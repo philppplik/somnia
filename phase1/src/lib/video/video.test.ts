@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
 import {exportName} from './recipe';
-import {clipRanges,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {clipRanges,flipOf,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -191,4 +191,14 @@ test('range export slicing: media windows shift, stills shrink, cut fades die, i
  const full=sliceTimeline(clips,0,18);
  assert.equal(full.length,3);
  assert.equal(full[0].crossfade_s,1,'uncut fade survives');
+});
+
+test('clip flips: sanitize keeps the four real values and drops junk and none',()=>{
+ const mk=(flip:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,flip:flip as never});
+ assert.deepEqual(sanitizeClips([mk('h')],{'a.mp4':5})[0].flip,'h');
+ assert.deepEqual(sanitizeClips([mk('hv')],{'a.mp4':5})[0].flip,'hv');
+ assert.equal(sanitizeClips([mk('none')],{'a.mp4':5})[0].flip,undefined);
+ assert.equal(sanitizeClips([mk('diagonal')],{'a.mp4':5})[0].flip,undefined);
+ assert.equal(flipOf(mk('v')),'v');
+ assert.equal(flipOf(mk(undefined)),'none');
 });

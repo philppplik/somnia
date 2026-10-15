@@ -6,7 +6,7 @@ import {addTimelineClip} from './session';
 import {setVideoEngineFactory} from './session';
 const MP4=new URL('../../../tests/assets/clip.mp4',import.meta.url);
 const bytes=(u:URL)=>new Uint8Array(readFileSync(u));
-import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
+import {addImageClip,closeVideo,duplicateTimelineClip,dirtyVideoNames,getVideoSession,openVideo,redoVideoEdit,serializeVideoProjectCopy,setImageClipLength,setTimelineClipFlip,setVideoFormat,undoVideoEdit,videoIsDirty} from './session';
 import {addTitleClip,updateTitle} from './titleSession';
 
 test('project: a saved .video-project reloads its timeline and format, clean',async()=>{
@@ -134,4 +134,25 @@ test('project: dropping a video source inserts it at the drop time and selects i
  assert.equal(s.clips.length,3);
  assert.equal(s.clips[2].source,'drop-src.mp4','without a time it appends as before');
  closeVideo(a);closeMedia(a);closeMedia('drop-src.mp4');
+});
+
+test('project: mirroring a clip sets, changes and clears the flip; titles refuse',async()=>{
+ const a='flip.video-project';
+ addBlankVideoProject(a);
+ await openVideo(getMedia().items.find(i=>i.name===a)!);
+ const imgId=addImageClip(a,{name:'photo.png'})!;
+ addTitleClip(a,Number.MAX_SAFE_INTEGER,{text:'T'});
+ const titleId=getVideoSession(a)!.clips[1].id;
+ setTimelineClipFlip(a,imgId,'h');
+ assert.equal(getVideoSession(a)!.clips[0].flip,'h');
+ setTimelineClipFlip(a,imgId,'hv');
+ assert.equal(getVideoSession(a)!.clips[0].flip,'hv');
+ setTimelineClipFlip(a,imgId,'none');
+ assert.equal(getVideoSession(a)!.clips[0].flip,undefined,'none clears the field');
+ setTimelineClipFlip(a,titleId,'h');
+ assert.equal(getVideoSession(a)!.clips[1].flip,undefined,'titles stay unflipped');
+ assert.ok(videoIsDirty(getVideoSession(a)));
+ undoVideoEdit(a);undoVideoEdit(a);
+ assert.equal(getVideoSession(a)!.clips[0].flip,'h','undo walks the flips back');
+ closeVideo(a);closeMedia(a);
 });

@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipRanges,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {blendAt,clipRanges,flipOf,isImageClip,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
@@ -78,6 +78,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
+   {const f=flipOf(e.range.clip),t=f==='none'?'':`scale(${f.includes('h')?-1:1},${f.includes('v')?-1:1})`;if(el.style.transform!==t)el.style.transform=t;}
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip);el.preservesPitch=false;
    if(!playing||Math.abs(el.currentTime-e.sourceTime)>0.35)el.currentTime=e.sourceTime;
@@ -184,7 +185,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      {playable&&blend.map(e=>isTitleClip(e.range.clip)?<div key={e.range.clip.id} className="absolute inset-0 flex items-center justify-center p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}}>
       <TitlePreview clip={e.range.clip} time={e.sourceTime} aspect={(probe?.video?.width??16)/(probe?.video?.height??9)} label={clipDisplayName(e.range.clip,'Title')}/>
      </div>:null)}
-     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none'}} data-testid="video-image-preview"/>:null)}
+     {playable&&blend.map(e=>isImageClip(e.range.clip)?<img key={e.range.clip.id} src={urlOf(e.range.clip.source)} alt="" className="absolute inset-0 h-full w-full object-contain p-2" style={{opacity:main&&e.range.index===main.range.index?e.video:1,zIndex:main&&e.range.index===main.range.index?1:0,pointerEvents:'none',transform:flipOf(e.range.clip)==='none'?'':`scale(${flipOf(e.range.clip).includes('h')?-1:1},${flipOf(e.range.clip).includes('v')?-1:1})`}} data-testid="video-image-preview"/>:null)}
     </div>
     <div className="flex items-center gap-3 px-4 pt-2 text-[12px] text-ink-2">
      <Button size="icon" variant="outline" aria-label={t(playing?'video.pause':'video.play')} aria-pressed={playing} disabled={!playable||!clips.length} onClick={toggle} data-testid="video-play">{playing?<Pause size={16}/>:<Play size={16}/>}</Button>

@@ -123,3 +123,13 @@ test('export options round-trip and old files load with the defaults',()=>{
  const junk=JSON.stringify({app:'somnia-video',version:2,scale:0.7,quality:'ultra',clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1}]});
  assert.deepEqual(parseVideoProject(junk).exportOptions,{scale:1,quality:'high'},'unsupported values are clamped');
 });
+
+test('clip flips round-trip; none is omitted from the file',()=>{
+ const clips:TimelineClip[]=[media('m1',{flip:'h'}),{id:'img1',kind:'image',source:'photo.png',in_s:0,out_s:5,gain:1,muted:false,flip:'hv'}];
+ const parsed=parseVideoProject(serializeVideoProject(clips,[],'webm'));
+ assert.equal(parsed.clips[0].flip,'h');
+ assert.equal(parsed.clips[1].flip,'hv');
+ assert.ok(!JSON.stringify(serializeVideoProject([media('m1')],[],'webm')).includes('flip'),'unflipped clips write no flip field');
+ const junk=JSON.stringify({app:'somnia-video',version:2,clips:[{id:'a',kind:'media',source:'x.mp4',in_s:0,out_s:1,flip:'diagonal'}]});
+ assert.equal(parseVideoProject(junk).clips[0].flip,undefined,'unsupported values drop');
+});

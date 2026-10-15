@@ -2,9 +2,9 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addImageClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,duplicateAudioTrackClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,duplicateTimelineClip,selectTimelineClip,setImageClipLength,setTimelineClipFlip,setVideoExportOptions,setVideoExportRange,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
-import {clipDuration,clipRanges,fadeOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
+import {clipDuration,clipRanges,fadeOf,flipOf,IMAGE_DEFAULT_SECONDS,isImageClip,MAX_GAIN,speedOf,timelineDuration,type ClipFlip} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
@@ -92,6 +92,11 @@ export function VideoControls({name}:{name:string}){
    <label>{t('video.imageDuration',{seconds:(selected.out_s-selected.in_s).toFixed(2)})}
     <NativeInput type="number" className={`${field} mt-1`} min={0.05} max={3600} step={0.5} value={selected.out_s} onChange={e=>setImageClipLength(name,selected.id,Number(e.target.value),`image-len:${selected.id}`)} data-testid="video-image-duration"/>
    </label>
+   <label className="grid gap-1">{t('video.clipFlip')}
+    <NativeSelect className={field} value={flipOf(selected)} onChange={e=>setTimelineClipFlip(name,selected.id,e.target.value as ClipFlip)} data-testid="video-clip-flip">
+     {(['none','h','v','hv'] as const).map(f=><option key={f} value={f}>{t(`video.clipFlip.${f}`)}</option>)}
+    </NativeSelect>
+   </label>
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="outline" disabled={selectedIndex<=0} onClick={()=>moveTimelineClip(name,selected.id,-1)} data-testid="video-clip-left">{t('video.moveLeft')}</Button>
     <Button size="compact" variant="outline" disabled={selectedIndex<0||selectedIndex>=s.clips.length-1} onClick={()=>moveTimelineClip(name,selected.id,1)} data-testid="video-clip-right">{t('video.moveRight')}</Button>
@@ -113,6 +118,11 @@ export function VideoControls({name}:{name:string}){
    <label className="grid gap-1">{t('video.clipSpeed')}
     <NativeSelect className={field} value={String(speedOf(selected))} onChange={e=>setTimelineClipSpeed(name,selected.id,Number(e.target.value))} data-testid="video-clip-speed">
      {[0.25,0.5,0.75,1,1.25,1.5,2,3,4].map(v=><option key={v} value={v}>{t('video.clipSpeedValue',{speed:v})}</option>)}
+    </NativeSelect>
+   </label>
+   <label className="grid gap-1">{t('video.clipFlip')}
+    <NativeSelect className={field} value={flipOf(selected)} onChange={e=>setTimelineClipFlip(name,selected.id,e.target.value as ClipFlip)} data-testid="video-clip-flip">
+     {(['none','h','v','hv'] as const).map(f=><option key={f} value={f}>{t(`video.clipFlip.${f}`)}</option>)}
     </NativeSelect>
    </label>
    <label className="grid gap-1">{t('video.gain',{percent:Math.round(selected.gain*100)})}

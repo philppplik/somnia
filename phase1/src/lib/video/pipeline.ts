@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipRanges,fadeOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
+import {clipRanges,fadeOf,flipOf,isImageClip,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
@@ -247,6 +247,15 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    const f=await sink.getCanvas(src);
    return f?f.canvas:null;
   };
+  // Mirrored clips draw through this instead of a bare drawImage; titles never pass a flip.
+  const drawFlip=(img:CanvasImageSource,flip:string)=>{
+   if(flip==='none'){ctx.drawImage(img,0,0);return;}
+   ctx.save();
+   ctx.translate(flip.includes('h')?outW:0,flip.includes('v')?outH:0);
+   ctx.scale(flip.includes('h')?-1:1,flip.includes('v')?-1:1);
+   ctx.drawImage(img,0,0);
+   ctx.restore();
+  };
   for(const z of zones){
    checkCancel();
    if(z.kind==='solo'){
@@ -271,7 +280,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      for(let k=0;k<n;k++){
       checkCancel();
       const t=z.start+k/fps,f=await sideFrame(z.a,t);
-      if(f){ctx.globalAlpha=1;ctx.drawImage(f as CanvasImageSource,0,0);}
+      if(f){ctx.globalAlpha=1;drawFlip(f as CanvasImageSource,flipOf(c));}
       await videoSource.add(t,Math.max(1e-3,Math.min(1/fps,z.end-t)));
       note(t);
      }
@@ -280,7 +289,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      for await(const frame of sink.canvases(srcStart,srcEnd)){
       checkCancel();
       if(base===null)base=frame.timestamp;
-      ctx.globalAlpha=1;ctx.drawImage(frame.canvas,0,0);
+      ctx.globalAlpha=1;drawFlip(frame.canvas,flipOf(c));
       await videoSource.add(z.start+(frame.timestamp-base),frame.duration);
       note(z.start+(frame.timestamp-base));
      }
@@ -298,8 +307,8 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
      const t=z.start+k/fps,p=Math.min(1,(t-z.start)/d);
      const[fa,fb]=await Promise.all([sideFrame(z.a,t),sideFrame(z.b,t)]);
      ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,outW,outH);
-     if(fa){ctx.globalAlpha=1;ctx.drawImage(fa as CanvasImageSource,0,0);}
-     if(fb){ctx.globalAlpha=p;ctx.drawImage(fb as CanvasImageSource,0,0);}
+     if(fa){ctx.globalAlpha=1;drawFlip(fa as CanvasImageSource,flipOf(ra.clip));}
+     if(fb){ctx.globalAlpha=p;drawFlip(fb as CanvasImageSource,flipOf(rb.clip));}
      ctx.globalAlpha=1;
      await videoSource.add(t,1/fps);
      note(t);

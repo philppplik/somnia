@@ -7,7 +7,7 @@ import {clampTitleSeconds,isTitleClip,splitTitleClip} from './titles';
  * Title clips (`kind:'title'`) carry no source: `in_s` stays 0 and `out_s` is the card duration.
  * Image clips (`kind:'image'`) reference a photo file: `in_s` stays 0, `out_s` is how long the still shows.
  */
-export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
+export interface TimelineClip{id:string;source:string;in_s:number;out_s:number;gain:number;muted:boolean;crossfade_s?:number;/** Mirroring of the clip's picture (media and image clips). Absent = not flipped. */flip?:ClipFlip;/** Playback speed of a media clip (timeline seconds = source seconds / speed). Absent = 1; title cards have no speed. */speed?:number;kind?:'media'|'title'|'image';title?:import('./titles').TitleSpec}
 /** The shortest clip worth keeping; below it splits and trims only produce broken files. */
 export const MIN_CLIP_SECONDS=0.05;
 export const MAX_GAIN=2;
@@ -16,6 +16,10 @@ export const MIN_SPEED=0.25,MAX_SPEED=4;
 export const IMAGE_DEFAULT_SECONDS=5;
 /** Image clips are stills with a duration, not seekable media. */
 export const isImageClip=(c:TimelineClip)=>c.kind==='image';
+/** Mirroring of a media or image clip: horizontal, vertical, or both (= 180° rotation). Dimension-preserving; 90/270° rotation is deliberately not supported. */
+export type ClipFlip='none'|'h'|'v'|'hv';
+export const CLIP_FLIPS:readonly ClipFlip[]=['none','h','v','hv'];
+export const flipOf=(c:TimelineClip):ClipFlip=>CLIP_FLIPS.includes(c.flip as ClipFlip)?(c.flip as ClipFlip):'none';
 /** A media clip's playback speed, clamped to the supported range. Title cards always play at 1. */
 export const speedOf=(c:TimelineClip)=>c.kind==='title'?1:Math.min(MAX_SPEED,Math.max(MIN_SPEED,typeof c.speed==='number'&&Number.isFinite(c.speed)?c.speed:1));
 /** Timeline seconds the clip occupies: its source range played at its speed. */
@@ -74,7 +78,7 @@ export function sanitizeClips(clips:TimelineClip[],durations:Record<string,numbe
   if(d<=0)return[];
   const in_s=Math.min(Math.max(0,c.in_s),d),out_s=Math.min(Math.max(in_s,c.out_s),d);
   if(out_s-in_s<MIN_CLIP_SECONDS)return[];
-  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,speed:speedOf(c)}];
+  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),gain:Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1)),muted:!!c.muted,speed:speedOf(c),flip:flipOf(c)==='none'?undefined:flipOf(c)}];
  });
  return clean.map((c,i)=>{
   const max=i+1<clean.length?Math.min(clipDuration(c),clipDuration(clean[i+1])):0;

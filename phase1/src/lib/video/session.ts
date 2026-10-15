@@ -2,11 +2,11 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {fullClip,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {flipOf,fullClip,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipFlip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
-import {clampTitleSeconds,insertClip,insertIndexAfter,needsSourceFile} from './titles';
+import {clampTitleSeconds,insertClip,insertIndexAfter,isTitleClip,needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
@@ -94,7 +94,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
 const sameClips=(a:TimelineClip[],b:TimelineClip[])=>a.length===b.length&&a.every((c,i)=>{
- const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title;
+ const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.gain===d.gain&&c.muted===d.muted&&c.kind===d.kind&&c.crossfade_s===d.crossfade_s&&c.title===d.title&&flipOf(c)===flipOf(d);
 });
 /** Applies a timeline edit, keeps every clip inside its source bounds and records the previous state as one undo step. `historyKey` coalesces a continuous gesture (trim drag, gain slider, title typing) into a single step. */
 export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineClip[]|null,opts?:{historyKey?:string}){
@@ -182,6 +182,13 @@ export function addImageClip(root:string,item:{name:string},seconds?:number,at?:
  editTimeline(root,clips=>insertClip(clips,clip,at===undefined?clips.length:insertIndexAfter(clips,at)));
  patch(root,{selectedClipId:clip.id,selectedAudioClipId:null});
  return clip.id;
+}
+/** Sets a clip's mirror (media and image clips; 'none' clears). */
+export function setTimelineClipFlip(root:string,id:string,flip:ClipFlip){
+ const s=sessions.get(root);if(!s)return;
+ const clip=s.clips.find(c=>c.id===id);
+ if(!clip||isTitleClip(clip))return;
+ editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,flip:flip==='none'?undefined:flip}:c));
 }
 /** Duplicates a timeline clip right after the original and selects the copy. Works for media, title and image clips. */
 export function duplicateTimelineClip(root:string,id:string):string|null{
