@@ -61,3 +61,8 @@ export function zoomRange(r:{min:number;max:number},anchor:number,factor:number)
  const span=Math.min(1e9,Math.max(0.01,(r.max-r.min)/factor)),a=Math.min(r.max,Math.max(r.min,anchor)),u=(a-r.min)/(r.max-r.min);
  const min=a-u*span;return {min,max:min+span};
 }
+/** Times of the keys whose screen position lies inside the box (edges included; the box corners may come in any order). */
+export function keysInBox<K extends {t:number}>(keys:readonly K[],pos:(k:K)=>{x:number;y:number},a:{x:number;y:number},b:{x:number;y:number}):number[]{
+ const xa=Math.min(a.x,b.x),xb=Math.max(a.x,b.x),ya=Math.min(a.y,b.y),yb=Math.max(a.y,b.y);
+ return keys.filter(k=>{const p=pos(k);return p.x>=xa&&p.x<=xb&&p.y>=ya&&p.y<=yb;}).map(k=>k.t);
+}

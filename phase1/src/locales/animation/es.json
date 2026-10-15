@@ -1071,5 +1071,6 @@
  "animation.rig.match.rotation": "Rotación",
  "animation.rig.match.opacity": "Opacidad",
  "animation.rig.match.all": "Todo esto",
- "cmd.animation.layers.match": "Igualar las demás capas a la primera capa"
+ "cmd.animation.layers.match": "Igualar las demás capas a la primera capa",
+ "animation.graph.marquee.hint": "Mayús+arrastrar: seleccionar claves con un recuadro (Ctrl/Cmd suma). Arrastrar: mover el cabezal."
 }

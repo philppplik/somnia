@@ -970,3 +970,10 @@ test('P216 match first layer: position by world anchor, scale, rotation, opacity
  for(const bad of [{mode:'x',layers:['b','c']},{mode:'all',layers:['b']},{mode:'all',layers:['b','d']}])assert.throws(()=>run(bad),(e:any)=>e.expected===true);
  run({mode:'opacity',layers:['b','c']});assert.throws(()=>run({mode:'opacity',layers:['b','c']}),(e:any)=>/already match/.test(e.message));
 });
+
+test('P217 graph box select: keys inside the box in any corner order, edges included, none outside',async()=>{
+ const {keysInBox}=await import('./graphWindow');
+ const keys=[{t:0,x:10,y:10},{t:1,x:50,y:50},{t:2,x:90,y:20},{t:3,x:50,y:90}];const pos=(k:{x:number;y:number})=>k;
+ assert.deepEqual(keysInBox(keys,pos,{x:0,y:0},{x:60,y:60}),[0,1]);assert.deepEqual(keysInBox(keys,pos,{x:60,y:60},{x:0,y:0}),[0,1]);
+ assert.deepEqual(keysInBox(keys,pos,{x:50,y:50},{x:90,y:20}),[1,2]);assert.deepEqual(keysInBox(keys,pos,{x:200,y:200},{x:300,y:300}),[]);assert.deepEqual(keysInBox([],pos,{x:0,y:0},{x:1,y:1}),[]);
+});

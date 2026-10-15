@@ -1071,5 +1071,6 @@
  "animation.rig.match.rotation": "Rotação",
  "animation.rig.match.opacity": "Opacidade",
  "animation.rig.match.all": "Tudo isso",
- "cmd.animation.layers.match": "Igualar as outras camadas à primeira camada"
+ "cmd.animation.layers.match": "Igualar as outras camadas à primeira camada",
+ "animation.graph.marquee.hint": "Shift+arrastar: selecionar chaves com uma caixa (Ctrl/Cmd soma). Arrastar: mover o cursor."
 }

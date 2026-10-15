@@ -1071,5 +1071,6 @@
  "animation.rig.match.rotation": "Drehung",
  "animation.rig.match.opacity": "Deckkraft",
  "animation.rig.match.all": "Alles davon",
- "cmd.animation.layers.match": "Andere Ebenen an die erste Ebene angleichen"
+ "cmd.animation.layers.match": "Andere Ebenen an die erste Ebene angleichen",
+ "animation.graph.marquee.hint": "Umschalt+Ziehen: Keys per Rahmen wählen (Strg/Cmd fügt hinzu). Ziehen: Abspielkopf bewegen."
 }

@@ -1071,5 +1071,6 @@
  "animation.rig.match.rotation": "Rotation",
  "animation.rig.match.opacity": "Opacité",
  "animation.rig.match.all": "Tout cela",
- "cmd.animation.layers.match": "Aligner les autres calques sur le premier calque"
+ "cmd.animation.layers.match": "Aligner les autres calques sur le premier calque",
+ "animation.graph.marquee.hint": "Maj+glisser : sélectionner des clés par cadre (Ctrl/Cmd ajoute). Glisser : déplacer la tête de lecture."
 }

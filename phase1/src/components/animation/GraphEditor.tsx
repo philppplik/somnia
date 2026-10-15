@@ -2,7 +2,7 @@ import {useEffect,useId,useLayoutEffect,useRef,useState,type KeyboardEvent as Re
 import {animationSession} from '../../lib/animation/session';
 import type {Edit} from '../../lib/animation/edit';
 import {PROP_META,TRANSFORM_KEYS,type Composition,type KeyRef,type TransformKey} from '../../lib/animation/model';
-import {ZOOM_STEP,fitTargets,graphWindow,panWindow,zoomRange,zoomWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
+import {ZOOM_STEP,fitTargets,graphWindow,keysInBox,panWindow,zoomRange,zoomWindow,timeTicks,windowValueRange} from '../../lib/animation/graphWindow';
 import {channelOf,playheadReading,curveSamples,handleToEase,handlesOf,niceStep,valueRange,speedSamples,speedRange,EASE_PRESETS,type Handle} from '../../lib/animation/graph';
 import {clickSelect,sameKey,shiftSelection} from '../../lib/animation/selection';
 import {evaluate} from '../../lib/animation/interpolate';
@@ -42,7 +42,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
  const active=animated.find(k=>k===view.openProps[0])??animated[0];
  const wrap=useRef<HTMLDivElement>(null);const svgRef=useRef<SVGSVGElement>(null);const size=useSize(wrap);
  const frozen=useRef<{min:number;max:number}|null>(null);const frozenWin=useRef<{t0:number;t1:number}|null>(null);
- const [zoom,setZoom]=useState<{t0:number;t1:number}|null>(null);const [vzoom,setVZoom]=useState<{min:number;max:number}|null>(null);const geo=useRef<{t0:number;t1:number;pw:number;start:number;end:number;fps:Composition['fps'];range:{min:number;max:number};ph:number}|null>(null);
+ const [box,setBox]=useState<{x0:number;y0:number;x1:number;y1:number}|null>(null);const [zoom,setZoom]=useState<{t0:number;t1:number}|null>(null);const [vzoom,setVZoom]=useState<{min:number;max:number}|null>(null);const geo=useRef<{t0:number;t1:number;pw:number;start:number;end:number;fps:Composition['fps'];range:{min:number;max:number};ph:number}|null>(null);
  useEffect(()=>{frozen.current=null;frozenWin.current=null;setZoom(null);setVZoom(null);},[active,layerId]);
  useEffect(()=>{setZoom(null);setVZoom(null);},[gtools.fit]);
  /** Ctrl/Cmd+wheel zooms the time axis around the pointer, Shift+wheel pans. A plain wheel is left alone so the page still scrolls. */
@@ -91,7 +91,22 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   const up=()=>done(true);const esc=(ev:KeyboardEvent)=>{if(ev.key==='Escape'){ev.stopPropagation();done(false);}};
   el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);window.addEventListener('keydown',esc,true);
  };
+ /** Shift+drag on the plot: box select. The keys of the shown channel inside the box become the selection (Ctrl/Cmd adds). */
+ const marquee=(e:PointerEvent<SVGRectElement>)=>{
+  const el=e.currentTarget;el.setPointerCapture(e.pointerId);const a=local(e.clientX,e.clientY),add=e.ctrlKey||e.metaKey;
+  const clean=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc,true);setBox(null);};
+  const mv=(ev:globalThis.PointerEvent)=>{const p=local(ev.clientX,ev.clientY);setBox({x0:a.x,y0:a.y,x1:p.x,y1:p.y});};
+  const esc=(ev:KeyboardEvent)=>{if(ev.key==='Escape'){ev.stopPropagation();clean();}};
+  const up=(ev:globalThis.PointerEvent)=>{
+   clean();const p=local(ev.clientX,ev.clientY),xa=Math.min(a.x,p.x),xb=Math.max(a.x,p.x),ya=Math.min(a.y,p.y),yb=Math.max(a.y,p.y);
+   if(xb-xa<3&&yb-ya<3)return;
+   const hit:KeyRef[]=keysInBox(keys,k=>({x:xOf(k.t),y:yOf(channelOf(k.v,ch))}),a,p).map(t=>({layer:layer.id,prop:active,t}));
+   sess.selectKeys(add?[...sel.filter(x=>!hit.some(h=>sameKey(h,x))),...hit]:hit);
+  };
+  el.addEventListener('pointermove',mv);el.addEventListener('pointerup',up);window.addEventListener('keydown',esc,true);
+ };
  const scrubDown=(e:PointerEvent<SVGRectElement>)=>{
+  if(e.shiftKey&&!speed&&e.button===0)return marquee(e);
   const el=e.currentTarget;el.setPointerCapture(e.pointerId);
   const set=(cx:number)=>sess.setView({playhead:Math.min(t1,Math.max(t0,tOf(local(cx,0).x)))});set(e.clientX);
   const mv=(ev:globalThis.PointerEvent)=>set(ev.clientX);const up=()=>{el.removeEventListener('pointermove',mv);el.removeEventListener('pointerup',up);};
@@ -175,7 +190,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
   <div ref={wrap} className="relative min-h-0 overflow-hidden">
    <svg ref={svgRef} width={w} height={h} role="group" aria-label={t('animation.graph.label',{name:t(PROP_LABEL[active])})} className="block touch-none select-none" data-testid="animation-graph-svg">
     <defs><clipPath id={clip}><rect x={PAD.l} y={PAD.t} width={pw} height={ph}/></clipPath></defs>
-    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} onDoubleClick={addKeyAt} data-testid="animation-graph-plot"/>
+    <rect x={PAD.l} y={PAD.t} width={pw} height={ph} fill="var(--bg-panel)" onPointerDown={scrubDown} onDoubleClick={addKeyAt} data-testid="animation-graph-plot"><title>{t('animation.graph.marquee.hint')}</title></rect>
     {grid.map(v=><g key={v}><line x1={PAD.l} x2={PAD.l+pw} y1={yOf(v)} y2={yOf(v)} stroke="var(--border-subtle)" strokeWidth={1}/><text x={PAD.l-6} y={yOf(v)+3} textAnchor="end" fontSize={9} fill="var(--text-tertiary)">{fmt(v)}</text></g>)}
     <rect x={PAD.l} y={PAD.t} width={Math.max(0,xOf(comp.workArea.in)-PAD.l)} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
     <rect x={xOf(comp.workArea.out)} y={PAD.t} width={Math.max(0,PAD.l+pw-xOf(comp.workArea.out))} height={ph} fill="rgba(0,0,0,.18)" pointerEvents="none"/>
@@ -183,6 +198,7 @@ export function GraphEditor({comp,layerId,sel,playhead}:{comp:Composition;layerI
      {other&&<polyline points={pts(other)} fill="none" stroke="var(--text-tertiary)" strokeWidth={1} strokeDasharray="4 3" data-testid="animation-graph-other"/>}
      <polyline points={pts(samples)} fill="none" stroke="var(--accent)" strokeWidth={2} data-testid="animation-graph-curve"/>
     </g>
+    {box&&<rect x={Math.min(box.x0,box.x1)} y={Math.min(box.y0,box.y1)} width={Math.abs(box.x1-box.x0)} height={Math.abs(box.y1-box.y0)} fill="var(--accent)" fillOpacity={0.15} stroke="var(--accent)" strokeWidth={1} strokeDasharray="3 2" pointerEvents="none" data-testid="animation-graph-marquee"/>}
     <line x1={xOf(playhead)} x2={xOf(playhead)} y1={PAD.t} y2={PAD.t+ph} stroke="var(--text-primary)" strokeWidth={1} pointerEvents="none" data-testid="animation-graph-playhead"/>
     {(()=>{const rv=playheadReading(prop,ch,playhead,t0,t1,speed);if(rv===null)return null;const px=xOf(playhead),py=Math.min(PAD.t+ph,Math.max(PAD.t,yOf(rv))),left=px>PAD.l+pw-60;
      return <g pointerEvents="none" data-testid="animation-graph-readout"><circle cx={px} cy={py} r={3.5} fill="var(--accent)" stroke="var(--text-primary)" strokeWidth={1}/><text x={left?px-7:px+7} y={Math.max(PAD.t+10,py-6)} textAnchor={left?'end':'start'} fontSize={10} fontWeight={600} fill="var(--text-primary)" data-testid="animation-graph-readout-value">{fmt(rv)}</text></g>;})()}

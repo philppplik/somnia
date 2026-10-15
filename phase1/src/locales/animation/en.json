@@ -1071,5 +1071,6 @@
  "animation.rig.match.rotation": "Rotation",
  "animation.rig.match.opacity": "Opacity",
  "animation.rig.match.all": "All of these",
- "cmd.animation.layers.match": "Match the other layers to the first layer"
+ "cmd.animation.layers.match": "Match the other layers to the first layer",
+ "animation.graph.marquee.hint": "Shift+drag: box-select keys (Ctrl/Cmd adds). Drag: move the playhead."
 }
