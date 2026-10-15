@@ -1,5 +1,5 @@
 import {useRef} from 'react';
-import {audioClipDuration,type AudioClip} from '../../lib/video/audioTrack';
+import {audioClipDuration,audioEnvelope,duckGainAt,type AudioClip} from '../../lib/video/audioTrack';
 import type {FilmstripController} from '../../lib/video/filmstrip-controller';
 import {snapThresholdSeconds,snapTime} from '../../lib/video/zoom';
 import {WaveformStrip} from './WaveformStrip';
@@ -77,7 +77,7 @@ export function AudioLane({clips,selectedId,duration,onSelect,onMoveAt,onResize,
      else if(e.key==='ArrowRight'){e.preventDefault();onMoveAt(c.id,c.at+d);}
     }}
     data-testid="audio-clip" data-clip="true" data-clip-id={c.id} data-selected={selected||undefined}>
-    {controller&&<WaveformStrip controller={controller} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.muted?0:c.gain}/>}
+    {controller&&<WaveformStrip controller={controller} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.gain} scaleAt={tau=>audioEnvelope(c,tau-c.in_s)*duckGainAt(clips,c,c.at+(tau-c.in_s))}/>}
     {(fadeInPct>0||fadeOutPct>0)&&<div className="pointer-events-none absolute inset-0" aria-hidden="true"
      style={{background:`linear-gradient(to right, rgba(0,0,0,.55) 0%, transparent ${fadeInPct}%, transparent ${100-fadeOutPct}%, rgba(0,0,0,.55) 100%)`}}/>}
     <span className="pointer-events-none absolute inset-x-1 top-1/2 -translate-y-1/2 truncate text-[10px] text-ink">

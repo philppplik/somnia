@@ -10,16 +10,21 @@ export const bucketCountFor=(duration:number)=>!(duration>0)?0:Math.min(WAVEFORM
  * whose time the column covers. Columns without coverage stay 0 (flat line). Gain scales the display, clamped to [-1,1].
  */
 export function slicePeaks(peaks:Float32Array,duration:number,in_s:number,out_s:number,widthPx:number,gain=1):Float32Array{
+ return slicePeaksScaled(peaks,duration,in_s,out_s,widthPx,()=>gain);
+}
+
+/** Like slicePeaks, but the display scale varies per column: `scaleAt` maps a source time to its multiplier (gain, fades, duck). */
+export function slicePeaksScaled(peaks:Float32Array,duration:number,in_s:number,out_s:number,widthPx:number,scaleAt:(sourceTime:number)=>number):Float32Array{
  const out=new Float32Array(Math.max(0,widthPx)*2);
  const buckets=peaks.length/2;
  if(!buckets||!(duration>0)||!(out_s>in_s)||widthPx<1)return out;
  const step=duration/buckets;
- const g=Math.max(0,gain);
  for(let x=0;x<widthPx;x++){
   const t0=in_s+(x/widthPx)*(out_s-in_s),t1=in_s+((x+1)/widthPx)*(out_s-in_s);
   const b0=Math.max(0,Math.floor(t0/step)),b1=Math.min(buckets-1,Math.floor((t1-1e-9)/step));
   let lo=0,hi=0;
   for(let b=b0;b<=b1;b++){const mn=peaks[b*2],mx=peaks[b*2+1];if(b===b0||mn<lo)lo=mn;if(b===b0||mx>hi)hi=mx;}
+  const g=Math.max(0,scaleAt((t0+t1)/2));
   out[x*2]=Math.max(-1,lo*g);out[x*2+1]=Math.min(1,hi*g);
  }
  return out;

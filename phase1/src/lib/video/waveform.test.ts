@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {bucketCountFor,slicePeaks,WAVEFORM_MAX_BUCKETS} from './waveform';
+import {bucketCountFor,slicePeaks,slicePeaksScaled,WAVEFORM_MAX_BUCKETS} from './waveform';
 
 test('bucket count targets ~50 ms per bucket and caps',()=>{
  assert.equal(bucketCountFor(10),200);
@@ -64,4 +64,19 @@ test('controller decodes peaks once per source and drops them on re-register',as
  c.unregister('a.webm');
  assert.equal(c.peaksFor('a.webm'),undefined,'closed source forgets its peaks');
  c.dispose();
+});
+
+test('slicePeaksScaled: per-column scale bends the envelope, clamps, and matches flat gain when constant',()=>{
+ const buckets=100,peaks=new Float32Array(buckets*2);
+ for(let b=0;b<buckets;b++){peaks[b*2]=-0.5;peaks[b*2+1]=0.5;}
+ // Fade to zero over the range: the right half is visibly lower than the left.
+ const cols=slicePeaksScaled(peaks,10,0,10,10,t=>1-t/10);
+ assert.ok(cols[1]>cols[19],'left edge louder than right edge');
+ assert.ok(cols[19]<=0.06,'right edge nearly silent');
+ // Constant scale equals slicePeaks.
+ const a=slicePeaks(peaks,10,2,8,40,0.5),b=slicePeaksScaled(peaks,10,2,8,40,()=>0.5);
+ assert.deepEqual([...a],[...b]);
+ // Overdrive clamps to the rails.
+ const hot=slicePeaksScaled(peaks,10,0,10,10,()=>4);
+ assert.ok(hot[1]<=1&&hot[0]>=-1);
 });
