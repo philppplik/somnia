@@ -318,6 +318,17 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
       };
+      const beginResize=(e:React.PointerEvent)=>{
+       e.preventDefault();e.stopPropagation();
+       const base={w:o.rect.w,h:o.rect.h},sx=e.clientX,sy=e.clientY;
+       const move=(ev:PointerEvent)=>{
+        const box=stageRef.current?.getBoundingClientRect();
+        if(!box||box.width===0||box.height===0)return;
+        setOverlayRect(item.name,o.id,{...o.rect,w:base.w+(ev.clientX-sx)/box.width,h:base.h+(ev.clientY-sy)/box.height},`orect-resize:${o.id}`);
+       };
+       const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
+       window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
+      };
       const style:CSSProperties={left:`${o.rect.x*100}%`,top:`${o.rect.y*100}%`,width:`${o.rect.w*100}%`,height:`${o.rect.h*100}%`,opacity:o.opacity,zIndex:2,cursor:'grab',touchAction:'none'};
       return <div key={o.id} title={o.title?.text||o.source}
        className={`absolute flex items-center justify-center ${selOverlay?'outline-2 outline-[var(--accent)]':''}`}
@@ -329,6 +340,15 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
          ?<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>
          :<PipPreview o={o} playhead={playhead} playing={playing} rate={rateMul} url={urlOf(o.source)}/>}
        </div>
+       {selOverlay&&<div role="slider" aria-label={t('video.overlayResize')} aria-valuemin={1} aria-valuemax={100} aria-valuenow={Math.round(o.rect.w*100)} aria-valuetext={`${Math.round(o.rect.w*100)} x ${Math.round(o.rect.h*100)} %`} tabIndex={0}
+        className="absolute bottom-[-5px] right-[-5px] h-2.5 w-2.5 cursor-nwse-resize rounded-sm bg-[var(--accent)]"
+        onPointerDown={beginResize}
+        onKeyDown={e=>{const d=e.shiftKey?0.05:0.01;
+         if(e.key==='ArrowLeft'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w-d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowRight'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w+d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowUp'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h-d},`orect-resize:${o.id}`);}
+         else if(e.key==='ArrowDown'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h+d},`orect-resize:${o.id}`);}}}
+        data-testid="overlay-resize-handle"/>}
       </div>;
      })}
     </div>

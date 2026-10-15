@@ -138,6 +138,7 @@
  "video.overlayClipTitle": "Incrustation sélectionnée",
  "video.overlayText": "Texte",
  "video.overlayBgAlpha": "Arrière-plan {percent}%",
+ "video.overlayResize": "Redimensionner l'incrustation",
  "video.overlayDuration": "Durée (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",

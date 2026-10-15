@@ -138,6 +138,7 @@
  "video.overlayClipTitle": "Sobreposição selecionada",
  "video.overlayText": "Texto",
  "video.overlayBgAlpha": "Fundo {percent}%",
+ "video.overlayResize": "Redimensionar sobreposição",
  "video.overlayDuration": "Duração (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",

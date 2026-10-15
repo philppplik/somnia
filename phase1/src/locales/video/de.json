@@ -138,6 +138,7 @@
  "video.overlayClipTitle": "Gewähltes Overlay",
  "video.overlayText": "Text",
  "video.overlayBgAlpha": "Hintergrund {percent}%",
+ "video.overlayResize": "Overlay-Größe ändern",
  "video.overlayDuration": "Dauer (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",
