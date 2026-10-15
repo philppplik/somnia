@@ -186,6 +186,7 @@ export type DocumentsRequest=
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'insertCoverPage';title:string;subtitle:string;author:string;date:string}
  |{id:number;kind:'sortParagraphs';first:number;last:number;descending:boolean}
+ |{id:number;kind:'moveParagraphs';first:number;last:number;delta:number}
  |{id:number;kind:'paragraphSpacingState'}
  |{id:number;kind:'setParagraphSpacing';value:string}
  |{id:number;kind:'bookmarksState'}

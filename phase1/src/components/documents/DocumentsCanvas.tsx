@@ -10,7 +10,7 @@ import '../../lib/documents/guards';
 import {getCollab,onSessionChange} from '../../lib/collab/session';
 import {peerCarets,type PeerCaret} from '../../lib/collab/office/docsPresence';
 import {CELL_BASE} from '../../lib/documents/edit';
-import {setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
+import {moveParagraphs,setLineSpacing,toggleList,insertPageBreak,copyFormatting,pasteFormatting,selectUnitAtCaret,clearFormatting,copyLinkAt,toggleVertAlign,setFindOpen,setParagraphStyle,clearCaret,deleteAtCaret,dragTo,editParagraph,getEngine,moveCaret,pasteText,settleDocument,switchDocument,pointerAt,redoEdit,selectAllText,setAlign,shiftListLevel,tabInCell,stepFontSize,stepIndent,toggleFormat,selectedText,splitAtCaret,syncGeometry,typeText,undoEdit} from '../../lib/documents/session';
 import {specialChar} from '../../lib/documents/symbols';
 import {parsePdfPages,type PdfOptions} from '../../lib/documents/protocol';
 import {saveCopy,savePdf,saveFormat} from '../../lib/documents/saveCopy';
@@ -70,6 +70,7 @@ function CaretInput({left,top}:{left:number;top:number}){
  return <Textarea ref={ref} data-testid="documents-input" aria-label={t('documents.caret.input')} className="absolute m-0 h-4 w-px resize-none overflow-hidden border-0 bg-transparent p-0 opacity-0" style={{left,top}} autoCapitalize="off" autoCorrect="off" spellCheck={false}
   onKeyDown={e=>{
    if(composing.current||e.nativeEvent.isComposing)return;const mod=e.ctrlKey||e.metaKey;
+   if(e.altKey&&e.shiftKey&&!mod&&(e.key==='ArrowUp'||e.key==='ArrowDown')){e.preventDefault();void moveParagraphs(e.key==='ArrowUp'?-1:1);return;}
    /* Ctrl (Windows/Linux) or Alt (macOS) moves and deletes by word. */
    const word=mod||e.altKey;
    if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&word){e.preventDefault();void moveCaret(e.key==='ArrowLeft'?'wordLeft':'wordRight',e.shiftKey);return;}

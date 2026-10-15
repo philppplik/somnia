@@ -19,7 +19,7 @@ export const SHORTCUTS:readonly (readonly [string,string])[]=[
  ['documents.format.clear','Ctrl+Space'],['documents.format.link','Ctrl+K'],['documents.shortcuts.size','Ctrl+Shift+< / >'],
  ['documents.shortcuts.align','Ctrl+L / E / R / J'],['documents.shortcuts.indent','Ctrl+[ / ]'],['documents.shortcuts.styles','Ctrl+Alt+0 - 4'],
  ['documents.find.label','Ctrl+F'],['documents.goto.title','Ctrl+G'],['documents.shortcuts.selectAll','Ctrl+A'],['documents.shortcuts.special','Ctrl+Shift+Space / -'],
- ['documents.shortcuts.lineSpacing','Ctrl+1 / 2 / 5'],['documents.shortcuts.bullets','Ctrl+Shift+L'],['documents.shortcuts.pageBreak','Ctrl+Enter'],['documents.shortcuts.painter','Ctrl+Shift+C / V'],
+ ['documents.shortcuts.moveParas','Alt+Shift+Up / Down'],['documents.shortcuts.lineSpacing','Ctrl+1 / 2 / 5'],['documents.shortcuts.bullets','Ctrl+Shift+L'],['documents.shortcuts.pageBreak','Ctrl+Enter'],['documents.shortcuts.painter','Ctrl+Shift+C / V'],
  ['documents.shortcuts.caps','Ctrl+Shift+A / K'],['documents.shortcuts.normal','Ctrl+Shift+N'],['documents.charlook.open','Ctrl+D'],
  ['documents.undo','Ctrl+Z'],['documents.redo','Ctrl+Y'],['documents.shortcuts.title','Ctrl+/'],
 ];

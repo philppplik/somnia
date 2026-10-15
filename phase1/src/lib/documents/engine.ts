@@ -72,6 +72,8 @@ export class DocumentsEngine{
  async colWidth(block:number,width:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'colWidth',block,width}))).document;}
  async insertImage(block:number,bytes:Uint8Array,alt:string):Promise<OpenedDocument>{const buf=bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength) as ArrayBuffer;return(await this.call('edited',id=>({id,kind:'insertImage',block,bytes:buf,alt}),[buf])).document;}
  async imageEdit(block:number,op:import('./protocol').ImageOp):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'imageEdit',block,op}))).document;}
+
+ async moveParagraphs(first:number,last:number,delta:number):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'moveParagraphs',first,last,delta}))).document;}
  async sortParagraphs(first:number,last:number,descending:boolean):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'sortParagraphs',first,last,descending}))).document;}
  async insertCoverPage(o:import('./protocol').CoverOptions):Promise<OpenedDocument>{return(await this.call('edited',id=>({id,kind:'insertCoverPage',title:o.title,subtitle:o.subtitle,author:o.author,date:o.date}))).document;}
  async paragraphSpacingState():Promise<string>{return(await this.call('paragraphSpacing',id=>({id,kind:'paragraphSpacingState'}))).value;}

@@ -5359,6 +5359,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.paragraphs.moveDown",
+      "title": "Move the selected paragraphs down",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.paragraphs.moveUp",
+      "title": "Move the selected paragraphs up",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.paragraphs.sortAsc",
       "title": "Sort the selected paragraphs A to Z",
       "category": "View",

@@ -109,6 +109,7 @@ export class DocSession {
     delete_comment(id: number): void;
     insert_cover_page(title: string, subtitle: string, author: string, date: string): void;
     sort_paragraphs(first: number, last: number, descending: boolean): void;
+    move_paragraphs(first: number, last: number, delta: number): void;
     paragraph_spacing(): string;
     set_paragraph_spacing(value: string): void;
     bookmarks(): string;

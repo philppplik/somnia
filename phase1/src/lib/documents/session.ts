@@ -1076,6 +1076,16 @@ const commentStep=(op:(e:DocumentsEngine)=>Promise<import('./protocol').OpenedDo
  const c=getDocumentsState().caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
  await structural(op,spot,spot);if(!c)patchDocuments({caret:null});
 });
+/** Moves the selected paragraphs one place up (-1) or down (+1). One undo step; the selection moves with them. */
+export const moveParagraphs=(delta:-1|1)=>run(async()=>{
+ const n=await paraSpan();if(!n)return;const first=n.s.block,last=n.e.block;
+ if(first>=CELL_BASE||last>=CELL_BASE)throw new Error('Paragraphs inside a table cannot be moved here.');
+ if(last-first+1>MAX_SORT_PARAGRAPHS)throw new Error(`Choose at most ${MAX_SORT_PARAGRAPHS} paragraphs.`);
+ const blocks=getDocumentsState().blocks;
+ for(let i=first;i<=last;i++){const b=blocks.find(x=>x.index===i);if(!b||b.kind!=='para'||!b.editable)throw new Error('Only plain paragraphs can be moved.');}
+ if(delta<0?first===0:blocks.length>0&&last>=Math.max(...blocks.map(b=>b.index)))return;
+ await structural(eng=>eng.moveParagraphs(first,last,delta),n.h,n.h);setSel({...n.a,block:n.a.block+delta},{...n.h,block:n.h.block+delta});
+});
 /** Sorts the selected paragraphs A to Z or Z to A (numbers in order, case ignored); each keeps its formatting. One undo step; the selection stays on the same positions. */
 export const sortParagraphs=(descending:boolean)=>run(async()=>{
  const n=await paraSpan();if(!n)return;const first=n.s.block,last=n.e.block;
