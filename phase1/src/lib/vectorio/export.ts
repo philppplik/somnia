@@ -1,4 +1,5 @@
 import { formatGuides, normalizeGuides } from './guides';
+import { formatSwatches, normalizeSwatches } from './swatches';
 import { escapeAttr } from './xml';
 import { gradientSvg, pruneGradients } from './gradient';
 import { fmt } from './matrix';
@@ -37,8 +38,8 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
   const lines: string[] = [];
   const emit = (depth: number, s: string) => lines.push(ind.repeat(depth) + s);
   const w = fmt(doc.width, 3), h = fmt(doc.height, 3);
-  const gd = normalizeGuides(doc.guides);
-  emit(0, `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"${gd ? ` data-vs-guides="${formatGuides(gd)}"` : ''}>`);
+  const gd = normalizeGuides(doc.guides), sw = normalizeSwatches(doc.swatches);
+  emit(0, `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"${gd ? ` data-vs-guides="${formatGuides(gd)}"` : ''}${sw ? ` data-vs-swatches="${formatSwatches(sw)}"` : ''}>`);
 
   const pruned = pruneGradients(doc);
   if (pruned.gradients) {

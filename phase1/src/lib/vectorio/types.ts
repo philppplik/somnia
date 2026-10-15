@@ -86,6 +86,8 @@ export interface VectorDocument {
   groupNames?: Record<string, string>;
   /** Extension. Ruler guides (editor aid, not drawn in the export). Exported as `data-vs-guides` on the root `<svg>`. */
   guides?: Guides;
+  /** Extension. Colour palette (editor aid). Exported as `data-vs-swatches="#rrggbb,..."` on the root `<svg>`. */
+  swatches?: string[];
 }
 
 export const GRADIENT_LIMITS = Object.freeze({ maxGradients: 64, maxStops: 16 });

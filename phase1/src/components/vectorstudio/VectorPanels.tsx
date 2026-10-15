@@ -12,7 +12,7 @@ import {exportAreaDoc,EXPORT_AREAS,PADDING_LIMITS,type ExportArea} from '../../l
 import {SIMPLIFY_LIMITS} from '../../lib/vectorstudio/simplify';
 import {OFFSET_LIMITS} from '../../lib/vectorstudio/offsetOps';
 import {GRADIENT_KINDS,angleOf,hexOr} from '../../lib/vectorstudio/gradients';
-import {gradientIdOf,BLEND_MODES,ARROW_KINDS,arrowsApply} from '../../lib/vectorio';
+import {swatchColor,gradientIdOf,BLEND_MODES,ARROW_KINDS,arrowsApply} from '../../lib/vectorio';
 import {DASH_PRESETS,dashArrayFor,dashPresetOf} from '../../lib/vectorstudio/strokeStyle';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
@@ -96,10 +96,19 @@ function GradientControls(){
   </div>}
  </div>;
 }
+const SWATCH_ACTIONS=['fill','stroke','remove'] as const;
+/** Document palette: chips apply (or remove) a colour; the add buttons take the current fill or stroke when it is a hex colour. */
+function SwatchControls({fill,stroke}:{fill?:string;stroke?:string}){const {t}=useT(),s=useVectorSession(),[act,setAct]=useState<typeof SWATCH_ACTIONS[number]>('fill');const list=s.doc.swatches??[];
+ return <div className="grid gap-1" data-testid="vector-swatches"><div className={row}>{t('vector.shell.swatches')}</div>
+  {list.length>0&&<div className="flex flex-wrap gap-1">{list.map(c=><Button key={c} size="compact" variant="outline" aria-label={c} title={c} data-swatch={c} onClick={()=>act==='remove'?run('removeSwatch',{color:c}):run('applySwatch',{color:c,target:act})}><svg width="14" height="14" aria-hidden="true"><rect width="14" height="14" rx="3" fill={c} stroke="currentColor" strokeOpacity={0.4}/></svg></Button>)}</div>}
+  <div className="grid grid-cols-2 gap-1">{([['fill',fill],['stroke',stroke]] as const).map(([k,v])=>{const c=swatchColor(v);return <Button key={k} size="compact" disabled={!c||list.includes(c)} onClick={()=>c&&run('addSwatch',{color:c})}>{t('vector.shell.swatchAdd.'+k)}</Button>;})}</div>
+  <label className={row}>{t('vector.shell.swatchClick')}<NativeSelect className={field} value={act} onChange={e=>setAct(e.target.value as typeof act)}>{SWATCH_ACTIONS.map(a=><option key={a} value={a}>{t('vector.shell.swatchAct.'+a)}</option>)}</NativeSelect></label>
+ </div>;}
 export function VectorStyleSection(){const {t}=useT(),s=useVectorSession();const first=s.doc.paths.find(p=>s.selection.includes(p.id));if(!first)return null;const style=first.style??{};
  return <div className="grid gap-2" data-testid="vector-shell-style"><p className="m-0 text-[11px] text-ink-3">{t('vector.shell.styleHint')}</p>
   {(['fill','stroke'] as const).map(key=><label key={key} className={row}>{t('vector.'+key)}<div className="flex gap-1"><NativeInput className={field} key={key+style[key]} defaultValue={key==='fill'&&gradientIdOf(style.fill)?t('vector.shell.gradient.kind.gradient'):style[key]??(key==='fill'?'#000000':'none')} aria-label={t('vector.'+key)} onBlur={e=>{const v=e.target.value.trim();if(v==='none'||/^#(?:[0-9a-f]{3}|[0-9a-f]{4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(v))run('setStyle',{patch:{[key]:v}});else e.target.value=style[key]??'none';}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/><Button size="compact" onClick={()=>run('setStyle',{patch:{[key]:'none'}})}>{t('vector.none')}</Button></div></label>)}
   <GradientControls/>
+  <SwatchControls fill={style.fill} stroke={style.stroke}/>
   <div className="grid grid-cols-2 gap-2">{(['strokeWidth','opacity'] as const).map(key=><label className={row} key={key}>{t('vector.'+key)}<NativeInput className={field} key={key+style[key]} type="number" min={0} max={key==='opacity'?1:undefined} step={key==='opacity'?0.05:0.5} defaultValue={style[key]??1} onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n>=0&&(key!=='opacity'||n<=1))run('setStyle',{patch:{[key]:n}});else e.target.value=String(style[key]??1);}}/></label>)}</div>
   {(['lineCap','lineJoin','fillRule'] as const).map(key=><label className={row} key={key}>{t('vector.shell.'+key)}<NativeSelect className={field} value={style[key]??(key==='lineCap'?'butt':key==='lineJoin'?'miter':'nonzero')} onChange={e=>run('setStyle',{patch:{[key]:e.target.value}})}>{(key==='lineCap'?['butt','round','square']:key==='lineJoin'?['miter','round','bevel']:['nonzero','evenodd']).map(v=><option key={v} value={v}>{t('vector.shell.option.'+v)}</option>)}</NativeSelect></label>)}
   {(['arrowStart','arrowEnd'] as const).map(key=><label className={row} key={key}>{t('vector.shell.'+key)}<NativeSelect className={field} disabled={!arrowsApply(first)} value={style[key]??'none'} onChange={e=>run('setStyle',{patch:{[key]:e.target.value}})}>{ARROW_KINDS.map(v=><option key={v} value={v}>{t('vector.shell.arrow.'+v)}</option>)}</NativeSelect></label>)}
