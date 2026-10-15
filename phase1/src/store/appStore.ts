@@ -165,4 +165,4 @@ export function requestStudio(id:StudioId,source:'manual'|'automatic'|'open'='ma
 export function jumpToSourceSpan(file:string,span:{from:number;to:number;raw:string}){if(getState().files[file]!==span.raw||!Number.isSafeInteger(span.from)||!Number.isSafeInteger(span.to)||span.from<0||span.to<=span.from||span.to>span.raw.length)return false;openFileTab(file);patchState({jumpTo:{file,line:1,col:1,nonce:Date.now()+Math.random(),span},viewMode:'split'});return true;}
 
 // Own the low-level code-editor integration without lib -> store imports.
-installCodeEditorHost({read:getState,generation:getProjectGeneration,reveal:jumpToSourceSpan,notice:text=>patchState({notice:text})});
+installCodeEditorHost({read:getState,generation:getProjectGeneration,reveal:jumpToSourceSpan,revealPosition:(file,position)=>{if(!getState().coreConnected||getState().files[file]!==position.raw||!Number.isSafeInteger(position.line)||!Number.isSafeInteger(position.column)||position.line<1||position.column<1)return false;jumpToLine(file,position.line,position.column);return true;},notice:text=>patchState({notice:text})});

@@ -4,6 +4,7 @@ export interface CodeEditorHost {
  read:()=>CodeEditorSnapshot;
  generation:()=>number;
  reveal:(file:string,span:{from:number;to:number;raw:string})=>boolean;
+ revealPosition?:(file:string,position:{raw:string;line:number;column:number})=>boolean;
  notice:(text:string)=>void;
 }
 const unavailable:CodeEditorHost={read:()=>({activeStudio:'',activeFile:'',coreConnected:false,files:{}}),generation:()=>-1,reveal:()=>false,notice:()=>{}};
