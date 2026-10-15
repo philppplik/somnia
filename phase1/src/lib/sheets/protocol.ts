@@ -46,6 +46,8 @@ export type CfFlag='blanks'|'noBlanks'|'errors'|'noErrors'|'duplicate'|'unique'|
 export type CfTextMode='contains'|'notContains'|'beginsWith'|'endsWith';
 /** Highlight rules: a closed set of shapes, no formulas. */
 export type CfOp={kind:'cell';operator:CfOperator;value:string|number;value2?:string|number;style:CfStyle}|{kind:'text';mode:CfTextMode;text:string;style:CfStyle}|{kind:'flag';flag:CfFlag;style:CfStyle}|{kind:'top';rank:number;bottom:boolean;percent:boolean;style:CfStyle}|{kind:'scale';scale:CfScale}|{kind:'clear'}|{kind:'clearAll'};
+/** Data validation: a closed set of shapes, no custom formulas. */
+export type ValidationOp={kind:'list';items:string[]}|{kind:'listRange';source:string}|{kind:'number';whole:boolean;operator:CfOperator;value:number;value2?:number}|{kind:'length';operator:CfOperator;value:number;value2?:number}|{kind:'clear'};
 export type FillDirection='down'|'right'|'up'|'left';
 export type SheetOp={kind:'add';name?:string}|{kind:'rename';name:string}|{kind:'duplicate'}|{kind:'delete'}|{kind:'move';to:number};
 export type SheetsRequest=
@@ -66,6 +68,8 @@ export type SheetsRequest=
  |{id:number;op:'setReviewed';sheet:number;address:string;token:string;old:string;input:string}
  |{id:number;op:'undoReviewed';sheet:number;address:string;token:string}
  |{id:number;op:'sheets'}
+ |{id:number;op:'validation';sheet:number;row:number;col:number;rows:number;cols:number;validation:ValidationOp}
+ |{id:number;op:'validationItems';sheet:number;row:number;col:number}
  |{id:number;op:'cf';sheet:number;row:number;col:number;rows:number;cols:number;cf:CfOp}
  |{id:number;op:'fill';sheet:number;row:number;col:number;rows:number;cols:number;dir:FillDirection}
  |{id:number;op:'filter';sheet:number;row:number;col:number;rows:number;cols:number;filter:FilterOp}

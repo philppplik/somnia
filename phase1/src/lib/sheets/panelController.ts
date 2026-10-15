@@ -4,10 +4,11 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
+import {parseValidationCommand} from './validationOps';
 import {CF_FLAGS,CF_OPERATORS,CF_SCALES,CF_STYLES,CF_TEXT_MODES,parseCfCommand} from './cfOps';
 import {FILL_DIRECTIONS,parseFillCommand} from './fillOps';
 import {FILTER_CONDITIONS,parseFilterCommand} from './filterOps';
@@ -34,12 +35,14 @@ export interface SheetsPanelController {
  fillRange(dir:FillDirection):void|Promise<void>;
  /** Adds or clears highlight rules on the selected block (one undo step). */
  highlightRules(op:CfOp):void|Promise<void>;
+ /** Sets or clears data validation on the selected block (one undo step). */
+ setValidation(op:ValidationOp):void|Promise<void>;
 }
 let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -78,6 +81,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.highlight',title:'Highlight cells with a rule or color scale',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['cell','text','flag','top','scale','clear','clearAll']},operator:{type:'string',enum:[...CF_OPERATORS]},value:{type:['string','number'],maxLength:255},value2:{type:['string','number'],maxLength:255},mode:{type:'string',enum:[...CF_TEXT_MODES]},text:{type:'string',minLength:1,maxLength:255},flag:{type:'string',enum:[...CF_FLAGS]},rank:{type:'integer',minimum:1,maximum:1000},bottom:{type:'boolean'},percent:{type:'boolean'},scale:{type:'string',enum:[...CF_SCALES]},style:{type:'string',enum:[...CF_STYLES]}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().highlightRules(parseCfCommand(p))},
+ {id:'sheets.validation',title:'Limit what can be typed into the selected cells',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{kind:{type:'string',enum:['list','listRange','number','length','clear']},items:{type:'array',items:{type:'string',minLength:1,maxLength:64},minItems:1,maxItems:100},source:{type:'string',maxLength:20},whole:{type:'boolean'},operator:{type:'string',enum:[...CF_OPERATORS]},value:{type:'number'},value2:{type:'number'}},required:['kind'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().setValidation(parseValidationCommand(p))},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

@@ -6292,6 +6292,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.validation",
+      "title": "Limit what can be typed into the selected cells",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "shell.rail.hide",
       "title": "Hide rail icon",
       "category": "View",

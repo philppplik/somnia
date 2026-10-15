@@ -13,7 +13,14 @@ const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_CF_RULES: usize = 64;
+const MAX_VALIDATION_ITEMS: usize = 500;
+const MAX_VALIDATION_ITEMS_SET: usize = 100;
 const CF_OPERATORS: [&str; 8] = ["greater", "less", "equal", "notEqual", "greaterOrEqual", "lessOrEqual", "between", "notBetween"];
+/// `B7` -> `$B$7`, so a list source does not shift from cell to cell.
+fn absolute_a1(a1: &str) -> String {
+    let split = a1.find(|c: char| c.is_ascii_digit()).unwrap_or(a1.len());
+    format!("${}${}", &a1[..split], &a1[split..])
+}
 /// A comparison value: a finite number or a short single-line text. Anything else is refused.
 fn cf_value(v: Option<&serde_json::Value>) -> Option<serde_json::Value> {
     match v? {
@@ -283,7 +290,31 @@ impl HeadlessWorkbook {
         if input.len() > 32_767 {
             return Err("input exceeds 32,767 UTF-8 bytes".into());
         }
+        // Typed values must pass a "stop" validation (formulas are not validated, like Excel); warnings and notes let the value in.
+        if !input.starts_with('=')
+            && let Some(at) = CellRef::parse(address)
+        {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if let Some((dv, msg)) = gridcraft_engine::cmd::data::check_validation(&doc.wb, sheet, at, input)
+                && dv.error_style == gridcraft_engine::model::ErrorStyle::Stop
+            {
+                return Err(msg);
+            }
+        }
         self.session.run("cell.set", json!({"sheet":sheet,"cell":address,"input":input})).map(|v| v.to_string())
+    }
+
+    /// The choices of a list validation on one cell, as `{"items":[..]}` (at most 500), or `{"items":null}` when the cell has none.
+    pub fn validation_items(&self, sheet: usize, row: u32, col: u32) -> Result<String, String> {
+        let doc = self.session.doc().map_err(|e| e.to_string())?;
+        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+        let at = CellRef::new(row, col);
+        let found = sh.validations.iter().find(|d| d.ranges.iter().any(|r| r.contains(at)));
+        let Some(dv) = found.filter(|d| d.kind == gridcraft_engine::model::ValidationKind::List && d.in_cell_dropdown) else {
+            return Ok(json!({"items": null}).to_string());
+        };
+        let items: Vec<String> = gridcraft_engine::cmd::data::list_items(&doc.wb, sheet, dv).into_iter().take(MAX_VALIDATION_ITEMS).collect();
+        Ok(json!({"items": items}).to_string())
     }
 
     /// Like `range`, plus what the grid needs to paint each cell: the display text with the
@@ -607,6 +638,67 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// Sets or clears data validation on the block as ONE history entry. `op_json` is
+    /// `{"kind":"list","items":["a","b"]}` (1 to 100 short items, no commas, quotes or control characters),
+    /// `{"kind":"listRange","source":"A1:A9"}` (same sheet), `{"kind":"number","whole":bool,"operator":..,"value":n,"value2":n}`,
+    /// `{"kind":"length","operator":..,"value":n,"value2":n}` or `{"kind":"clear"}`. Typed entries that break a rule are refused by
+    /// `set_cell`. Protected sheets refused; the block replaces older rules it covers.
+    pub fn validation_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let kind = op.get("kind").and_then(|v| v.as_str()).ok_or("missing operation kind")?;
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let num = |v: Option<&serde_json::Value>| -> Result<String, String> {
+            let n = v.and_then(|v| v.as_f64()).filter(|n| n.is_finite() && n.abs() < 1e15).ok_or("the rule needs a number")?;
+            Ok(n.to_string())
+        };
+        let compare = |op: &serde_json::Value| -> Result<(String, String, Option<String>), String> {
+            let operator = op.get("operator").and_then(|v| v.as_str()).filter(|o| CF_OPERATORS.contains(o)).ok_or("unsupported comparison")?;
+            let f1 = num(op.get("value"))?;
+            let two = operator == "between" || operator == "notBetween";
+            let f2 = if two { Some(num(op.get("value2"))?) } else { None };
+            Ok((operator.to_string(), f1, f2))
+        };
+        let args = match kind {
+            "clear" => json!({"range": range, "clear": true}),
+            "list" => {
+                let items = op.get("items").and_then(|v| v.as_array()).ok_or("the list needs items")?;
+                if items.is_empty() || items.len() > MAX_VALIDATION_ITEMS_SET {
+                    return Err(format!("A list holds 1 to {MAX_VALIDATION_ITEMS_SET} items."));
+                }
+                let mut texts = Vec::new();
+                for i in items {
+                    let t = i.as_str().map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= 64).ok_or("each list item must be 1 to 64 characters")?;
+                    if t.chars().any(|c| c.is_control() || c == ',' || c == '"') {
+                        return Err("List items cannot contain commas, quotes or control characters.".into());
+                    }
+                    texts.push(t.to_string());
+                }
+                json!({"range": range, "type": "list", "formula1": format!("\"{}\"", texts.join(",")), "dropdown": true, "ignoreBlank": true})
+            }
+            "listRange" => {
+                let src = op.get("source").and_then(|v| v.as_str()).ok_or("the list needs a source range")?;
+                let r = gridcraft_engine::core::RangeRef::parse(src).filter(|r| !src.contains('!') && r.count() <= 500).ok_or("the source must be a range of at most 500 cells on this sheet")?;
+                json!({"range": range, "type": "list", "formula1": format!("{}:{}", absolute_a1(&r.start.a1()), absolute_a1(&r.end.a1())), "dropdown": true, "ignoreBlank": true})
+            }
+            "number" => {
+                let whole = op.get("whole").and_then(|v| v.as_bool()).ok_or("whole must be true or false")?;
+                let (operator, f1, f2) = compare(&op)?;
+                json!({"range": range, "type": if whole { "whole" } else { "decimal" }, "operator": operator, "formula1": f1, "formula2": f2, "ignoreBlank": true})
+            }
+            "length" => {
+                let (operator, f1, f2) = compare(&op)?;
+                json!({"range": range, "type": "textLength", "operator": operator, "formula1": f1, "formula2": f2, "ignoreBlank": true})
+            }
+            _ => return Err("unsupported validation kind".into()),
+        };
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run("data.validation", args).map(|v| v.to_string())
     }
 
     /// Adds or clears conditional-format rules as ONE history entry. `op_json` is one of
@@ -1679,5 +1771,40 @@ mod tests {
         }
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.cf_range(0, 50, 0, 3, 1, op).unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn validation_range_gates_typed_input_and_lists_choices() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.validation_range(0, 60, 0, 3, 1, r#"{"kind":"list","items":["red","green","blue"]}"#).unwrap();
+        assert!(book.validation_items(0, 60, 0).unwrap().contains("green"));
+        assert!(book.validation_items(0, 70, 0).unwrap().contains("null"));
+        assert!(book.set_cell(0, "A61", "purple").is_err());
+        book.set_cell(0, "A61", "Green").unwrap();
+        book.set_cell(0, "A62", "=1+1").unwrap();
+        book.undo().unwrap();
+        book.undo().unwrap();
+        book.undo().unwrap();
+        assert!(book.validation_items(0, 60, 0).unwrap().contains("null"), "one undo step removes the rule");
+        book.validation_range(0, 60, 1, 2, 1, r#"{"kind":"number","whole":true,"operator":"between","value":1,"value2":10}"#).unwrap();
+        book.set_cell(0, "B61", "5").unwrap();
+        assert!(book.set_cell(0, "B62", "11").is_err());
+        assert!(book.set_cell(0, "B62", "2.5").is_err());
+        book.validation_range(0, 60, 1, 2, 1, r#"{"kind":"clear"}"#).unwrap();
+        book.set_cell(0, "B62", "11").unwrap();
+        for bad in [
+            "nope",
+            r#"{"kind":"list","items":[]}"#,
+            r#"{"kind":"list","items":["a,b"]}"#,
+            r#"{"kind":"list","items":["a\"b"]}"#,
+            r#"{"kind":"listRange","source":"Other!A1:A3"}"#,
+            r#"{"kind":"listRange","source":"A1:A9999"}"#,
+            r#"{"kind":"number","whole":true,"operator":"between","value":1}"#,
+            r#"{"kind":"number","whole":true,"operator":"regex","value":1}"#,
+            r#"{"kind":"custom","formula":"=1"}"#,
+        ] {
+            assert!(book.validation_range(0, 60, 0, 3, 1, bad).is_err(), "{bad}");
+        }
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.validation_range(0, 60, 0, 3, 1, r#"{"kind":"clear"}"#).unwrap_err().contains("protected"));
     }
 }

@@ -14,6 +14,8 @@ import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
 import type {FillDirection,CfStyle} from '../../lib/sheets/protocol';
+import {VALIDATION_CHOICES,buildValidationOp,MAX_ITEM_CHARS,type ValidationChoice} from '../../lib/sheets/validationOps';
+import type {CfOperator} from '../../lib/sheets/protocol';
 import {CF_CHOICES,CF_STYLES,buildCfOp,cfChoiceNeeds,MAX_CF_TEXT,type CfChoice} from '../../lib/sheets/cfOps';
 import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
@@ -204,6 +206,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <FilterGroup/>
   <FillGroup/>
   <HighlightGroup/>
+  <ValidationGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
@@ -240,6 +243,28 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Limits what can be typed into the selected block: a list of choices or number/length bounds. One undo step. Typed entries that break a rule are refused. */
+const VALIDATION_OPERATORS:readonly CfOperator[]=['between','notBetween','equal','notEqual','greater','less','greaterOrEqual','lessOrEqual'];
+function ValidationGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState<ValidationChoice>('list');const [operator,setOperator]=useState<CfOperator>('between');const [a,setA]=useState('');const [b,setB]=useState('');
+ const r=s?.range;if(!s||!r)return null;
+ const numeric=choice==='whole'||choice==='decimal'||choice==='length',two=numeric&&(operator==='between'||operator==='notBetween'),op=buildValidationOp(choice,operator,a,b);
+ const run=(o:object)=>void action.run('sheets.validation',o);
+ const items=s.listItems;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.dv.title')}>
+  <span>{t('sheets.dv.title')}</span>
+  {items&&items.length>0&&<label className="flex flex-col gap-1">{t('sheets.dv.pick')}<NativeSelect className={field} value="" disabled={action.busy} onChange={e=>{const v=e.currentTarget.value;if(v)void action.run('sheets.setCell',{input:v});}} data-testid="sheets-dv-pick"><option value="">{t('sheets.dv.pickNone')}</option>{items.map(i=><option key={i} value={i}>{i}</option>)}</NativeSelect></label>}
+  <label className="flex flex-col gap-1">{t('sheets.dv.allow')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value as ValidationChoice)} data-testid="sheets-dv-kind">{VALIDATION_CHOICES.map(c=><option key={c} value={c}>{t('sheets.dv.kind.'+c)}</option>)}</NativeSelect></label>
+  {numeric&&<label className="flex flex-col gap-1">{t('sheets.dv.operator')}<NativeSelect className={field} value={operator} disabled={action.busy} onChange={e=>setOperator(e.currentTarget.value as CfOperator)} data-testid="sheets-dv-operator">{VALIDATION_OPERATORS.map(c=><option key={c} value={c}>{t('sheets.dv.op.'+c)}</option>)}</NativeSelect></label>}
+  <label className="flex flex-col gap-1">{t(choice==='list'?'sheets.dv.items':choice==='listRange'?'sheets.dv.source':'sheets.dv.value')}<NativeInput className={field} value={a} maxLength={choice==='list'?MAX_ITEM_CHARS*20:32} disabled={action.busy} onChange={e=>setA(e.currentTarget.value)} data-testid="sheets-dv-value"/></label>
+  {two&&<label className="flex flex-col gap-1">{t('sheets.dv.value2')}<NativeInput className={field} value={b} maxLength={32} disabled={action.busy} onChange={e=>setB(e.currentTarget.value)} data-testid="sheets-dv-value2"/></label>}
+  <div className="flex flex-wrap gap-2">
+   <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>op&&run(op)} data-testid="sheets-dv-apply">{t('sheets.dv.apply')}</Button>
+   <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>run({kind:'clear'})} data-testid="sheets-dv-clear">{t('sheets.dv.clear')}</Button>
+  </div>
+  <p className="text-ink-3">{t('sheets.dv.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 /** Highlights cells of the selected block by a rule or a color scale. One undo step; rules can be cleared for the block or the sheet. */
