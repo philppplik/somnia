@@ -19,3 +19,7 @@ test('shift commands pair insert with down/right and delete with up/left',()=>{
  assert.equal(shiftBlockProblem({kind:'insert',shift:'down'},r,6,100),'edge');assert.equal(shiftBlockProblem({kind:'insert',shift:'right'},r,1000,4),'edge');
  assert.equal(shiftBlockProblem({kind:'delete',shift:'up'},r,6,4),null);assert.equal(shiftBlockProblem({kind:'delete',shift:'up'},{r0:0,c0:0,r1:2000,c1:1000},9999,9999),'large');
 });
+test('error-check kinds are accepted by the find command',()=>{
+ assert.deepEqual(parseSpecialCommand({kind:'numbersAsText'}),{kind:'numbersAsText'});assert.deepEqual(parseSpecialCommand({kind:'paddedText'}),{kind:'paddedText'});
+ assert.throws(()=>parseSpecialCommand({kind:'inconsistent'}));
+});

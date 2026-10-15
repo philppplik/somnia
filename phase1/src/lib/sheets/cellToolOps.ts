@@ -33,6 +33,7 @@ export function parseCellToolCommand(input:unknown):CellToolOp{
  if(o.kind==='deleteStyle'){only('kind','name');const n=cleanStyleName(o.name);if(!n)throw Error('Invalid style name.');return {kind:'deleteStyle',name:n};}
  if(o.kind==='renameStyle'){only('kind','name','newName');const n=cleanStyleName(o.name),m=cleanStyleName(o.newName);if(!n||!m)throw Error('Invalid style name.');return {kind:'renameStyle',name:n,newName:m};}
  if(o.kind==='autoSum'){only('kind','function');if(!(AUTOSUM_FUNCTIONS as readonly unknown[]).includes(o.function))throw Error('Unsupported function.');return {kind:'autoSum',function:o.function as typeof AUTOSUM_FUNCTIONS[number]};}
+ if(o.kind==='fixText'){only('kind','rule');if(o.rule!=='numbersAsText'&&o.rule!=='paddedText')throw Error('Unsupported rule.');return {kind:'fixText',rule:o.rule};}
  if((SIMPLE_CELL_TOOLS as readonly unknown[]).includes(o.kind)){only('kind');return {kind:o.kind as typeof SIMPLE_CELL_TOOLS[number]};}
  throw Error('Unsupported cell tool.');
 }

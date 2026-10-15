@@ -34,3 +34,8 @@ test('custom styles: names are bounded and never shadow a built-in',()=>{
  assert.deepEqual(toolFromChoice('custom:Brand: 2'),{kind:'style',name:'Brand: 2'});assert.equal(toolFromChoice('newStyle'),null);
  assert.deepEqual(parseCustomStyles({styles:['A','B']}),['A','B']);assert.throws(()=>parseCustomStyles({styles:[1]}));assert.throws(()=>parseCustomStyles({styles:Array(51).fill('a')}));assert.throws(()=>parseCustomStyles(null));
 });
+test('fixText takes one closed rule',()=>{
+ assert.deepEqual(parseCellToolCommand({kind:'fixText',rule:'numbersAsText'}),{kind:'fixText',rule:'numbersAsText'});
+ assert.deepEqual(parseCellToolCommand({kind:'fixText',rule:'paddedText'}),{kind:'fixText',rule:'paddedText'});
+ for(const bad of [{kind:'fixText'},{kind:'fixText',rule:'x'},{kind:'fixText',rule:'paddedText',name:'a'}])assert.throws(()=>parseCellToolCommand(bad));
+});

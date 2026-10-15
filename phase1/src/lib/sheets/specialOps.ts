@@ -1,5 +1,5 @@
 /** Find cells by what they are (Go To Special). Reads only; the Rust bridge re-validates and the engine does the search. */
-export const SPECIAL_KINDS=['blanks','constants','formulas','text','numbers','errors','comments','conditionalFormats','dataValidation','invalidData'] as const;
+export const SPECIAL_KINDS=['blanks','constants','formulas','text','numbers','errors','comments','conditionalFormats','dataValidation','invalidData','numbersAsText','paddedText'] as const;
 export type SpecialKind=typeof SPECIAL_KINDS[number];
 export const MAX_SPECIAL_RANGES=500;
 export interface SpecialResult{count:number;ranges:string[];truncated:boolean}

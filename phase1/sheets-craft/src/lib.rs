@@ -13,6 +13,48 @@ const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
 const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_FIND_RANGES: usize = 500;
+const MAX_TEXT_FIX: usize = 2000;
+/// The text a cell would get from the error-checking rules, or None when the rule does not apply: `numbersAsText` is a typed text that reads as a number
+/// (IDs with a leading zero are left alone), `paddedText` is text with spaces around it that is not such a number. Formulas and anything that would
+/// start with = + - or @ after the change are never touched.
+fn text_fix(rule: &str, cell: &gridcraft_engine::model::Cell) -> Option<String> {
+    let gridcraft_engine::core::Value::Text(t) = &cell.value else { return None };
+    if cell.formula.is_some() || t.len() > 32_767 {
+        return None;
+    }
+    let trimmed = t.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let numeric = gridcraft_engine::core::parse::parse_number_text(trimmed).is_some();
+    let zero_led = trimmed.len() > 1 && trimmed.starts_with('0') && trimmed.chars().nth(1).is_some_and(|c| c.is_ascii_digit());
+    match rule {
+        "numbersAsText" if numeric && !zero_led => Some(trimmed.to_string()),
+        "paddedText" if !numeric && trimmed.len() != t.len() && !trimmed.starts_with(['=', '+', '-', '@', '\'']) => Some(trimmed.to_string()),
+        _ => None,
+    }
+}
+/// Runs of cells in one column, as A1 spans, for the Find results.
+fn cell_runs(cells: &mut Vec<(u32, u32)>) -> (usize, Vec<String>, bool) {
+    cells.sort_unstable();
+    cells.dedup();
+    let count = cells.len();
+    let mut runs: Vec<String> = Vec::new();
+    let mut i = 0;
+    while i < cells.len() && runs.len() <= MAX_FIND_RANGES {
+        let (c, r0) = cells[i];
+        let mut r1 = r0;
+        while i + 1 < cells.len() && cells[i + 1] == (c, r1 + 1) {
+            r1 += 1;
+            i += 1;
+        }
+        runs.push(if r1 == r0 { CellRef::new(r0, c).a1() } else { format!("{}:{}", CellRef::new(r0, c).a1(), CellRef::new(r1, c).a1()) });
+        i += 1;
+    }
+    let truncated = runs.len() > MAX_FIND_RANGES;
+    runs.truncate(MAX_FIND_RANGES);
+    (count, runs, truncated)
+}
 const MAX_SPLIT_PARTS: usize = 20;
 const MAX_NOTE_CHARS: usize = 2000;
 const MAX_NAMES: usize = 500;
@@ -3954,7 +3996,7 @@ impl HeadlessWorkbook {
     /// whole used range of the sheet. Returns `{"count":n,"ranges":["A1:A3","C5"],"truncated":bool}` with at most 500 vertical runs, `count` 0 when
     /// nothing matches. The engine selection is put back afterwards, so nothing is added to the history.
     pub fn find_special(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, kind: &str) -> Result<String, String> {
-        if !matches!(kind, "blanks" | "constants" | "formulas" | "text" | "numbers" | "errors" | "comments" | "conditionalFormats" | "dataValidation" | "invalidData") {
+        if !matches!(kind, "blanks" | "constants" | "formulas" | "text" | "numbers" | "errors" | "comments" | "conditionalFormats" | "dataValidation" | "invalidData" | "numbersAsText" | "paddedText") {
             return Err("unsupported kind of cells".into());
         }
         if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
@@ -3962,6 +4004,16 @@ impl HeadlessWorkbook {
         }
         self.check_block(sheet, row, col, rows, cols, false)?;
         self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+        if kind == "numbersAsText" || kind == "paddedText" {
+            // Error-checking rules, read only: one pass over the stored cells of the block (a single cell searches the whole sheet).
+            let whole = rows == 1 && cols == 1;
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let area = if whole { sh.cells.used_range() } else { Some(gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1))) };
+            let mut cells: Vec<(u32, u32)> = area.map(|a| sh.cells.iter_range(a).filter(|(_, c)| text_fix(kind, c).is_some()).map(|(c, _)| (c.col, c.row)).collect()).unwrap_or_default();
+            let (count, ranges, truncated) = cell_runs(&mut cells);
+            return Ok(json!({"count": count, "ranges": ranges, "truncated": truncated}).to_string());
+        }
         if kind == "invalidData" {
             // Cells whose content breaks their own validation rule (the engine's "circle invalid data", a query without history). The grid cannot draw
             // circles, so the cells come back as runs to jump to. The block limits the search; a single cell searches the whole sheet.
@@ -4614,6 +4666,7 @@ impl HeadlessWorkbook {
             "style" | "newStyle" | "deleteStyle" => &["kind", "name"],
             "renameStyle" => &["kind", "name", "newName"],
             "autoSum" => &["kind", "function"],
+            "fixText" => &["kind", "rule"],
             _ => &["kind"],
         };
         if map.keys().any(|k| !known.contains(&k.as_str())) {
@@ -4748,6 +4801,45 @@ impl HeadlessWorkbook {
                     }
                     self.session.run("selection.set", json!({"sheet": sheet, "range": range}))?;
                     self.session.run("cell.toggleCheckbox", json!({"sheet": sheet})).map(|v| v.to_string())
+                }
+                "fixText" => {
+                    let rule = map.get("rule").and_then(|v| v.as_str()).filter(|r| ["numbersAsText", "paddedText"].contains(r)).ok_or("unsupported rule")?;
+                    let mut hits: Vec<(u32, u32, String)> = {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        sh.cells.iter_range(block).filter_map(|(c, cell)| text_fix(rule, cell).map(|t| (c.col, c.row, t))).take(MAX_TEXT_FIX + 1).collect()
+                    };
+                    if hits.is_empty() {
+                        return Err("Nothing to fix in the selection.".into());
+                    }
+                    if hits.len() > MAX_TEXT_FIX {
+                        return Err(format!("More than {MAX_TEXT_FIX} cells to fix: select fewer."));
+                    }
+                    hits.sort_unstable_by_key(|h| (h.0, h.1));
+                    let total = hits.len();
+                    // One engine write per run of cells in a column; the wrapper keeps the first undo snapshot, so the whole fix is ONE history entry.
+                    let mut i = 0;
+                    while i < hits.len() {
+                        let (c, r0) = (hits[i].0, hits[i].1);
+                        let mut values = vec![vec![hits[i].2.clone()]];
+                        let mut r1 = r0;
+                        while i + 1 < hits.len() && hits[i + 1].0 == c && hits[i + 1].1 == r1 + 1 {
+                            r1 += 1;
+                            i += 1;
+                            values.push(vec![hits[i].2.clone()]);
+                        }
+                        self.session.run("range.setValues", json!({"sheet": sheet, "range": CellRef::new(r0, c).a1(), "values": values}))?;
+                        i += 1;
+                    }
+                    let left = {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        sh.cells.iter_range(block).filter(|(_, cell)| text_fix(rule, cell).is_some()).count()
+                    };
+                    if left >= total {
+                        return Err("The cells keep their text (for example a Text number format). Change their number format first.".into());
+                    }
+                    Ok(json!({"fixed": total - left}).to_string())
                 }
                 "pickFormat" => {
                     self.session.run("selection.set", json!({"sheet": sheet, "range": range}))?;
@@ -5818,6 +5910,30 @@ mod tests {
         assert_eq!(book.session.doc().unwrap().wb.sheets.len(), sheets_before + 1, "undo removes only the last list sheet");
         book.undo().unwrap();
         assert_eq!(book.session.doc().unwrap().wb.sheets.len(), sheets_before);
+    }
+    #[test]
+    fn error_checking_rules_find_and_fix_text_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        // Typed text: the engine reads a leading apostrophe as "keep as text", so the cells are written as text through the model.
+        book.set_values(0, 900, 0, r#"[["'42"],["'1,000"],["'007"],["'plain"],["'  padded  "],["'  12  "],["'  =x"]]"#).unwrap();
+        let found = |book: &mut HeadlessWorkbook, kind: &str| -> serde_json::Value { serde_json::from_str(&book.find_special(0, 900, 0, 7, 1, kind).unwrap()).unwrap() };
+        assert_eq!(found(&mut book, "numbersAsText")["count"], 3, "42, 1,000 and '  12  ' read as numbers; 007 keeps its zeros");
+        assert_eq!(found(&mut book, "paddedText")["count"], 1, "only the padded word: a padded number belongs to the other rule, =x is never touched");
+        assert!(book.find_special(0, 900, 0, 7, 1, "nope").is_err());
+        assert!(book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"nope"}"#).is_err());
+        assert!(book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"paddedText","x":1}"#).is_err());
+        let depth = book.session.doc().unwrap().undo.len();
+        let r: serde_json::Value = serde_json::from_str(&book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"numbersAsText"}"#).unwrap()).unwrap();
+        assert_eq!(r["fixed"], 3);
+        assert_eq!(book.session.doc().unwrap().undo.len(), depth + 1, "one history entry for the whole fix");
+        assert_eq!(found(&mut book, "numbersAsText")["count"], 0);
+        assert!(book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"numbersAsText"}"#).is_err(), "nothing left to fix");
+        book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"paddedText"}"#).unwrap();
+        assert_eq!(found(&mut book, "paddedText")["count"], 0);
+        book.undo().unwrap();
+        assert_eq!(found(&mut book, "paddedText")["count"], 1, "undo restores the padded text");
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.cell_tools_op(0, 900, 0, 7, 1, r#"{"kind":"fixText","rule":"paddedText"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn sheet_hide_unhide_tab_color_and_view_flags() {
