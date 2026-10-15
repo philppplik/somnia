@@ -5006,6 +5006,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.delete_table",
+      "title": "Delete table",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.table.even_cols",
+      "title": "Make columns the same width",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.insert",
       "title": "Insert table",
       "category": "View",

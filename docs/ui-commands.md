@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-915 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+917 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -416,6 +416,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.table.colWidth` | Set column width | View | documents |  |
 | `documents.table.delete_col` | Delete column | View | documents |  |
 | `documents.table.delete_row` | Delete row | View | documents |  |
+| `documents.table.delete_table` | Delete table | View | documents |  |
+| `documents.table.even_cols` | Make columns the same width | View | documents |  |
 | `documents.table.insert` | Insert table | View | documents |  |
 | `documents.table.layout` | Set table layout | View | documents |  |
 | `documents.table.merge_down` | Merge with cell below | View | documents |  |

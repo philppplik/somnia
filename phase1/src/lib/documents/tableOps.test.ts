@@ -38,3 +38,11 @@ test('vertical merge keeps the caret in the same cell and the hidden cell is sim
  assert.equal(blockAfterTableEdit('merge_down',at,b),CELL_BASE);
  assert.equal(blockAfterTableEdit('merge_down',{table:1,row:1,cell:1},b),CELL_BASE+3);
 });
+test('after deleting a table the caret goes to the paragraph now in its place, else the one before',()=>{
+ const p=(index:number,editable=true)=>({index,kind:'para',text:'x',editable}) as never;
+ const at={table:2,row:0,cell:0};
+ assert.equal(blockAfterTableEdit('delete_table',at,[p(0),p(1),p(2)]),2);
+ assert.equal(blockAfterTableEdit('delete_table',at,[p(0),p(1)]),1);
+ assert.equal(blockAfterTableEdit('delete_table',at,[p(0,false),p(1,false)]),null);
+ assert.equal(blockAfterTableEdit('delete_table',{table:0,row:0,cell:0},[]),null);
+});

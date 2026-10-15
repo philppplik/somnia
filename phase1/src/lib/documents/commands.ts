@@ -297,6 +297,8 @@ export function registerDocumentsCommands(){
   add('documents.table.split_cell','Split merged cell',async()=>{await editTable('split_cell');},inCell),
   add('documents.table.merge_down','Merge with cell below',async()=>{await editTable('merge_down');},inCell),
   add('documents.table.split_down','Split vertically merged cell',async()=>{await editTable('split_down');},inCell),
+  add('documents.table.even_cols','Make all columns the same width',async()=>{await editTable('even_cols');},inCell),
+  add('documents.table.delete_table','Delete table',async()=>{await editTable('delete_table');},inCell),
   add('documents.table.delete_col','Delete column',async()=>{await editTable('delete_col');},inCell),
  ];
  return()=>offs.forEach(f=>f());

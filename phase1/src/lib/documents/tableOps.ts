@@ -18,6 +18,11 @@ export function wantedCell(op:TableOp,at:CellSpot):{row:number;cell:number}{
 }
 /** First paragraph of the cell in table `at.table` nearest to the wanted row and cell (after a delete the wanted cell may be gone). */
 export function blockAfterTableEdit(op:TableOp,at:CellSpot,blocks:readonly DocBlock[]):number|null{
+ if(op==='delete_table'){
+  // The table is gone: the paragraph that now sits where it was, else the one before it.
+  const ok=(i:number)=>blocks.find(b=>b.index===i&&b.kind==='para'&&b.editable)?.index??null;
+  return ok(at.table)??ok(at.table-1);
+ }
  const w=wantedCell(op,at);let best:DocBlock|null=null,bd=Infinity;
  for(const b of blocks){
   if(b.kind!=='cell'||b.table!==at.table||b.row===undefined||b.cell===undefined||!b.editable)continue;

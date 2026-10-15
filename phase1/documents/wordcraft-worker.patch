@@ -52,7 +52,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5707 @@
+@@ -0,0 +1,5758 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2301,6 +2301,16 @@ index 0000000..5b80b79
 +        }
 +        let [b, r, c, _] = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
 +        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("the caret is not inside a table".into()) };
++        if op == "delete_table" {
++            // The whole table goes; a paragraph always stays on at least one side so text can still be typed there.
++            self.doc.body.remove(b);
++            let para_at = |i: usize| matches!(self.doc.body.get(i).map(|x| &**x), Some(Block::Para(_)));
++            if !(b > 0 && para_at(b - 1)) && !para_at(b) {
++                self.doc.body.insert(b, wordcraft_doc::para_block(wordcraft_doc::Paragraph::new()));
++            }
++            self.pages = DocLayout::default();
++            return Ok(());
++        }
 +        let mut t2 = t.clone();
 +        let row = t2.rows.get(r).ok_or("no such row")?;
 +        let grid_start: usize = row.cells.iter().take(c).map(|x| x.span()).sum();
@@ -2355,6 +2365,24 @@ index 0000000..5b80b79
 +                    target.props.vmerge = if goes_on { VMerge::Restart } else { VMerge::None };
 +                }
 +                t2.delete_row(r);
++            }
++            "even_cols" => {
++                let n = t2.grid.len();
++                if n == 0 || t2.grid.len() != t2.cols() {
++                    return Err("this table has no usable column grid".into());
++                }
++                let each = t2.grid.iter().sum::<f32>() / n as f32;
++                if !each.is_finite() || !(20.0..=1000.0).contains(&each) {
++                    return Err("the columns would be too narrow or too wide".into());
++                }
++                for g in t2.grid.iter_mut() {
++                    *g = each;
++                }
++                for row in t2.rows.iter_mut() {
++                    for cell in row.cells.iter_mut() {
++                        cell.props.width = Some(each * cell.span() as f32);
++                    }
++                }
 +            }
 +            "col_left" | "col_right" => {
 +                let n = t2.grid.len();
@@ -4437,6 +4465,29 @@ index 0000000..5b80b79
 +        for bad in [r#"{"rowHeight":{"rule":"exact"}}"#, r#"{"rowHeight":{"rule":"exact","value":0}}"#, r#"{"rowHeight":{"rule":"exact","value":2000}}"#, r#"{"rowHeight":{"rule":"auto","value":5}}"#, r#"{"rowHeight":{"rule":"x"}}"#, r#"{"rowHeight":5}"#, r#"{"allRows":true}"#, r#"{"rowHeight":{"rule":"exact","value":10,"extra":1}}"#] {
 +            assert!(s.do_set_table_layout(blk, bad).is_err(), "{bad}");
 +        }
++    }
++    #[test]
++    fn delete_table_and_even_columns_work_and_unknown_ops_fail() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        s.do_insert_table(0, 2, 3).unwrap();
++        s.do_set_col_width(CELL_BASE, 60.0).unwrap();
++        let width = |s: &DocSession| match s.doc.body.iter().find_map(|b| if let Block::Table(t) = &**b { Some(t.grid.clone()) } else { None }) {
++            Some(g) => g,
++            None => vec![],
++        };
++        let before: f32 = width(&s).iter().sum();
++        s.do_table_edit(CELL_BASE, "even_cols").unwrap();
++        let g = width(&s);
++        assert!(g.iter().all(|x| (x - g[0]).abs() < 0.01));
++        assert!((g.iter().sum::<f32>() - before).abs() < 0.1);
++        assert!(s.do_table_edit(CELL_BASE, "nope").is_err());
++        let blocks = s.doc.body.len();
++        s.do_table_edit(CELL_BASE, "delete_table").unwrap();
++        assert_eq!(s.doc.body.len(), blocks - 1);
++        assert!(width(&s).is_empty());
++        assert!(s.do_table_edit(0, "delete_table").is_err());
++        let reopened = DocSession::from_bytes(&s.save().unwrap()).unwrap();
++        assert!(width(&reopened).is_empty());
 +    }
 +    #[test]
 +    fn proofing_lists_issues_with_offsets_and_skips_marked_text() {
