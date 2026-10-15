@@ -1312,5 +1312,11 @@
  "animation.rig.shake.20": "Sacudir a partir do cursor, forte",
  "cmd.animation.layers.shake": "Sacudir as camadas marcadas a partir do cursor como um impacto",
  "animation.export.check.shrunk": "Reduzida a zero em todo o intervalo de exportação, então nunca aparece: {names}",
- "animation.export.check.empty": "Camada de texto sem texto, não desenha nada: {names}"
+ "animation.export.check.empty": "Camada de texto sem texto, não desenha nada: {names}",
+ "animation.rig.slide.in.left": "Entrar voando pela esquerda",
+ "animation.rig.slide.in.right": "Entrar voando pela direita",
+ "animation.rig.slide.out.left": "Sair voando para a esquerda",
+ "animation.rig.slide.out.right": "Sair voando para a direita",
+ "animation.rig.group.slide": "Entrar ou sair voando",
+ "cmd.animation.layers.slide": "Fazer as camadas marcadas entrarem ou saírem por uma borda da tela"
 }

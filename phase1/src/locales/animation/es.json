@@ -1312,5 +1312,11 @@
  "animation.rig.shake.20": "Sacudir desde el cabezal, fuerte",
  "cmd.animation.layers.shake": "Sacudir las capas marcadas desde el cabezal como un impacto",
  "animation.export.check.shrunk": "Reducida a cero en todo el rango de exportación, así que nunca se ve: {names}",
- "animation.export.check.empty": "Capa de texto sin texto, no dibuja nada: {names}"
+ "animation.export.check.empty": "Capa de texto sin texto, no dibuja nada: {names}",
+ "animation.rig.slide.in.left": "Entrar volando desde la izquierda",
+ "animation.rig.slide.in.right": "Entrar volando desde la derecha",
+ "animation.rig.slide.out.left": "Salir volando hacia la izquierda",
+ "animation.rig.slide.out.right": "Salir volando hacia la derecha",
+ "animation.rig.group.slide": "Entrar o salir volando",
+ "cmd.animation.layers.slide": "Hacer entrar o salir las capas marcadas por un borde del lienzo"
 }

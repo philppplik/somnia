@@ -1835,3 +1835,18 @@ test('P275 export check: shrunk to zero and empty text are warned, normal layers
  assert.ok(sh&&sh.severity==='warn'&&sh.layers.includes('Gone')&&sh.layers.length===1);
  assert.ok(em&&em.layers.includes('Blank'));
 });
+
+test('P276 slide: flies in from past the edge, out past it, skips parented and animated layers, one undo',async()=>{
+ const {slideSpecs,offCanvas}=await import('./slideCommands');const run=slideSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.deepEqual(offCanvas([100,50],'left',800,450),[-700,50]);assert.deepEqual(offCanvas([100,50],'down',800,450),[100,500]);
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!;
+ const home=L().transform.position.value as readonly number[],c=findComp(s.document!)!;
+ assert.throws(()=>run({frames:0,layers:['b']}),/1 to/);
+ run({mode:'in',dir:'right',frames:10,layers:['b']});let k=L().transform.position.keys;
+ assert.equal(k.length,2);assert.equal(k[0].t,L().inT);assert.equal(k[1].t,L().inT+f(10));assert.deepEqual(k[0].v,[home[0]+c.width,home[1]]);assert.deepEqual(k[1].v,[...home]);
+ assert.throws(()=>run({layers:['b']}),/can slide/);
+ s.undo();assert.equal(L().transform.position.keys.length,0);
+ run({mode:'out',dir:'up',frames:6,layers:['b'],ease:false});k=L().transform.position.keys;
+ assert.equal(k[0].t,L().outT-f(6));assert.deepEqual(k[0].v,[...home]);assert.deepEqual(k[1].v,[home[0],home[1]-c.height]);assert.equal(k[0].interp,'linear');
+});

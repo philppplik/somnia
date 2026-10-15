@@ -1312,5 +1312,11 @@
  "animation.rig.shake.20": "Shake at the playhead, strong",
  "cmd.animation.layers.shake": "Shake the ticked layers from the playhead like an impact",
  "animation.export.check.shrunk": "Scaled down to nothing for the whole export range, so it never shows: {names}",
- "animation.export.check.empty": "Text layer with no text, so it draws nothing: {names}"
+ "animation.export.check.empty": "Text layer with no text, so it draws nothing: {names}",
+ "animation.rig.slide.in.left": "Fly in from the left",
+ "animation.rig.slide.in.right": "Fly in from the right",
+ "animation.rig.slide.out.left": "Fly out to the left",
+ "animation.rig.slide.out.right": "Fly out to the right",
+ "animation.rig.group.slide": "Fly in or out",
+ "cmd.animation.layers.slide": "Fly the ticked layers in from or out past a canvas edge"
 }

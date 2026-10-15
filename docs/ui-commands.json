@@ -2459,6 +2459,26 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.slide",
+      "title": "Fly the ticked layers in from or out past a canvas edge",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "edge",
+        "enter",
+        "entrance",
+        "exit",
+        "fly",
+        "in",
+        "move",
+        "out",
+        "slide",
+        "transition"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.spin",
       "title": "Spin the ticked layers around their anchor",
       "category": "Edit",

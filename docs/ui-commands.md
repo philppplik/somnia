@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1004 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1005 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -185,6 +185,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.layers.scatter` | Scatter, nudge or shuffle the ticked layers | Edit | animation |  |
 | `animation.layers.sendTo` | Copy or move layers to another composition | Edit | animation |  |
 | `animation.layers.shake` | Shake the ticked layers from the playhead like an impact | Edit | animation |  |
+| `animation.layers.slide` | Fly the ticked layers in from or out past a canvas edge | Edit | animation |  |
 | `animation.layers.spin` | Spin the ticked layers around their anchor | Edit | animation |  |
 | `animation.layers.split` | Split the selected layers at the playhead | Edit | animation |  |
 | `animation.layers.squash` | Squash and stretch the selected layers from their motion | Edit | animation |  |

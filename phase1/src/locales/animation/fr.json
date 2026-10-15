@@ -1312,5 +1312,11 @@
  "animation.rig.shake.20": "Secouer depuis la tête de lecture, fort",
  "cmd.animation.layers.shake": "Secouer les calques cochés depuis la tête de lecture comme un choc",
  "animation.export.check.shrunk": "Réduit à zéro sur toute la plage d’export, donc jamais visible : {names}",
- "animation.export.check.empty": "Calque de texte sans texte, ne dessine rien : {names}"
+ "animation.export.check.empty": "Calque de texte sans texte, ne dessine rien : {names}",
+ "animation.rig.slide.in.left": "Entrer par la gauche",
+ "animation.rig.slide.in.right": "Entrer par la droite",
+ "animation.rig.slide.out.left": "Sortir par la gauche",
+ "animation.rig.slide.out.right": "Sortir par la droite",
+ "animation.rig.group.slide": "Entrer ou sortir",
+ "cmd.animation.layers.slide": "Faire entrer ou sortir les calques cochés par un bord du canevas"
 }
