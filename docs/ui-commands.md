@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1049 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1051 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -410,6 +410,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.image.wrap` | Set picture wrap | View | documents |  |
 | `documents.import.file` | Open a Markdown, HTML, text, RTF or ODT file as a document | View | documents |  |
 | `documents.indent.decrease` | Decrease indent | View | documents |  |
+| `documents.indent.hanging` | Add a hanging indent | View | documents |  |
+| `documents.indent.hangingLess` | Reduce the hanging indent | View | documents |  |
 | `documents.indent.increase` | Increase indent | View | documents |  |
 | `documents.insert.coverPage` | Insert a cover page | View | documents |  |
 | `documents.insert.dateTime` | Insert the current date and time | View | documents |  |

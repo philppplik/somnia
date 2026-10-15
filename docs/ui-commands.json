@@ -5311,6 +5311,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.indent.hanging",
+      "title": "Add a hanging indent",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.indent.hangingLess",
+      "title": "Reduce the hanging indent",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.indent.increase",
       "title": "Increase indent",
       "category": "View",

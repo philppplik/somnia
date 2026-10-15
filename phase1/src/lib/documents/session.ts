@@ -278,6 +278,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
  patchDocuments({edited:true,editError:'',caretLocked:false,imageBlock:null,imageRects:[],caret:{block:after.block,anchor:after.off,head:after.off}});await refresh(d);
 }
 /* ---- On-page caret: all offsets are UTF-8 bytes of the paragraph's current text. A selection may span paragraphs (anchorBlock differs from block). ---- */
+import {hangingPatch} from './hanging';
 import {autoLink,autoCorrect,autoCorrectOn} from './autocorrect';
 import {printDocument} from './print';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
@@ -735,6 +736,12 @@ export const shiftListLevel=(delta:1|-1)=>run(async()=>{
  await structural(eng=>eng.shiftListLevel(n.s.block,n.e.block,delta),n.h,n.h);setSel(n.a,n.h);
 });
 export const INDENT_STEP_PT=36;
+/** Ctrl+T: moves the text of the selected paragraphs one step right and keeps the first line (a hanging indent); Ctrl+Shift+T reduces it. One undo step. */
+export const stepHanging=(dir:'more'|'less')=>run(()=>{
+ const p=getDocumentsState().para;
+ const patch=hangingPatch(p?.indentLeft??null,p?.indentFirst??null,dir);
+ return patch?applyPara(patch):Promise.resolve();
+});
 /** Moves the left indent by one 36 pt step (clamped to 0-1440); a mixed selection starts from 0. */
 export const stepIndent=(dir:-1|1)=>run(()=>{
  const cur=getDocumentsState().para?.indentLeft??0;

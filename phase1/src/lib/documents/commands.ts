@@ -24,7 +24,7 @@ import {pickAndCompareText,pickAndInsertText} from './insertFromFile';
 import {symbolProblem,specialChar,timeText} from './symbols';
 import {getLocale as currentLocale} from '../i18n';
 import {authorProblem,setAuthor} from './author';
-import {insertBlankPage,insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
+import {stepHanging,insertBlankPage,insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './session';
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
@@ -234,6 +234,8 @@ export function registerDocumentsCommands(){
   add('documents.align.center','Align center',async()=>{await setAlign('center');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.align.right','Align right',async()=>{await setAlign('right');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.align.justify','Align justify',async()=>{await setAlign('justify');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.indent.hanging','Add a hanging indent',async()=>{await stepHanging('more');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.indent.hangingLess','Reduce the hanging indent',async()=>{await stepHanging('less');},()=>ready()&&!!getDocumentsState().caret),
   add('documents.indent.increase','Increase indent',async()=>{await stepIndent(1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.indent.decrease','Decrease indent',async()=>{await stepIndent(-1);},()=>ready()&&!!getDocumentsState().caret),
   add('documents.style.normal','Apply Normal style',async()=>{await setParagraphStyle('Normal');},()=>ready()&&!!getDocumentsState().caret),
