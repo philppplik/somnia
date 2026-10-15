@@ -19,6 +19,7 @@ import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
+import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
 import {ALLOW_PRESETS,MAX_PASSWORD_CHARS,passwordBad} from '../../lib/sheets/protectOps';
 import type {PivotField,PivotFunc} from '../../lib/sheets/protocol';
@@ -229,6 +230,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ProtectGroup/>
   <WhatIfGroup/>
   <ObjectsGroup/>
+  <SavedViewsGroup/>
   <TablesGroup/>
   <PivotGroup/>
   <PrintGroup/>
@@ -397,6 +399,26 @@ function WhatIfGroup(){
  </div>;
 }
 /** Pictures and shapes in one grouped menu. A picture is read from a chosen PNG or JPEG file; shapes and object changes are built from fields. One undo step each. */
+/** Named views: the sheet, the selected cell and the zoom. Saving and deleting are workbook settings, not undo steps. */
+type ViewsAction='save'|'show'|'delete';
+function SavedViewsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ViewsAction>('show');const [name,setName]=useState('');const [pick,setPick]=useState('');
+ if(!s)return null;
+ const list=s.savedViews??[],saving=act==='save',chosen=list.find(v=>v.name===pick)??null,target=saving?name.trim():chosen?.name??'';
+ const problem=saving?viewNameProblem(name):chosen?'':'pick';
+ const apply=()=>{if(!problem)void action.run('sheets.savedView',{kind:act,name:target}).then(r=>{if(r!==null&&saving)setName('');});};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.sv.title')}>
+  <span>{t('sheets.sv.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.sv.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ViewsAction)} data-testid="sheets-sv-action">
+   <optgroup label={t('sheets.sv.groupCurrent')}><option value="save">{t('sheets.sv.save')}</option></optgroup>
+   <optgroup label={t('sheets.sv.groupSaved')}><option value="show">{t('sheets.sv.show')}</option><option value="delete">{t('sheets.sv.delete')}</option></optgroup>
+  </NativeSelect></label>
+  {saving?<label className="flex flex-col gap-1">{t('sheets.sv.name')}<NativeInput className={field} value={name} maxLength={MAX_VIEW_NAME} aria-invalid={name!==''&&!!problem} disabled={action.busy} onChange={e=>setName(e.currentTarget.value)} data-testid="sheets-sv-name"/></label>
+   :<label className="flex flex-col gap-1">{t('sheets.sv.pick')}<NativeSelect className={field} value={pick} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-sv-pick"><option value="">{t('sheets.sv.pickNone')}</option>{list.map(v=><option key={v.name} value={v.name}>{v.name} ({v.selection}, {v.zoom}%)</option>)}</NativeSelect></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={apply} data-testid="sheets-sv-apply">{t('sheets.sv.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.sv.hint',{cell:s.address})}</p>
+ </div>;
+}
 function ObjectsGroup(){
  const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ObjectAction>('picture');const [file,setFile]=useState<File|null>(null);const [alt,setAlt]=useState('');
  const [f,setF]=useState({fill:'',line:'',text:'',width:'',height:'',pick:''});const r=s?.range;

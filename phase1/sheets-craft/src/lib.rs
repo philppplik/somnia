@@ -29,6 +29,8 @@ const MAX_WHATIF_REFS: usize = 200;
 const MAX_WHATIF_NAME: usize = 255;
 const MAX_WHATIF_VALUES: usize = 32;
 const MAX_OBJECTS: usize = 200;
+const MAX_SAVED_VIEWS: usize = 50;
+const MAX_VIEW_NAME: usize = 64;
 const MAX_PICTURES: usize = 100;
 const MAX_PICTURE_BYTES: usize = 10 * 1024 * 1024;
 const MAX_SHAPE_TEXT: usize = 200;
@@ -1575,6 +1577,78 @@ impl HeadlessWorkbook {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
         let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
         Ok(json!({"zoom": sh.zoom, "gridlines": sh.show_gridlines}).to_string())
+    }
+
+    /// The saved views of the workbook (read only): `{"views":[{"name","sheet","selection","zoom"}]}` in name order, at most 50. A saved view remembers the
+    /// sheet, the selected cell and the zoom of that sheet.
+    pub fn saved_views(&mut self) -> Result<String, String> {
+        let stash = self.session.run("view.customViews", json!({})).map_err(|e| e.to_string())?;
+        let mut views: Vec<(String, serde_json::Value)> = stash.as_object().map(|m| m.iter().map(|(k, v)| (k.clone(), v.clone())).collect()).unwrap_or_default();
+        views.sort_by(|a, b| a.0.cmp(&b.0));
+        let list: Vec<_> = views.iter().take(MAX_SAVED_VIEWS).filter(|(n, _)| n.chars().count() <= MAX_VIEW_NAME).map(|(n, v)| json!({
+            "name": n, "sheet": v["sheet"].as_u64(), "selection": v["selection"].as_str().map(|t| t.chars().take(24).collect::<String>()), "zoom": v["zoom"].as_u64(),
+        })).collect();
+        Ok(json!({"views": list}).to_string())
+    }
+
+    /// Saves, shows or deletes a named view. `op_json` is `{"kind":"save","name"}` (the sheet `sheet`, the cell `row`,`col` and that sheet's zoom; an existing
+    /// name is replaced; at most 50 views), `{"kind":"show","name"}` (activates the sheet, selects the cell, sets the zoom; hidden or missing sheets refused) or
+    /// `{"kind":"delete","name"}`. Names are 1 to 64 characters without control characters. Views are workbook settings and not undo steps.
+    /// Returns `{"sheet","selection","zoom"}` for `show` and the view list otherwise.
+    pub fn saved_view_op(&mut self, sheet: usize, row: u32, col: u32, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        if map.keys().any(|k| k != "kind" && k != "name") {
+            return Err("unknown view field".into());
+        }
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?.to_string();
+        let name = map.get("name").and_then(|v| v.as_str()).map(str::trim).filter(|t| !t.is_empty() && t.chars().count() <= MAX_VIEW_NAME && !t.chars().any(|c| c.is_control())).ok_or("The view name must be 1 to 64 characters without control characters.")?.to_string();
+        let existing = {
+            let listed: serde_json::Value = serde_json::from_str(&self.saved_views()?).map_err(|e| e.to_string())?;
+            listed["views"].as_array().map(|a| a.iter().any(|v| v["name"].as_str() == Some(name.as_str())) as usize * 1000 + a.len()).unwrap_or(0)
+        };
+        let (known, count) = (existing >= 1000, existing % 1000);
+        match kind.as_str() {
+            "save" => {
+                self.check_block(sheet, row, col, 1, 1, false)?;
+                if !known && count >= MAX_SAVED_VIEWS {
+                    return Err(format!("A workbook can keep at most {MAX_SAVED_VIEWS} saved views."));
+                }
+                self.session.run("sheet.activate", json!({"sheet": sheet})).map_err(|e| e.to_string())?;
+                self.session.run("selection.set", json!({"range": CellRef::new(row, col).a1()})).map_err(|e| e.to_string())?;
+                self.session.run("view.customViews", json!({"save": name})).map_err(|e| e.to_string())?;
+                self.saved_views()
+            }
+            "show" => {
+                if !known {
+                    return Err("No such view.".into());
+                }
+                let target = {
+                    let listed: serde_json::Value = serde_json::from_str(&self.saved_views()?).map_err(|e| e.to_string())?;
+                    listed["views"].as_array().and_then(|a| a.iter().find(|v| v["name"].as_str() == Some(name.as_str())).and_then(|v| v["sheet"].as_u64())).ok_or("The view has no sheet.")? as usize
+                };
+                {
+                    use gridcraft_engine::model::Visibility;
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    let sh = doc.wb.sheet(target).ok_or("The sheet of this view no longer exists.")?;
+                    if sh.visibility != Visibility::Visible {
+                        return Err("The sheet of this view is hidden.".into());
+                    }
+                }
+                self.session.run("view.customViews", json!({"show": name})).map_err(|e| e.to_string())?;
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let sh = doc.wb.active().ok_or("no sheet")?;
+                Ok(json!({"sheet": doc.wb.active_sheet, "selection": doc.selection.active.a1(), "zoom": sh.zoom}).to_string())
+            }
+            "delete" => {
+                if !known {
+                    return Err("No such view.".into());
+                }
+                self.session.run("view.customViews", json!({"delete": name})).map_err(|e| e.to_string())?;
+                self.saved_views()
+            }
+            _ => Err("unsupported view operation".into()),
+        }
     }
 
     /// The page setup of a sheet (read only): `{"orientation":"portrait"|"landscape","paper":..,"margins":[l,r,t,b,header,footer],"scale":n,
@@ -3277,6 +3351,41 @@ mod tests {
         assert!(book.fill_range(0, 0, 0, 2_000_000, 2, "down").is_err());
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn saved_views_remember_sheet_cell_and_zoom_and_refuse_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.view_op(0, r#"{"zoom":150}"#).unwrap();
+        book.saved_view_op(0, 12, 3, r#"{"kind":"save","name":"Totals"}"#).unwrap();
+        book.view_op(0, r#"{"zoom":100}"#).unwrap();
+        let listed = book.saved_views().unwrap();
+        assert!(listed.contains("Totals") && listed.contains("D13"), "{listed}");
+        let shown: serde_json::Value = serde_json::from_str(&book.saved_view_op(0, 0, 0, r#"{"kind":"show","name":"Totals"}"#).unwrap()).unwrap();
+        assert_eq!(shown["selection"], "D13");
+        assert_eq!(shown["zoom"], 150);
+        book.saved_view_op(0, 1, 1, r#"{"kind":"save","name":"Totals"}"#).unwrap();
+        assert_eq!(serde_json::from_str::<serde_json::Value>(&book.saved_views().unwrap()).unwrap()["views"].as_array().unwrap().len(), 1, "same name replaces");
+        book.saved_view_op(0, 0, 0, r#"{"kind":"delete","name":"Totals"}"#).unwrap();
+        assert!(!book.saved_views().unwrap().contains("Totals"));
+        for bad in [
+            "nope",
+            r#"{"kind":"save"}"#,
+            r#"{"kind":"save","name":""}"#,
+            r#"{"kind":"save","name":"a\nb"}"#,
+            r#"{"kind":"show","name":"Nobody"}"#,
+            r#"{"kind":"delete","name":"Nobody"}"#,
+            r#"{"kind":"rename","name":"x"}"#,
+            r#"{"kind":"save","name":"x","extra":1}"#,
+        ] {
+            assert!(book.saved_view_op(0, 0, 0, bad).is_err(), "{bad}");
+        }
+        assert!(book.saved_view_op(0, 0, 0, &format!(r#"{{"kind":"save","name":"{}"}}"#, "x".repeat(65))).is_err());
+        assert!(book.saved_view_op(9, 0, 0, r#"{"kind":"save","name":"x"}"#).is_err());
+        for i in 0..50 {
+            book.saved_view_op(0, 0, 0, &format!(r#"{{"kind":"save","name":"v{i}"}}"#)).unwrap();
+        }
+        assert!(book.saved_view_op(0, 0, 0, r#"{"kind":"save","name":"one too many"}"#).is_err());
+        book.saved_view_op(0, 0, 0, r#"{"kind":"save","name":"v1"}"#).unwrap();
     }
     #[test]
     fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {

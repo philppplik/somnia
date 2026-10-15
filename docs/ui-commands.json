@@ -6839,6 +6839,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.savedView",
+      "title": "Save, show or delete a named view",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.setCell",
       "title": "Apply cell value or formula",
       "category": "Edit",

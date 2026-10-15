@@ -49,6 +49,9 @@ export interface ChartScene{width:number;height:number;prims:Prim[]}
 export interface SparklineScene extends ChartScene{row:number;col:number}
 export type ViewOp={zoom:number}|{gridlines:boolean};
 export interface ViewOpResult{zoom:number;gridlines:boolean}
+/** Saved views: the sheet, the selected cell and the zoom under a name. */
+export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
+export interface SavedView{name:string;sheet:number;selection:string;zoom:number}
 export interface ExportOp{format:'pdf'|'csv'|'tsv'|'html';scope:'sheet'|'all'|'selection';fit?:boolean}
 export interface ExportResult{format:ExportOp['format'];base64:string;bytes:number;pages:number|null}
 export type NegativeStyle='minus'|'red'|'paren'|'redParen';
@@ -151,6 +154,8 @@ export type SheetsRequest=
  |{id:number;op:'sparklines';sheet:number}
  |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
+ |{id:number;op:'savedViews'}
+ |{id:number;op:'savedViewOp';sheet:number;row:number;col:number;view:SavedViewOp}
  |{id:number;op:'objects';sheet:number}
  |{id:number;op:'imageData';sheet:number;image:number}
  |{id:number;op:'pictureOp';sheet:number;row:number;col:number;bytes:Uint8Array;alt:string;width:number}
