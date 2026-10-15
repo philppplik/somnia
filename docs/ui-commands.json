@@ -10594,6 +10594,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.sculpt.maskSmooth",
+      "title": "Blur the sculpt mask of a 3D mesh towards its neighbourhood",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.select",
       "title": "Select a 3D object",
       "category": "Edit",

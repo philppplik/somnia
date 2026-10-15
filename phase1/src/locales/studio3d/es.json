@@ -1039,5 +1039,7 @@
  "cmd.studio3d.sculpt.maskGrow": "Expandir o contraer la máscara de escultura de una malla 3D entre vértices vecinos",
  "studio3d.hist.growMask": "Expandir o contraer la máscara de {name}",
  "cmd.studio3d.sculpt.maskFromSelection": "Enmascarar los vértices seleccionados de la malla 3D editada para esculpir",
- "studio3d.hist.maskFromSelection": "Enmascarar selección de {name}"
+ "studio3d.hist.maskFromSelection": "Enmascarar selección de {name}",
+ "cmd.studio3d.sculpt.maskSmooth": "Difuminar la máscara de escultura de una malla 3D hacia su vecindad",
+ "studio3d.hist.smoothMask": "Suavizar máscara de {name}"
 }

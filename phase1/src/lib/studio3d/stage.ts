@@ -1372,6 +1372,33 @@ export class Stage{
   set(after);
   this.push({label:{key:'studio3d.hist.maskFromSelection',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
  }
+ /** Blurs the sculpt mask towards the mean of neighbouring vertices by amount (0 keeps, 1 replaces); position-equal twins blur together. One undo step. */
+ sculptMaskSmooth(id:number,amount:number=0.5){
+  const m=this.editableMesh(id);const g=m.geometry;
+  const attr=g.getAttribute('somniaMask') as THREE.BufferAttribute|undefined;
+  if(!attr)throw new StageError(`${m.name} has no sculpt mask.`);
+  if(!Number.isFinite(amount)||amount<=0||amount>1)throw new StageError('Amount must be between 0 and 1.');
+  const pos=g.getAttribute('position') as THREE.BufferAttribute;const n=pos.count;
+  const key=(i:number)=>`${Math.round(pos.getX(i)*1e6)},${Math.round(pos.getY(i)*1e6)},${Math.round(pos.getZ(i)*1e6)}`;
+  const gids=new Map<string,number>();const grp:number[]=[];const members:number[][]=[];
+  for(let i=0;i<n;i++){const k=key(i);let gi=gids.get(k);if(gi==null){gi=members.length;gids.set(k,gi);members.push([]);}grp[i]=gi;members[gi].push(i);}
+  const adj:Set<number>[]=members.map(()=>new Set<number>());
+  const idx=g.getIndex();const tri=idx?idx.count:n;const at=(t:number)=>idx?idx.getX(t):t;
+  for(let t=0;t<tri;t+=3){const a=grp[at(t)],b=grp[at(t+1)],c=grp[at(t+2)];
+   if(a!==b){adj[a].add(b);adj[b].add(a);}if(b!==c){adj[b].add(c);adj[c].add(b);}if(a!==c){adj[a].add(c);adj[c].add(a);}}
+  const val=members.map(vs=>{let v=0;for(const i of vs)v=Math.max(v,(attr.array as Float32Array)[i]);return v;});
+  const smoothed=val.map((v,gi)=>{
+   if(!adj[gi].size)return v;
+   let mean=0;for(const nb of adj[gi])mean+=val[nb];mean/=adj[gi].size;
+   return v*(1-amount)+mean*amount;
+  });
+  const before=new Float32Array(attr.array as ArrayLike<number> as number[]);
+  const after=new Float32Array(n);
+  for(let i=0;i<n;i++)after[i]=smoothed[grp[i]];
+  const set=(arr:Float32Array)=>{const a=g.getAttribute('somniaMask') as THREE.BufferAttribute;(a.array as Float32Array).set(arr);a.needsUpdate=true;};
+  set(after);
+  this.push({label:{key:'studio3d.hist.smoothMask',params:{name:m.name}},undo:()=>set(before),redo:()=>set(after)});
+ }
  sculptEnd(){
   const shot=this.sculptShot;this.sculptShot=null;if(!shot)return;
   const m=this.find(shot.id) as THREE.Mesh|undefined;if(!m||!(m as THREE.Mesh).isMesh)return;

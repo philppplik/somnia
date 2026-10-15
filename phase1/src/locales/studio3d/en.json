@@ -1039,5 +1039,7 @@
  "cmd.studio3d.sculpt.maskGrow": "Grow or shrink the sculpt mask of a 3D mesh across neighbouring vertices",
  "studio3d.hist.growMask": "Grow or shrink mask of {name}",
  "cmd.studio3d.sculpt.maskFromSelection": "Mask the selected vertices of the edited 3D mesh for sculpting",
- "studio3d.hist.maskFromSelection": "Mask selection of {name}"
+ "studio3d.hist.maskFromSelection": "Mask selection of {name}",
+ "cmd.studio3d.sculpt.maskSmooth": "Blur the sculpt mask of a 3D mesh towards its neighbourhood",
+ "studio3d.hist.smoothMask": "Smooth mask of {name}"
 }
