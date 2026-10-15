@@ -19,11 +19,12 @@ import {useMedia,getMedia} from '../../lib/media';
 import {studioAgentContext} from '../../lib/agent/studioContext';
 import {activeStudioDocument} from '../../lib/agent/studioTarget';
 import {reportError} from '../../lib/log';
-import {useCallback,useEffect,useReducer,useRef,useState,useSyncExternalStore} from 'react';
+import {useCallback,useEffect,useMemo,useReducer,useRef,useState,useSyncExternalStore} from 'react';
 import {LoaderCircle,PanelRightClose,Send,Settings,Square,SquarePen} from '../../lib/icons';
 import {createStreamSink} from '../../lib/agent/streaming';
 import {chatReducer,initialChat,type ChatItem} from '../../lib/agent/chat';
 import {getAgentCore,type AgentProposal,type AgentRun,type ApprovalDecision,type AgentApproval} from '../../lib/agent/core';
+import {listSessionGrants,revokeSessionGrant,subscribeSessionGrants,sessionGrantsVersion} from '../../lib/agent/sessionGrants';
 import {agentSettingsSnapshot,subscribeAgentSettings,initializeAgentSettings,setAgentActivity} from '../../lib/agent/settingsRuntime';
 import {getState,patchState} from '../../store/appStore';
 import {useT} from '../../lib/useT';
@@ -44,6 +45,8 @@ export function AgentPanel(){
  const recordDecision=(p:AgentProposal,state:'accepted'|'rejected'|'undone')=>recordReviewDecision(proposalHistoryKeys.current.get(p.id)??JSON.stringify([getProjectGeneration(),p.file]),{id:p.id,file:p.file,summary:p.textEdit?.label??p.sheets?.address??'Reviewed proposal',state,decidedAt:Date.now()});
  const nativeMode=prefs.nativeMode;
  const task=prefs.task;const localChoices=prefs.choices;
+ const grantsRev=useSyncExternalStore(subscribeSessionGrants,sessionGrantsVersion,sessionGrantsVersion);
+ const sessionGrants=useMemo(()=>listSessionGrants(),[grantsRev]);
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const selectedTaskModel=settings.config.localRuntime?.taskModels?.[task];const effectiveProvider=selectedTaskModel?'ollama':settings.config.provider;const effectiveModel=effectiveLocalChoice(settings.config,task,localChoices.studio?agentContext?.studioId:undefined).model;
  const [loadedModels,setLoadedModels]=useState<string[]|null>(null);useEffect(()=>{let live=true;setLoadedModels(null);if(effectiveProvider==='ollama')void new LocalModelsRuntime().running().then(raw=>{if(live)setLoadedModels(loadedLocalModels(raw));}).catch(()=>{if(live)setLoadedModels(null);});return()=>{live=false;};},[effectiveProvider,effectiveModel,settings.revision,chat.busy]);
@@ -84,6 +87,7 @@ export function AgentPanel(){
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
    <p className="ag-context-chip" role="status" data-testid="agent-context-status">{displayDocument??t('agent.panel.noDocument')} · {effectiveProvider==='ollama'?'Local Ollama':effectiveProvider} · Selected: {effectiveModel||t('local.unknown')}{effectiveProvider==='ollama'&&<><br/>Ollama loaded (last check): {loadedModels===null?t('local.unknown'):loadedModels.length?loadedModels.join(', '):'None'}</>}{nativeMode&&' · No cloud fallback'}</p>
+   {sessionGrants.length>0&&<section className="ag-grants" aria-label="Session file access" data-testid="session-grants"><strong>Session access</strong><ul>{sessionGrants.map(g=><li key={g.path}><code>{g.path}</code><span>{g.actions.join(' + ')}</span><NativeButton type="button" onClick={()=>revokeSessionGrant(g.path)}>Revoke</NativeButton></li>)}</ul></section>}
    {!!reviewHistory.length&&<details className="ag-review-history"><summary>Earlier decisions · {reviewHistory.length}</summary><ul>{reviewHistory.map(e=><li key={e.id}>{e.summary} · {e.state}</li>)}</ul><p>Session-local display only. Previous edits cannot be applied from this list.</p></details>}
    {settingsError&&<StudioStatus tone="error" live="assertive">{settingsError}</StudioStatus>}
    {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{studio.label==='Code'?t('agent.empty.body'):`Describe what you want to do in ${studio.label}. ${studio.scope}.`}</span><p className="ag-tip">{t('agent.panel.tip')}</p><ul className="ag-prompt-chips" aria-label="Draft suggestions">{studioPromptChips(({Docs:'documents',Slides:'slides',Sheets:'sheets',Photos:'photos',Sounds:'sound',Code:'code'} as Record<string,string>)[studio.label]??app.activeStudio).map(text=><li key={text}><NativeButton type="button" className="ag-prompt-chip" onClick={()=>{setDraft(text);input.current?.focus();}}>{text}</NativeButton></li>)}</ul></div>:chat.items.map((item,index)=><Row key={item.id} item={item} local={effectiveProvider==='ollama'} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')} onUndo={async p=>{try{await(await getAgentCore()).revertProposal(p.id);recordDecision(p,'undone');dispatch({type:'resolve',proposalId:p.id,state:'undone'});}catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}}}/>)}

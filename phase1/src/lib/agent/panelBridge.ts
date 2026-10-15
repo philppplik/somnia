@@ -72,6 +72,7 @@ import {holdAgentAutosave} from './autosaveHold';
 import {applyOperations,getState,getProjectGeneration,subscribe,patchState,undoAIGroup,subscribeProjectTransactions} from '../../store/appStore';
 import type {AgentCore,AgentEvent,AgentApproval,AgentProposal,DiffLine} from './coreTypes';
 import type {AgentProvider,AgentProviderRequest} from './types';
+import {addSessionGrant,clearSessionGrants,hasSessionGrant} from './sessionGrants';
 export interface AgentConfiguration {provider:AuthProvider;model:string;apiKey:string;allowActiveFile:boolean;customPrompts?:CustomPrompt[];localRuntime?:LocalRuntimePreferences}
 let config:AgentConfiguration={provider:'ollama',model:'',apiKey:'',allowActiveFile:false};
 export function configureAgent(value:AgentConfiguration){realCore.clear?.();config={...value};agentPrivacy.setLocalOnly(value.localRuntime?.offlineOnly===true||value.localRuntime?.routing?.localOnly===true);}
@@ -117,18 +118,18 @@ const textTransactions=new TextReviewTransactions();const textProposalIds=new Se
 const slidesMultiTransactions=new SlidesMultiTransactions();
 const rangePreviewIds=new Set<string>();const rangeTransactions=new SheetsRangeTransactions();
 const sheetsTransactions=new SheetsReviewedTransactions();const sheetsProposalIds=new Set<string>();const sheetsProposalPaths=new Map<string,string>();const sheetsProposalEngines=new Map<string,SheetsEngine>();
-const permissions=new Map<string,Set<'read'|'write'>>();
+// session grants live in ./sessionGrants (shared with the panel UI)
 let approvalCounter=0;
 function currentFiles(){return getState().files;}
 async function authorize(path:string,action:'read'|'write',signal:AbortSignal){
  if(epoch!==getProjectGeneration())throw Error('Project changed. Start a new chat.');
- if(permissions.get(path)?.has(action))return;
+ if(hasSessionGrant(path,action))return;
  await new Promise<void>((resolve,reject)=>{
   let settled=false;const abort=()=>finish('cancel');
   const finish=(decision:Parameters<AgentApproval['resolve']>[0])=>{
    if(settled)return;settled=true;signal.removeEventListener('abort',abort);
    if((decision==='accept'||decision==='accept_for_session')&&!signal.aborted&&epoch===getProjectGeneration()){
-    if(decision==='accept_for_session'){const grants=permissions.get(path)??new Set<'read'|'write'>();grants.add('read');if(action==='write')grants.add('write');permissions.set(path,grants);}
+    if(decision==='accept_for_session')addSessionGrant(path,action);
     resolve();
    }else reject(Error(decision==='cancel'?'Access request cancelled.':'File access declined.'));
   };
@@ -316,7 +317,7 @@ export const realCore:AgentCore={
   const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
   const contextKey=JSON.stringify({executionMode:request.context.executionMode,choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
   const generation=getProjectGeneration();
-  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;rangePreviewIds.clear();rangeTransactions.revokePending();rangeTransactions.clear();slidesMultiTransactions.clear();textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();proposals.clear();permissions.clear();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
+  if(epoch!==generation){session?.cancel();session=null;sessionSerial++;rangePreviewIds.clear();rangeTransactions.revokePending();rangeTransactions.clear();slidesMultiTransactions.clear();textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();proposals.clear();clearSessionGrants();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
   void (async()=>{
    if(taskChoice){const runtime=new LocalModelsRuntime();const inventory=await runtime.snapshot();controller.signal.throwIfAborted();if(inventory.state!=='running'||inventory.inventoryError)throw new LocalTaskPreflightError(taskChoice.model,'network');if(!requiresExactInstalledTaskModel(taskChoice.model,inventory.models.map(m=>m.id)))throw new LocalTaskPreflightError(taskChoice.model,'model-not-found');deliver({type:'provenance',provider:'ollama',model:taskChoice.model});}
@@ -396,7 +397,7 @@ export const realCore:AgentCore={
  },
  async rejectProposal(id){if(slidesMultiTransactions.reject(id))return;if(rangeTransactions.reject(id))return;if(rangePreviewIds.delete(id))return;if(textProposalIds.has(id)){textTransactions.reject(id);textProposalIds.delete(id);return;}if(sheetsProposalIds.has(id)){dropMcpProposal(id);sheetsTransactions.reject(id);sheetsProposalIds.delete(id);return;}dropMcpProposal(id);const set=proposals.get(id);if(set)for(const f of set.files)photoPreviews.delete(f.proposedText);const n=nativeIds.get(id);if(n)transactions.reject(n);proposals.delete(id);session?.discardProposals();},
  async revertProposal(id){if(slidesMultiTransactions.has(id)){await slidesMultiTransactions.undo(id,new AbortController().signal);patchState({notice:'Reviewed slide text undone, not saved.'});return;}if(rangeTransactions.has(id)){const path=sheetsProposalPaths.get(id)!;await rangeTransactions.undo(id,new AbortController().signal,()=>{if(getCollabEngine().snapshot().role!=='none'||getSheetsSession(path)?.engine!==sheetsProposalEngines.get(id))throw Error('Workbook shared or replaced.');});setSheetsDirty(path,true);patchState({notice:'Sheets range undone, not saved.'});return;}if(textProposalIds.has(id)){await textTransactions.undo(id,new AbortController().signal);textProposalIds.delete(id);patchState({notice:'Native text edit undone, not saved.'});return;}if(sheetsProposalIds.has(id)){await sheetsTransactions.undo(id,new AbortController().signal,()=>{if(getCollabEngine().snapshot().role!=='none'||getSheetsSession(sheetsProposalPaths.get(id)!)?.engine!==sheetsProposalEngines.get(id))throw Error('Workbook is shared or replaced.');});sheetsProposalIds.delete(id);patchState({notice:'Sheets AI edit undone, not saved.'});return;}dropMcpProposal(id);const n=nativeIds.get(id);if(!n)throw Error('No native AI transaction.');await transactions.undo(n);const receipt=transactions.get(n);nativeRunLedger.record(receipt.runId,{phase:'undone',target:documents.snapshot(receipt.base.path).ref,proposalId:id,history:'unverified',readback:documents.snapshot(receipt.base.path).text===receipt.before?'verified':'unverified'});photoPreviews.delete(transactions.get(n).after);patchState({notice:'AI transaction undone, not saved.'});},
- clear(){rangePreviewIds.clear();rangeTransactions.revokePending();rangeTransactions.clear();slidesMultiTransactions.clear();textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();actionReceipts.clear();nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();permissions.clear();policy.revoke();send=null;}
+ clear(){rangePreviewIds.clear();rangeTransactions.revokePending();rangeTransactions.clear();slidesMultiTransactions.clear();textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();actionReceipts.clear();nativeRunLedger.clear();photoPreviews.clear();activeController?.abort();activeController=null;runGeneration++;sessionSerial++;session?.cancel();session=null;proposals.clear();clearSessionGrants();policy.revoke();send=null;}
 };
 subscribeProjectTransactions(tx=>{for(const op of tx.operations??[])if(op.type==='renameFile'){try{documents.rename(op.file,op.to);}catch{/* document not registered yet */}}});
 subscribe(()=>{if(epoch!==getProjectGeneration()){realCore.clear?.();documents.clear();transactions.clear();nativeIds.clear();epoch=getProjectGeneration();}syncDocuments();});
