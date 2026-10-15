@@ -4148,7 +4148,5 @@
   "agent.panel.disclose": "Divulgar el documento y selección de la próxima ejecución a {provider}.",
   "agent.panel.oneUse": "La autorización se usa una vez y caduca al cambiar el contexto o configuración. También requiere consentimiento para la nube.",
   "agent.panel.tip": "Elige modelo y contexto en Ajustes y describe tu tarea. Los cambios requieren revisión.",
-  "cmd.studio.next": "Cambiar al siguiente estudio",
-  "cmd.shell.focus.inspector": "Enfocar el inspector",
   "cmd.docs.open": "Abrir un enlace de documentación del estudio"
 }

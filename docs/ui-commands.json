@@ -7665,6 +7665,7 @@
       "title": "Close all files",
       "category": "Project",
       "source": "core",
+      "shortcut": "Mod+Alt+W",
       "keywords": [
         "all",
         "close",
@@ -7772,12 +7773,14 @@
       "title": "Save all files",
       "category": "Project",
       "source": "core",
+      "shortcut": "Mod+Alt+S",
       "keywords": [
         "all",
         "every",
         "save",
         "studios"
       ],
+      "allowInInput": true,
       "hasEnabled": true
     },
     {
@@ -8270,20 +8273,6 @@
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
-      "hasEnabled": true
-    },
-    {
-      "id": "shell.focus.inspector",
-      "title": "Focus inspector",
-      "category": "View",
-      "source": "core",
-      "shortcut": "Mod+Alt+W",
-      "keywords": [
-        "focus",
-        "inspector",
-        "panel",
-        "properties"
-      ],
       "hasEnabled": true
     },
     {
@@ -9505,21 +9494,6 @@
       "title": "Switch to Interface Studio",
       "category": "View",
       "source": "core",
-      "allowInInput": true,
-      "hasEnabled": true
-    },
-    {
-      "id": "studio.next",
-      "title": "Switch to next studio",
-      "category": "View",
-      "source": "core",
-      "shortcut": "Mod+Alt+S",
-      "keywords": [
-        "cycle",
-        "next",
-        "studio",
-        "switch"
-      ],
       "allowInInput": true,
       "hasEnabled": true
     },

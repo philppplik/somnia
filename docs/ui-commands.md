@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1098 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1096 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -627,7 +627,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `photos.undo` | Photos: Undo develop step | Edit | photos |  |
 | `photos.wb.preset` | Photos: Apply a white-balance preset | Edit | photos |  |
 | `problems.toggle` | Toggle problems | Tools | core | `Mod+J` |
-| `project.closeAll` | Close all files | Project | core |  |
+| `project.closeAll` | Close all files | Project | core | `Mod+Alt+W` |
 | `project.export` | Export project... | Project | core |  |
 | `project.export.advanced` | Advanced export... | Project | core |  |
 | `project.export.md` | Export active file as Markdown | Project | core |  |
@@ -636,7 +636,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `project.openFile` | Open file | Project | core |  |
 | `project.openMedia` | Open image or PDF to preview | Project | core |  |
 | `project.save` | Save copy... | Project | core | `Mod+S` |
-| `project.saveAll` | Save all files | Project | core |  |
+| `project.saveAll` | Save all files | Project | core | `Mod+Alt+S` |
 | `search.localSources` | Local source search (reviewed open text) | Tools | core |  |
 | `search.project` | Search in project | View | core | `Mod+Shift+F` |
 | `settings.open` | Settings | Tools | core | `Mod+,` |
@@ -696,7 +696,6 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.validationManage` | Delete one data validation rule of the sheet | Edit | sheets |  |
 | `sheets.view` | Zoom, gridlines, headings, zeros and formulas | View | sheets |  |
 | `sheets.whatif` | Run goal seek, scenarios or a data table | Edit | sheets |  |
-| `shell.focus.inspector` | Focus inspector | View | core | `Mod+Alt+W` |
 | `shell.rail.hide` | Hide rail icon | View | core |  |
 | `shell.rail.moveDown` | Move rail icon down | View | core |  |
 | `shell.rail.moveUp` | Move rail icon up | View | core |  |
@@ -793,7 +792,6 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio.design` | Switch to Design Studio | View | core | `Mod+7` |
 | `studio.documents` | Switch to Documents Studio | View | core | `Mod+2` |
 | `studio.interface` | Switch to Interface Studio | View | core |  |
-| `studio.next` | Switch to next studio | View | core | `Mod+Alt+S` |
 | `studio.photos` | Switch to Photos Studio | View | core | `Mod+9` |
 | `studio.sheets` | Switch to Sheets Studio | View | core | `Mod+3` |
 | `studio.slides` | Switch to Slides Studio | View | core | `Mod+4` |
