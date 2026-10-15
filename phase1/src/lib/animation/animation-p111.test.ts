@@ -1057,3 +1057,19 @@ test('P222 orient to path: rotation follows the position heading, unwraps, repla
  assert.throws(()=>run({layers:['b'],step:0}),/key step/);assert.throws(()=>run({layers:['b'],offset:200}),/offset/);
  s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
 });
+test('P223 bake modifiers: wiggle and loop become keys over the work area, modifiers removed, one undo step, errors',async()=>{
+ const {modifierBakeSpecs,bakeTicks}=await import('./modifierBakeCommands');const {evaluateMod}=await import('./modifiers');const {evaluate}=await import('./interpolate');
+ const run=(p?:unknown)=>modifierBakeSpecs()[0].run(p) as unknown;
+ const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const C=()=>findComp(s.document!),L=()=>C().layers.find(l=>l.id==='b')!;
+ assert.throws(()=>run({layers:['b']}),/no wiggle/);
+ s.dispatch({type:'modifier.add',layer:'b',prop:'position',modifier:{type:'wiggle',amplitude:20,frequency:2,seed:7}} as never);
+ const want=bakeTicks(C(),2),before=s.document;
+ const ref=want.map(t=>evaluateMod(L().transform.position,t) as number[]);
+ const r=run({layers:['b'],step:2}) as {properties:number};assert.equal(r.properties,1);
+ const p=L().transform.position;assert.equal(p.keys.length,want.length);assert.equal((p.modifiers??[]).length,0);
+ want.forEach((t,i)=>{const v=evaluate(p,t) as number[];assert.ok(Math.abs(v[0]-ref[i][0])<0.01&&Math.abs(v[1]-ref[i][1])<0.01);});
+ s.undo();assert.equal(s.document,before);
+ assert.throws(()=>run({layers:['b'],step:0}),/key step/);
+ s.dispatch({type:'layer.update',layer:'b',locked:true});assert.throws(()=>run({layers:['b']}),/locked/);
+});

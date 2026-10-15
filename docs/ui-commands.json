@@ -2090,6 +2090,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.modifiers.bake",
+      "title": "Bake wiggle, loop and link modifiers of the selected layers into keys",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bake",
+        "convert",
+        "expression",
+        "freeze",
+        "keys",
+        "link",
+        "loop",
+        "modifier",
+        "wiggle"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.modifiers.reseed",
       "title": "Reseed the wiggles of the selected layers",
       "category": "Edit",

@@ -25,6 +25,7 @@ const groups:{key:string;items:RigItem[]}[]=[
   {testid:'animation-rig-center',label:'animation.rig.center',cmd:'animation.layers.centerAnchor',min:1},
   {testid:'animation-rig-trim',label:'animation.rig.trim',cmd:'animation.layers.trimToWorkArea',min:1},
   {testid:'animation-rig-reseed',label:'animation.rig.reseed',cmd:'animation.modifiers.reseed',min:1},
+  {testid:'animation-rig-bake',label:'animation.rig.bake',cmd:'animation.modifiers.bake',min:1},
   {testid:'animation-rig-number',label:'animation.rig.number',cmd:'animation.layers.number',min:1},
   {testid:'animation-rig-markers',label:'animation.rig.markers',cmd:'animation.marker.fromLayers',min:1}]},
  {key:'order',items:(['front','back','up','down','reverse'] as const).map(m=>({testid:`animation-rig-order-${m}`,label:`animation.rig.order.${m}`,cmd:'animation.layers.arrange',min:m==='reverse'?2:1,args:{mode:m}}))},
