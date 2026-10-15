@@ -1230,5 +1230,6 @@
  "animation.rig.group.path": "Le long du tracé",
  "animation.rig.path.move": "Parcourir le tracé",
  "animation.rig.path.face": "Parcourir le tracé en regardant devant",
- "cmd.animation.layers.followPath": "Déplacer les calques le long du tracé du premier calque coché"
+ "cmd.animation.layers.followPath": "Déplacer les calques le long du tracé du premier calque coché",
+ "animation.rig.bounce.squash": "Tomber et rebondir 3 fois, avec écrasement et étirement"
 }

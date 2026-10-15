@@ -1230,5 +1230,6 @@
  "animation.rig.group.path": "Along path",
  "animation.rig.path.move": "Travel along the path",
  "animation.rig.path.face": "Travel along the path and face forward",
- "cmd.animation.layers.followPath": "Travel layers along the first ticked path layer"
+ "cmd.animation.layers.followPath": "Travel layers along the first ticked path layer",
+ "animation.rig.bounce.squash": "Drop and bounce 3 times, squash and stretch"
 }

@@ -1230,5 +1230,6 @@
  "animation.rig.group.path": "Por el trazado",
  "animation.rig.path.move": "Recorrer el trazado",
  "animation.rig.path.face": "Recorrer el trazado mirando al frente",
- "cmd.animation.layers.followPath": "Mover capas por el trazado de la primera capa marcada"
+ "cmd.animation.layers.followPath": "Mover capas por el trazado de la primera capa marcada",
+ "animation.rig.bounce.squash": "Caer y rebotar 3 veces, con aplastar y estirar"
 }

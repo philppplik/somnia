@@ -20,22 +20,26 @@ export function bounceHeight(u:number,n:number,restitution:number):number{
  return 0;
 }
 /** Position keys for `l` falling onto `ground` and bouncing `n` times. Null when the layer is not above the ground or its parent cannot be inverted. */
-export function bounceKeys(c:Composition,l:Layer,ground:Layer,a:number,b:number,n:number,restitution:number):{t:number;v:Vec2}[]|null{
+/** Stretch (fast in the air) and squash (at contact) factors for a height fraction `h` at normalized speed `speed` 0..1: [x,y] multipliers. */
+export function squashFactor(h:number,speed:number):Vec2{const q=Math.max(0,1-h/0.04);if(q>0)return [1+0.3*q,1-0.3*q];const st=0.2*Math.min(1,Math.max(0,speed));return [1-st*0.5,1+st];}
+export function bounceKeys(c:Composition,l:Layer,ground:Layer,a:number,b:number,n:number,restitution:number,squash=false):{t:number;v:Vec2;s?:Vec2}[]|null{
  const f0=tickToFrame(a,c.fps),f1=tickToFrame(b,c.fps),step=Math.max(1,Math.ceil((f1-f0)/(MAX_BOUNCE_KEYS-1)));
  const fs:number[]=[];for(let f=f0;f<f1;f+=step)fs.push(f);fs.push(f1);
  const p0=anchorWorld(c,l,a),yf=anchorWorld(c,ground,a)[1],h0=yf-p0[1];if(h0<1)return null;
- const out:{t:number;v:Vec2}[]=[];
+ const out:{t:number;v:Vec2;s?:Vec2}[]=[];const sc=evaluateMod(l.transform.scale,a) as Vec2,span=Math.max(1,f1-f0),spd=(f:number)=>Math.abs(bounceHeight((f+0.5)/span,n,restitution)-bounceHeight((f-0.5)/span,n,restitution)),vmax=Math.max(1e-9,...fs.map(x=>spd(x-f0)));
  for(const f of fs){const t=frameToTick(f,c.fps),inv=invertMatrix(parentMatrix(c,l,t));if(!inv)return null;
   const y=yf-bounceHeight((f-f0)/Math.max(1,f1-f0),n,restitution)*h0,x=p0[0];
-  out.push({t,v:[Math.round((inv[0]*x+inv[2]*y+inv[4])*100)/100,Math.round((inv[1]*x+inv[3]*y+inv[5])*100)/100]});}
+  const k:{t:number;v:Vec2;s?:Vec2}={t,v:[Math.round((inv[0]*x+inv[2]*y+inv[4])*100)/100,Math.round((inv[1]*x+inv[3]*y+inv[5])*100)/100]};
+  if(squash){const q=squashFactor(bounceHeight((f-f0)/span,n,restitution),spd(f-f0)/vmax);k.s=[Math.round(sc[0]*q[0]*100)/100,Math.round(sc[1]*q[1]*100)/100];}
+  out.push(k);}
  return out;
 }
 export const bounceSpecs=():CommandSpec<unknown,unknown>[]=>[{
  id:'animation.layers.bounce',title:'Drop layers onto the first ticked layer and bounce',category:'Edit',level:'ui',keywords:['animation','bounce','drop','fall','gravity','ball','physics','floor','ground'],
- params:{type:'object',properties:{bounces:{type:'integer',minimum:1,maximum:MAX_BOUNCES},restitution:{type:'integer',minimum:10,maximum:90},layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:2,maxItems:MAX_BOUNCE_LAYERS+1}},additionalProperties:false},
+ params:{type:'object',properties:{bounces:{type:'integer',minimum:1,maximum:MAX_BOUNCES},restitution:{type:'integer',minimum:10,maximum:90},squash:{type:'boolean'},layers:{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:2,maxItems:MAX_BOUNCE_LAYERS+1}},additionalProperties:false},
  // The Rig menu passes its own ticked layers: the first is the ground, the others drop onto it.
  enabled:()=>{const d=animationSession().document,c=d?findComp(d):undefined;return !!c&&c.layers.length>1;},
- run:((p:{bounces?:number;restitution?:number;layers?:string[]}={})=>{
+ run:((p:{bounces?:number;restitution?:number;squash?:boolean;layers?:string[]}={})=>{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const n=p.bounces??3,e=p.restitution??DEFAULT_RESTITUTION;
   if(!Number.isInteger(n)||n<1||n>MAX_BOUNCES)return expected(`Bounces are 1 to ${MAX_BOUNCES}.`);
@@ -48,9 +52,11 @@ export const bounceSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const a=c.workArea.in,b=c.workArea.out;if(b<=a)return expected('The work area is empty.');
   const edits:Edit[]=[];let skipped=0;
   for(const l of balls){
-   const keys=bounceKeys(c,l,ground,a,b,n,e);if(!keys){skipped++;continue;}
+   const keys=bounceKeys(c,l,ground,a,b,n,e,p.squash===true);if(!keys){skipped++;continue;}
    for(const k of l.transform.position.keys)edits.push({type:'key.remove',layer:l.id,prop:'position',t:k.t});
-   for(const k of keys)edits.push({type:'key.add',layer:l.id,prop:'position',t:k.t},{type:'prop.set',layer:l.id,prop:'position',t:k.t,value:k.v as never},{type:'key.interp',layer:l.id,prop:'position',t:k.t,interp:'linear'});}
+   if(p.squash===true)for(const k of l.transform.scale.keys)edits.push({type:'key.remove',layer:l.id,prop:'scale',t:k.t});
+   for(const k of keys){edits.push({type:'key.add',layer:l.id,prop:'position',t:k.t},{type:'prop.set',layer:l.id,prop:'position',t:k.t,value:k.v as never},{type:'key.interp',layer:l.id,prop:'position',t:k.t,interp:'linear'});
+    if(k.s)edits.push({type:'key.add',layer:l.id,prop:'scale',t:k.t},{type:'prop.set',layer:l.id,prop:'scale',t:k.t,value:k.s as never},{type:'key.interp',layer:l.id,prop:'scale',t:k.t,interp:'linear'});}}
   if(!edits.length)return expected('Put the layers above the ground first. They fall from where they are now.');
   try{s.dispatch(edits);}catch(err){if(err instanceof EditError)throw Object.assign(err,{expected:true});throw err;}
   return {dropping:balls.length-skipped,skipped,bounces:n,keys:edits.filter(x=>x.type==='key.add').length};

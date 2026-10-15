@@ -1505,3 +1505,15 @@ test('P250 travel along a path: start, middle and end sit on the path in world s
  const w2=worldMatrix(c,m,b-(b-a)/10);assert.ok(Math.abs(Math.atan2(w2[1],w2[0])-Math.PI/2)<0.02,'faces down on the second leg');
  s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='m')!.transform.position.keys.length,0);
 });
+
+test('P251 bounce with squash and stretch: starts at the original scale, squashes wide at contact, stretches tall in the air, undo restores',async()=>{
+ const {bounceSpecs,squashFactor}=await import('./bounceCommands');const bounce=bounceSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.ok(squashFactor(0,0)[0]>1.2&&squashFactor(0,0)[1]<0.8);assert.ok(squashFactor(0.5,1)[1]>1.1&&squashFactor(0.5,1)[0]<1);assert.deepEqual(squashFactor(0.5,0),[1,1]);
+ const d0=applyEdits(base(),[{type:'layer.add',kind:'solid',id:'floor'},{type:'prop.set',layer:'floor',prop:'position',t:f(0),value:[300,400]},{type:'layer.add',kind:'solid',id:'ball'},{type:'prop.set',layer:'ball',prop:'position',t:f(0),value:[250,100]}] as never);
+ const s=new AnimationSession();s.open(d0);setAnimationSession(s);
+ const r=bounce({layers:['floor','ball'],squash:true}) as {keys:number};assert.ok(r.keys>0);
+ const k=findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.scale.keys.map(x=>x.v as unknown as number[]);
+ assert.ok(k.length>20);assert.ok(Math.abs(k[0][0]-100)<=1&&Math.abs(k[0][1]-100)<=1,'first key is the original scale');
+ assert.ok(Math.min(...k.map(v=>v[1]))<85,'squashed at contact');assert.ok(Math.max(...k.map(v=>v[1]))>110,'stretched in the air');
+ s.undo();assert.equal(findComp(s.document!)!.layers.find(l=>l.id==='ball')!.transform.scale.keys.length,0);
+});

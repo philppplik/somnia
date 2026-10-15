@@ -1230,5 +1230,6 @@
  "animation.rig.group.path": "Ao longo do caminho",
  "animation.rig.path.move": "Percorrer o caminho",
  "animation.rig.path.face": "Percorrer o caminho olhando para frente",
- "cmd.animation.layers.followPath": "Mover camadas ao longo do caminho da primeira camada marcada"
+ "cmd.animation.layers.followPath": "Mover camadas ao longo do caminho da primeira camada marcada",
+ "animation.rig.bounce.squash": "Cair e quicar 3 vezes, com achatar e esticar"
 }
