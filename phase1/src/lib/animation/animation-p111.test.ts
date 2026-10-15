@@ -2025,3 +2025,13 @@ test('P293 cascade random: seeded, spans 0..spread, differs by seed',async()=>{
  assert.deepEqual(a,b);assert.notDeepEqual(a,c);assert.equal(Math.min(...a),0);assert.equal(Math.max(...a),100);
  assert.notEqual(cascadeDelays([[5,5],[5,5]],'random',10,1),null);
 });
+test('P294 text case and replace: counters keep {n}, case-insensitive replace, all text layers when none ticked, one undo each',async()=>{
+ const {changeCase,replaceText,textCaseSpecs}=await import('./textCaseCommands');const [cs,rp]=textCaseSpecs().map(x=>x.run as (p?:unknown)=>unknown);
+ assert.equal(changeCase('hello wORLD','title'),'Hello World');assert.equal(changeCase('one. two! three','sentence'),'One. Two! Three');assert.equal(changeCase('{n} views','upper'),'{n} VIEWS');assert.equal(changeCase('straße','upper'),'STRASSE');
+ assert.equal(replaceText('Cat cat CAT','cat','dog',false),'dog dog dog');assert.equal(replaceText('Cat cat','cat','dog',true),'Cat dog');
+ const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'text',id:'tx1'},{type:'layer.update',layer:'tx1',source:{text:'big sale today'}},{type:'layer.add',kind:'text',id:'tx2'},{type:'layer.update',layer:'tx2',source:{text:'Sale ends soon'}}] as never));setAnimationSession(s);
+ const T=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!.source.text;const before=JSON.stringify(s.document);
+ cs({mode:'upper',layers:['tx1']});assert.equal(T('tx1'),'BIG SALE TODAY');assert.equal(T('tx2'),'Sale ends soon');s.undo();assert.equal(JSON.stringify(s.document),before);
+ s.setView({selectedLayer:null as never});rp({find:'sale',replace:'offer'});assert.equal(T('tx1'),'big offer today');assert.equal(T('tx2'),'offer ends soon');s.undo();assert.equal(JSON.stringify(s.document),before);
+ assert.throws(()=>rp({find:'zzz',replace:'a'}),/Nothing changes/);assert.throws(()=>rp({find:'{n}'}),/counter/);
+});

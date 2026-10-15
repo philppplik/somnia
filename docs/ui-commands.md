@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1038 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1040 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -261,11 +261,13 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `animation.template.rename` | Rename saved template | Insert | animation |  |
 | `animation.template.save` | Save the selected layer as a template | Insert | animation |  |
 | `animation.text.animator` | Edit text animator | Edit | animation |  |
+| `animation.text.case` | Change the case of the ticked text layers | Edit | animation |  |
 | `animation.text.count` | Count the ticked text layers from one number to another | Edit | animation |  |
 | `animation.text.path` | Put text on a path, move its start or take it off | Insert | animation |  |
 | `animation.text.preset.apply` | Apply a saved text animator preset | Edit | animation |  |
 | `animation.text.preset.delete` | Delete a saved text animator preset | Edit | animation |  |
 | `animation.text.preset.save` | Save a text animator as a preset | Edit | animation |  |
+| `animation.text.replace` | Find and replace text in the ticked text layers (all text layers when none is ticked) | Edit | animation |  |
 | `animation.timeline.autoKey` | Auto-key: record changes at the playhead as keys | Project | animation |  |
 | `animation.timeline.shy` | Hide or show shy layers in the timeline | Project | animation |  |
 | `animation.timeline.snap` | Snap timeline drags to markers, work area and playhead | Project | animation |  |

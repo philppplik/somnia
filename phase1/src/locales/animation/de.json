@@ -1355,5 +1355,12 @@
  "cmd.animation.layers.blink": "Markierte Ebenen ab und zu blinzeln lassen",
  "animation.rig.grid": "Positionen auf 10-px-Raster setzen",
  "cmd.animation.layers.grid": "Position der markierten Ebenen auf ein Pixelraster runden",
- "animation.rig.cascade.random": "Zufällige Reihenfolge"
+ "animation.rig.cascade.random": "Zufällige Reihenfolge",
+ "animation.rig.group.textcase": "Groß-/Kleinschreibung",
+ "animation.rig.textcase.upper": "GROSSBUCHSTABEN",
+ "animation.rig.textcase.lower": "kleinbuchstaben",
+ "animation.rig.textcase.title": "Titel-Schreibung",
+ "animation.rig.textcase.sentence": "Satzanfang groß",
+ "cmd.animation.text.case": "Groß-/Kleinschreibung der markierten Textebenen ändern",
+ "cmd.animation.text.replace": "Text in den markierten Textebenen suchen und ersetzen (ohne Markierung alle Textebenen)"
 }

@@ -3583,6 +3583,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.text.case",
+      "title": "Change the case of the ticked text layers",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "capitalize",
+        "caps",
+        "case",
+        "lowercase",
+        "sentence",
+        "text",
+        "title case",
+        "uppercase"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.text.count",
       "title": "Count the ticked text layers from one number to another",
       "category": "Edit",
@@ -3647,6 +3665,25 @@
         "animation",
         "keyframe",
         "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "animation.text.replace",
+      "title": "Find and replace text in the ticked text layers (all text layers when none is ticked)",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "all",
+        "animation",
+        "find",
+        "localise",
+        "rename",
+        "replace",
+        "search",
+        "text",
+        "translate",
+        "typo"
       ],
       "hasEnabled": true
     },

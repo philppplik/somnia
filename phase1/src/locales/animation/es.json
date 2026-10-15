@@ -1355,5 +1355,12 @@
  "cmd.animation.layers.blink": "Hacer que las capas marcadas parpadeen de vez en cuando",
  "animation.rig.grid": "Ajustar posiciones a una cuadrícula de 10 px",
  "cmd.animation.layers.grid": "Ajustar la posición de las capas marcadas a una cuadrícula de píxeles",
- "animation.rig.cascade.random": "Orden aleatorio"
+ "animation.rig.cascade.random": "Orden aleatorio",
+ "animation.rig.group.textcase": "Mayúsculas",
+ "animation.rig.textcase.upper": "MAYÚSCULAS",
+ "animation.rig.textcase.lower": "minúsculas",
+ "animation.rig.textcase.title": "Título",
+ "animation.rig.textcase.sentence": "Solo la primera mayúscula",
+ "cmd.animation.text.case": "Cambiar mayúsculas y minúsculas de las capas de texto marcadas",
+ "cmd.animation.text.replace": "Buscar y reemplazar texto en las capas de texto marcadas (todas si no hay ninguna marcada)"
 }

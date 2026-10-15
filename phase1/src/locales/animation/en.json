@@ -1355,5 +1355,12 @@
  "cmd.animation.layers.blink": "Make the ticked layers blink now and then",
  "animation.rig.grid": "Snap positions to a 10 px grid",
  "cmd.animation.layers.grid": "Snap the position of the ticked layers to a pixel grid",
- "animation.rig.cascade.random": "Random order"
+ "animation.rig.cascade.random": "Random order",
+ "animation.rig.group.textcase": "Text case",
+ "animation.rig.textcase.upper": "UPPERCASE",
+ "animation.rig.textcase.lower": "lowercase",
+ "animation.rig.textcase.title": "Title Case",
+ "animation.rig.textcase.sentence": "Sentence case",
+ "cmd.animation.text.case": "Change the case of the ticked text layers",
+ "cmd.animation.text.replace": "Find and replace text in the ticked text layers (all text layers when none is ticked)"
 }

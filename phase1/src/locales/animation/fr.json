@@ -1355,5 +1355,12 @@
  "cmd.animation.layers.blink": "Faire cligner les calques cochés de temps en temps",
  "animation.rig.grid": "Aligner les positions sur une grille de 10 px",
  "cmd.animation.layers.grid": "Aligner la position des calques cochés sur une grille de pixels",
- "animation.rig.cascade.random": "Ordre aléatoire"
+ "animation.rig.cascade.random": "Ordre aléatoire",
+ "animation.rig.group.textcase": "Casse",
+ "animation.rig.textcase.upper": "MAJUSCULES",
+ "animation.rig.textcase.lower": "minuscules",
+ "animation.rig.textcase.title": "Casse de titre",
+ "animation.rig.textcase.sentence": "Majuscule de phrase",
+ "cmd.animation.text.case": "Changer la casse des calques de texte cochés",
+ "cmd.animation.text.replace": "Rechercher et remplacer le texte des calques de texte cochés (tous si aucun n'est coché)"
 }

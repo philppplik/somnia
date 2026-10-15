@@ -1355,5 +1355,12 @@
  "cmd.animation.layers.blink": "Fazer as camadas marcadas piscarem de vez em quando",
  "animation.rig.grid": "Ajustar posições a uma grade de 10 px",
  "cmd.animation.layers.grid": "Ajustar a posição das camadas marcadas a uma grade de pixels",
- "animation.rig.cascade.random": "Ordem aleatória"
+ "animation.rig.cascade.random": "Ordem aleatória",
+ "animation.rig.group.textcase": "Maiúsculas",
+ "animation.rig.textcase.upper": "MAIÚSCULAS",
+ "animation.rig.textcase.lower": "minúsculas",
+ "animation.rig.textcase.title": "Título",
+ "animation.rig.textcase.sentence": "Apenas a primeira maiúscula",
+ "cmd.animation.text.case": "Mudar maiúsculas e minúsculas das camadas de texto marcadas",
+ "cmd.animation.text.replace": "Localizar e substituir texto nas camadas de texto marcadas (todas se nenhuma estiver marcada)"
 }
