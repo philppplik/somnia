@@ -17,7 +17,7 @@ import {MAX_RATING,useRatings} from '../../lib/photos/ratings';
 import {useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {allTags} from '../../lib/photos/tags';
-import {useCaption} from '../../lib/photos/captions';
+import {getCaption,useCaption} from '../../lib/photos/captions';
 import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {SOFT_PROOF_MODEL_IDS} from '../../lib/photos/softProof';
@@ -38,7 +38,7 @@ import {useVisiblePhotos,type SmartFilter,SMART_FILTER_DEFAULTS,normalizeSmart,s
 const tipDateFmt=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
 /** Honest thumbnail tooltip: name plus whatever the EXIF cache has resolved - capture date, camera, pixel dimensions. */
 function thumbTooltip(name:string,size:number):string{
- const parts=[name];const e=getCaptureEntry(name,size);
+ const parts=[name];const cap=getCaption(name).trim();if(cap)parts.push(cap);const e=getCaptureEntry(name,size);
  if(e){if(e.t)parts.push(tipDateFmt.format(e.t));if(e.cam)parts.push(e.cam);const x=exposureLine(e);if(x)parts.push(x);if(e.w&&e.h)parts.push(`${e.w} × ${e.h}`);}
  return parts.join(' · ');
 }
@@ -65,6 +65,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const [applyNote,setApplyNote]=useState<string|null>(null);
  const [snapNaming,setSnapNaming]=useState(false);
  const [collNaming,setCollNaming]=useState(false);
+ const caption=useCaption(active);
  const [infoOpen,setInfoOpen]=useState(false);
  const [infoLines,setInfoLines]=useState<{key:string;value:string}[]|null>(null);
  const [statsOpen,setStatsOpen]=useState(false);
@@ -77,9 +78,11 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
   if(!infoItem){setInfoLines(null);return;}
   if(!infoEntry){setInfoLines(null);ensureCaptureDates([infoItem]);return;}
   const lines=photoInfoLines(entryToInfo(infoEntry));
+  const cap=getCaption(infoItem.name).trim();
+  if(cap)lines.unshift({key:'caption',value:cap}); // the user's own words lead the facts
   if(infoItem.size>0)lines.push({key:'size',value:formatBytes(infoItem.size)});
   setInfoLines(lines);
- },[infoOpen,active,infoItem,infoEntry]);
+ },[infoOpen,active,infoItem,infoEntry,caption]);
  const [armRemove,setArmRemove]=useState(false);
  const [rawPresets]=usePanelState<unknown>('photos.presets.user',[]);
  const [applying,setApplying]=useState(false);
@@ -88,7 +91,6 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  useEffect(()=>{strip.current?.querySelector('[aria-pressed="true"]')?.scrollIntoView({block:'nearest',inline:'nearest'});},[active]);
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
- const caption=useCaption(active);
  const [metaClip,setMetaClip]=useState(hasMetadataClip()); // session clipboard for culling metadata
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');

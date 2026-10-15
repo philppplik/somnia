@@ -1613,6 +1613,23 @@ test('search: lens name and exposure line join the query (light and dark)',async
   await page.getByTestId('photos-filmstrip-search').fill(''); // off
  }
 });
+test('caption surfaces: thumb tooltip and the info popover show it (light and dark)',async({page})=>{
+ for(const theme of['light','dark']){
+  await page.goto('/test/design-system/?view=photos-filmstrip');
+  await page.evaluate(t=>document.documentElement.setAttribute('data-theme',t),theme);
+  await expect(page.getByTestId('photos-workspace')).toBeVisible();
+  await expect(page.getByTestId('photos-filmstrip-item-strip-3.png')).toBeVisible(); // media added progressively
+  await page.evaluate(async()=>{const ch=await import('/src/lib/photos/cullHistory.ts');ch.cullSetCaption('strip-1.png','Morgennebel am See');});
+  await expect(page.getByTestId('photos-filmstrip-item-strip-1.png')).toHaveAttribute('title',/Morgennebel am See/); // tooltip leads with the user's words
+  await page.getByTestId('photos-filmstrip-menu').click();
+  await page.getByTestId('photos-filmstrip-info-toggle').click();
+  await expect(page.getByTestId('photos-filmstrip-info-caption')).toHaveText('Morgennebel am See');
+  await page.screenshot({path:`test-results/ds-photos-caption-surfaces-${theme}.png`,fullPage:true});
+  await page.getByTestId('photos-filmstrip-info-toggle').click(); // close again
+  await page.keyboard.press('Escape');
+  await page.evaluate(async()=>{const c=await import('/src/lib/photos/captions.ts');c.setCaption('strip-1.png','');}); // leave no state behind
+ }
+});
 test('menu groups: labeled collapsible sections, expanded by default (light and dark)',async({page})=>{
  for(const theme of['light','dark']){
   await page.goto('/test/design-system/?view=photos-filmstrip');

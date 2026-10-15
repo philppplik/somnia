@@ -945,3 +945,19 @@ without a resolved cache entry never match.
 Coverage: the light/dark gallery leg seeds two full exposure
 sets and narrows by lens name, aperture, ISO and focal length in
 turn (`test-results/ds-photos-search-exif-{light,dark}.png`).
+
+## Caption surfaces (P143)
+
+The caption was writeable and searchable but invisible while
+scanning. Now the thumb tooltip leads with it after the file
+name, the info popover shows it as the first line (the user's
+own words lead the facts; the popover re-reads it live as it
+changes), and the inspector's info panel carries a conditional
+caption row reusing the existing label. Empty captions add
+nothing anywhere.
+
+Coverage: the light/dark gallery leg proves the tooltip
+attribute and the popover line
+(`test-results/ds-photos-caption-surfaces-{light,dark}.png`);
+the info panel row shares the same getter and has no gallery
+harness, like its EXIF rows.

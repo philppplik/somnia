@@ -9,12 +9,14 @@ import {PanelBody} from './shared';
 import {ensureCaptureDates,exposureLine,getCaptureEntry,useCaptureDates} from '../../../lib/photos/captureDates';
 import {useEffect} from 'react';
 import {RatingStars} from '../RatingStars';
+import {useAllCaptions} from '../../../lib/photos/captions';
 const mb=(n:number)=>n>=1_000_000?`${(n/1_000_000).toFixed(1)} MB`:`${Math.max(1,Math.round(n/1000))} kB`;
 /** File, source, output and session facts. Every row is read from the live session, nothing is invented. */
 const exifDateFmt=new Intl.DateTimeFormat(undefined,{dateStyle:'medium',timeStyle:'short'});
 export function InfoPanel(){
  const {t}=useT();const media=useMedia();
  useCaptureDates(); // re-render as EXIF entries land
+ const captions=useAllCaptions(); // and as captions change
  const activeItem=media.items.find(i=>i.name===media.active);
  useEffect(()=>{if(activeItem)ensureCaptureDates([activeItem]);},[activeItem]); // resolve the active photo's entry for the EXIF rows below
  return <PanelBody testId="photos-info-panel">{({name,session})=>{
@@ -33,6 +35,7 @@ export function InfoPanel(){
    [t('photos.p.info.engine'),photosEngines.lightcraft.label],
    [t('photos.p.info.changed'),String(changed)],
    [t('photos.p.info.state'),dirtyPhoto(session)?t('photos.status.dirty'):t('photos.status.clean')],
+   ...((captions[name]??'').trim()?[[t('photos.caption'),captions[name].trim()] as [string,string]]:[]),
    ...(exif?.cam?[[t('photos.p.info.camera'),exif.cam] as [string,string]]:[]),
    ...(exif?.lens?[[t('photos.p.info.lens'),exif.lens] as [string,string]]:[]),
    ...(xline?[[t('photos.p.info.exposure'),xline] as [string,string]]:[]),
