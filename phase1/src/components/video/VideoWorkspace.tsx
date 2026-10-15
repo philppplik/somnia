@@ -9,7 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
-import {blendAt,clipFadeGain,clipRanges,cropOf,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
+import {blendAt,clipFadeGain,clipRanges,cropOf,gainAt,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -190,7 +190,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    if(isTitleClip(e.range.clip)||isImageClip(e.range.clip))continue;
    const el=slotOf(e.range.index).current;if(!el)continue;
    const c=e.range.clip;
-   el.muted=muted;el.volume=isFreeze(c)||isReversed(c)?0:Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:c.gain)*clipFadeGain(c,e.range.start,e.range.end,playhead)));
+   el.muted=muted;el.volume=isFreeze(c)||isReversed(c)?0:Math.min(1,Math.max(0,volume*e.audio*(c.muted?0:gainAt(c,playhead-e.range.start))*clipFadeGain(c,e.range.start,e.range.end,playhead)));
   }
  },[blend,volume,muted,playhead]);
  const advance=useCallback((fromIndex:number)=>{

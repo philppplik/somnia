@@ -161,6 +161,7 @@
  "video.reverse": "Reverso (exportação)",
  "video.overlayAnimateRect": "Animar posição/tamanho",
  "video.kenBurns": "Ken Burns (zoom lento)",
+ "video.gainAnimate": "Animar o volume",
  "video.overlayAnimateOpacity": "Animar opacidade",
  "video.overlayKeysActive": "{count} chaves",
  "video.overlayKeysClear": "Limpar chaves",

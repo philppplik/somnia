@@ -161,6 +161,7 @@
  "video.reverse": "Lecture inversée (export)",
  "video.overlayAnimateRect": "Animer position/taille",
  "video.kenBurns": "Ken Burns (zoom lent)",
+ "video.gainAnimate": "Animer le volume",
  "video.overlayAnimateOpacity": "Animer opacité",
  "video.overlayKeysActive": "{count} clés",
  "video.overlayKeysClear": "Effacer les clés",

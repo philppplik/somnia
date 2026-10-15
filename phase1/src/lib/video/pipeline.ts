@@ -2,7 +2,7 @@
 import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,BufferTarget,CanvasSink,CanvasSource,Input,Mp4OutputFormat,Output,QUALITY_HIGH,QUALITY_LOW,QUALITY_MEDIUM,WebMOutputFormat,getFirstEncodableAudioCodec,getFirstEncodableVideoCodec} from 'mediabunny';
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,resolveOutputSize,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
-import {clipFadeGain,clipRanges,clipSourceTime,cropAt,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,isReversed,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
+import {clipFadeGain,clipRanges,clipSourceTime,cropAt,gainAt as clipGainAt,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,isReversed,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -374,7 +374,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
     }
     if(rec?.probe.audio&&mixer&&!c.muted&&!isFreeze(c)&&!isReversed(c)){
      const aTrack=(await rec.input.getAudioTracks())[0];
-     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,(t)=>c.gain*clipFadeGain(c,r.start,r.end,t),speed,mixer);
+     await emitZoneAudio(new AudioSampleSink(aTrack),srcStart,srcEnd,z.start,(t)=>clipGainAt(c,t-r.start)*clipFadeGain(c,r.start,r.end,t),speed,mixer);
     }else if(rec&&rec.probe.audio===null&&audioSource&&z===zones[0])steps.push(`No audio track in ${c.source}.`);
     if(isReversed(c)&&!c.muted&&rec?.probe.audio&&!reversedAudioNoted){reversedAudioNoted=true;steps.push('Reversed clips export without audio.');}
    }else{
@@ -425,7 +425,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
       any=true;
       for(let i=0;i<len;i++){
        const pr=i/len;
-       const env=(side.sign==='out'?Math.cos(pr*Math.PI/2):Math.sin(pr*Math.PI/2))*c.gain*clipFadeGain(c,side.r.start,side.r.end,z.start+i/48_000);
+       const env=(side.sign==='out'?Math.cos(pr*Math.PI/2):Math.sin(pr*Math.PI/2))*clipGainAt(c,z.start+i/48_000-side.r.start)*clipFadeGain(c,side.r.start,side.r.end,z.start+i/48_000);
        const srcPos=i/48_000*rate*speedOf(c),f0=Math.min(frames-1,Math.floor(srcPos)),f1=Math.min(frames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
        const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
        const rgt=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
