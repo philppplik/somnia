@@ -148,6 +148,7 @@
  "photos.wb.flash": "Blitz",
  "photos.filmstrip.selectAll": "Alle auswaehlen",
  "photos.filmstrip.selectUnrated": "Unbewertete auswaehlen",
+ "photos.filmstrip.selectInvert": "Auswahl umkehren",
  "photos.filmstrip.selectNone": "Auswahl aufheben",
  "photos.filmstrip.select": "Auswahl",
  "photos.label.set": "Markierung",

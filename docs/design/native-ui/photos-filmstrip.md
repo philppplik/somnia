@@ -961,3 +961,15 @@ attribute and the popover line
 (`test-results/ds-photos-caption-surfaces-{light,dark}.png`);
 the info panel row shares the same getter and has no gallery
 harness, like its EXIF rows.
+
+## Invert selection (P144)
+
+The selection dropdown gains "invert" next to all / unrated /
+none: the visible strip's unselected photos become the selection
+and vice versa, the Lightroom convention. No keybinding - the
+dropdown is the discoverable surface.
+
+Coverage: the selection-helpers gallery leg (extended, nothing
+weakened) proves both directions through the stored selection:
+unrated -> invert leaves exactly the rated photo, invert again
+restores it (`test-results/ds-photos-select-helpers-{light,dark}.png`).

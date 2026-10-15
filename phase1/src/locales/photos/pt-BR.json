@@ -148,6 +148,7 @@
  "photos.wb.flash": "Flash",
  "photos.filmstrip.selectAll": "Selecionar tudo",
  "photos.filmstrip.selectUnrated": "Selecionar sem avaliacao",
+ "photos.filmstrip.selectInvert": "Inverter seleção",
  "photos.filmstrip.selectNone": "Limpar selecao",
  "photos.filmstrip.select": "Selecao",
  "photos.label.set": "Rotulo",

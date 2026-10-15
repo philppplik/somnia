@@ -378,6 +378,10 @@ test('selection helpers: all, unrated, clear (light and dark)',async({page})=>{
   await page.getByTestId('photos-filmstrip-rating-star-2').click(); // rate the active strip-1
   await page.getByTestId('photos-filmstrip-select').selectOption('unrated');
   await expect(page.getByTestId('photos-filmstrip-apply')).toHaveText('Apply to 2 photos'); // strip-2 + strip-3
+  await page.getByTestId('photos-filmstrip-select').selectOption('invert'); // the rated one stays
+  await expect.poll(async()=>page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');return JSON.stringify(ps.panelStateStore.get('photos.filmstripSelection'));})).toBe('["strip-1.png"]');
+  await page.getByTestId('photos-filmstrip-select').selectOption('invert'); // and back
+  await expect.poll(async()=>page.evaluate(async()=>{const ps=await import('/src/store/panelStateStore.ts');return JSON.stringify(ps.panelStateStore.get('photos.filmstripSelection'));})).toBe('["strip-2.png","strip-3.png"]');
   await page.getByTestId('photos-filmstrip-select').selectOption('all');
   await expect(page.getByTestId('photos-filmstrip-apply')).toHaveText('Apply to 3 photos');
   await page.screenshot({path:`test-results/ds-photos-select-helpers-${theme}.png`,fullPage:true});

@@ -148,6 +148,7 @@
  "photos.wb.flash": "Flash",
  "photos.filmstrip.selectAll": "Tout selectionner",
  "photos.filmstrip.selectUnrated": "Selectionner non notes",
+ "photos.filmstrip.selectInvert": "Inverser la sélection",
  "photos.filmstrip.selectNone": "Effacer la selection",
  "photos.filmstrip.select": "Selection",
  "photos.label.set": "Libelle",

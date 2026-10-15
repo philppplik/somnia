@@ -421,11 +421,13 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
    const v=e.currentTarget.value;e.currentTarget.value='';
    if(v==='all')setSel(photos.map(p=>p.name));
    else if(v==='unrated')setSel(photos.filter(p=>!(ratings[p.name]>=1)).map(p=>p.name));
+   else if(v==='invert')setSel(photos.filter(p=>!sel.includes(p.name)).map(p=>p.name)); // Lightroom: invert inside the visible strip
    else if(v==='none')setSel([]);
   }} className="h-7 shrink-0" data-testid="photos-filmstrip-select">
    <option value="" disabled>{t('photos.filmstrip.select')}</option>
    <option value="all">{t('photos.filmstrip.selectAll')}</option>
    <option value="unrated">{t('photos.filmstrip.selectUnrated')}</option>
+   <option value="invert">{t('photos.filmstrip.selectInvert')}</option>
    <option value="none">{t('photos.filmstrip.selectNone')}</option>
   </NativeSelect>
   <NativeSelect value="" aria-label={t('photos.label.set')} title={t('photos.label.set')} onChange={e=>{
