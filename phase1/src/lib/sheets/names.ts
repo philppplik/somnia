@@ -1,6 +1,10 @@
 import type {NameInfo,NameOp} from './protocol';
 /** Defined names: validation of untrusted command input and of the bridge answer. The Rust bridge re-validates. */
 export const MAX_NAME_CHARS=64,MAX_NAMES=500;
+export const MAX_COMMENT_CHARS=255;
+const textOk=(v:unknown,max:number,empty:boolean)=>typeof v==='string'&&(empty||v!=='')&&[...v].length<=max&&!/[\u0000-\u001f\u007f]/.test(v);
+/** What the constant box means: a number when it reads as one, otherwise text. */
+export function constantValue(raw:string):number|string{const t=raw.trim();return t!==''&&Number.isFinite(Number(t))?Number(t):raw;}
 const rc=(l:string)=>/^r[0-9]*c[0-9]*$/.test(l);
 const cellLike=(n:string)=>/^\$?[A-Za-z]{1,3}\$?[0-9]{1,7}$/.test(n);
 /** null when the name is fine; otherwise why not. */
@@ -16,6 +20,8 @@ export function parseNamesCommand(input:unknown):NameOp{
  const scope=o.scope===undefined?'workbook':o.scope;if(scope!=='workbook'&&scope!=='sheet')throw Error('Scope must be workbook or sheet.');
  if(o.kind==='define'){only('kind','name','scope','replace');if(nameProblem(name))throw Error('Invalid name.');if(o.replace!==undefined&&typeof o.replace!=='boolean')throw Error('replace must be true or false.');const out:NameOp={kind:'define',name,scope};if(o.replace)out.replace=true;return out;}
  if(o.kind==='delete'){only('kind','name','scope');if(name===''||[...name].length>MAX_NAME_CHARS)throw Error('Invalid name.');return {kind:'delete',name,scope};}
+ if(o.kind==='comment'){only('kind','name','scope','text');if(name===''||[...name].length>MAX_NAME_CHARS)throw Error('Invalid name.');if(!textOk(o.text,MAX_COMMENT_CHARS,true))throw Error('A comment has at most 255 characters and no control characters.');return {kind:'comment',name,scope,text:o.text as string};}
+ if(o.kind==='constant'){only('kind','name','scope','value','replace');if(nameProblem(name))throw Error('Invalid name.');if(o.replace!==undefined&&typeof o.replace!=='boolean')throw Error('replace must be true or false.');const v=o.value;if(!((typeof v==='number'&&Number.isFinite(v))||textOk(v,MAX_COMMENT_CHARS,false)))throw Error('A constant is a number or a text of 1 to 255 characters.');return {kind:'constant',name,scope,value:v as number|string,...(o.replace===true?{replace:true}:{})};}
  throw Error('Unsupported name operation.');
 }
 export function parseNames(raw:{names:unknown}):NameInfo[]{

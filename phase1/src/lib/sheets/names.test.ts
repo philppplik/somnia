@@ -1,5 +1,5 @@
 import {test} from 'node:test';import assert from 'node:assert/strict';
-import {nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
+import {constantValue,nameProblem,nameTarget,parseNames,parseNamesCommand} from './names';
 import {customNumFmtCode,DATE_PATTERNS,parseFormatOp} from './formatOps';
 test('nameProblem',()=>{
  for(const ok of ['Prices','_x','tax.rate','Größe','a1b','x'.repeat(64)])assert.equal(nameProblem(ok),null,ok);
@@ -25,4 +25,12 @@ test('custom number and date formats match the Rust bridge',()=>{
  assert.deepEqual(parseFormatOp({kind:'numFmtCustom',grouping:true,decimals:0,prefix:'EUR '}),{kind:'numFmtCustom',grouping:true,decimals:0,prefix:'EUR '});
  for(const bad of [{kind:'numFmtCustom',prefix:'a"b'},{kind:'numFmtCustom',prefix:'a;b'},{kind:'numFmtCustom',suffix:'[Red]'},{kind:'numFmtCustom',suffix:'0123456789abc'},{kind:'numFmtCustom',decimals:11},{kind:'numFmtCustom',negative:'blue'},{kind:'numFmtCustom',zero:'x'},{kind:'numFmtCustom',grouping:'yes'},{kind:'numFmtCustom',code:'0'},{kind:'dateFmt',pattern:'yyyy'},{kind:'dateFmt'}])assert.throws(()=>parseFormatOp(bad),JSON.stringify(bad));
  assert.deepEqual(parseFormatOp({kind:'dateFmt',pattern:'dmyDot'}),{kind:'dateFmt',pattern:'dmyDot'});assert.equal(DATE_PATTERNS.length,11);
+});
+test('name comments and constants are bounded',()=>{
+ assert.deepEqual(parseNamesCommand({kind:'comment',name:'P',text:'Tax rate'}),{kind:'comment',name:'P',scope:'workbook',text:'Tax rate'});
+ assert.deepEqual(parseNamesCommand({kind:'comment',name:'P',scope:'sheet',text:''}),{kind:'comment',name:'P',scope:'sheet',text:''});
+ assert.deepEqual(parseNamesCommand({kind:'constant',name:'Rate',value:0.07}),{kind:'constant',name:'Rate',scope:'workbook',value:0.07});
+ assert.deepEqual(parseNamesCommand({kind:'constant',name:'Who',value:'Ann',replace:true}),{kind:'constant',name:'Who',scope:'workbook',value:'Ann',replace:true});
+ for(const bad of [{kind:'comment',name:'P'},{kind:'comment',name:'P',text:'x'.repeat(256)},{kind:'comment',name:'P',text:'a\nb'},{kind:'comment',name:'P',text:'x',value:1},{kind:'constant',name:'A1',value:1},{kind:'constant',name:'R',value:''},{kind:'constant',name:'R',value:Infinity},{kind:'constant',name:'R',value:NaN},{kind:'constant',name:'R',value:true},{kind:'constant',name:'R',value:'x'.repeat(256)},{kind:'constant',name:'R',value:1,replace:'y'},{kind:'constant',name:'R',value:1,text:'x'}])assert.throws(()=>parseNamesCommand(bad),JSON.stringify(bad));
+ assert.equal(constantValue(' 0.07 '),0.07);assert.equal(constantValue('abc'),'abc');assert.equal(constantValue(''),'');assert.equal(constantValue('1e999'),'1e999');
 });

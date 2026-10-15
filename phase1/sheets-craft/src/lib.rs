@@ -2714,6 +2714,70 @@ impl HeadlessWorkbook {
         Ok(json!({"name": name, "refersTo": format!("={refers}")}).to_string())
     }
 
+    /// Edits a defined name as ONE history entry. `op_json` is `{"kind":"comment","name":..,"scope":"workbook"|"sheet","text":..}` (up to
+    /// 255 characters, no control characters, empty clears it; the name keeps what it refers to) or `{"kind":"constant","name":..,"scope":..,
+    /// "value":number|text,"replace":bool}` (a name that stands for a number or a text, no formula; an existing name of the same scope is
+    /// only replaced with `replace`). `sheet` is the sheet a sheet-scoped name belongs to. Refused: protected workbook structure,
+    /// invalid names, missing names, more than 500 names. Formulas that use the name see the new value on the next recalculation.
+    pub fn edit_name(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let obj = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = obj.get("kind").and_then(|v| v.as_str()).ok_or("missing kind")?;
+        let allowed: &[&str] = if kind == "comment" { &["kind", "name", "scope", "text"] } else { &["kind", "name", "scope", "value", "replace"] };
+        if obj.keys().any(|k| !allowed.contains(&k.as_str())) || !matches!(kind, "comment" | "constant") {
+            return Err("unknown name operation".into());
+        }
+        let name = obj.get("name").and_then(|v| v.as_str()).ok_or("missing name")?.to_string();
+        let sheet_scope = match obj.get("scope").and_then(|v| v.as_str()).unwrap_or("workbook") {
+            "workbook" => false,
+            "sheet" => true,
+            _ => return Err("scope must be workbook or sheet".into()),
+        };
+        let (sheet_name, existing) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            if doc.wb.protected_structure {
+                return Err("The workbook structure is protected.".into());
+            }
+            let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+            let scope = if sheet_scope { Some(sheet) } else { None };
+            let found = doc.wb.names.iter().find(|n| n.name.eq_ignore_ascii_case(&name) && n.scope == scope && !n.hidden).map(|n| (n.name.clone(), n.formula.clone(), n.comment.clone()));
+            if kind == "constant" && found.is_none() && doc.wb.names.iter().filter(|n| !n.hidden).count() >= MAX_NAMES {
+                return Err("A workbook holds at most 500 names.".into());
+            }
+            (sh.name.clone(), found)
+        };
+        let ok_text = |t: &str, max: usize| t.chars().count() <= max && !t.chars().any(|c| c.is_control());
+        let (refers, comment, stored_name) = if kind == "comment" {
+            let text = obj.get("text").and_then(|v| v.as_str()).ok_or("missing text")?;
+            if !ok_text(text, 255) {
+                return Err("A comment has at most 255 characters and no control characters.".into());
+            }
+            let (n, f, _) = existing.ok_or("There is no such name.")?;
+            (f, text.to_string(), n)
+        } else {
+            if let Some(why) = Self::name_problem(&name) {
+                return Err(why.into());
+            }
+            let replace = obj.get("replace").and_then(|v| v.as_bool()).unwrap_or(false);
+            if existing.is_some() && !replace {
+                return Err("A name like this already exists here. Choose another or replace it.".into());
+            }
+            if existing.is_none() && replace {
+                return Err("There is no such name.".into());
+            }
+            let body = match obj.get("value") {
+                Some(serde_json::Value::Number(n)) => n.as_f64().filter(|f| f.is_finite()).map(|f| format!("{f}")).ok_or("value must be a finite number")?,
+                Some(serde_json::Value::String(t)) if !t.is_empty() && ok_text(t, 255) => format!("\"{}\"", t.replace('"', "\"\"")),
+                _ => return Err("value must be a number or a text of 1 to 255 characters".into()),
+            };
+            let keep = existing.as_ref().map(|e| e.2.clone()).unwrap_or_default();
+            (body, keep, name.clone())
+        };
+        let scope_param = if sheet_scope { sheet_name } else { "Workbook".to_string() };
+        self.session.run("formulas.defineName", json!({"name": stored_name, "refersTo": format!("={refers}"), "scope": scope_param, "comment": comment})).map_err(|e| e.to_string())?;
+        Ok(json!({"name": stored_name, "refersTo": format!("={refers}")}).to_string())
+    }
+
     /// Deletes one name as ONE history entry. `op_json` is `{"name":..,"scope":"workbook"|"sheet"}` with `sheet` the sheet a sheet-scoped
     /// name belongs to. Formulas that use the name are not rewritten, so they show #NAME? afterwards.
     pub fn delete_name(&mut self, sheet: usize, op_json: &str) -> Result<String, String> {
@@ -5595,6 +5659,26 @@ mod tests {
         assert!(info.contains("\"rowBreaks\":[]"), "{info}");
         let info = book.page_setup(0, r#"{"clearBreaks":true}"#).unwrap();
         assert!(info.contains("\"colBreaks\":[]"), "{info}");
+    }
+    #[test]
+    fn edit_name_sets_comments_and_constants_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.define_name(0, 0, 0, 2, 1, r#"{"name":"Block","scope":"workbook"}"#).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.edit_name(0, r#"{"kind":"comment","name":"Block","text":"first two rows"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        let listed = book.list_names().unwrap();
+        assert!(listed.contains("first two rows") && listed.contains("$A$1:$A$2"), "{listed}");
+        book.edit_name(0, r#"{"kind":"constant","name":"Rate","value":0.07}"#).unwrap();
+        book.edit_name(0, r#"{"kind":"constant","name":"Who","value":"say \"hi\""}"#).unwrap();
+        assert!(book.list_names().unwrap().contains("=0.07"));
+        assert!(book.edit_name(0, r#"{"kind":"constant","name":"Rate","value":1}"#).is_err(), "exists");
+        assert!(book.edit_name(0, r#"{"kind":"constant","name":"Rate","value":1,"replace":true}"#).is_ok());
+        assert!(book.edit_name(0, r#"{"kind":"constant","name":"Nope","value":1,"replace":true}"#).is_err(), "nothing to replace");
+        for bad in [r#"{"kind":"comment","name":"Missing","text":"x"}"#, r#"{"kind":"constant","name":"A1","value":1}"#, r#"{"kind":"constant","name":"Z","value":""}"#, r#"{"kind":"constant","name":"Z","value":true}"#, r#"{"kind":"comment","name":"Block","text":"a\nb"}"#, r#"{"kind":"comment","name":"Block","extra":1}"#, r#"{"kind":"formula","name":"Z"}"#] {
+            assert!(book.edit_name(0, bad).is_err(), "{bad}");
+        }
     }
     #[test]
     fn view_op_sets_zoom_and_gridlines_with_bounds() {
