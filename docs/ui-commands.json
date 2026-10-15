@@ -12640,8 +12640,22 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.addSwatch",
+      "title": "Add colour swatch",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.alignSelection",
       "title": "Align vector selection",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.applySwatch",
+      "title": "Apply colour swatch",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true
@@ -12831,6 +12845,13 @@
     {
       "id": "vector.releaseClip",
       "title": "Release clipping mask",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.removeSwatch",
+      "title": "Remove colour swatch",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true

@@ -1,3 +1,4 @@
+import {installCodeEditorHost} from '../lib/codeEditorHost';
 import {readPreviewScripts,savePreviewScripts} from '../lib/previewScripts';
 import {shellLayoutStore} from './shellLayoutStore';
 import {studioPanels,studioDefaultLayout} from '../lib/shell/codePanels';
@@ -162,3 +163,6 @@ export function requestStudio(id:StudioId,source:'manual'|'automatic'|'open'='ma
 
 /** Citation host checks exact current buffer, editor checks again before selection. */
 export function jumpToSourceSpan(file:string,span:{from:number;to:number;raw:string}){if(getState().files[file]!==span.raw||!Number.isSafeInteger(span.from)||!Number.isSafeInteger(span.to)||span.from<0||span.to<=span.from||span.to>span.raw.length)return false;openFileTab(file);patchState({jumpTo:{file,line:1,col:1,nonce:Date.now()+Math.random(),span},viewMode:'split'});return true;}
+
+// Own the low-level code-editor integration without lib -> store imports.
+installCodeEditorHost({read:getState,generation:getProjectGeneration,reveal:jumpToSourceSpan,notice:text=>patchState({notice:text})});

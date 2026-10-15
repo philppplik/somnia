@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1087 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1090 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1039,7 +1039,9 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `tools.editImage` | Open another... | Tools | core |  |
 | `vector.addNodeNear` | Add vector node near point | Insert | vector |  |
 | `vector.addPath` | Add vector path | Insert | vector |  |
+| `vector.addSwatch` | Add colour swatch | Edit | vector |  |
 | `vector.alignSelection` | Align vector selection | Edit | vector |  |
+| `vector.applySwatch` | Apply colour swatch | Edit | vector |  |
 | `vector.booleanOp` | Combine vector shapes | Edit | vector |  |
 | `vector.clearError` | Clear vector diagnostics | View | vector |  |
 | `vector.clearGuides` | Clear all ruler guides | Edit | vector |  |
@@ -1067,6 +1069,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.pasteStyle` | Paste vector style | Edit | vector |  |
 | `vector.redo` | Redo vector edit | Edit | vector |  |
 | `vector.releaseClip` | Release clipping mask | Edit | vector |  |
+| `vector.removeSwatch` | Remove colour swatch | Edit | vector |  |
 | `vector.renameGroup` | Rename vector group | Edit | vector |  |
 | `vector.renamePath` | Rename vector path | Edit | vector |  |
 | `vector.reorder` | Arrange vector paths | Edit | vector |  |
