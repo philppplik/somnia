@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1017 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1019 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -617,6 +617,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.analyzeRange` | Analyze spreadsheet range | Tools | sheets |  |
 | `sheets.annotate` | Add a note, comment or link to the active cell | Edit | sheets |  |
 | `sheets.cellLayout` | Merge, justify, rotate or clear the formats of the selected cells | Edit | sheets |  |
+| `sheets.cellTools` | Apply a cell style, AutoSum, checkboxes or copy and paste formats | Edit | sheets |  |
 | `sheets.chart` | Create or change a chart | Edit | sheets |  |
 | `sheets.dedupe` | Remove duplicate rows in the selected block | Edit | sheets |  |
 | `sheets.editLines` | Insert or delete rows and columns | Edit | sheets |  |
@@ -627,6 +628,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.formulas.open` | Open Smart Formula builder | View | sheets |  |
 | `sheets.freeze` | Freeze panes | View | sheets |  |
 | `sheets.highlight` | Highlight cells with a rule or color scale | Edit | sheets |  |
+| `sheets.insertFunction` | Start a formula with a function from the library | Edit | sheets |  |
 | `sheets.names` | Define or delete a named range | Edit | sheets |  |
 | `sheets.navigate` | Go to spreadsheet cell | View | sheets |  |
 | `sheets.object` | Add a shape, or move, resize or delete a picture or shape | Edit | sheets |  |

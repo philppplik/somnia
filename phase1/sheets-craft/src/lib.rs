@@ -32,6 +32,8 @@ const MAX_OBJECTS: usize = 200;
 const MAX_SAVED_VIEWS: usize = 50;
 const MAX_VIEW_NAME: usize = 64;
 /// Reviewed range edits: at most this many cells, and this many bytes of old and new text.
+const CELL_STYLE_NAMES: &[&str] = &["Normal", "Good", "Bad", "Neutral", "Calculation", "Check Cell", "Explanatory Text", "Input", "Linked Cell", "Note", "Output", "Warning Text", "Title", "Heading 1", "Heading 2", "Heading 3", "Heading 4", "Total", "Currency", "Comma", "Percent", "Currency [0]", "Comma [0]"];
+const AUTOSUM_FUNCTIONS: &[&str] = &["SUM", "AVERAGE", "COUNT", "MAX", "MIN"];
 const MAX_REVIEWED_RANGE_CELLS: u64 = 1000;
 const MAX_REVIEWED_RANGE_BYTES: usize = 1_000_000;
 const MAX_SUBTOTAL_GROUPS: usize = 100;
@@ -2918,6 +2920,144 @@ impl HeadlessWorkbook {
         self.session.run(command, params).map(|v| v.to_string())
     }
 
+    /// Cell tools over existing engine commands, ONE undo step each. `op_json` is `{"kind":"style","name":<one of the built-in cell styles>}`,
+    /// `{"kind":"autoSum","function":"SUM"|"AVERAGE"|"COUNT"|"MAX"|"MIN"}`, `{"kind":"insertCheckbox"}`, `{"kind":"toggleCheckbox"}`,
+    /// `{"kind":"pickFormat"}` (remembers the formats of the block, no undo step) or `{"kind":"pasteFormat"}` (paints them onto the block).
+    /// Protected sheets are refused (except picking a format); AutoSum refuses to overwrite filled cells and to guess when no numbers are next to
+    /// the cell; checkbox cells hold TRUE/FALSE and at most 100,000 cells are changed at once.
+    pub fn cell_tools_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FORMAT_CELLS {
+            return Err("invalid block (1 to 1,000,000 cells)".into());
+        }
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported cell tool")?;
+        let known: &[&str] = match kind {
+            "style" => &["kind", "name"],
+            "autoSum" => &["kind", "function"],
+            _ => &["kind"],
+        };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown cell tool field".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, kind != "pickFormat")?;
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
+        let (before_rev, before, snap_sel, snap_redo) = {
+            let doc = self.session.doc().map_err(|e| e.to_string())?;
+            (doc.revision, doc.undo.len(), doc.selection.clone(), if kind == "pickFormat" { doc.redo.clone() } else { Vec::new() })
+        };
+        let outcome: Result<String, String> = (|| {
+            self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+            match kind {
+                "style" => {
+                    let name = map.get("name").and_then(|v| v.as_str()).filter(|n| CELL_STYLE_NAMES.contains(n)).ok_or("unknown cell style")?;
+                    self.session.run("home.cellStyle", json!({"sheet": sheet, "range": range, "name": name})).map(|v| v.to_string())
+                }
+                "autoSum" => {
+                    let func = map.get("function").and_then(|v| v.as_str()).filter(|f| AUTOSUM_FUNCTIONS.contains(f)).ok_or("unsupported function")?;
+                    {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        let filled = |r: u32, c: u32| {
+                            let at = CellRef::new(r, c);
+                            sh.cells.iter_range(gridcraft_engine::core::RangeRef::new(at, at)).any(|(_, cell)| cell.formula.is_some() || !cell.value.display().is_empty())
+                        };
+                        if rows * cols == 1 {
+                            if filled(row, col) {
+                                return Err("Select an empty cell below or beside the numbers.".into());
+                            }
+                        } else {
+                            let last = row + rows - 1;
+                            let last_blank = (col..col + cols).all(|c| sh.value(CellRef::new(last, c)).is_empty());
+                            let out_row = if last_blank { last } else { last + 1 };
+                            if out_row >= gridcraft_engine::core::MAX_ROWS {
+                                return Err("There is no row left below the selection.".into());
+                            }
+                            if (col..col + cols).any(|c| filled(out_row, c)) {
+                                return Err("AutoSum would overwrite filled cells below the selection.".into());
+                            }
+                        }
+                    }
+                    let result = self.session.run("formulas.autoSum", json!({"sheet": sheet, "range": range, "function": func}))?;
+                    if rows * cols == 1 {
+                        // With nothing numeric beside the cell the engine only asks the UI to open the editor and writes nothing.
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        let at = CellRef::new(row, col);
+                        if !sh.cells.iter_range(gridcraft_engine::core::RangeRef::new(at, at)).any(|(_, cell)| cell.formula.is_some()) {
+                            return Err("No numbers found next to this cell. Select the numbers to add up instead.".into());
+                        }
+                    }
+                    Ok(result.to_string())
+                }
+                "insertCheckbox" | "toggleCheckbox" => {
+                    if u64::from(rows) * u64::from(cols) > 100_000 {
+                        return Err("Select at most 100,000 cells.".into());
+                    }
+                    if kind == "insertCheckbox" {
+                        return self.session.run("insert.checkbox", json!({"sheet": sheet, "range": range})).map(|v| v.to_string());
+                    }
+                    let flippable = {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                        sh.cells.iter_range(block).filter(|(_, cell)| cell.formula.is_none() && matches!(cell.value, gridcraft_engine::core::Value::Bool(_))).count()
+                    };
+                    if flippable == 0 {
+                        return Err("No checkbox or TRUE/FALSE cells in the selection.".into());
+                    }
+                    self.session.run("selection.set", json!({"sheet": sheet, "range": range}))?;
+                    self.session.run("cell.toggleCheckbox", json!({"sheet": sheet})).map(|v| v.to_string())
+                }
+                "pickFormat" => {
+                    self.session.run("selection.set", json!({"sheet": sheet, "range": range}))?;
+                    self.session.run("edit.formatPainter", json!({})).map(|v| v.to_string())
+                }
+                "pasteFormat" => self.session.run("edit.formatPainter", json!({"apply": range})).map(|v| v.to_string()),
+                _ => Err("unsupported cell tool".into()),
+            }
+        })();
+        let _ = self.session.take_ui_requests();
+        match outcome {
+            Ok(text) => {
+                let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                if kind == "pickFormat" {
+                    // Picking a format changes nothing in the workbook: it is not an undo step.
+                    doc.undo.truncate(before);
+                    doc.redo = snap_redo;
+                    doc.selection = snap_sel;
+                    doc.revision = before_rev;
+                } else if doc.undo.len() > before {
+                    doc.undo.truncate(before + 1);
+                    doc.redo.clear();
+                }
+                Ok(text)
+            }
+            Err(e) => {
+                while self.session.doc().map_err(|e| e.to_string())?.undo.len() > before {
+                    if self.undo().is_err() {
+                        break;
+                    }
+                }
+                Err(e)
+            }
+        }
+    }
+
+    /// The built-in function library for the Insert Function picker (read only): `{"functions":[{"name","category","signature","description"}],"truncated":bool}`,
+    /// at most 1,000 entries with bounded texts. Nothing is written; the panel starts the formula in the cell editor.
+    pub fn function_catalog(&mut self) -> Result<String, String> {
+        let all = self.session.run("formulas.functions", json!({}))?;
+        let list = all.as_array().ok_or("function list unavailable")?;
+        let text = |v: &serde_json::Value, n: usize| v.as_str().unwrap_or("").chars().take(n).collect::<String>();
+        let functions: Vec<serde_json::Value> = list
+            .iter()
+            .take(1000)
+            .map(|f| json!({"name": text(&f["name"], 64), "category": text(&f["category"], 32), "signature": text(&f["signature"], 200), "description": text(&f["description"], 300)}))
+            .collect();
+        Ok(json!({"functions": functions, "truncated": list.len() > 1000}).to_string())
+    }
+
     /// Increase/decrease decimals like a spreadsheet: the active cell (`at`, inside the block) decides the
     /// new number format, which is then applied to the whole block.
     fn decimals_command(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op: &serde_json::Value) -> Result<(&'static str, serde_json::Value), String> {
@@ -3709,6 +3849,39 @@ mod tests {
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
     }
+    #[test]
+    fn cell_tools_run_as_single_undo_steps_and_refuse_overwrites_and_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for (a, v) in [("A950", "1"), ("A951", "2"), ("A952", "3")] {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": a, "input": v})).unwrap();
+        }
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.cell_tools_op(0, 949, 0, 3, 1, r#"{"kind":"autoSum","function":"SUM"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.view_range(0, 952, 0, 1, 1).unwrap().contains("SUM(A950:A952)"));
+        assert!(book.cell_tools_op(0, 949, 0, 3, 1, r#"{"kind":"autoSum","function":"SUM"}"#).unwrap_err().contains("overwrite"));
+        assert!(book.cell_tools_op(0, 960, 5, 1, 1, r#"{"kind":"autoSum","function":"AVERAGE"}"#).unwrap_err().contains("No numbers"));
+        assert_eq!(steps(&book), before + 1, "a refused tool leaves no history");
+        book.cell_tools_op(0, 959, 2, 1, 2, r#"{"kind":"insertCheckbox"}"#).unwrap();
+        book.cell_tools_op(0, 959, 2, 1, 2, r#"{"kind":"toggleCheckbox"}"#).unwrap();
+        assert!(book.view_range(0, 959, 2, 1, 1).unwrap().contains("true"));
+        assert!(book.cell_tools_op(0, 970, 2, 1, 1, r#"{"kind":"toggleCheckbox"}"#).is_err());
+        book.cell_tools_op(0, 949, 0, 1, 1, r#"{"kind":"style","name":"Good"}"#).unwrap();
+        let before_pick = steps(&book);
+        book.cell_tools_op(0, 949, 0, 1, 1, r#"{"kind":"pickFormat"}"#).unwrap();
+        assert_eq!(steps(&book), before_pick, "picking a format is not an undo step");
+        book.cell_tools_op(0, 949, 3, 1, 1, r#"{"kind":"pasteFormat"}"#).unwrap();
+        assert_eq!(steps(&book), before_pick + 1);
+        for bad in ["nope", r#"{"kind":"style","name":"Nope"}"#, r#"{"kind":"style"}"#, r#"{"kind":"autoSum","function":"EVIL"}"#, r#"{"kind":"pickFormat","x":1}"#, r#"{"kind":"x"}"#] {
+            assert!(book.cell_tools_op(0, 949, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        assert!(book.cell_tools_op(0, 949, 0, 0, 1, r#"{"kind":"pickFormat"}"#).is_err());
+        assert!(book.cell_tools_op(9, 949, 0, 1, 1, r#"{"kind":"pickFormat"}"#).is_err());
+        let catalog: serde_json::Value = serde_json::from_str(&book.function_catalog().unwrap()).unwrap();
+        assert!(catalog["functions"].as_array().unwrap().iter().any(|f| f["name"] == "SUM"));
+    }
+
     #[test]
     fn saved_views_remember_sheet_cell_and_zoom_and_refuse_bad_input() {
         let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();

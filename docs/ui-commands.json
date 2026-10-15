@@ -7421,6 +7421,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.cellTools",
+      "title": "Apply a cell style, AutoSum, checkboxes or copy and paste formats",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.chart",
       "title": "Create or change a chart",
       "category": "Edit",
@@ -7504,6 +7512,13 @@
       "category": "Edit",
       "source": "sheets",
       "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
+      "id": "sheets.insertFunction",
+      "title": "Start a formula with a function from the library",
+      "category": "Edit",
+      "source": "sheets",
       "hasEnabled": true
     },
     {

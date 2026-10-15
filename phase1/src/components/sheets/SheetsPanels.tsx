@@ -20,6 +20,7 @@ import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
 import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
+import {CELL_STYLE_GROUPS,AUTOSUM_FUNCTIONS,cellToolProblem,toolFromChoice,filterFunctions,functionCategories} from '../../lib/sheets/cellToolOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
@@ -233,6 +234,8 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <WhatIfGroup/>
   <ObjectsGroup/>
   <CellLayoutGroup/>
+  <CellToolsGroup/>
+  <InsertFunctionGroup/>
   <SheetTabGroup/>
   <OutlineGroup/>
   <SavedViewsGroup/>
@@ -420,6 +423,44 @@ function CellLayoutGroup(){
   </NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.cellLayout',LAYOUT_OPS[act])} data-testid="sheets-cl-apply">{t('sheets.cl.apply')}</Button>
   <p className="text-ink-3">{t(problem==='two'?'sheets.cl.needTwo':'sheets.cl.hint',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Cell styles, AutoSum, checkboxes and the format painter in one grouped menu. One undo step each. */
+function CellToolsGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [choice,setChoice]=useState('style:Good');
+ const r=s?.range;if(!s||!r)return null;
+ const op=toolFromChoice(choice),rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,problem=op?cellToolProblem(op,rows,cols):'cells';
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ct.title')}>
+  <span>{t('sheets.ct.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ct.action')}<NativeSelect className={field} value={choice} disabled={action.busy} onChange={e=>setChoice(e.currentTarget.value)} data-testid="sheets-ct-action">
+   <optgroup label={t('sheets.ct.groupStyles')}>{Object.values(CELL_STYLE_GROUPS).flat().map(n=><option key={n} value={'style:'+n}>{t('sheets.ct.style.'+n)}</option>)}</optgroup>
+   <optgroup label={t('sheets.ct.groupSum')}>{AUTOSUM_FUNCTIONS.map(f=><option key={f} value={'sum:'+f}>{t('sheets.ct.sum.'+f)}</option>)}</optgroup>
+   <optgroup label={t('sheets.ct.groupCheckbox')}>{(['insertCheckbox','toggleCheckbox'] as const).map(k=><option key={k} value={k}>{t('sheets.ct.'+k)}</option>)}</optgroup>
+   <optgroup label={t('sheets.ct.groupPainter')}>{(['pickFormat','pasteFormat'] as const).map(k=><option key={k} value={k}>{t('sheets.ct.'+k)}</option>)}</optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!op||!!problem} onClick={()=>void action.run('sheets.cellTools',op)} data-testid="sheets-ct-apply">{t('sheets.ct.apply')}</Button>
+  <p className="text-ink-3">{t(problem==='many'?'sheets.ct.many':'sheets.ct.hint',{range:rangeAddress(r)})}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Insert Function: pick from the engine's library; the formula starts in the cell editor and the person finishes it. */
+function InsertFunctionGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [category,setCategory]=useState('');const [search,setSearch]=useState('');const [pick,setPick]=useState('');
+ const all=s?.functions??[];if(!s||all.length===0)return null;
+ const list=filterFunctions(all,category,search),chosen=list.find(f=>f.name===pick)??list[0]??null;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.fn.title')}>
+  <span>{t('sheets.fn.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.fn.search')}<NativeInput className={field} value={search} maxLength={64} onChange={e=>setSearch(e.currentTarget.value)} data-testid="sheets-fn-search"/></label>
+  <label className="flex flex-col gap-1">{t('sheets.fn.category')}<NativeSelect className={field} value={category} onChange={e=>setCategory(e.currentTarget.value)} data-testid="sheets-fn-category">
+   <option value="">{t('sheets.fn.all')}</option>{functionCategories(all).map(c=><option key={c} value={c}>{c}</option>)}
+  </NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.fn.function')}<NativeSelect className={field} value={chosen?.name??''} disabled={!chosen} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-fn-pick">
+   {list.map(f=><option key={f.name} value={f.name}>{f.name}</option>)}
+  </NativeSelect></label>
+  {chosen?<p className="break-words text-ink-3"><span className="font-semibold">{chosen.signature}</span> {chosen.description}</p>:<p className="text-ink-3">{t('sheets.fn.none')}</p>}
+  <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>void action.run('sheets.insertFunction',{name:chosen?.name})} data-testid="sheets-fn-insert">{t('sheets.fn.insert')}</Button>
+  <p className="text-ink-3">{t('sheets.fn.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }
 /** Sheet tab: hide this sheet, show a hidden one, or set the tab color. One undo step each. */
