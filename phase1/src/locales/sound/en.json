@@ -171,6 +171,8 @@
   "sound.arrange.copyHint": "Copy the clip to the internal clipboard",
   "sound.arrange.paste": "Paste",
   "sound.arrange.pasteHint": "Inserts the copied clip at the playhead",
+  "sound.arrange.reverse": "Reverse",
+  "sound.arrange.reverseHint": "Reverses the source audio (new media \"<name>-reverse.wav\") and points the clip at it",
   "sound.arrange.normalize": "Normalize",
   "sound.arrange.normalizeHint": "Sets the clip gain so the region peak hits 0 dBFS (from the waveform)",
   "sound.arrange.delete": "Delete",

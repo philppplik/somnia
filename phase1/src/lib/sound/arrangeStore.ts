@@ -1,11 +1,12 @@
 import type {MasterReport,MasterTarget} from './mastering';
 import type {SoundAnalysis} from './analysis';
 import {useSyncExternalStore} from 'react';
-import {ArrangementHistory,arrangementEnd,emptyArrangement,newClip,newTrack,parseArrangement,serializeArrangement,validateArrangement,ARRANGE_LIMITS,type Arrangement,type AudioSourceRef} from './arrangement';
+import {ArrangementHistory,arrangementEnd,emptyArrangement,findArrangeClip,newClip,newTrack,parseArrangement,serializeArrangement,validateArrangement,ARRANGE_LIMITS,type Arrangement,type AudioSourceRef} from './arrangement';
 import {getSoundSession,openSound} from './session';
+import {decodeSessionWav,encodeSessionWav,reverseSource} from './sessionWav';
 import {trackAnalysisSession} from './analysisSource';
 import {registerWorkProvider} from '../workDocs';
-import {getMedia} from '../media';
+import {addMediaFile,getMedia} from '../media';
 import {t} from '../i18n';
 import {registerCloseGuard} from '../closeGuards';
 let history=new ArrangementHistory(emptyArrangement());
@@ -48,6 +49,22 @@ export async function addArrangementMedia(name:string,relinkId?:string){
  if(!expected){doc.sources.push(source);let track=doc.tracks[0];if(doc.tracks.length<ARRANGE_LIMITS.tracks){track=newTrack(uid(),item.name);doc.tracks.push(track);}if(!track)throw Error('Track limit');track.clips.push(newClip(uid(),source));validateArrangement(doc);}
  const wav=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while importing');await request({kind:'source',sourceId:id,wav},[wav]);if(token!==generation)throw Error('Session changed while importing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
  if(!expected)history.change(s=>{s.sources=doc.sources;s.tracks=doc.tracks;});invalidate();
+}
+/** Reverses a clip's source audio into a new media item ("<name>-reverse.wav", numbered on collision) and repoints the clip. One undoable arrangement edit; the media item stays in the library like any import. */
+export async function reverseClipToMedia(clipId:string){
+ const token=generation;const doc=history.snapshot;const {clip}=findArrangeClip(doc,clipId);const source=doc.sources.find(src=>src.id===clip.sourceId)!;
+ const session=getSoundSession(source.name);if(!session?.original)throw Error('Source audio is not ready');
+ const decoded=decodeSessionWav(source.id,await session.original.blob.arrayBuffer());
+ const reversed=reverseSource(decoded,source.id);
+ const base=source.name.replace(/\.[^.]+$/,'');let name=`${base}-reverse.wav`,n=2;while(getMedia().items.some(m=>m.name===name))name=`${base}-reverse-${n++}.wav`;
+ const added=await addMediaFile(new Blob([encodeSessionWav(reversed.channels,reversed.sampleRate)],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
+ const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Reversed audio was not registered');
+ await openSound(item);const next=getSoundSession(added.name);if(!next?.original)throw Error('Reversed audio is not ready');
+ if(token!==generation)throw Error('Session changed while reversing');
+ const report=next.original.report.output,id=uid();
+ const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
+ const wav=await next.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while reversing');await request({kind:'source',sourceId:id,wav},[wav]);if(token!==generation)throw Error('Session changed while reversing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:next.original.peaks}});
+ history.change(s=>{s.sources.push(ref);findArrangeClip(s,clipId).clip.sourceId=id;});invalidate();
 }
 /** Analyses one rendered track (own inserts/level/pan, no master chain) in the mix worker. Bound to the session revision and the current output range, invalidated by edits like the full-mix report. */
 export async function analyzeTrack(trackId:string){const snapshot=history.snapshot;trackAnalysisSession(snapshot,trackId);const rev=history.revision,token=generation;emit({trackAnalysisBusy:true});try{const result=await request({kind:'analyze',session:snapshot,trackId,...(state.rangeSelection?{range:state.rangeSelection}:{})});if(token!==generation||rev!==history.revision)return;emit({trackAnalysis:{trackId,analysis:result.analysis,revision:rev}});}catch(e){if(token===generation)emit({error:e instanceof Error?e.message:String(e)});}finally{if(token===generation)emit({trackAnalysisBusy:false});}}

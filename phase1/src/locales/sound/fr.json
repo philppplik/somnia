@@ -171,6 +171,8 @@
   "sound.arrange.copyHint": "Copie le clip dans le presse-papiers interne",
   "sound.arrange.paste": "Coller",
   "sound.arrange.pasteHint": "Insère le clip copié à la tête de lecture",
+  "sound.arrange.reverse": "Inverser",
+  "sound.arrange.reverseHint": "Inverse l’audio source (nouveau média « <name>-reverse.wav ») et y pointe le clip",
   "sound.arrange.normalize": "Normaliser",
   "sound.arrange.normalizeHint": "Règle le gain du clip pour que le pic atteigne 0 dBFS (depuis la forme d’onde)",
   "sound.arrange.delete": "Supprimer",

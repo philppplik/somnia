@@ -171,6 +171,8 @@
   "sound.arrange.copyHint": "Copia o clipe para a área de transferência interna",
   "sound.arrange.paste": "Colar",
   "sound.arrange.pasteHint": "Insere o clipe copiado no cursor",
+  "sound.arrange.reverse": "Inverter",
+  "sound.arrange.reverseHint": "Inverte o áudio fonte (nova mídia \"<name>-reverse.wav\") e aponta o clipe para ela",
   "sound.arrange.normalize": "Normalizar",
   "sound.arrange.normalizeHint": "Ajusta o ganho do clipe para o pico atingir 0 dBFS (pela forma de onda)",
   "sound.arrange.delete": "Excluir",
