@@ -1012,5 +1012,6 @@
  "studio3d.mesh.bend": "Bend",
  "studio3d.mesh.bendAxis": "Deform axis",
  "studio3d.mesh.bendAngle": "Bend angle in degrees",
- "cmd.studio3d.edit.selectChecker": "Deselect every nth selected element of the edited 3D mesh, starting at the offset"
+ "cmd.studio3d.edit.selectChecker": "Deselect every nth selected element of the edited 3D mesh, starting at the offset",
+ "cmd.studio3d.edit.selectRandom": "Select a seeded random share of the edited 3D mesh elements"
 }

@@ -1012,5 +1012,6 @@
  "studio3d.mesh.bend": "Curvar",
  "studio3d.mesh.bendAxis": "Eje de deformación",
  "studio3d.mesh.bendAngle": "Ángulo de curvatura en grados",
- "cmd.studio3d.edit.selectChecker": "Deselecciona cada n-ésimo elemento seleccionado de la malla 3D editada, empezando en el desplazamiento"
+ "cmd.studio3d.edit.selectChecker": "Deselecciona cada n-ésimo elemento seleccionado de la malla 3D editada, empezando en el desplazamiento",
+ "cmd.studio3d.edit.selectRandom": "Selecciona una parte aleatoria reproducible por semilla de los elementos de la malla 3D editada"
 }

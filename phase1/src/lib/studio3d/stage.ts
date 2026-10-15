@@ -963,6 +963,26 @@ export class Stage{
    }
   }
  }
+ /** Selects a seeded random share of every element of one kind, replacing the selection of that kind. The seed makes the pick deterministic and repeatable; selection changes are not undo steps. */
+ editSelectRandom(kind:'vertex'|'edge'|'face',ratio:number,seed:number){
+  if(!Number.isFinite(ratio)||ratio<=0||ratio>1)throw new StageError('The random ratio must be a number greater than 0 and at most 1.');
+  if(!Number.isInteger(seed)||seed<1||seed>1000000000)throw new StageError('The random seed must be a whole number between 1 and 1000000000.');
+  const m=this.editMesh();
+  const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
+  const n=kind==='vertex'?pos.count:kind==='face'?(idx?idx.count:pos.count)/3:this.allEdges(m).length;
+  if(!n)throw new StageError('Nothing to select.');
+  let t=seed>>>0;
+  const rand=()=>{t=(t+0x6D2B79F5)>>>0;let r=Math.imul(t^(t>>>15),1|t);r=(r+Math.imul(r^(r>>>7),61|r))^r;return((r^(r>>>14))>>>0)/4294967296;};
+  const picked=new Set<number>();
+  for(let i=0;i<n;i++)if(rand()<ratio)picked.add(i);
+  if(kind==='vertex')this.editSel.verts=picked;
+  else if(kind==='face')this.editSel.faces=picked;
+  else{
+   const all=this.allEdges(m);
+   this.editSel.edges=new Map();
+   all.forEach((e,i)=>{if(picked.has(i))this.editSel.edges.set(`${e[0]}_${e[1]}`,e);});
+  }
+ }
  /** Checker-deselects: drops every nth element of the current selection (sorted by id), starting at the offset. Deterministic; selection changes are not undo steps. */
  editSelectChecker(kind:'vertex'|'edge'|'face',nth:number,offset:number){
   if(!Number.isInteger(nth)||nth<2||nth>1000)throw new StageError('The checker step must be a whole number of 2 or more.');

@@ -1012,5 +1012,6 @@
  "studio3d.mesh.bend": "Biegen",
  "studio3d.mesh.bendAxis": "Verformungsachse",
  "studio3d.mesh.bendAngle": "Biegewinkel in Grad",
- "cmd.studio3d.edit.selectChecker": "Jedes n-te selektierte Element des bearbeiteten 3D-Meshs abwählen, beginnend beim Offset"
+ "cmd.studio3d.edit.selectChecker": "Jedes n-te selektierte Element des bearbeiteten 3D-Meshs abwählen, beginnend beim Offset",
+ "cmd.studio3d.edit.selectRandom": "Eine zufällige, per Seed wiederholbare Auswahl der Elemente des bearbeiteten 3D-Meshs treffen"
 }

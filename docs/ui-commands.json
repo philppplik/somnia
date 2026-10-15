@@ -8209,6 +8209,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.selectRandom",
+      "title": "Select a seeded random share of the edited 3D mesh elements",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.selectSharp",
       "title": "Select edges whose faces meet at an angle of at least the given degrees",
       "category": "Edit",

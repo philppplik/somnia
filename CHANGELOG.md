@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit mode selects a seeded random share of elements (`studio3d.edit.selectRandom`).
 - 3D Studio: edit mode checker-deselects every nth selected element (`studio3d.edit.selectChecker`).
 - 3D Studio: bend deforms meshes along concentric arcs around the perpendicular axis (`studio3d.mesh.bend`).
 - 3D Studio: edit mode selects the shortest edge path between two vertices (`studio3d.edit.selectPath`).
