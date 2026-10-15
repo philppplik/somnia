@@ -1343,5 +1343,8 @@
  "animation.rig.cascade.in": "Cascade des bords vers le centre",
  "cmd.animation.layers.cascade": "Décaler les calques cochés selon leur position sur la toile",
  "animation.rig.wipe.in.iris": "Iris d'ouverture depuis le centre",
- "animation.rig.wipe.out.iris": "Iris de fermeture vers le centre"
+ "animation.rig.wipe.out.iris": "Iris de fermeture vers le centre",
+ "animation.rig.group.hue": "Cycle de couleur",
+ "animation.rig.hue": "Cycle de couleur : un tour de roue chromatique",
+ "cmd.animation.layers.hue": "Faire parcourir la roue chromatique à la couleur des calques cochés"
 }

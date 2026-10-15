@@ -2258,6 +2258,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.hue",
+      "title": "Cycle the colour of the ticked layers round the hue wheel",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "color",
+        "colour",
+        "cycle",
+        "fill",
+        "hue",
+        "loop",
+        "rainbow",
+        "shift",
+        "stroke"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.ik",
       "title": "Reach the last ticked layer with a three-layer arm",
       "category": "Edit",

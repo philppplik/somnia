@@ -1981,3 +1981,13 @@ test('P288 iris: ellipse mask grows from the centre to cover the corners, out re
  assert.deepEqual(ps[1].v,[100-d/2,50-d/2]);assert.deepEqual(ps[0].v,[99.5,49.5]);
  const o=wipeMask('mk',200,100,'iris',0,10,true,false);assert.deepEqual(o.anim!.size!.keys[0].v,[d,d]);
 });
+test('P289 hue: nine colour keys round the wheel ending on the start colour, grey and keyed layers skipped, one undo',async()=>{
+ const {hueSteps,hueSpecs}=await import('./hueCommands');const run=hueSpecs()[0].run as (p?:unknown)=>unknown;
+ assert.equal(hueSteps(1).length,9);assert.equal(hueSteps(2).at(-1),720);
+ const s=new AnimationSession();s.open(applyEdits(base(),[{type:'layer.add',kind:'solid',id:'hz1'},{type:'layer.update',layer:'hz1',source:{color:'#ff0000'}},{type:'layer.add',kind:'solid',id:'hz2'},{type:'layer.update',layer:'hz2',source:{color:'#808080'}}] as never));setAnimationSession(s);
+ const L=(id:string)=>findComp(s.document!)!.layers.find(x=>x.id===id)!;const before=JSON.stringify(s.document);
+ const r=run({layers:['hz1']}) as {layers:number};assert.equal(r.layers,1);
+ const k=L('hz1').colorKeys!.fill!;assert.equal(k.length,9);assert.equal(k[0].color,'#ff0000');assert.equal(k[8].color,'#ff0000');assert.equal(k[4].color,'#00ffff');
+ assert.throws(()=>run({layers:['hz1']}),/no colour keys/);
+ s.undo();assert.equal(JSON.stringify(s.document),before);
+});

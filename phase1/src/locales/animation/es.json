@@ -1343,5 +1343,8 @@
  "animation.rig.cascade.in": "Cascada de los bordes hacia dentro",
  "cmd.animation.layers.cascade": "Retrasar las capas marcadas según su posición en el lienzo",
  "animation.rig.wipe.in.iris": "Iris de apertura desde el centro",
- "animation.rig.wipe.out.iris": "Iris de cierre hacia el centro"
+ "animation.rig.wipe.out.iris": "Iris de cierre hacia el centro",
+ "animation.rig.group.hue": "Ciclo de color",
+ "animation.rig.hue": "Ciclo de color: una vuelta a la rueda de tonos",
+ "cmd.animation.layers.hue": "Hacer que el color de las capas marcadas recorra la rueda de tonos"
 }

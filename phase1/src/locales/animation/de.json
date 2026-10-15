@@ -1343,5 +1343,8 @@
  "animation.rig.cascade.in": "Kaskade von außen nach innen",
  "cmd.animation.layers.cascade": "Markierte Ebenen nach ihrer Position auf der Fläche verzögern",
  "animation.rig.wipe.in.iris": "Irisblende auf (von der Mitte)",
- "animation.rig.wipe.out.iris": "Irisblende zu (zur Mitte)"
+ "animation.rig.wipe.out.iris": "Irisblende zu (zur Mitte)",
+ "animation.rig.group.hue": "Farbwechsel",
+ "animation.rig.hue": "Farbwechsel: einmal um den Farbkreis",
+ "cmd.animation.layers.hue": "Farbe der markierten Ebenen einmal um den Farbkreis laufen lassen"
 }

@@ -1343,5 +1343,8 @@
  "animation.rig.cascade.in": "Cascata das bordas para dentro",
  "cmd.animation.layers.cascade": "Atrasar as camadas marcadas pela posição na tela",
  "animation.rig.wipe.in.iris": "Íris abrindo do centro",
- "animation.rig.wipe.out.iris": "Íris fechando para o centro"
+ "animation.rig.wipe.out.iris": "Íris fechando para o centro",
+ "animation.rig.group.hue": "Ciclo de cor",
+ "animation.rig.hue": "Ciclo de cor: uma volta no círculo de matizes",
+ "cmd.animation.layers.hue": "Fazer a cor das camadas marcadas percorrer o círculo de matizes"
 }

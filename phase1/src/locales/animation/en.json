@@ -1343,5 +1343,8 @@
  "animation.rig.cascade.in": "Cascade from the edges inward",
  "cmd.animation.layers.cascade": "Delay the ticked layers by their position on the canvas",
  "animation.rig.wipe.in.iris": "Iris in from the centre",
- "animation.rig.wipe.out.iris": "Iris out to the centre"
+ "animation.rig.wipe.out.iris": "Iris out to the centre",
+ "animation.rig.group.hue": "Colour cycle",
+ "animation.rig.hue": "Colour cycle: round the hue wheel once",
+ "cmd.animation.layers.hue": "Cycle the colour of the ticked layers round the hue wheel"
 }
