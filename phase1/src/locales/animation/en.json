@@ -1158,5 +1158,15 @@
  "animation.rig.stretch.75": "75% length",
  "animation.rig.stretch.125": "125% length",
  "animation.rig.stretch.200": "200% length (twice as slow)",
- "cmd.animation.layers.stretch": "Stretch the time of the selected layers"
+ "cmd.animation.layers.stretch": "Stretch the time of the selected layers",
+ "animation.export.lottie": "Lottie (JSON)",
+ "animation.export.lottie.hint": "Whole animation as a Lottie file for the web and apps: solid, null and shape layers with their keys, easing and parenting.",
+ "animation.export.lottie.left": "Left out of the Lottie file: {items}.",
+ "animation.export.lottie.gap.text": "text layers",
+ "animation.export.lottie.gap.media": "images, nested compositions and audio",
+ "animation.export.lottie.gap.matte": "mattes",
+ "animation.export.lottie.gap.effects": "effects, masks, repeaters and path effects",
+ "animation.export.lottie.gap.colour": "gradients and colour keys (flat colour used)",
+ "animation.export.lottie.gap.motion": "modifiers, stroke trim and dash, per-channel ease",
+ "cmd.animation.export.lottie": "Export the composition as Lottie JSON"
 }

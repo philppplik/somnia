@@ -1263,3 +1263,19 @@ test('P235 layer time stretch: keys and out point scale about the in point, one 
  assert.throws(()=>run({percent:100,layers:[L0.id]}),/percent/);assert.throws(()=>run({percent:5,layers:[L0.id]}),/percent/);
  assert.throws(()=>run({percent:1000,layers:[L0.id]}),/No layer|leave/);
 });
+
+test('P236 Lottie export: layers, keys with easing, parenting, flat fills and a list of what is left out',async()=>{
+ const {lottieFromComposition}=await import('./lottie');const {exportLottieFile}=await import('./exportSvg');
+ const s=open();const c=findComp(s.document!)!;
+ const r=lottieFromComposition(c),j=JSON.parse(r.json);
+ assert.equal(j.v,'5.7.4');assert.equal(j.w,c.width);assert.equal(j.h,c.height);assert.equal(j.fr,30);assert.equal(j.op,Math.round(c.duration*30/240000));
+ assert.ok(Array.isArray(j.layers)&&j.layers.length===r.layers&&r.layers>=1);
+ const inds=j.layers.map((l:{ind:number})=>l.ind);assert.equal(new Set(inds).size,inds.length);
+ for(const l of j.layers){assert.ok([1,3,4].includes(l.ty));assert.ok(l.ks&&l.ks.o&&l.ks.p&&l.ks.a&&l.ks.s&&l.ks.r);if(l.parent!==undefined)assert.ok(inds.includes(l.parent));}
+ const text=c.layers.find(l=>l.kind==='text');if(text)assert.ok(r.left.includes('text')||c.layers.some(l=>l.parent===text.id));
+ const kf=j.layers.flatMap((l:{ks:{p:{a:number;k:{t:number;s:number[];o?:{x:number[]};i?:{x:number[]}}[]}}})=>l.ks.p.a?l.ks.p.k:[]);
+ assert.ok(kf.length>=2);assert.ok(kf.every((k:{t:number;s:number[]})=>typeof k.t==='number'&&k.s.length===3));
+ assert.ok(kf.some((k:{o?:unknown;h?:number})=>k.o||k.h));
+ const f=exportLottieFile(c,'My anim');assert.equal(f.fileName,'My_anim.json');assert.ok(f.blob.size>100);
+ assert.throws(()=>exportLottieFile({...c,layers:c.layers.filter(l=>l.kind==='text')},'x'),/Lottie/);
+});

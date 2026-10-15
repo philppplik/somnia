@@ -485,6 +485,24 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.lottie",
+      "title": "Export the composition as Lottie JSON",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "app",
+        "bodymovin",
+        "export",
+        "json",
+        "lottie",
+        "lottie-web",
+        "vector",
+        "web"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.preset.apply",
       "title": "Apply one of my export presets",
       "category": "Project",

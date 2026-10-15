@@ -1158,5 +1158,15 @@
  "animation.rig.stretch.75": "75 % de duree",
  "animation.rig.stretch.125": "125 % de duree",
  "animation.rig.stretch.200": "200 % de duree (deux fois plus lent)",
- "cmd.animation.layers.stretch": "Etirer le temps des calques selectionnes"
+ "cmd.animation.layers.stretch": "Etirer le temps des calques selectionnes",
+ "animation.export.lottie": "Lottie (JSON)",
+ "animation.export.lottie.hint": "Toute l'animation en fichier Lottie pour le web et les apps : calques unis, nuls et de forme avec cles, interpolation et parentes.",
+ "animation.export.lottie.left": "Absent du fichier Lottie : {items}.",
+ "animation.export.lottie.gap.text": "calques de texte",
+ "animation.export.lottie.gap.media": "images, compositions imbriquees et audio",
+ "animation.export.lottie.gap.matte": "mattes",
+ "animation.export.lottie.gap.effects": "effets, masques, repeteurs et effets de trace",
+ "animation.export.lottie.gap.colour": "degrades et cles de couleur (couleur unie utilisee)",
+ "animation.export.lottie.gap.motion": "modificateurs, rognage et tirets du contour, interpolation par canal",
+ "cmd.animation.export.lottie": "Exporter la composition en JSON Lottie"
 }

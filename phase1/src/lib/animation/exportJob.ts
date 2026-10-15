@@ -8,7 +8,7 @@ import {findComp,type Layer} from './model';
 import {layerSetIds} from './layerSet';
 import {defaultExportSettings,exportPlan,problemMessage,settingsProblems,EXPORT_PRESETS,EXPORT_LIMITS,cropInside,withoutLoopSeam,DEFAULT_FRAME_QUALITY,webmBitrate,type ExportFormat,type ExportSettings} from './exportSettings';
 import {animationSession} from './session';
-import {exportFrameSvg} from './exportSvg';
+import {exportFrameSvg,exportLottieFile} from './exportSvg';
 import {Zip,ZipPassThrough,strToU8} from 'fflate';
 import {sheetPlan,packSheet,encodePngRgba,sheetManifest,SheetError} from './spriteSheet';
 /** Observable state of the one export job the studio runs at a time. The UI shows real progress and real failures; nothing reports success before the file was handed to the browser. */
@@ -101,6 +101,12 @@ export function copyCurrentFrame(d:Deps={}){
 export function exportCurrentFrameSvg(d:Deps={}){
  const {doc,comp}=target();const at=animationSession().getState().view.playhead;
  return guarded('frame',async()=>exportFrameSvg(comp,at,doc.name,state.transparent,doc.assets),d.save??downloadBlob);
+}
+/** Whole composition as Lottie JSON. What the format could not carry is left in `message` as a comma list of codes for the done line. */
+export async function exportLottie(d:Deps={}){
+ const {doc,comp}=target();let left:string[]=[];
+ const name=await guarded('frame',async()=>{const r=exportLottieFile(comp,doc.name);left=r.left;return r;},d.save??downloadBlob);
+ set({message:left.join(',')});return name;
 }
 export function exportWorkAreaSequence(d:Deps={}){
  const {doc,out,ec}=target('sequence');

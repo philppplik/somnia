@@ -1158,5 +1158,15 @@
  "animation.rig.stretch.75": "75 % Laenge",
  "animation.rig.stretch.125": "125 % Laenge",
  "animation.rig.stretch.200": "200 % Laenge (halb so schnell)",
- "cmd.animation.layers.stretch": "Zeit der gewaehlten Ebenen dehnen"
+ "cmd.animation.layers.stretch": "Zeit der gewaehlten Ebenen dehnen",
+ "animation.export.lottie": "Lottie (JSON)",
+ "animation.export.lottie.hint": "Ganze Animation als Lottie-Datei fuer Web und Apps: Farbflaechen-, Null- und Formebenen mit Keys, Easing und Eltern-Verknuepfung.",
+ "animation.export.lottie.left": "Nicht in der Lottie-Datei: {items}.",
+ "animation.export.lottie.gap.text": "Textebenen",
+ "animation.export.lottie.gap.media": "Bilder, verschachtelte Kompositionen und Audio",
+ "animation.export.lottie.gap.matte": "Mattes",
+ "animation.export.lottie.gap.effects": "Effekte, Masken, Repeater und Pfad-Effekte",
+ "animation.export.lottie.gap.colour": "Verlaeufe und Farb-Keys (flache Farbe verwendet)",
+ "animation.export.lottie.gap.motion": "Modifikatoren, Stroke-Trim und Strichelung, Ease pro Kanal",
+ "cmd.animation.export.lottie": "Komposition als Lottie-JSON exportieren"
 }

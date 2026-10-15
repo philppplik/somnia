@@ -1158,5 +1158,15 @@
  "animation.rig.stretch.75": "75% da duracao",
  "animation.rig.stretch.125": "125% da duracao",
  "animation.rig.stretch.200": "200% da duracao (metade da velocidade)",
- "cmd.animation.layers.stretch": "Esticar o tempo das camadas selecionadas"
+ "cmd.animation.layers.stretch": "Esticar o tempo das camadas selecionadas",
+ "animation.export.lottie": "Lottie (JSON)",
+ "animation.export.lottie.hint": "Animacao inteira como arquivo Lottie para web e apps: camadas solidas, nulas e de forma com chaves, suavizacao e hierarquia.",
+ "animation.export.lottie.left": "Fora do arquivo Lottie: {items}.",
+ "animation.export.lottie.gap.text": "camadas de texto",
+ "animation.export.lottie.gap.media": "imagens, composicoes aninhadas e audio",
+ "animation.export.lottie.gap.matte": "mattes",
+ "animation.export.lottie.gap.effects": "efeitos, mascaras, repetidores e efeitos de caminho",
+ "animation.export.lottie.gap.colour": "gradientes e chaves de cor (cor plana usada)",
+ "animation.export.lottie.gap.motion": "modificadores, corte e tracejado do contorno, suavizacao por canal",
+ "cmd.animation.export.lottie": "Exportar a composicao como JSON do Lottie"
 }

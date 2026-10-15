@@ -275,10 +275,12 @@ export function RenderSection(_:InspectorSectionProps){
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.gif')} data-testid="animation-export-gif">{t('animation.export.gif')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.apng')} data-testid="animation-export-apng">{t('animation.export.apng')}</Button>
    <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.export.webm')} data-testid="animation-export-webm">{t('animation.export.webm')}</Button>
+   <Button size="compact" variant="outline" disabled={busy} title={t('animation.export.lottie.hint')} onClick={()=>run('animation.export.lottie')} data-testid="animation-export-lottie">{t('animation.export.lottie')}</Button>
   </div>
   <p className="m-0 text-ink-3">{t('animation.export.videoNote')}</p>
   {busy&&<StudioProgress label={t('animation.export.progress',{done:job.done,total:job.total})} value={job.done} max={job.total} progressTestId="animation-export-progress" cancelLabel={t('animation.export.cancel')} onCancel={job.kind&&job.kind!=='frame'?cancelExport:undefined} cancelTestId="animation-export-cancel"/>}
   {job.status==='done'&&<StudioStatus className="block m-0 text-ink" data-testid="animation-export-done">{job.kind==='copy'?t('animation.export.copied'):job.bytes>0?t('animation.export.doneSize',{file:job.fileName,size:formatBytes(job.bytes)}):t('animation.export.done',{file:job.fileName})}</StudioStatus>}
+  {job.status==='done'&&job.kind==='frame'&&!!job.message&&<p className="m-0 text-ink-3" data-testid="animation-export-lottie-left">{t('animation.export.lottie.left',{items:job.message.split(',').map(g=>t(`animation.export.lottie.gap.${g}`)).join(', ')})}</p>}
   {job.status==='error'&&<StudioStatus tone="error" live="assertive" className="block m-0 text-ink" data-testid="animation-export-error">{t('animation.export.error',{message:job.message})}</StudioStatus>}
   <p className="m-0 text-ink-3">{t('animation.render.note')}</p>
   <Button size="compact" variant="outline" disabled={busy} onClick={()=>run('animation.render.close')}>{t('animation.render.close')}</Button>
