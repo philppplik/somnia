@@ -4528,6 +4528,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.proofing.addWord",
+      "title": "Add a word to the spelling dictionary",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.proofing.toggle",
+      "title": "Toggle spelling and grammar marks",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.properties.set",
       "title": "Set document properties",
       "category": "View",

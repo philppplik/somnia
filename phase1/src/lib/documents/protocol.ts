@@ -166,6 +166,9 @@ export type DocumentsRequest=
  |{id:number;kind:'setListOptions';block:number;patch:ListOptionsPatch}
  |{id:number;kind:'propertiesState'}
  |{id:number;kind:'setProperties';patch:PropertiesPatch}
+ |{id:number;kind:'proofCheck';words:string[]}
+ |{id:number;kind:'proofSuggest';word:string}
+ |{id:number;kind:'setProofing';on:boolean}
  |{id:number;kind:'pageSetupState'}
  |{id:number;kind:'setPageSetup';setup:PageSetupPatch}
  |{id:number;kind:'commentsState'}
@@ -200,6 +203,8 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'styles';items:StyleItem[]}
  |{id:number;ok:true;kind:'styleSaved';styleId:string;document:OpenedDocument}
  |{id:number;ok:true;kind:'listOptions';state:ListOptionsState}
+ |{id:number;ok:true;kind:'proof';issues:ProofIssue[]}
+ |{id:number;ok:true;kind:'suggest';words:string[]}
  |{id:number;ok:true;kind:'pageSetup';state:PageSetupState}
  |{id:number;ok:true;kind:'hit';hit:HitResult|null}
  |{id:number;ok:true;kind:'caret';caret:CaretBox|null}
@@ -254,6 +259,23 @@ export const TABLE_PRESETS:readonly (readonly [number,number])[]=[[2,2],[3,3],[4
 /** Limits for inserted pictures (PNG or JPEG, checked by file signature). */
 export const MAX_IMAGE_BYTES=5*1024*1024,MAX_IMAGE_SIDE=8000,MAX_IMAGE_PIXELS=25_000_000,MAX_IMAGES=200,MIN_IMAGE_PT=10,MAX_IMAGE_PT=2000;
 export const IMAGE_WIDTH_PERCENTS=[25,50,75,100] as const;
+/** A spelling or grammar issue: UTF-8 byte range in one paragraph. `fixable` is false when the paragraph holds inline objects. */
+export interface ProofIssue{block:number;start:number;end:number;kind:'spelling'|'grammar';word:string;message:string;suggestions:string[];fixable:boolean}
+export const MAX_PROOF_ISSUES=400,MAX_USER_WORDS=1000,MAX_PROOF_WORD_CHARS=40;
+/** True for a word the user dictionary can hold: 1 to 40 characters, no spaces or control characters. */
+export const proofWordOk=(w:unknown):w is string=>typeof w==='string'&&w.length>0&&[...w].length<=MAX_PROOF_WORD_CHARS&&!/[\s\u0000-\u001f\u007f]/.test(w);
+/** The engine's issue list, checked: anything malformed is dropped and the list is capped. */
+export function parseProofIssues(json:string):ProofIssue[]{
+ let v:unknown;try{v=JSON.parse(json);}catch{return[];}
+ if(!Array.isArray(v))return[];const out:ProofIssue[]=[];
+ for(const x of v){
+  if(out.length>=MAX_PROOF_ISSUES)break;if(!x||typeof x!=='object')continue;const o=x as Record<string,unknown>;
+  const int=(n:unknown):n is number=>typeof n==='number'&&Number.isInteger(n)&&n>=0&&n<2**31;
+  if(!int(o.block)||!int(o.start)||!int(o.end)||o.end<=o.start||(o.kind!=='spelling'&&o.kind!=='grammar')||typeof o.word!=='string'||typeof o.message!=='string'||typeof o.fixable!=='boolean'||!Array.isArray(o.suggestions))continue;
+  out.push({block:o.block,start:o.start,end:o.end,kind:o.kind,word:o.word,message:o.message.slice(0,200),suggestions:o.suggestions.filter((s):s is string=>typeof s==='string'&&s.length>0&&s.length<=200&&!/[\r\n]/.test(s)).slice(0,5),fixable:o.fixable});
+ }
+ return out;
+}
 export const IMAGE_WRAPS=['inline','square','topAndBottom','behind','front'] as const;
 export const IMAGE_ALIGNS=['left','center','right'] as const;
 export type ImageWrap=typeof IMAGE_WRAPS[number];

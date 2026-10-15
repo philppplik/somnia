@@ -132,6 +132,8 @@ pub struct DocSession {
     pages: DocLayout,
     snaps: std::collections::HashMap<u32, Snap>,
     next_snap: u32,
+    /// Red and blue squiggles under spelling and grammar issues (English word list).
+    proofing: bool,
 }
 
 impl DocSession {
@@ -140,7 +142,7 @@ impl DocSession {
             return Err("adapter input limit: 16 MiB".into());
         }
         let doc = wordcraft_docx::read(bytes).map_err(|e| e.to_string())?;
-        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1 })
+        Ok(Self { doc, cache: LayoutCache::new(), pages: DocLayout::default(), snaps: Default::default(), next_snap: 1, proofing: false })
     }
     fn do_insert(&mut self, block: usize, offset: usize, text: &str) -> Result<(), String> {
         if text.len() > 1024 * 1024 {
@@ -3243,6 +3245,62 @@ impl DocSession {
         self.pages = DocLayout::default();
         Ok(())
     }
+    /// Spelling and grammar issues of every paragraph (top level, then table cells), as JSON
+    /// `[{block,start,end,kind,word,message,suggestions,fixable}]` with UTF-8 byte offsets. Text marked "do not check", hidden text,
+    /// links and text tagged with a language other than English are skipped. `words_json` is the user's own word list
+    /// (at most 1000 words of 40 characters), added to the dictionary for the check. At most 400 issues are returned.
+    fn do_proof_check(&self, words_json: &str) -> Result<String, String> {
+        const MAX_ISSUES: usize = 400;
+        let words: Vec<String> = serde_json::from_str(words_json).map_err(|_| "the word list is not valid".to_string())?;
+        if words.len() > 1000 || words.iter().any(|w| w.is_empty() || w.chars().count() > 40 || w.chars().any(|c| c.is_control() || c.is_whitespace())) {
+            return Err("the word list holds at most 1000 words of 1 to 40 characters".into());
+        }
+        for w in &words {
+            wordcraft_proof::add_word(w);
+        }
+        let mut out: Vec<serde_json::Value> = Vec::new();
+        let ids = (0..self.doc.body.len()).chain((0..self.cell_paras().count().min(CELL_LIST_MAX)).map(|n| CELL_BASE + n));
+        'paras: for id in ids {
+            let Some(p) = self.para_at(id) else { continue };
+            if p.text.trim().is_empty() || p.text.len() > 100_000 {
+                continue;
+            }
+            let text = wordcraft_layout::para::proof_text(p);
+            let skip = |a: usize, b: usize| {
+                p.run_ranges().any(|(r, c)| {
+                    r.start < b
+                        && a < r.end
+                        && (c.no_proof == Some(true) || c.hidden == Some(true) || c.link.is_some() || c.lang.as_deref().is_some_and(|l| !l.to_ascii_lowercase().starts_with("en")))
+                })
+            };
+            let mut found = wordcraft_proof::check_spelling(&text);
+            found.extend(wordcraft_proof::check_grammar(&text));
+            found.sort_by_key(|i| (i.start, i.end));
+            for i in found {
+                if skip(i.start, i.end) {
+                    continue;
+                }
+                let Some(word) = p.text.get(i.start..i.end) else { continue };
+                if out.len() >= MAX_ISSUES {
+                    break 'paras;
+                }
+                out.push(serde_json::json!({
+                    "block": id, "start": i.start, "end": i.end,
+                    "kind": if i.kind == wordcraft_proof::IssueKind::Spelling { "spelling" } else { "grammar" },
+                    "word": word, "message": i.message, "suggestions": i.suggestions.iter().take(5).collect::<Vec<_>>(),
+                    "fixable": p.objects.is_empty(),
+                }));
+            }
+        }
+        Ok(serde_json::Value::Array(out).to_string())
+    }
+    /// Up to five spelling suggestions for one word, as a JSON array of strings.
+    fn do_proof_suggest(&self, word: &str) -> Result<String, String> {
+        if word.is_empty() || word.chars().count() > 40 || word.chars().any(|c| c.is_control() || c.is_whitespace()) {
+            return Err("a word is 1 to 40 characters without spaces".into());
+        }
+        Ok(serde_json::json!(wordcraft_proof::suggest(word, 5)).to_string())
+    }
     fn do_export_pdf(&self, opts_json: &str) -> Result<Vec<u8>, String> {
         self.do_export_pdf_at(opts_json, "")
     }
@@ -3661,6 +3719,17 @@ impl DocSession {
     pub fn set_image_crop(&mut self, block: usize, left: f32, top: f32, right: f32, bottom: f32) -> Result<(), JsValue> {
         self.do_set_image_crop(block, left, top, right, bottom).map_err(|e| js_err(&e))
     }
+    /// Turns the spelling and grammar squiggles on or off (they show after the next `paginate`).
+    pub fn set_proofing(&mut self, on: bool) {
+        self.proofing = on;
+    }
+    /// Spelling and grammar issues of the whole document as JSON; `words_json` is the user's word list.
+    pub fn proof_check(&self, words_json: &str) -> Result<String, JsValue> {
+        self.do_proof_check(words_json).map_err(|e| js_err(&e))
+    }
+    pub fn proof_suggest(&self, word: &str) -> Result<String, JsValue> {
+        self.do_proof_suggest(word).map_err(|e| js_err(&e))
+    }
     pub fn fit_image(&mut self, block: usize, percent: u32) -> Result<(), JsValue> {
         self.do_fit_image(block, percent).map_err(|e| js_err(&e))
     }
@@ -3742,7 +3811,7 @@ impl DocSession {
         self.do_insert(block, utf8_byte_offset, text).map_err(|e| js_err(&e))
     }
     pub fn paginate(&mut self) -> usize {
-        self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions::default());
+        self.pages = wordcraft_layout::layout(&self.doc, &mut self.cache, &LayoutOptions { proofing: self.proofing, ..LayoutOptions::default() });
         self.pages.pages.len()
     }
     pub fn page_info(&self) -> String {
@@ -4123,6 +4192,38 @@ mod tests {
             Block::Para(p) => image_only(p).map(|i| i.1).unwrap_or(0.0),
             _ => 0.0,
         }
+    }
+    #[test]
+    fn proofing_lists_issues_with_offsets_and_skips_marked_text() {
+        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
+        s.do_insert(0, 0, "Teh the the quick brwn fox. ").unwrap();
+        let v: Vec<serde_json::Value> = serde_json::from_str(&s.do_proof_check("[]").unwrap()).unwrap();
+        let text = s.para_at(0).unwrap().text.clone();
+        assert!(v.iter().any(|i| i["kind"] == "spelling" && i["word"] == "brwn"), "{v:?}");
+        assert!(v.iter().any(|i| i["kind"] == "grammar" && i["message"].as_str().is_some_and(|m| m.contains("Repeated"))), "{v:?}");
+        for i in &v {
+            let (a, b) = (i["start"].as_u64().unwrap() as usize, i["end"].as_u64().unwrap() as usize);
+            assert!(a < b && b <= text.len() && text.is_char_boundary(a) && text.is_char_boundary(b));
+            assert_eq!(i["word"].as_str().unwrap(), &text[a..b]);
+        }
+        // The user's own words are accepted for the check.
+        let w: Vec<serde_json::Value> = serde_json::from_str(&s.do_proof_check(r#"["brwn"]"#).unwrap()).unwrap();
+        assert!(!w.iter().any(|i| i["word"] == "brwn"));
+        // Text marked "do not check" is skipped.
+        let at = text.find("brwn").unwrap();
+        s.do_format(0, at, 0, at + 4, r#"{"link":"https://example.org"}"#).unwrap();
+        let k: Vec<serde_json::Value> = serde_json::from_str(&s.do_proof_check("[]").unwrap()).unwrap();
+        assert!(!k.iter().any(|i| i["word"] == "brwn"), "linked text is skipped");
+        for bad in ["x", "{}", r#"[""]"#, r#"["a b"]"#, r#"[1]"#] {
+            assert!(s.do_proof_check(bad).is_err(), "{bad}");
+        }
+        assert!(s.do_proof_check(&serde_json::json!(vec!["w"; 1001]).to_string()).is_err());
+        assert!(s.do_proof_suggest("").is_err() && s.do_proof_suggest("a b").is_err() && s.do_proof_suggest(&"x".repeat(41)).is_err());
+        assert!(s.do_proof_suggest("quikc").unwrap().contains("quick"));
+        s.set_proofing(true);
+        assert!(s.paginate() >= 1);
+        s.set_proofing(false);
+        assert!(s.paginate() >= 1);
     }
     #[test]
     fn typography_contextual_spacing_line_rule_and_char_scale() {

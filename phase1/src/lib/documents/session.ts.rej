@@ -1,0 +1,9 @@
+diff a/phase1/src/lib/documents/session.ts b/phase1/src/lib/documents/session.ts	(rejected hunks)
+@@ -1,5 +1,7 @@
+ import {scrollToPage} from './navigate';
+ import {commentAuthor} from './author';
++import {addUserWord,savedUserWords} from './userWords';
++import type {ProofIssue} from './protocol';
+ import {setStyleList} from './styles';
+ import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
+ import {imageCropProblem,imageWrapProblem,type ImageWrap,type ImageAlign,tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';

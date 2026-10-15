@@ -878,6 +878,40 @@ export function documentStats():{words:number;chars:number;charsNoSpaces:number;
  return{...all,selectionWords:textStats(selectedText()).words};
 }
 
+/* ---- Spelling and grammar (English word list) ---- */
+/** Turns the spelling and grammar marks on the pages on or off. Not an edit: nothing goes on the undo stack. */
+export const setProofing=(on:boolean)=>run(async()=>{
+ const e=engine;if(!e)return;const check=ownerGuard();const d=await e.setProofing(on);check();
+ patchDocuments({proofing:on});await refresh(d);
+});
+/** Every spelling and grammar issue (at most 400) with the user's own words accepted. */
+export async function proofCheck():Promise<ProofIssue[]>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return[];const check=ownerGuard();const r=await e.proofCheck(savedUserWords());check();return r;
+}
+/** Up to five spelling suggestions for a word. */
+export async function proofSuggestions(word:string):Promise<string[]>{
+ const e=engine;if(!e||getDocumentsState().status!=='ready')return[];const check=ownerGuard();const r=await e.proofSuggest(word);check();return r;
+}
+/** Adds a word to the user's dictionary on this device. */
+export const addToDictionary=(word:string):boolean=>addUserWord(word);
+const dec=new TextDecoder();
+/** The issue's text as it is in the paragraph now, or null when the paragraph is gone, not editable or has changed. */
+const issueStillThere=(i:ProofIssue):boolean=>{
+ const t=blockText(i.block);if(t===null)return false;
+ const b=enc.encode(t);if(i.end>b.length)return false;return dec.decode(b.slice(i.start,i.end))===i.word;
+};
+/** Selects the issue's text in the page so it can be seen. False when the text has changed since the check. */
+export const showProofIssue=(i:ProofIssue):Promise<boolean>=>{
+ let ok=false;
+ return run(async()=>{if(!issueStillThere(i))return;ok=true;goalX=null;patchDocuments({caretLocked:false,imageBlock:null,caret:{block:i.block,anchor:i.start,head:i.end}});await syncGeometry();}).then(()=>ok);
+};
+/** Replaces the issue's text with `text` (one undo step). Refused when the text changed since the check or the paragraph holds objects. */
+export const applyProofFix=(i:ProofIssue,text:string)=>run(async()=>{
+ if(!validReplaceText(text)||text==='')throw new Error('The replacement is limited to 1000 characters, without line breaks.');
+ if(!i.fixable||!issueStillThere(i))throw new Error('The text changed. Check again.');
+ goalX=null;await structural(eng=>eng.replace({block:i.block,hunks:[{start:i.start,end:i.end,text}]}),{block:i.block,off:i.start},{block:i.block,off:i.start+u8(text)});
+});
+
 /* ---- Page setup and go to page ---- */
 /** The page size, orientation and margins as the engine reports them (not an edit). */
 export async function readPageSetup():Promise<PageSetupState|null>{
