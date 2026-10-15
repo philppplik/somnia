@@ -416,6 +416,36 @@ export const clearFormatting=()=>run(async()=>{
  await applyFormat({clear:true});
 });
 export const hasTextSelection=needSelection;
+/* ---- Format painter: copy the formatting at the caret or selection, paste it onto another selection. ---- */
+let painted:Painted|null=null;
+/** Remembers the character and paragraph formatting of the caret or selection. Nothing changes in the document. */
+export function copyFormatting():boolean{
+ const st=getDocumentsState();const p=capturePaint(st.format,st.para??null);
+ if(paintIsEmpty(p)){painted=null;patchDocuments({painted:false});return false;}
+ painted=p;patchDocuments({painted:true});return true;
+}
+/** Applies the copied formatting: characters of a selection and the paragraphs it touches in ONE undo step; at a caret only the paragraph and the next typed text. */
+export const pasteFormatting=()=>run(async()=>{
+ const x=painted;if(!x)throw new Error('Copy formatting first.');
+ const c=getDocumentsState().caret;if(!c)return;const n=norm(c);goalX=null;
+ const hasF=Object.keys(x.format).length>0,hasP=Object.keys(x.para).length>0;
+ if(cmp(n.s,n.e)===0){
+  if(hasP)await applyPara(x.para);
+  if(hasF&&blockText(n.s.block)!==null)patchDocuments({pendingFormat:{block:n.s.block,off:n.s.off,patch:{...(heldFormat()??{}),...x.format}}});
+  return;
+ }
+ const ts=spanTexts(n.s.block,n.e.block);if(!ts)throw new Error('This selection includes a part that cannot be edited as text.');
+ const blocks=getDocumentsState().blocks;
+ for(let i=n.s.block;i<=n.e.block;i++){const k=blocks.find(b=>b.index===i)?.kind;if(k!=='para'&&k!=='cell')throw new Error('This selection includes a part that cannot be formatted as a paragraph.');}
+ await structural(async eng=>{
+  let d:import('./protocol').OpenedDocument|null=null;
+  if(hasF)d=await eng.format(n.s,n.e,x.format);
+  if(hasP)d=await eng.formatParagraphs(n.s.block,n.e.block,x.para);
+  return d!;
+ },n.h,n.h);
+ setSel(n.a,n.h);
+});
+export const hasPainted=()=>painted!==null;
 /** Grows or shrinks the size by one step of the usual size ladder (stays within 1-400 pt; a mixed selection starts from 11 pt). */
 export const FONT_SIZES=[8,9,10,11,12,14,16,18,20,24,28,32,36,48,72] as const;
 export const stepFontSize=(dir:-1|1)=>run(async()=>{

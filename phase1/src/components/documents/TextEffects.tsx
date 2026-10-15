@@ -1,5 +1,5 @@
 import {useState} from 'react';
-import {setCharSpacing,insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
+import {copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
 import {setShortcutsOpen} from '../../lib/documents/shortcuts';
 import {setInfoDialog} from '../../lib/documents/infoDialog';
@@ -46,6 +46,8 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
    {hl===null&&<option value="" disabled>{t('documents.format.highlight')}</option>}{hl==='other'&&<option value="other" disabled>{t('documents.format.other')}</option>}
    {HIGHLIGHTS.map(h=><option key={h} value={h}>{t(h==='none'?'documents.format.hl.none':'documents.format.hl.'+h)}</option>)}</NativeSelect>
   <NativeButton className={tool+' border border-subtle'} aria-pressed={!!format?.link} title={t('documents.format.link')+' (Ctrl+K)'} disabled={!enabled||!picked} onClick={()=>setLinkOpen(true)} data-testid="documents-format-link">{t('documents.format.link')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} title={t('documents.painter.copy')} disabled={!enabled} onClick={()=>copyFormatting()} data-testid="documents-painter-copy">{t('documents.painter.copy')}</NativeButton>
+  <NativeButton className={tool+' border border-subtle'} title={t('documents.painter.paste')} disabled={!enabled||!doc.painted} onClick={()=>void pasteFormatting()} data-testid="documents-painter-paste">{t('documents.painter.paste')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} title={t('documents.format.clear')+' (Ctrl+Space)'} disabled={!enabled||!picked} onClick={()=>void clearFormatting()} data-testid="documents-format-clear">{t('documents.format.clear')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setParagraphOptionsOpen(true)} data-testid="documents-paraopt-open">{t('documents.para.opt.open')}</NativeButton>
   <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertPageBreak()} data-testid="documents-page-break">{t('documents.para.opt.insertBreak')}</NativeButton>

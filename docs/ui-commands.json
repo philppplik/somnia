@@ -4224,6 +4224,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.formatPainter.copy",
+      "title": "Copy formatting",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.formatPainter.paste",
+      "title": "Paste formatting",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.goToPage",
       "title": "Go to document page",
       "category": "View",

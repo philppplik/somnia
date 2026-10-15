@@ -20,7 +20,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,addToDictionary,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -247,6 +247,8 @@ export function registerDocumentsCommands(){
    const o=(p as Record<string,unknown>|undefined)??{};const crop=[o.left,o.top,o.right,o.bottom].map(v=>v===undefined?0:v);const bad=imageCropProblem(crop);if(bad)throw expected(`${bad} Pass "left", "top", "right" and "bottom" in percent.`);
    await setImageCrop(crop as number[]);
   },()=>ready()&&getDocumentsState().imageBlock!==null),
+  add('documents.formatPainter.copy','Copy formatting',async()=>{if(!copyFormatting())throw expected('There is no formatting to copy here.');},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.formatPainter.paste','Paste formatting',async()=>{await pasteFormatting();},()=>ready()&&!!getDocumentsState().caret&&getDocumentsState().painted),
   add('documents.proofing.toggle','Toggle spelling and grammar marks',async()=>{await setProofing(!getDocumentsState().proofing);},()=>ready()),
   add('documents.proofing.addWord','Add a word to the spelling dictionary',async p=>{
    const w=(p as Record<string,unknown>|undefined)?.word;if(!proofWordOk(w))throw expected('Missing or invalid "word" (1 to 40 characters, no spaces).');
