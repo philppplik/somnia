@@ -3,6 +3,8 @@ import {pngDimensions} from '../../lib/vectorstudio/exportFiles';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {useState} from 'react';
 import {Button} from '../ui/button';
+import {Menu,MenuTrigger,MenuContent,MenuItem,MenuGroup,MenuGroupLabel,MenuSeparator} from '../ui/menu';
+import {ALIGN_MODES,ALIGN_TARGETS} from '../../lib/vectorstudio/transforms';
 import {useT} from '../../lib/useT';
 import {executeCommand} from '../../lib/commands';
 import {usePanelState} from '../../store/panelStateStore';
@@ -34,6 +36,9 @@ export function VectorTransformSection(){const {t}=useT(),s=useVectorSession(),b
   <div className="grid grid-cols-2 gap-2">{(['x','y','w','h'] as const).map(axis=><label className={row} key={axis}>{axis==='w'?t('vector.shell.width'):axis==='h'?t('vector.shell.height'):axis.toUpperCase()}<NativeInput className={field} key={axis+values[axis]} type="number" step="any" min={axis==='w'||axis==='h'?0.001:undefined} defaultValue={+values[axis].toFixed(3)} onBlur={e=>{const n=Number(e.target.value);if(e.target.value!==''&&Number.isFinite(n)&&n!==values[axis]&&((axis==='x'||axis==='y')||n>0))run('setSelectionBounds',{[axis]:n});else e.target.value=String(values[axis]);}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>)}</div>
   <label className={row}>{t('vector.shell.rotate')}<NativeInput className={field} type="number" defaultValue={0} onBlur={e=>{const n=Number(e.target.value);if(Number.isFinite(n)&&n)run('rotateSelection',{degrees:n});e.target.value='0';}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></label>
   <div className="flex flex-wrap gap-1">{(['horizontal','vertical'] as const).map(axis=><Button key={axis} size="compact" onClick={()=>run('flipSelection',{axis})}>{t('vector.shell.flip.'+axis)}</Button>)}</div>
+  <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-align-menu">{t('vector.shell.align')}</Button>}/>
+   <MenuContent>{ALIGN_TARGETS.map(to=><MenuGroup key={to}><MenuGroupLabel>{t('vector.shell.align.'+to)}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignSelection',{mode,to})}>{t('vector.shell.align.'+mode)}</MenuItem>)}<MenuSeparator/></MenuGroup>)}
+    <MenuGroup><MenuGroupLabel>{t('vector.shell.distribute')}</MenuGroupLabel>{(['horizontal','vertical'] as const).map(axis=><MenuItem key={axis} onClick={()=>run('distributeSelection',{axis})}>{t('vector.shell.distribute.'+axis)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
   <div className="grid grid-cols-2 gap-1">{(['front','back','forward','backward'] as const).map(mode=><Button key={mode} size="compact" onClick={()=>run('reorder',{mode})}>{t(mode==='front'?'vector.toFront':mode==='back'?'vector.shell.toBack':'vector.'+mode)}</Button>)}
    <Button size="compact" onClick={()=>run('duplicateSelection')}>{t('vector.duplicate')}</Button><Button size="compact" onClick={()=>run('deleteSelection')}>{t('vector.shell.delete')}</Button></div>
  </div>;

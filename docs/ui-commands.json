@@ -12581,6 +12581,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.alignSelection",
+      "title": "Align vector selection",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.clearError",
       "title": "Clear vector diagnostics",
       "category": "View",
@@ -12604,6 +12611,13 @@
     {
       "id": "vector.deleteSelection",
       "title": "Delete selected vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
+      "id": "vector.distributeSelection",
+      "title": "Distribute vector selection",
       "category": "Edit",
       "source": "vector",
       "hasEnabled": true

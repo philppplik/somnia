@@ -33,3 +33,32 @@ test('typed shell tools, transforms and history reject invalid or remote writes'
  await d.runCommand('vector.flipSelection',{axis:'horizontal'},{origin:'test'});assert.equal(S.getVectorSession().doc.paths[0].nodes[0].x,100);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
  await d.runCommand('vector.rotateSelection',{degrees:0},{origin:'test'});assert.deepEqual(S.getVectorSession().doc,before);
 });
+import {alignSelection,distributeSelection,selectionBounds} from './transforms';
+const box=(x:number,y:number,w:number,h:number)=>rectPath({x,y,w,h});
+const at=(doc:ReturnType<typeof S.getVectorSession>['doc'],i:number)=>selectionBounds(doc,[doc.paths[i].id])!;
+test('align and distribute move whole objects, keep compounds together and refuse unusable selections',()=>{
+ S.resetVectorSession();S.createBlankVector();const [a,b,c]=[box(10,10,20,20),box(100,50,40,10),box(70,200,30,30)];[a,b,c].forEach(p=>S.addPath(p));
+ const doc=S.getVectorSession().doc,ids=doc.paths.map(p=>p.id);
+ const L=alignSelection(doc,ids,'left','selection');for(let i=0;i<3;i++)assert.equal(at(L,i).x,10);assert.equal(at(L,0).y,10);
+ const R=alignSelection(doc,ids,'right','selection');for(let i=0;i<3;i++)assert.equal(at(R,i).x+at(R,i).width,140);
+ const P=alignSelection(doc,[ids[1]],'centerY','page');assert.equal(at(P,1).y+at(P,1).height/2,doc.height/2);
+ const B=alignSelection(doc,ids,'bottom','page');for(let i=0;i<3;i++)assert.equal(at(B,i).y+at(B,i).height,doc.height);
+ const D=distributeSelection(doc,ids,'horizontal'),xs=[0,1,2].map(i=>at(D,i)).sort((p,q)=>p.x-q.x);
+ assert.equal(xs[0].x,10);assert.equal(xs[2].x+xs[2].width,140);assert.ok(Math.abs((xs[1].x-(xs[0].x+xs[0].width))-(xs[2].x-(xs[1].x+xs[1].width)))<1e-9);
+ assert.throws(()=>alignSelection(doc,[ids[0]],'left','selection'),/at least two/);assert.throws(()=>distributeSelection(doc,ids.slice(0,2),'vertical'),/at least three/);
+ assert.throws(()=>alignSelection(doc,ids,'diagonal' as never,'page'),/Unknown/);assert.throws(()=>alignSelection(doc,[],'left','page'),/Nothing/);
+ const comp={...doc,paths:doc.paths.map((p,i)=>i<2?{...p,compound:'k'}:p)},C=alignSelection(comp,ids,'left','selection');
+ assert.deepEqual(C.paths[0].nodes,doc.paths[0].nodes);assert.deepEqual(C.paths[1].nodes,doc.paths[1].nodes);assert.equal(at(C,2).x,10);
+ assert.deepEqual(doc,structuredClone(doc));
+});
+test('align and distribute commands are one undo step and reject bad params',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(10,10,20,20),box(100,50,40,10),box(70,200,30,30)].forEach(p=>S.addPath(p));
+ S.select(S.getVectorSession().doc.paths.map(p=>p.id));const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.alignSelection',{mode:'left'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.alignSelection',{mode:'x',to:'page'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.distributeSelection',{axis:'horizontal'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.alignSelection',{mode:'left',to:'selection'},{origin:'test'});assert.notDeepEqual(S.getVectorSession().doc,before);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.distributeSelection',{axis:'vertical'},{origin:'test'});S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+});
