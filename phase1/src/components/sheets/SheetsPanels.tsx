@@ -237,6 +237,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <NoteListGroup/>
   <AuditGroup/>
   <SymbolGroup/>
+  <ReviewInfoGroup/>
   <NamesGroup/>
   <ViewGroup/>
   <ChartsGroup/>
@@ -920,6 +921,35 @@ function SymbolGroup(){
   </NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!isSymbol(pick)} onClick={()=>void action.run('sheets.insertSymbol',{char:pick})} data-testid="sheets-sy-apply">{t('sheets.sy.apply',{cell:s.address})}</Button>
   <p className="text-ink-3">{t('sheets.sy.hint')}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Workbook statistics and the accessibility check in one grouped menu. Reads only. */
+type ReviewChoice='stats'|'accessibility'|'clear';
+function ReviewInfoGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<ReviewChoice>('stats');const [pick,setPick]=useState(0);
+ if(!s)return null;
+ const r=s.reviewResult??null,st=r?.stats,iss=r?.issues,chosen=iss?.issues[pick]??iss?.issues[0]??null;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ri.title')}>
+  <span>{t('sheets.ri.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ri.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as ReviewChoice)} data-testid="sheets-ri-action">
+   <optgroup label={t('sheets.ri.groupInfo')}><option value="stats">{t('sheets.ri.a.stats')}</option></optgroup>
+   <optgroup label={t('sheets.ri.groupCheck')}><option value="accessibility">{t('sheets.ri.a.accessibility')}</option></optgroup>
+   <optgroup label={t('sheets.ri.groupResults')}><option value="clear">{t('sheets.ri.a.clear')}</option></optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.review',{kind:act})} data-testid="sheets-ri-apply">{t('sheets.ri.apply')}</Button>
+  {st&&<ul data-testid="sheets-ri-stats">
+   <li>{t('sheets.ri.sheet',{name:st.sheet.name,cells:st.sheet.cellsWithData,formulas:st.sheet.formulas,end:st.sheet.endOfSheet??'-'})}</li>
+   <li>{t('sheets.ri.sheetObjects',{tables:st.sheet.tables,charts:st.sheet.charts,comments:st.sheet.comments})}</li>
+   <li>{t('sheets.ri.book',{sheets:st.workbook.sheets,cells:st.workbook.cellsWithData,formulas:st.workbook.formulas})}</li>
+   <li>{t('sheets.ri.bookObjects',{tables:st.workbook.tables,charts:st.workbook.charts,names:st.workbook.names})}</li>
+  </ul>}
+  {iss&&<p data-testid="sheets-ri-issues">{iss.total===0?t('sheets.ri.none'):t('sheets.ri.count',{n:iss.total})+(iss.total>iss.issues.length?' '+t('sheets.ri.truncated'):'')}</p>}
+  {iss&&iss.issues.length>0&&<>
+   <label className="flex flex-col gap-1">{t('sheets.ri.found')}<NativeSelect className={field} value={chosen?iss.issues.indexOf(chosen):0} disabled={action.busy} onChange={e=>setPick(Number(e.currentTarget.value))} data-testid="sheets-ri-found">{iss.issues.map((i,n)=><option key={n} value={n}>{i.sheetName+': '+t('sheets.ri.i.'+i.code)+(i.object?' ('+i.object+')':'')+(i.count?' x'+i.count:'')}</option>)}</NativeSelect></label>
+   <Button variant="outline" size="compact" disabled={action.busy||!chosen} onClick={()=>{if(chosen)void action.run('sheets.navigate',{sheet:chosen.sheet,address:'A1'});}} data-testid="sheets-ri-go">{t('sheets.ri.go')}</Button>
+  </>}
+  <p className="text-ink-3">{t('sheets.ri.hint')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

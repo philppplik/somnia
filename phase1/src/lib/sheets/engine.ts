@@ -1,3 +1,4 @@
+import {parseReviewResult,type ReviewResult} from './reviewInfo';
 import {parseAuditAnswer,type AuditAnswer,type AuditBridgeOp} from './audit';
 import {parseAnnotations,parseNoteList,type NoteList} from './notes';
 import {parseNames} from './names';
@@ -149,6 +150,7 @@ export class SheetsEngine{
  /** The note and link of one cell (read only). */
  async auditOp(sheet:number,row:number,col:number,audit:AuditBridgeOp):Promise<AuditAnswer>{return parseAuditAnswer(await this.result<unknown>({op:'auditOp',sheet,row,col,audit}));}
  insertSymbol(sheet:number,row:number,col:number,char:string){return this.result<unknown>({op:'insertSymbol',sheet,row,col,char});}
+ async reviewInfo(sheet:number,kind:'stats'|'accessibility'):Promise<ReviewResult>{return parseReviewResult(await this.result<unknown>({op:'reviewInfo',sheet,kind}));}
  async customStyles():Promise<string[]>{return parseCustomStyles(await this.result<unknown>({op:'customStyles'}));}
  async notesOverview(sheet:number):Promise<NoteList>{return parseNoteList(await this.result<unknown>({op:'notesOverview',sheet}));}
  async annotations(sheet:number,row:number,col:number):Promise<CellAnnotations>{const r=await this.result<{notes:unknown;links:unknown}>({op:'annotations',sheet,row,col});return parseAnnotations(r);}

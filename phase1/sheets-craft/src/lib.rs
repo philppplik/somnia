@@ -2984,6 +2984,53 @@ impl HeadlessWorkbook {
         }
     }
 
+    /// Workbook statistics and the accessibility check (read only, nothing changes). `kind` is `"stats"` or `"accessibility"`.
+    /// Stats: `{"stats":{"sheet":{name,endOfSheet,cellsWithData,formulas,tables,charts,comments},"workbook":{sheets,cellsWithData,formulas,tables,charts,names}}}`.
+    /// Accessibility runs the engine's check (pictures without alternative text, merged cells, default sheet names): `{"issues":[{"sheet":n,"sheetName","code","object"?,"count"?}],"total":n}`, at most 200 listed.
+    pub fn review_info(&mut self, sheet: usize, kind: &str) -> Result<String, String> {
+        match kind {
+            "stats" => {
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                let filled = |s: &gridcraft_engine::model::Sheet| s.cells.iter().filter(|(_, c)| !c.value.is_empty()).count();
+                let formulas = |s: &gridcraft_engine::model::Sheet| s.cells.iter().filter(|(_, c)| c.formula.is_some()).count();
+                let mut wb_filled = 0usize;
+                let mut wb_formulas = 0usize;
+                for s in &doc.wb.sheets {
+                    wb_filled += filled(s);
+                    wb_formulas += formulas(s);
+                }
+                Ok(json!({"stats": {
+                    "sheet": {"name": sh.name.chars().take(64).collect::<String>(), "endOfSheet": sh.used_range().map(|r| r.end.a1()), "cellsWithData": filled(sh), "formulas": formulas(sh), "tables": sh.tables.len(), "charts": sh.charts.len(), "comments": sh.comments.len()},
+                    "workbook": {"sheets": doc.wb.sheets.len(), "cellsWithData": wb_filled, "formulas": wb_formulas, "tables": doc.wb.sheets.iter().map(|s| s.tables.len()).sum::<usize>(), "charts": doc.wb.sheets.iter().map(|s| s.charts.len()).sum::<usize>(), "names": doc.wb.names.iter().filter(|n| !n.hidden).count()}
+                }})
+                .to_string())
+            }
+            "accessibility" => {
+                let found = self.session.run("review.checkAccessibility", json!({}))?;
+                let list = found.as_array().ok_or("accessibility check unavailable")?;
+                let doc = self.session.doc().map_err(|e| e.to_string())?;
+                let issues: Vec<serde_json::Value> = list
+                    .iter()
+                    .take(MAX_AUDIT_ITEMS)
+                    .map(|i| {
+                        let name = i.get("sheet").and_then(|v| v.as_str()).unwrap_or("");
+                        let index = doc.wb.sheets.iter().position(|s| s.name == name).unwrap_or(0);
+                        let code = match i.get("issue").and_then(|v| v.as_str()).unwrap_or("") {
+                            "Missing alternative text" => "altText",
+                            "Merged cells" => "merged",
+                            "Default sheet name" => "defaultName",
+                            _ => "other",
+                        };
+                        json!({"sheet": index, "sheetName": name.chars().take(64).collect::<String>(), "code": code, "object": i.get("object").and_then(|v| v.as_str()).map(|o| o.chars().take(40).collect::<String>()), "count": i.get("count").and_then(|v| v.as_u64())})
+                    })
+                    .collect();
+                Ok(json!({"issues": issues, "total": list.len()}).to_string())
+            }
+            _ => Err("unsupported review".into()),
+        }
+    }
+
     /// Names of the custom cell styles saved in this workbook (read only, at most 50): `{"styles":["name"]}`.
     pub fn custom_cell_styles(&self) -> Result<String, String> {
         let doc = self.session.doc().map_err(|e| e.to_string())?;
@@ -5158,6 +5205,22 @@ mod tests {
         assert_eq!(steps(&book), before + 2, "refusals leave no history entry");
         book.session.run("review.protectSheet", json!({})).unwrap();
         assert!(book.insert_symbol(0, 959, 0, "\u{20AC}").unwrap_err().contains("protected"));
+    }
+    #[test]
+    fn review_info_reports_statistics_and_accessibility_without_changing_anything() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "A980", "input": "7"})).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "B980", "input": "=A980+1"})).unwrap();
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        let s: serde_json::Value = serde_json::from_str(&book.review_info(0, "stats").unwrap()).unwrap();
+        assert!(s["stats"]["sheet"]["formulas"].as_u64().unwrap() >= 1);
+        assert!(s["stats"]["workbook"]["cellsWithData"].as_u64().unwrap() >= 2);
+        let a: serde_json::Value = serde_json::from_str(&book.review_info(0, "accessibility").unwrap()).unwrap();
+        assert!(a["issues"].is_array() && a["total"].as_u64().is_some());
+        assert!(book.review_info(0, "nope").is_err());
+        assert!(book.review_info(99, "stats").is_err());
+        assert_eq!(steps(&book), before, "reading leaves no history entry");
     }
     #[test]
     fn notes_overview_lists_every_note_in_reading_order() {

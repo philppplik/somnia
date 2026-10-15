@@ -7657,6 +7657,14 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.review",
+      "title": "Show workbook statistics or run the accessibility check",
+      "category": "Edit",
+      "source": "sheets",
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.saveCopy",
       "title": "Save workbook copy",
       "category": "Project",

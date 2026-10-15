@@ -174,6 +174,7 @@ export type SheetsRequest=
  |{id:number;op:'annotations';sheet:number;row:number;col:number}
  |{id:number;op:'notesOverview';sheet:number}
  |{id:number;op:'customStyles'}
+ |{id:number;op:'reviewInfo';sheet:number;kind:'stats'|'accessibility'}
  |{id:number;op:'insertSymbol';sheet:number;row:number;col:number;char:string}
  |{id:number;op:'auditOp';sheet:number;row:number;col:number;audit:AuditBridgeOp}
  |{id:number;op:'defineName';sheet:number;row:number;col:number;rows:number;cols:number;name:{name:string;scope:'workbook'|'sheet';replace?:boolean}}
