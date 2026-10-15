@@ -1341,5 +1341,7 @@
  "animation.rig.cascade.up": "Cascade from the bottom",
  "animation.rig.cascade.out": "Cascade from the centre outward",
  "animation.rig.cascade.in": "Cascade from the edges inward",
- "cmd.animation.layers.cascade": "Delay the ticked layers by their position on the canvas"
+ "cmd.animation.layers.cascade": "Delay the ticked layers by their position on the canvas",
+ "animation.rig.wipe.in.iris": "Iris in from the centre",
+ "animation.rig.wipe.out.iris": "Iris out to the centre"
 }

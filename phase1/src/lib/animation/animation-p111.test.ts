@@ -1973,3 +1973,11 @@ test('P287 cascade: delays follow position, centre-out and in mirror, one undo',
  s.undo();assert.equal(JSON.stringify(s.document),before);
  assert.throws(()=>run({layers:['cx1']}),/two/);
 });
+test('P288 iris: ellipse mask grows from the centre to cover the corners, out reverses',async()=>{
+ const {wipeMask}=await import('./wipeCommands');
+ const m=wipeMask('mk','200'.length&&200,100,'iris',0,10,false,false);
+ assert.equal(m.shape,'ellipse');const sz=m.anim!.size!.keys,ps=m.anim!.position!.keys;
+ assert.deepEqual(sz[0].v,[1,1]);const d=Math.ceil(Math.hypot(200,100))+2;assert.deepEqual(sz[1].v,[d,d]);
+ assert.deepEqual(ps[1].v,[100-d/2,50-d/2]);assert.deepEqual(ps[0].v,[99.5,49.5]);
+ const o=wipeMask('mk',200,100,'iris',0,10,true,false);assert.deepEqual(o.anim!.size!.keys[0].v,[d,d]);
+});

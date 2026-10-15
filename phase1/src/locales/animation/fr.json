@@ -1341,5 +1341,7 @@
  "animation.rig.cascade.up": "Cascade depuis le bas",
  "animation.rig.cascade.out": "Cascade du centre vers l'extérieur",
  "animation.rig.cascade.in": "Cascade des bords vers le centre",
- "cmd.animation.layers.cascade": "Décaler les calques cochés selon leur position sur la toile"
+ "cmd.animation.layers.cascade": "Décaler les calques cochés selon leur position sur la toile",
+ "animation.rig.wipe.in.iris": "Iris d'ouverture depuis le centre",
+ "animation.rig.wipe.out.iris": "Iris de fermeture vers le centre"
 }

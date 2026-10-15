@@ -1341,5 +1341,7 @@
  "animation.rig.cascade.up": "Kaskade von unten",
  "animation.rig.cascade.out": "Kaskade von der Mitte nach außen",
  "animation.rig.cascade.in": "Kaskade von außen nach innen",
- "cmd.animation.layers.cascade": "Markierte Ebenen nach ihrer Position auf der Fläche verzögern"
+ "cmd.animation.layers.cascade": "Markierte Ebenen nach ihrer Position auf der Fläche verzögern",
+ "animation.rig.wipe.in.iris": "Irisblende auf (von der Mitte)",
+ "animation.rig.wipe.out.iris": "Irisblende zu (zur Mitte)"
 }

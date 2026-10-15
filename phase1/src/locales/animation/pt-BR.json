@@ -1341,5 +1341,7 @@
  "animation.rig.cascade.up": "Cascata de baixo",
  "animation.rig.cascade.out": "Cascata do centro para fora",
  "animation.rig.cascade.in": "Cascata das bordas para dentro",
- "cmd.animation.layers.cascade": "Atrasar as camadas marcadas pela posição na tela"
+ "cmd.animation.layers.cascade": "Atrasar as camadas marcadas pela posição na tela",
+ "animation.rig.wipe.in.iris": "Íris abrindo do centro",
+ "animation.rig.wipe.out.iris": "Íris fechando para o centro"
 }

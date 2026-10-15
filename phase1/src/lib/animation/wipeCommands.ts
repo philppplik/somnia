@@ -6,12 +6,17 @@ import {layerSetIds} from './layerSet';
 import {frameToTick} from './time';
 /** Wipe: a rect mask opens (in) or closes (out) across the layer from one edge. Own file so the big command array keeps cheap type inference. */
 const expected=(m:string):never=>{throw Object.assign(new Error(m),{expected:true});};
-export const WIPE_DIRS=['left','right','up','down'] as const;
+export const WIPE_DIRS=['left','right','up','down','iris'] as const;
 export type WipeDir=typeof WIPE_DIRS[number];
 export const MAX_WIPE_LAYERS=30,MAX_WIPE_FRAMES=240;
 const key=(t:number,v:[number,number],ease:boolean)=>({t,v,interp:ease?'bezier' as const:'linear' as const,out:EASE_OUT,in:EASE_IN});
 /** The mask for a wipe. At the closed end it is a 1px sliver just outside the layer, so nothing shows; at the open end it covers the whole layer. */
 export function wipeMask(id:string,w:number,h:number,dir:WipeDir,t0:number,t1:number,reverse:boolean,ease:boolean):LayerMask{
+ if(dir==='iris'){// ellipse grows from the layer centre until its box covers the corners
+  const dia=Math.ceil(Math.hypot(w,h))+2,open:[number,number]=[dia,dia],shut:[number,number]=[1,1],pc=(sz:[number,number]):[number,number]=>[w/2-sz[0]/2,h/2-sz[1]/2];
+  const ks=reverse?[[t0,open],[t1,shut]] as const:[[t0,shut],[t1,open]] as const;
+  const mk=(f:(z:[number,number])=>[number,number])=>({type:'vec2',value:f(ks[0][1]),keys:ks.map(k=>key(k[0],f(k[1]),ease))} as Property);
+  return {id,shape:'ellipse',mode:'add',x:0,y:0,width:w,height:h,feather:0,invert:false,anim:{position:mk(pc),size:mk(z=>z)}};}
  const horiz=dir==='left'||dir==='right';
  const pos0:[number,number]=dir==='left'?[-1,0]:dir==='right'?[w,0]:dir==='up'?[0,-1]:[0,h];
  const size0:[number,number]=horiz?[1,h]:[w,1];
@@ -28,7 +33,7 @@ export const wipeSpecs=():CommandSpec<unknown,unknown>[]=>[{
   const s=animationSession(),d=s.document,c=d?findComp(d):undefined;if(!c)return expected('No composition is open.');
   const mode=p.mode??'in',dir=(p.dir??'left') as WipeDir,frames=p.frames??12;
   if(mode!=='in'&&mode!=='out')return expected('Wipe in or out.');
-  if(!WIPE_DIRS.includes(dir))return expected('The wipe starts from left, right, up or down.');
+  if(!WIPE_DIRS.includes(dir))return expected('The wipe starts from left, right, up or down, or opens as an iris.');
   if(!Number.isInteger(frames)||frames<1||frames>MAX_WIPE_FRAMES)return expected(`The wipe lasts 1 to ${MAX_WIPE_FRAMES} frames.`);
   const ls=[...new Set(p.layers??layerSetIds(s.getState().view.selectedLayer))].slice(0,MAX_WIPE_LAYERS).map(id=>findLayer(c,id)).filter((l):l is Layer=>!!l&&!l.locked&&l.kind!=='audio'&&l.kind!=='null');
   if(!ls.length)return expected('Tick at least one unlocked drawable layer.');
