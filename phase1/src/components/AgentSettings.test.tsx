@@ -20,17 +20,16 @@ test('AI Settings owns provider, prompts, active-file approval and explicit clou
  assert.ok(!html.includes('type="checkbox" checked'));
  assert.ok(!html.includes('linear-gradient'));
 });
-test('agent panel keeps provider configuration separate while exposing explicit local run context and templates',()=>{
+test('agent panel keeps provider configuration separate while exposing explicit local run context',()=>{
  const html=renderToStaticMarkup(<AgentPanel/>);
  assert.ok(html.includes('Agent configuration'));
- assert.ok(html.includes('Cloud data consent'));
+ // After the panel declutter, consent and provider fields live in AI Settings (the 'Allow cloud AI'
+ // checkbox is asserted in the settings test above); the panel only surfaces where a run would go.
+ assert.ok(html.includes('ag-context-chip'),'panel must expose its run context (provider, model, document)');
+ assert.ok(html.includes('role="status"'),'run context must be announced as a status region');
+ assert.ok(!html.includes('Cloud data consent'),'consent copy belongs in AI Settings, not embedded in the panel');
  assert.ok(!html.includes('Custom prompts'));
- const selects=html.match(/<select/g)??[];assert.equal(selects.length,3,'active task, document byte limit and template task are the only embedded selects');
- for(const label of ['Current task','Maximum document bytes','Template task']){
-  const binding=[...html.matchAll(/<label[^>]*for="([^"]+)"[^>]*>([^<]+)<\/label>/g)].find(match=>match[2]===label);
-  assert.ok(binding,label+' must have a field label');
-  assert.ok([...html.matchAll(/<select[^>]*id="([^"]+)"/g)].some(match=>match[1]===binding[1]),label+' must label its select');
- }
+ const selects=html.match(/<select/g)??[];assert.equal(selects.length,0,'provider configuration selects belong in AI Settings, not embedded in the panel');
  assert.ok(!html.includes('Save AI settings'),'provider configuration still belongs in settings');
  assert.ok(!html.includes('ag-consent-backdrop'));
 });
