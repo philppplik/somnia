@@ -8,6 +8,7 @@ import {clipDisplayName,isTitleClip,needsSourceFile} from '../../lib/video/title
 import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
+import {WaveformStrip} from './WaveformStrip';
 import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
@@ -179,7 +180,10 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
       trackHeight={48} zoom={zoom} onZoom={setZoom}
-      renderStrip={c=>needsSourceFile(c)&&filmstrip?<FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>:null}
+      renderStrip={c=>needsSourceFile(c)&&filmstrip?<>
+       <FilmstripStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} name={shortName(c.source)}/>
+       <WaveformStrip controller={filmstrip} source={c.source} in_s={c.in_s} out_s={c.out_s} gain={c.muted?0:c.gain}/>
+      </>:null}
       label={t('video.timeline',{name:item.name})}/>
     </div>
     <div className="flex items-center gap-3 px-4 pb-2 text-[12px] text-ink-2">

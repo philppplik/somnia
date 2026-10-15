@@ -1,5 +1,6 @@
 /** Filmstrip controller: thumbnail cache (LRU, per source generation), latest-wins request queue and change notifications. No DOM. */
 import {tileKey,type TileSpec} from './filmstrip-model';
+import {bucketCountFor} from './waveform';
 /** A decoded thumbnail. ImageBitmap in the browser; tests use a fake with the same `close`. */
 export interface Thumb{width:number;height:number;close():void}
 export interface SourceInfo{duration:number;width:number;height:number}
@@ -8,13 +9,15 @@ export interface ThumbDecoder{
  open(key:string,bytes:ArrayBuffer):Promise<SourceInfo>;
  /** One entry per time; null when that frame could not be decoded. */
  thumbs(key:string,times:number[],width:number,height:number):Promise<(Thumb|null)[]>;
+ /** Interleaved [min,max] amplitude buckets over the whole source; null when there is no audio track. Runs once per open. */
+ peaks(key:string,buckets:number):Promise<Float32Array|null>;
  close(key:string):void;
  dispose():void;
 }
 export type SourceState='opening'|'ready'|'failed';
 export interface TileRequest{source:string;tile:TileSpec;height:number}
 interface Entry{thumb:Thumb;source:string;gen:number;step:number;time:number}
-interface SourceRec{gen:number;state:SourceState;info:SourceInfo|null;error?:string}
+interface SourceRec{gen:number;state:SourceState;info:SourceInfo|null;error?:string;/** Waveform peaks; undefined while decoding, null for silent sources. */peaks?:Float32Array|null}
 export interface ControllerOptions{maxTiles?:number;batch?:number;dpr?:number}
 export class FilmstripController{
  private cache=new Map<string,Entry>();
@@ -36,6 +39,11 @@ export class FilmstripController{
   this.decoder.open(source,bytes).then(info=>{
    if(this.sources.get(source)?.gen!==gen||this.disposed)return;
    rec.info=info;rec.state='ready';this.emit();void this.pump();
+   // Peaks decode in the background after the source is ready; failure leaves them undefined and the strip just skips the waveform.
+   void this.decoder.peaks(source,bucketCountFor(info.duration)).then(peaks=>{
+    if(this.sources.get(source)?.gen!==gen||this.disposed)return;
+    rec.peaks=peaks;this.emit();
+   },()=>{});
   },err=>{
    if(this.sources.get(source)?.gen!==gen||this.disposed)return;
    rec.state='failed';rec.error=err instanceof Error?err.message:String(err);this.emit();
@@ -50,6 +58,8 @@ export class FilmstripController{
  }
  state(source:string):SourceState|'unknown'{return this.sources.get(source)?.state??'unknown';}
  info(source:string){return this.sources.get(source)?.info??null;}
+ /** Waveform peaks for a source: interleaved [min,max] per bucket, null for silent sources, undefined until decoded. */
+ peaksFor(source:string){return this.sources.get(source)?.peaks;}
  gen(source:string){return this.sources.get(source)?.gen??0;}
  /** Exact thumbnail for a tile, or null. Touches the LRU. */
  get(source:string,tile:TileSpec,height:number):Thumb|null{
