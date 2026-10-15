@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
-import {smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
+import {replaceSkippedSlides,smallTextSlides,countTextMatches,emptySlides,textMatchesBySlide,replaceTextAll,slidesWithoutNotes,duplicateTitles,setPictureDecorative,readPictureDecorative,untitledSlides,missingAltText,MAX_ALT_REPORT,setPictureAlt,readPictureAlt,editSections,setSlideHidden,readHiddenSlides,setFirstSlideNum,readFirstSlideNum,setSlideFooter,setAllSlideFooters,readSlideFooter,setSlideSize,readSlideSize,setAllSlideBackgrounds,backgroundSummary,setSlideBackground,readSlideBackground,editLayoutBox,readLayoutBoxes,editMasterBox,readMaster,editTheme,readTheme,insertTable,editTable,readTable,setShapeStyle,readShapeStyle,setSlideNotes,groupShapes,ungroupShape,readSlideTransition,setSlideTransition,arrangeShapes,arrangedOrder,setShapesBounds,readSlideNotes,insertPicture,replacePicture,removePicture,fitImage,formatShapeText,addTextBox,removeTextBox,nextShapeId,setShapeBounds,boundsEditIssue,readDeckModel,moveSlide,reorderSlides,duplicateSlide,deleteSlide,newSlideFromLayout,readLayouts} from './deckPackage';
 import {readRuns,makeEditedCopy} from './editCopy';
 import {png,jpeg} from './imageFixtures';
 
@@ -1073,4 +1073,12 @@ test('smallTextSlides reads explicit run sizes only, bounded input',()=>{
  assert.equal(r.total,1);assert.equal(r.items[0].slideIndex,0);assert.ok(r.items[0].runs>=1);
  assert.equal(smallTextSlides(out,8).total,0);
  assert.throws(()=>smallTextSlides(out,0),/1 to 200/);
+});
+
+test('replaceSkippedSlides counts unsupported slides, which find and replace leaves untouched',()=>{
+  const z=unzipSync(deck(2));
+  z['ppt/slides/slide2.xml']=strToU8(strFromU8(z['ppt/slides/slide2.xml']).replace('<a:t>','<a:t />x<a:t>'));
+  const bytes=zipSync(z);
+  assert.equal(replaceSkippedSlides(deck(2)),0);assert.equal(replaceSkippedSlides(bytes),1);
+  assert.ok(textMatchesBySlide(bytes,'Slide',false).every(r=>r.slideIndex===0));
 });

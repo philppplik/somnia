@@ -2111,6 +2111,8 @@ export function textMatchesBySlide(bytes:Uint8Array,find:string,matchCase:boolea
   model.slides.forEach((slide,slideIndex)=>{if(slide.problems.length||total>MAX_REPLACEMENTS)return;const n=replaceInXml(text(zip,slide.part),re,null).count;if(n){total+=n;out.push({slideIndex,count:n});}});
   return out;
 }
+/** Slides that find and replace leaves alone because their structure is unsupported. */
+export function replaceSkippedSlides(bytes:Uint8Array):number{return readDeckModel(bytes).slides.filter(x=>x.problems.length).length;}
 export function replaceTextAll(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean):Uint8Array{
   const issue=findTextIssue(find)||replaceTextIssue(replacement);if(issue)throw Error(issue);
   const model=readDeckModel(bytes),zip=openPackage(bytes),re=textRe(find,matchCase),changed:Record<string,string>={};let total=0;
