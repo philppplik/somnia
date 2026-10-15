@@ -4042,6 +4042,21 @@
       "hasEnabled": true
     },
     {
+      "id": "code.references.local",
+      "title": "Find local references...",
+      "category": "Tools",
+      "source": "core",
+      "shortcut": "Shift+F12",
+      "keywords": [
+        "local",
+        "references",
+        "symbol",
+        "usages"
+      ],
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "code.rename.local",
       "title": "Rename local symbol...",
       "category": "Tools",
