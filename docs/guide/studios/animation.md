@@ -66,3 +66,4 @@ Back to [Studios](../studios.md).
 - Rig > Appearance > Orient to path: rotation keys that make selected layers with a moving position face along it (pick which way the artwork points).
 - Rig > Layers > Bake modifiers to keys: wiggle, loop and link modifiers become plain keys over the work area (every frame), then the modifiers are removed.
 - Export crop: "Fit to selected layers" sets the crop to the box that holds the selected layers over the whole work area (plus 8 px).
+- Poses can be applied or keyed mirrored (Mirror: around the canvas centre or around the pose); Pose to pose with Mirror on can go from a pose to its own mirror image, for walk cycles.

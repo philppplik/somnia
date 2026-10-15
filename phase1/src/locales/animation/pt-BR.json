@@ -1108,5 +1108,9 @@
  "animation.rig.bake": "Converter modificadores em chaves",
  "cmd.animation.modifiers.bake": "Converter os modificadores de tremor, loop e vinculo das camadas selecionadas em chaves",
  "animation.export.crop.layers": "Ajustar as camadas selecionadas",
- "cmd.animation.export.cropToLayers": "Ajustar o corte de exportacao as camadas selecionadas"
+ "cmd.animation.export.cropToLayers": "Ajustar o corte de exportacao as camadas selecionadas",
+ "animation.pose.mirror": "Espelhar",
+ "animation.pose.mirror.off": "Sem espelho",
+ "animation.pose.mirror.canvas": "Espelhar no centro da tela",
+ "animation.pose.mirror.pose": "Espelhar em torno da pose"
 }

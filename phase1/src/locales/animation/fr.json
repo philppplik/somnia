@@ -1108,5 +1108,9 @@
  "animation.rig.bake": "Convertir les modificateurs en cles",
  "cmd.animation.modifiers.bake": "Convertir les modificateurs wiggle, boucle et lien des calques selectionnes en cles",
  "animation.export.crop.layers": "Ajuster aux calques choisis",
- "cmd.animation.export.cropToLayers": "Ajuster le recadrage d'export aux calques selectionnes"
+ "cmd.animation.export.cropToLayers": "Ajuster le recadrage d'export aux calques selectionnes",
+ "animation.pose.mirror": "Miroir",
+ "animation.pose.mirror.off": "Sans miroir",
+ "animation.pose.mirror.canvas": "Miroir au centre de l'image",
+ "animation.pose.mirror.pose": "Miroir autour de la pose"
 }

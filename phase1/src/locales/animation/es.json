@@ -1108,5 +1108,9 @@
  "animation.rig.bake": "Convertir modificadores en claves",
  "cmd.animation.modifiers.bake": "Convertir los modificadores de oscilacion, bucle y enlace de las capas seleccionadas en claves",
  "animation.export.crop.layers": "Ajustar a las capas elegidas",
- "cmd.animation.export.cropToLayers": "Ajustar el recorte de exportacion a las capas seleccionadas"
+ "cmd.animation.export.cropToLayers": "Ajustar el recorte de exportacion a las capas seleccionadas",
+ "animation.pose.mirror": "Espejo",
+ "animation.pose.mirror.off": "Sin espejo",
+ "animation.pose.mirror.canvas": "Espejo en el centro del lienzo",
+ "animation.pose.mirror.pose": "Espejo en torno a la pose"
 }

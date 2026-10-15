@@ -1108,5 +1108,9 @@
  "animation.rig.bake": "Bake modifiers to keys",
  "cmd.animation.modifiers.bake": "Bake wiggle, loop and link modifiers of the selected layers into keys",
  "animation.export.crop.layers": "Fit to selected layers",
- "cmd.animation.export.cropToLayers": "Set the export crop to the selected layers"
+ "cmd.animation.export.cropToLayers": "Set the export crop to the selected layers",
+ "animation.pose.mirror": "Mirror",
+ "animation.pose.mirror.off": "No mirror",
+ "animation.pose.mirror.canvas": "Mirror around canvas centre",
+ "animation.pose.mirror.pose": "Mirror around the pose"
 }

@@ -1087,3 +1087,21 @@ test('P224 export crop from layers: union over the work area with padding, clamp
  assert.throws(()=>run({layers:['b'],padding:-1}),/padding/);assert.throws(()=>run({layers:['b'],range:'x'}),/range/);
  assert.equal(layerCrop(c2,['nope'],[0],0).crop,null);
 });
+test('P225 mirrored poses: apply flips x about canvas or pose centre and negates rotation, transition to a mirrored copy, errors',async()=>{
+ const {poseSpecs,mirrorValue,mirrorAxis}=await import('./poseCommands');const {evaluate}=await import('./interpolate');
+ assert.deepEqual(mirrorValue('position',[100,50],400),[700,50]);assert.equal(mirrorValue('rotation',25,0),-25);assert.equal(mirrorValue('rotation',0,0),0);assert.deepEqual(mirrorValue('scale',[1,2],9),[1,2]);
+ const W=findComp(open().document!).width;const run=(i:number,p?:unknown)=>poseSpecs()[i].run(p) as unknown;
+ const s=open();setAnimationSession(s);s.setView({playhead:0});s.dispatch({type:'layer.add',kind:'shape',id:'b'});
+ const L=()=>findComp(s.document!).layers.find(l=>l.id==='b')!;
+ s.dispatch({type:'prop.set',layer:'b',prop:'position',value:[100,50],t:0});s.dispatch({type:'prop.set',layer:'b',prop:'rotation',value:30,t:0});
+ run(0,{name:'A',layers:['b']});const pose=s.document!.poses!.items[0];assert.equal(mirrorAxis(findComp(s.document!),pose,'pose'),100);
+ run(1,{id:'a',mirror:'canvas'});assert.deepEqual(evaluate(L().transform.position,0),[W-100,50]);assert.equal(evaluate(L().transform.rotation,0),-30);
+ s.undo();assert.deepEqual(evaluate(L().transform.position,0),[100,50]);
+ run(1,{id:'a',mirror:'pose'});assert.deepEqual(evaluate(L().transform.position,0),[100,50]);assert.equal(evaluate(L().transform.rotation,0),-30);
+ s.undo();
+ assert.throws(()=>run(1,{id:'a',mirror:'x'}),/Mirror/);
+ assert.throws(()=>run(3,{from:'a',to:'a',frames:6}),/different/);
+ run(3,{from:'a',to:'a',frames:6,mirror:'canvas'});
+ const f=(n:number)=>frameToTick(n,{num:30,den:1});
+ assert.deepEqual(evaluate(L().transform.position,f(0)),[100,50]);assert.deepEqual(evaluate(L().transform.position,f(6)),[W-100,50]);assert.equal(evaluate(L().transform.rotation,f(6)),-30);
+});

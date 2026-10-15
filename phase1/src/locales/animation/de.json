@@ -1108,5 +1108,9 @@
  "animation.rig.bake": "Modifier in Keys umwandeln",
  "cmd.animation.modifiers.bake": "Wiggle-, Loop- und Link-Modifier der gewaehlten Ebenen in Keys umwandeln",
  "animation.export.crop.layers": "An gewaehlte Ebenen anpassen",
- "cmd.animation.export.cropToLayers": "Den Export-Zuschnitt auf die gewaehlten Ebenen setzen"
+ "cmd.animation.export.cropToLayers": "Den Export-Zuschnitt auf die gewaehlten Ebenen setzen",
+ "animation.pose.mirror": "Spiegeln",
+ "animation.pose.mirror.off": "Nicht spiegeln",
+ "animation.pose.mirror.canvas": "An der Bildmitte spiegeln",
+ "animation.pose.mirror.pose": "An der Pose spiegeln"
 }
