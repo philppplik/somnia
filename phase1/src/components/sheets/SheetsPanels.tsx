@@ -12,6 +12,8 @@ import {aggregateFormula,FORMULA_FUNCTIONS,parsePanelRange,rangeAddress,summariz
 import {rectCells} from '../../lib/sheets/clipboard';
 import {addressOf,colName,parseAddress} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
+import {fillBlockProblem,FILL_DIRECTIONS} from '../../lib/sheets/fillOps';
+import type {FillDirection} from '../../lib/sheets/protocol';
 import {FILTER_CONDITIONS,MAX_FILTER_VALUE,filterValueProblem} from '../../lib/sheets/filterOps';
 import {MAX_SHEETS,sheetNameProblem} from '../../lib/sheets/sheetOps';
 import type {BorderLineStyle,FilterCondition,RangeCell} from '../../lib/sheets/protocol';
@@ -199,6 +201,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   </div>
   <SortGroup/>
   <FilterGroup/>
+  <FillGroup/>
   <p role="status">{action.notice}</p></Region>;
 }
 /** Sorts the rows of exactly the selected block by one column. The block is never widened and the header row is an explicit choice. One undo step. */
@@ -235,6 +238,19 @@ function FilterGroup(){
    <Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.filter',{kind:'off'})} data-testid="sheets-filter-off">{t('sheets.filter.off')}</Button>
   </div>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.filter.scope',{range:rangeAddress(r)})}</p>
+ </div>;
+}
+/** Fills the selected block from its first row or column. One undo step; the block is never widened. */
+function FillGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();
+ const r=s?.range;if(!s||!r)return null;
+ const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1;
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.fill.title')}>
+  <span>{t('sheets.fill.title')}</span>
+  <div className="flex flex-wrap gap-2">
+   {FILL_DIRECTIONS.map((d:FillDirection)=><Button key={d} variant="outline" size="compact" disabled={action.busy||!!fillBlockProblem(r.r0,r.c0,rows,cols,d)} onClick={()=>void action.run('sheets.fill',{dir:d})} data-testid={'sheets-fill-'+d}>{t('sheets.fill.'+d)}</Button>)}
+  </div>
+  <p className="text-ink-3">{t('sheets.fill.scope',{range:rangeAddress(r)})}</p>
  </div>;
 }
 export function SheetsLayoutSection({sectionId,context}:InspectorSectionProps){return <SheetsLayoutPanel panelId={sectionId} context={context}/>;}

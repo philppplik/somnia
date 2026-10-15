@@ -4,10 +4,11 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress} from './format';
 import {parseFormatOp} from './formatOps';
-import type {FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
+import {FILL_DIRECTIONS,parseFillCommand} from './fillOps';
 import {FILTER_CONDITIONS,parseFilterCommand} from './filterOps';
 export interface SheetsPanelController {
  ready():boolean;
@@ -28,12 +29,14 @@ export interface SheetsPanelController {
  sortRange(op:SortOp):void|Promise<void>;
  /** Filters rows by one column (the selection only creates the filter), or clears/removes it, one undo step. */
  filterRows(op:FilterOp):void|Promise<void>;
+ /** Fills the selected block in one direction (one undo step). */
+ fillRange(dir:FillDirection):void|Promise<void>;
 }
 let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to spreadsheet cell',category:'View',level:'ui',allowInInput:true,
@@ -66,6 +69,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.filter',title:'Filter rows by a column',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['custom','clear','clearAll','off']},column:{type:'integer',minimum:0,maximum:16383},op:{type:'string',enum:[...FILTER_CONDITIONS]},value:{type:'string',minLength:1,maxLength:255}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().filterRows(parseFilterCommand(p))},
+ {id:'sheets.fill',title:'Fill the selected block down, right, up or left',category:'Edit',level:'ui',allowInInput:true,
+  params:{type:'object',properties:{dir:{type:'string',enum:[...FILL_DIRECTIONS]}},required:['dir'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>requireController().fillRange(parseFillCommand(p).dir)},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}

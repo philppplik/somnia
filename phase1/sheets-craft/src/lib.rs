@@ -11,6 +11,7 @@ const MAX_RESIZE_COLS: u32 = 16_384;
 const MAX_FREEZE: u32 = 20;
 const MAX_SHEETS: usize = 255;
 const MAX_SORT_CELLS: u64 = 1_000_000;
+const MAX_FILL_CELLS: u64 = 1_000_000;
 const MAX_SORT_KEYS: usize = 3;
 const FILTER_OPS: [&str; 10] = ["=", "<>", ">", "<", ">=", "<=", "beginsWith", "endsWith", "contains", "notContains"];
 const MAX_FILTER_VALUE: usize = 255;
@@ -571,6 +572,32 @@ impl HeadlessWorkbook {
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         self.session.run("sheet.activate", json!({"sheet": sheet}))?;
         self.session.run("data.sort", json!({"range": range, "header": header, "keys": keys, "matchCase": match_case})).map(|v| v.to_string())
+    }
+
+    /// Fills the selected block in one direction (`down`, `right`, `up`, `left`) as ONE history entry, copying the first
+    /// row/column of the block (the last for up/left) over the rest like Fill Down/Right. Formulas shift relative references.
+    /// With a single row (or column) selected, down/right copy from the row above (column to the left), so that needs
+    /// one more row above (column to the left). Protected sheets and blocks over 1,000,000 cells are refused.
+    pub fn fill_range(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, dir: &str) -> Result<String, String> {
+        let (cmd, vertical) = match dir {
+            "down" => ("edit.fillDown", true),
+            "up" => ("edit.fillUp", true),
+            "right" => ("edit.fillRight", false),
+            "left" => ("edit.fillLeft", false),
+            _ => return Err("direction must be down, right, up or left".into()),
+        };
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FILL_CELLS {
+            return Err("Select a block of at most 1,000,000 cells to fill.".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let span = if vertical { rows } else { cols };
+        let start = if vertical { row } else { col };
+        if span < 2 && (dir == "up" || dir == "left" || start == 0) {
+            return Err("Select at least two rows or columns to fill.".into());
+        }
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        self.session.run("sheet.activate", json!({"sheet": sheet}))?;
+        self.session.run(cmd, json!({"range": range})).map(|v| v.to_string())
     }
 
     /// Filters rows by one column as ONE history entry. `op_json` is `{"kind":"custom","column":abs,"op":..,"value":..}`
@@ -1471,5 +1498,24 @@ mod tests {
         }
         assert!(book.edit_sheet(0, r#"{"kind":"delete"}"#).is_err());
         assert_eq!(sheet_names(&book).len(), 1);
+    }
+    #[test]
+    fn fill_range_copies_in_one_undo_step_and_refuses_bad_input() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        book.set_values(0, 30, 0, r#"[["1","=A31+1"],["",""],["",""]]"#).unwrap();
+        book.fill_range(0, 30, 0, 3, 2, "down").unwrap();
+        assert_eq!(text(&book, "A33"), "1");
+        assert_eq!(text(&book, "B33"), "2");
+        book.undo().unwrap();
+        assert_ne!(text(&book, "A33"), "1");
+        book.set_values(0, 40, 0, r#"[["7","","",""]]"#).unwrap();
+        book.fill_range(0, 40, 0, 1, 4, "right").unwrap();
+        assert_eq!(text(&book, "D41"), "7");
+        assert!(book.fill_range(0, 0, 0, 1, 2, "down").is_err(), "no row above to copy");
+        assert!(book.fill_range(0, 5, 0, 1, 2, "up").is_err());
+        assert!(book.fill_range(0, 5, 0, 3, 2, "sideways").is_err());
+        assert!(book.fill_range(0, 0, 0, 2_000_000, 2, "down").is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.fill_range(0, 5, 0, 3, 2, "down").unwrap_err().contains("protected"));
     }
 }
