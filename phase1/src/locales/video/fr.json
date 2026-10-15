@@ -79,6 +79,9 @@
  "video.audioAt": "Début sur la timeline (s)",
  "video.audioFadeIn": "Fondu d’entrée (s)",
  "video.audioFadeOut": "Fondu de sortie (s)",
+ "video.audioDuck": "Ducking",
+ "video.audioDuckOff": "Désactivé",
+ "video.audioDuckHint": "Baisse ce clip pendant qu’un autre audio sans ducking joue (p. ex. la musique s’efface sous une voix off).",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Gain · {percent}%",
  "video.clipSpeed": "Vitesse",
@@ -147,5 +150,6 @@
  "cmd.video.audio.gain": "Régler le gain d’un clip audio",
  "cmd.video.audio.fades": "Régler le fondu d’entrée et de sortie d’un clip audio",
  "cmd.video.audio.delete": "Supprimer un clip audio",
- "cmd.video.audio.mute": "Couper ou rétablir le son d’un clip audio"
+ "cmd.video.audio.mute": "Couper ou rétablir le son d’un clip audio",
+ "cmd.video.audio.duck": "Régler l’auto-ducking d’un clip audio"
 }

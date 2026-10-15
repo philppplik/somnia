@@ -159,3 +159,18 @@ test('audio track: mute toggles, dirties and undoes',async()=>{
   void sig;
  }finally{done();}
 });
+
+test('audio track: duck sets, dirties and undoes',async()=>{
+ setVideoEngineFactory(()=>fakeAudioEngine());
+ const done=await freshProject('au-duck.video-project');
+ try{
+  const {setAudioTrackClipDuck}=await import('./session');
+  const id=await addAudioTrackClip('au-duck.video-project',audioItem('bed.mp3'));
+  assert.equal(getVideoSession('au-duck.video-project')!.audioClips[0].duck,0);
+  setAudioTrackClipDuck('au-duck.video-project',id!,0.5);
+  assert.equal(getVideoSession('au-duck.video-project')!.audioClips[0].duck,0.5);
+  assert.ok(videoIsDirty(getVideoSession('au-duck.video-project')));
+  undoVideoEdit('au-duck.video-project');
+  assert.equal(getVideoSession('au-duck.video-project')!.audioClips[0].duck,0,'undo restores duck 0');
+ }finally{done();}
+});

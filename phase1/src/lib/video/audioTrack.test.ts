@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipMuted,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
-const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,muted:false,fadeIn:0,fadeOut:0,...over});
+import {audioClipDuration,audioEnvelope,audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipMuted,setAudioClipDuck,duckGainAt,DUCK_RAMP_SECONDS,setAudioClipEdge,setAudioClipFades,setAudioClipGain,type AudioClip} from './audioTrack';
+const clip=(id:string,over:Partial<AudioClip>={}):AudioClip=>({id,source:'song.mp3',in_s:0,out_s:10,at:0,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0,...over});
 
 test('free placement: gaps and overlaps are legal, the track end is the last clip end',()=>{
  const clips=[clip('a',{at:5}),clip('b',{at:7,out_s:20})];
@@ -47,7 +47,7 @@ test('edits: remove, move clamps at 0, edges hold the minimum, gain and fades se
 });
 
 test('resizeAudioClip: in-edge carries the position, out-edge only resizes, both respect the minimum length',()=>{
- const c:AudioClip={id:'a',source:'m.mp3',in_s:2,out_s:8,at:10,gain:1,muted:false,fadeIn:0,fadeOut:0};
+ const c:AudioClip={id:'a',source:'m.mp3',in_s:2,out_s:8,at:10,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0};
  // in-edge dragged 2s right: at follows, content offset stays.
  const r1=resizeAudioClip([c],'a','in',12);
  assert.deepEqual([r1[0].at,r1[0].in_s,r1[0].out_s],[12,4,8]);
@@ -74,4 +74,31 @@ test('mute: envelope is silent, toggle flips, sanitize defaults and coerces',()=
  assert.equal(setAudioClipMuted(on,'a',false)[0].muted,false);
  assert.equal(sanitizeAudioClips([{...c,muted:undefined as never}],{})[0].muted,false,'missing muted defaults to false');
  assert.equal(sanitizeAudioClips([{...c,muted:'yes' as never}],{})[0].muted,false,'non-boolean muted coerces to false');
+});
+
+test('duck: foreground overlap lowers a ducking clip with ramps; foreground itself never ducks',()=>{
+ const R=DUCK_RAMP_SECONDS;
+ const voice=clip('v',{at:10,in_s:0,out_s:5});// 10..15, foreground (duck 0)
+ const music=clip('m',{at:0,in_s:0,out_s:30,duck:0.75});
+ // Deep inside the voiceover: full duck.
+ assert.equal(duckGainAt([voice,music],music,12),0.25);
+ // No voiceover yet: no duck.
+ assert.equal(duckGainAt([voice,music],music,2),1);
+ // Ramp middle on the way in.
+ assert.ok(Math.abs(duckGainAt([voice,music],music,10)-0.625)<1e-9);
+ // Ramp middle on the way out.
+ assert.ok(Math.abs(duckGainAt([voice,music],music,15)-0.625)<1e-9);
+ // The foreground clip itself is never ducked.
+ assert.equal(duckGainAt([voice,music],voice,12),1);
+ // A muted voiceover ducks nothing.
+ assert.equal(duckGainAt([{...voice,muted:true},music],music,12),1);
+ // A muted ducking clip reports 1 (silence anyway, via the envelope).
+ assert.equal(duckGainAt([voice,{...music,muted:true}],{...music,muted:true},12),1);
+ // Two ducking clips do not duck each other.
+ const m2=clip('m2',{at:0,in_s:0,out_s:30,duck:0.5});
+ assert.equal(duckGainAt([music,m2],m2,12),1);
+ // sanitize clamps and defaults duck.
+ assert.equal(sanitizeAudioClips([{...music,duck:9}],{})[0].duck,1);
+ assert.equal(sanitizeAudioClips([{...music,duck:undefined as never}],{})[0].duck,0);
+ assert.equal(setAudioClipDuck([music],'m',0.5)[0].duck,0.5);
 });

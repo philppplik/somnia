@@ -2,7 +2,7 @@ import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
-import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
+import {addAudioTrackClip,addTimelineClip,addTimelineClipsFromDialog,cancelVideoExport,deleteAudioTrackClip,deleteTimelineClip,moveAudioTrackClip,moveTimelineClip,resetTimeline,resizeAudioTrackClip,setAudioTrackClipDuck,setAudioTrackClipFades,setAudioTrackClipGain,toggleAudioTrackClipMute,setTimelineClipCrossfade,setTimelineClipGain,setTimelineClipSpeed,setVideoFormat,selectTimelineClip,toggleTimelineClipMute,trimTimelineClip,useVideoSession} from '../../lib/video/session';
 import {audioClipDuration,audioTrackEnd} from '../../lib/video/audioTrack';
 import {clipDuration,clipRanges,fadeOf,MAX_GAIN,speedOf,timelineDuration} from '../../lib/video/timeline';
 import {isTitleClip} from '../../lib/video/titles';
@@ -118,7 +118,15 @@ export function VideoControls({name}:{name:string}){
     <label>{t('video.audioFadeIn')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={audioClipDuration(selectedAudio)} step={0.1} value={selectedAudio.fadeIn} onChange={e=>setAudioTrackClipFades(name,selectedAudio.id,Number(e.target.value),selectedAudio.fadeOut)} data-testid="video-audio-clip-fade-in"/></label>
     <label>{t('video.audioFadeOut')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={audioClipDuration(selectedAudio)} step={0.1} value={selectedAudio.fadeOut} onChange={e=>setAudioTrackClipFades(name,selectedAudio.id,selectedAudio.fadeIn,Number(e.target.value))} data-testid="video-audio-clip-fade-out"/></label>
    </div>
-   <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={selectedAudio.muted} onChange={()=>toggleAudioTrackClipMute(name,selectedAudio.id)} data-testid="video-audio-clip-mute"/>{t('video.clipMute')}</label>
+   <div className="grid grid-cols-2 items-end gap-2">
+    <label className="flex items-center gap-2"><NativeInput type="checkbox" className={check} checked={selectedAudio.muted} onChange={()=>toggleAudioTrackClipMute(name,selectedAudio.id)} data-testid="video-audio-clip-mute"/>{t('video.clipMute')}</label>
+    <label>{t('video.audioDuck')}
+     <NativeSelect className={`${field} mt-1`} value={String(selectedAudio.duck)} onChange={e=>setAudioTrackClipDuck(name,selectedAudio.id,Number(e.target.value))} data-testid="video-audio-clip-duck">
+      {[0,0.25,0.5,0.75,0.9].map(v=><option key={v} value={v}>{v===0?t('video.audioDuckOff'):`${Math.round(v*100)}%`}</option>)}
+     </NativeSelect>
+    </label>
+   </div>
+   <p className="m-0 text-ink-3">{t('video.audioDuckHint')}</p>
    <div className="flex flex-wrap gap-2">
     <Button size="compact" variant="ghost" onClick={()=>deleteAudioTrackClip(name,selectedAudio.id)} data-testid="video-audio-clip-delete">{t('video.deleteClip')}</Button>
    </div>

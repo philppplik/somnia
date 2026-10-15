@@ -16,6 +16,8 @@ export interface AudioClip{
  gain:number;
  /** Muted clips stay on the track but contribute silence (kept in the project file). */
  muted:boolean;
+ /** Auto-duck amount 0..1: while any other unmuted clip WITHOUT duck plays, this clip drops by (1 - duck). 0 = foreground (ducks others, is never ducked). */
+ duck:number;
  /** Equal-power edge fades, seconds. */
  fadeIn:number;fadeOut:number;
 }
@@ -27,7 +29,7 @@ export const audioTrackEnd=(clips:AudioClip[])=>clips.reduce((end,c)=>Math.max(e
 let nextId=1;
 export const newAudioClipId=()=>`aclip-${nextId++}-${Math.random().toString(36).slice(2,7)}`;
 
-export const fullAudioClip=(source:string,duration:number,at:number):AudioClip=>({id:newAudioClipId(),source,in_s:0,out_s:Math.max(MIN_CLIP_SECONDS,duration),at:Math.max(0,at),gain:1,muted:false,fadeIn:0,fadeOut:0});
+export const fullAudioClip=(source:string,duration:number,at:number):AudioClip=>({id:newAudioClipId(),source,in_s:0,out_s:Math.max(MIN_CLIP_SECONDS,duration),at:Math.max(0,at),gain:1,muted:false,fadeIn:0,fadeOut:0,duck:0});
 
 /** Clamps every clip into its source bounds (when known), rounds to milliseconds, drops degenerate ranges and caps the fades at the clip length. */
 export function sanitizeAudioClips(clips:AudioClip[],durations:Record<string,number|undefined>):AudioClip[]{
@@ -42,7 +44,7 @@ export function sanitizeAudioClips(clips:AudioClip[],durations:Record<string,num
   const gain=Math.min(MAX_GAIN,Math.max(0,typeof c.gain==='number'&&Number.isFinite(c.gain)?c.gain:1));
   const fadeIn=Math.min(Math.max(0,Number.isFinite(c.fadeIn)?c.fadeIn:0),dur);
   const fadeOut=Math.min(Math.max(0,Number.isFinite(c.fadeOut)?c.fadeOut:0),Math.max(0,dur-fadeIn));
-  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),at:Number(Math.max(0,Number.isFinite(c.at)?c.at:0).toFixed(3)),gain,muted:c.muted===true,fadeIn:Number(fadeIn.toFixed(3)),fadeOut:Number(fadeOut.toFixed(3))}];
+  return[{...c,in_s:Number(in_s.toFixed(3)),out_s:Number(out_s.toFixed(3)),at:Number(Math.max(0,Number.isFinite(c.at)?c.at:0).toFixed(3)),gain,muted:c.muted===true,duck:Math.min(1,Math.max(0,typeof c.duck==='number'&&Number.isFinite(c.duck)?c.duck:0)),fadeIn:Number(fadeIn.toFixed(3)),fadeOut:Number(fadeOut.toFixed(3))}];
  });
 }
 
@@ -54,6 +56,26 @@ export function audioEnvelope(c:AudioClip,t:number):number{
  if(c.fadeIn>0&&t<c.fadeIn)e*=Math.sin(Math.min(1,t/c.fadeIn)*Math.PI/2);
  if(c.fadeOut>0&&t>dur-c.fadeOut)e*=Math.cos(Math.min(1,(t-(dur-c.fadeOut))/c.fadeOut)*Math.PI/2);
  return e*c.gain;
+}
+
+/** Seconds for the duck gain ramp at foreground edges; fast enough to track speech, slow enough to not click. */
+export const DUCK_RAMP_SECONDS=0.15;
+/**
+ * Duck multiplier at timeline time `t`: 1 unless `c` ducks (c.duck>0) and an unmuted foreground clip (duck=0) overlaps.
+ * Overlap edges ramp linearly over DUCK_RAMP_SECONDS on both sides.
+ */
+export function duckGainAt(clips:AudioClip[],c:AudioClip,t:number):number{
+ if(!(c.duck>0)||c.muted)return 1;
+ const R=DUCK_RAMP_SECONDS;
+ let level=0;
+ for(const o of clips){
+  if(o.id===c.id||o.muted||o.duck>0)continue;
+  const s=o.at,e=o.at+audioClipDuration(o);
+  if(t>=s+R&&t<=e-R){level=1;break;}
+  if(t>s-R&&t<s+R)level=Math.max(level,(t-(s-R))/(2*R));
+  else if(t>e-R&&t<e+R)level=Math.max(level,(e+R-t)/(2*R));
+ }
+ return 1-c.duck*Math.min(1,level);
 }
 
 export const removeAudioClip=(clips:AudioClip[],id:string)=>clips.filter(c=>c.id!==id);
@@ -82,4 +104,5 @@ export function resizeAudioClip(clips:AudioClip[],id:string,edge:'in'|'out',time
 }
 export const setAudioClipGain=(clips:AudioClip[],id:string,gain:number)=>clips.map(c=>c.id===id?{...c,gain}:c);
 export const setAudioClipMuted=(clips:AudioClip[],id:string,muted:boolean)=>clips.map(c=>c.id===id?{...c,muted}:c);
+export const setAudioClipDuck=(clips:AudioClip[],id:string,duck:number)=>clips.map(c=>c.id===id?{...c,duck}:c);
 export const setAudioClipFades=(clips:AudioClip[],id:string,fadeIn:number,fadeOut:number)=>clips.map(c=>c.id===id?{...c,fadeIn,fadeOut}:c);

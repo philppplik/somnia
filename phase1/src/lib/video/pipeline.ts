@@ -3,7 +3,7 @@ import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,B
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import type {VideoFormat} from './recipe';
 import {clipRanges,fadeOf,speedOf,timelineDuration,type ClipRange,type TimelineClip} from './timeline';
-import {audioEnvelope,type AudioClip} from './audioTrack';
+import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {drawTitleCard,isTitleClip,needsSourceFile} from './titles';
 import {renderTitleSpan} from './titleExport';
@@ -183,7 +183,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
    const srcFrames=count/ch,dur=ac.out_s-ac.in_s,len=Math.max(1,Math.round(dur*48_000));
    const out=new Float32Array(len*2);
    for(let i=0;i<len;i++){
-    const localT=i/48_000,env=audioEnvelope(ac,localT);
+    const localT=i/48_000,env=audioEnvelope(ac,localT)*duckGainAt(audioClips,ac,ac.at+localT);
     const srcPos=localT*rate,f0=Math.min(srcFrames-1,Math.floor(srcPos)),f1=Math.min(srcFrames-1,f0+1),fr=Math.min(1,Math.max(0,srcPos-f0));
     const l=ch===1?raw[f0]*(1-fr)+raw[f1]*fr:raw[f0*ch]*(1-fr)+raw[f1*ch]*fr;
     const r=ch===1?l:raw[f0*ch+1]*(1-fr)+raw[f1*ch+1]*fr;
@@ -332,6 +332,7 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   if(clips.some(c=>c.gain!==1&&!c.muted))steps.push('Per-clip gain applied.');
   if(clips.some(c=>needsSourceFile(c)&&speedOf(c)!==1))steps.push('Clip speed applied; audio is resampled (pitch shifts).');
   if(audioFeed.length)steps.push(`${audioFeed.length} audio-track clip(s) mixed in.`);
+  if(audioClips.some(c=>c.duck>0&&!c.muted))steps.push('Auto-duck applied under foreground audio.');
   if(audioMuteSkip)steps.push('Muted audio clips kept as silence.');
   if(audioMutedNote)steps.push('Some audio-track sources have no audio track and were skipped.');
   if(audioTrimmedNote)steps.push('Audio-track clips past the end of the video were trimmed.');

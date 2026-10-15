@@ -22,7 +22,7 @@ test('serialize and parse round-trip media and title clips',()=>{
 });
 
 test('audio clips round-trip and version 2 is the written format',()=>{
- const audio=[{id:'au1',source:'music.mp3',in_s:2,out_s:12,at:4,gain:0.7,muted:true,fadeIn:1.5,fadeOut:2}];
+ const audio=[{id:'au1',source:'music.mp3',in_s:2,out_s:12,at:4,gain:0.7,muted:true,duck:0.5,fadeIn:1.5,fadeOut:2}];
  const text=serializeVideoProject([media('m1')],audio,'mp4');
  assert.equal(JSON.parse(text).version,VIDEO_PROJECT_VERSION);
  const parsed=parseVideoProject(text);
@@ -37,6 +37,7 @@ test('legacy version 1 files load with an empty audio track; version 3+ is rejec
  assert.deepEqual(parsed.audioClips,[]);
  const v2nomute=JSON.stringify({app:'somnia-video',version:2,clips:[],audio:[{id:'x',source:'m.mp3',in_s:0,out_s:1,at:0,gain:1,fadeIn:0,fadeOut:0}]});
  assert.equal(parseVideoProject(v2nomute).audioClips[0].muted,false,'v2 files written before mute load unmuted');
+ assert.equal(parseVideoProject(v2nomute).audioClips[0].duck,0,'v2 files written before duck load with duck 0');
  const v3=JSON.stringify({app:'somnia-video',version:3,clips:[]});
  assert.throws(()=>parseVideoProject(v3),/version 3 is not supported/i);
 });
@@ -90,7 +91,7 @@ test('clipsSignature changes on edits and is stable for equal timelines',()=>{
  assert.equal(clipsSignature(a),clipsSignature([media('m1')]));
  assert.notEqual(clipsSignature(a),clipsSignature([media('m1',{muted:true})]));
  assert.notEqual(clipsSignature(a),clipsSignature([media('m2')]),'a new id is a different edit');
- const au=[{id:'au1',source:'m.mp3',in_s:0,out_s:2,at:0,gain:1,muted:false,fadeIn:0,fadeOut:0}];
+ const au=[{id:'au1',source:'m.mp3',in_s:0,out_s:2,at:0,gain:1,muted:false,duck:0,fadeIn:0,fadeOut:0}];
  assert.notEqual(clipsSignature(a),clipsSignature(a,au),'audio edits change the signature');
  assert.equal(clipsSignature(a,au),clipsSignature(a,au.map(c=>({...c}))));
  assert.notEqual(clipsSignature(a),clipsSignature([{...media('m1'),crossfade_s:0.5}]));

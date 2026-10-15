@@ -10,7 +10,7 @@ import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
 import {blendAt,clipRanges,locate,speedOf,timelineDuration} from '../../lib/video/timeline';
-import {audioClipDuration,audioEnvelope,audioTrackEnd} from '../../lib/video/audioTrack';
+import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
 import {snapPointsFor,zoomInStep,zoomOutStep} from '../../lib/video/zoom';
 import {formatTime} from '../../lib/video/recipe';
@@ -65,7 +65,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
     if(el.paused){el.currentTime=expected;void el.play().catch(()=>{});}
     else if(Math.abs(el.currentTime-expected)>0.35)el.currentTime=expected;
     el.muted=muted;
-    el.volume=Math.min(1,Math.max(0,volume*audioEnvelope(ac,playhead-ac.at)));
+    el.volume=Math.min(1,Math.max(0,volume*audioEnvelope(ac,playhead-ac.at)*duckGainAt(audioClips,ac,playhead)));
    }else if(!el.paused)el.pause();
   }
  },[audioClips,playhead,playing,volume,muted,media]);

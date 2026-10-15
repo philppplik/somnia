@@ -4,7 +4,7 @@ import {VideoEngine,type VideoEngineLike} from './engine';
 import {DEFAULT_FORMAT,exportName,type VideoFormat} from './recipe';
 import {fullClip,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipSpeed,setCrossfade,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
-import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
+import {audioTrackEnd,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {needsSourceFile} from './titles';
 import {FilmstripController} from './filmstrip-controller';
@@ -122,7 +122,7 @@ export const videoCanRedo=(s:VideoSession|null)=>!!s&&s.history.future.length>0;
 /** Probed durations of audio-track sources (audio files and videos alike), filled when a clip is added. */
 const audioDurations=new Map<string,number>();
 const audioDurationsOf=(clips:AudioClip[])=>Object.fromEntries([...new Set(clips.map(c=>c.source))].flatMap(n=>{const d=audioDurations.get(n);return d?[[n,d]]:[];}));
-const sameAudio=(a:AudioClip[],b:AudioClip[])=>a.length===b.length&&a.every((c,i)=>{const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.at===d.at&&c.gain===d.gain&&c.muted===d.muted&&c.fadeIn===d.fadeIn&&c.fadeOut===d.fadeOut;});
+const sameAudio=(a:AudioClip[],b:AudioClip[])=>a.length===b.length&&a.every((c,i)=>{const d=b[i];return c.id===d.id&&c.source===d.source&&c.in_s===d.in_s&&c.out_s===d.out_s&&c.at===d.at&&c.gain===d.gain&&c.muted===d.muted&&c.duck===d.duck&&c.fadeIn===d.fadeIn&&c.fadeOut===d.fadeOut;});
 /** Applies an audio-track edit and records the previous state (both tracks) as one undo step. */
 export function editAudioTrack(root:string,edit:(clips:AudioClip[])=>AudioClip[]|null,opts?:{historyKey?:string}){
  const s=sessions.get(root);if(!s)return;
@@ -158,6 +158,7 @@ export const resizeAudioTrackClip=(root:string,id:string,edge:'in'|'out',timelin
 export const setAudioTrackClipGain=(root:string,id:string,gain:number,historyKey?:string)=>editAudioTrack(root,clips=>setAudioClipGain(clips,id,gain),historyKey?{historyKey}:undefined);
 export const setAudioTrackClipFades=(root:string,id:string,fadeIn:number,fadeOut:number)=>editAudioTrack(root,clips=>setAudioClipFades(clips,id,fadeIn,fadeOut));
 export const deleteAudioTrackClip=(root:string,id:string)=>editAudioTrack(root,clips=>removeAudioClip(clips,id));
+export const setAudioTrackClipDuck=(root:string,id:string,duck:number)=>editAudioTrack(root,clips=>setAudioClipDuck(clips,id,duck));
 export const toggleAudioTrackClipMute=(root:string,id:string)=>editAudioTrack(root,clips=>{const c=clips.find(x=>x.id===id);return c?setAudioClipMuted(clips,id,!c.muted):null;});
 /** Appends a full-length clip of another video source (opened and probed on demand) and selects it. */
 export async function addTimelineClip(root:string,item:{name:string;url:string}){

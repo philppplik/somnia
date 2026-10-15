@@ -79,6 +79,9 @@
  "video.audioAt": "Start on timeline (s)",
  "video.audioFadeIn": "Fade in (s)",
  "video.audioFadeOut": "Fade out (s)",
+ "video.audioDuck": "Ducking",
+ "video.audioDuckOff": "Off",
+ "video.audioDuckHint": "Lowers this clip while other audio without ducking plays (e.g. music dips under a voiceover).",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Gain · {percent}%",
  "video.clipSpeed": "Speed",
@@ -147,5 +150,6 @@
  "cmd.video.audio.gain": "Set an audio clip gain",
  "cmd.video.audio.fades": "Set an audio clip fade in and out",
  "cmd.video.audio.delete": "Delete an audio clip",
- "cmd.video.audio.mute": "Toggle an audio clip mute"
+ "cmd.video.audio.mute": "Toggle an audio clip mute",
+ "cmd.video.audio.duck": "Set an audio clip auto-duck amount"
 }

@@ -45,6 +45,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.audio.trim','Trim an audio clip edge to a source time',(p:{id:string;edge:'in'|'out';seconds:number})=>trimAudioTrackClip(root(),p.id,p.edge,p.seconds),object({id,edge:{enum:['in','out']},seconds:number()}),ready,'Edit'),
   spec('video.audio.gain','Set an audio clip gain',(p:{id:string;gain:number})=>setAudioTrackClipGain(root(),p.id,p.gain),object({id,gain:number(0,2)}),ready,'Edit'),
   spec('video.audio.fades','Set an audio clip fade in and out',(p:{id:string;fadeIn:number;fadeOut:number})=>setAudioTrackClipFades(root(),p.id,p.fadeIn,p.fadeOut),object({id,fadeIn:number(0,30),fadeOut:number(0,30)}),ready,'Edit'),
+  spec('video.audio.duck','Set an audio clip auto-duck amount',(p:{id:string;amount:number})=>setAudioTrackClipDuck(root(),p.id,p.amount),object({id,amount:number(0,1)}),ready,'Edit'),
   spec('video.audio.mute','Toggle an audio clip mute',(p:{id:string})=>toggleAudioTrackClipMute(root(),p.id),object({id}),ready,'Edit'),
   spec('video.audio.delete','Delete an audio clip',(p:{id:string})=>deleteAudioTrackClip(root(),p.id),object({id}),ready,'Edit'),
   spec('video.title.add','Add a title card',()=>addTitleClip(root(),Number.MAX_SAFE_INTEGER,{text:''}),undefined,ready,'Insert'),

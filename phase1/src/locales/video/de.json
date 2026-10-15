@@ -79,6 +79,9 @@
  "video.audioAt": "Start auf der Timeline (s)",
  "video.audioFadeIn": "Einblenden (s)",
  "video.audioFadeOut": "Ausblenden (s)",
+ "video.audioDuck": "Ducking",
+ "video.audioDuckOff": "Aus",
+ "video.audioDuckHint": "Senkt diesen Clip ab, während anderes Audio ohne Ducking spielt (z. B. Musik weicht unter einem Voiceover zurück).",
  "video.clipTitle": "Clip {index}",
  "video.gain": "Verstärkung · {percent}%",
  "video.clipSpeed": "Tempo",
@@ -147,5 +150,6 @@
  "cmd.video.audio.gain": "Verstärkung eines Audioclips einstellen",
  "cmd.video.audio.fades": "Ein- und Ausblendung eines Audioclips einstellen",
  "cmd.video.audio.delete": "Audioclip löschen",
- "cmd.video.audio.mute": "Stummschaltung eines Audioclips umschalten"
+ "cmd.video.audio.mute": "Stummschaltung eines Audioclips umschalten",
+ "cmd.video.audio.duck": "Auto-Ducking eines Audioclips einstellen"
 }
