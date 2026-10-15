@@ -166,6 +166,8 @@
   "sound.arrange.split": "Scinder ici",
   "sound.arrange.duplicate": "Dupliquer",
   "sound.arrange.delete": "Supprimer",
+  "sound.arrange.mute": "Muet",
+  "sound.arrange.unmute": "Réactiver",
   "sound.arrange.start": "Début (s)",
   "sound.arrange.offset": "Entrée source (s)",
   "sound.arrange.length": "Durée (s)",

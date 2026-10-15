@@ -166,6 +166,8 @@
   "sound.arrange.split": "Split at playhead",
   "sound.arrange.duplicate": "Duplicate",
   "sound.arrange.delete": "Delete",
+  "sound.arrange.mute": "Mute",
+  "sound.arrange.unmute": "Unmute",
   "sound.arrange.start": "Start (s)",
   "sound.arrange.offset": "Source in (s)",
   "sound.arrange.length": "Length (s)",
