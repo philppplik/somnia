@@ -1,3 +1,8 @@
+import {panelDocumentLabel,loadedLocalModels} from '../../lib/agent/panelStatus';
+import {LocalModelsRuntime} from '../../lib/agent/localModels';
+import {useDocuments} from '../../lib/documents/store';
+import {useSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {getSlidesSessionState,subscribeSlides} from '../../lib/slides/session';
 import {activeAgentDocumentRef} from '../../lib/agent/panelBridge';
 import {effectiveLocalChoice} from '../../lib/agent/localAssistant';
 import {panelPreferencesSnapshot,subscribePanelPreferences,setPanelPreferences,panelDisclosureKey,consumePanelDisclosure} from '../../lib/agent/panelPreferences';
@@ -28,6 +33,7 @@ import {AIGeneratedLabel} from './AgentPrivacy';
 import {NativeButton,NativeInput} from '../ui/native-controls';
 export function AgentPanel(){
  const media=useMedia();const app=useAppStore();const target=activeStudioDocument(app,media);const studio=studioAgentContext(app.activeStudio,target.path,app.editorKind);
+ const docState=useDocuments(),sheetSelection=useSheetsSelection(),slideState=useSyncExternalStore(subscribeSlides,getSlidesSessionState,getSlidesSessionState);const displayDocument=panelDocumentLabel(target,app.activeStudio,{documents:docState.name,sheets:sheetSelection?.file,slides:slideState.name},media.items.map(m=>m.name));
  const ui=useUiContext();const definition=getStudio(app.activeStudio);const adapted=hasAgentContextAdapter(definition)&&!(definition.id==='code'&&(target.media||['raster','vector','pdf'].includes(ui.domain)));
  const agentContext=adapted?buildAgentStudioContext(definition,target,ui,app.viewMode):undefined;
  const {t}=useT();const [chat,dispatch]=useReducer(chatReducer,initialChat);const prefs=useSyncExternalStore(subscribePanelPreferences,panelPreferencesSnapshot,panelPreferencesSnapshot);const draft=prefs.draft;const setDraft=(draft:string)=>setPanelPreferences({draft});
@@ -35,6 +41,7 @@ export function AgentPanel(){
  const task=prefs.task;const localChoices=prefs.choices;
  const settings=useSyncExternalStore(subscribeAgentSettings,agentSettingsSnapshot,agentSettingsSnapshot);
  const selectedTaskModel=settings.config.localRuntime?.taskModels?.[task];const effectiveProvider=selectedTaskModel?'ollama':settings.config.provider;const effectiveModel=effectiveLocalChoice(settings.config,task,localChoices.studio?agentContext?.studioId:undefined).model;
+ const [loadedModels,setLoadedModels]=useState<string[]|null>(null);useEffect(()=>{let live=true;setLoadedModels(null);if(effectiveProvider==='ollama')void new LocalModelsRuntime().running().then(raw=>{if(live)setLoadedModels(loadedLocalModels(raw));}).catch(()=>{if(live)setLoadedModels(null);});return()=>{live=false;};},[effectiveProvider,effectiveModel,settings.revision,chat.busy]);
  const {ready:settingsReady,saving,authBusy,error:settingsError}=settings;
  useEffect(()=>{publishLocalContextBudget(null);},[draft,settings.revision,task,target.path,app.activeStudio,localChoices]);
  useEffect(()=>{void initializeAgentSettings();},[]);
@@ -71,7 +78,7 @@ export function AgentPanel(){
    <div className="ag-hd-right"><NativeButton type="button" className="ag-ib" title="Agent configuration" aria-label="Agent configuration" disabled={chat.busy||!settingsReady||saving||authBusy} onClick={openSettings}><Settings size={17}/></NativeButton><NativeButton type="button" className="ag-ib" title={t('agent.collapse')} aria-label={t('agent.collapse')} onClick={()=>patchState({agentOpen:false})}><PanelRightClose size={17}/></NativeButton></div>
   </header>
   <div className="ag-chat" ref={scroller} onScroll={e=>{const el=e.currentTarget;pinned.current=el.scrollHeight-el.scrollTop-el.clientHeight<48;}} role="log" aria-live="off" aria-label={t('agent.title')}>
-   <p className="ag-context-chip" role="status">{nativeMode?'Local-only mode · ':''}{effectiveProvider} · {effectiveModel||t('local.unknown')} · {target.path||t('agent.panel.noDocument')}</p>
+   <p className="ag-context-chip" role="status" data-testid="agent-context-status">{displayDocument??t('agent.panel.noDocument')} · {effectiveProvider==='ollama'?'Local Ollama':effectiveProvider} · Selected: {effectiveModel||t('local.unknown')}{effectiveProvider==='ollama'&&<><br/>Ollama loaded (last check): {loadedModels===null?t('local.unknown'):loadedModels.length?loadedModels.join(', '):'None'}</>}{nativeMode&&' · No cloud fallback'}</p>
    {settingsError&&<StudioStatus tone="error" live="assertive">{settingsError}</StudioStatus>}
    {empty?<div className="ag-empty"><div className="ag-orb" aria-hidden="true"/><h3>{t('agent.empty.title')}</h3><span>{studio.label==='Code'?t('agent.empty.body'):`Describe what you want to do in ${studio.label}. ${studio.scope}.`}</span><p className="ag-tip">{t('agent.panel.tip')}</p></div>:chat.items.map((item,index)=><Row key={item.id} item={item} busy={chat.busy} onRetry={()=>{const last=chat.items.slice(0,index).reverse().find(i=>i.kind==='user');if(last&&last.kind==='user')send(last.text);}} onAccept={(p,d)=>void resolve(p,'accepted',d)} onReject={p=>void resolve(p,'rejected')} onUndo={async p=>{try{await(await getAgentCore()).revertProposal(p.id);dispatch({type:'resolve',proposalId:p.id,state:'undone'});}catch(e){dispatch({type:'event',event:{type:'error',message:e instanceof Error?e.message:String(e)}});}}}/>)}
    {mcpProposals.map(p=><div key={p.id} className="ag-review" data-state="pending" data-testid="mcp-proposal"><AIGeneratedLabel provenance={p.changeSet?.provenance}/>{p.sheets?<section className="ag-native-review"><strong>{p.file} · {p.sheets.address}</strong><p>Before: {p.sheets.before}</p><p>After: {p.sheets.after}</p><p>One selected cell. No disk write.</p><NativeButton onClick={()=>void resolve(p,'accepted')}>Accept preview</NativeButton><NativeButton onClick={()=>void resolve(p,'rejected')}>Reject proposal</NativeButton></section>:<NativeProposalReview proposal={p} onAccept={(pr,d)=>void resolve(pr,'accepted',d)} onReject={()=>void resolve(p,'rejected')}/>}</div>)}
