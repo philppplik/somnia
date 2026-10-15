@@ -4,7 +4,7 @@ export interface SheetMeta{index:number;name:string;visibility:string;tabColor?:
 export interface WorkbookInfo{sheets:SheetMeta[];warnings:string[]}
 export interface SheetInfo{sheet:number;rows:number;cols:number;canUndo:boolean;canRedo:boolean}
 export interface RangeCell{address:string;value:CellValue;formula:string|null}
-export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'general';wrap:boolean;indent?:number;v?:'top'|'middle'|'bottom';fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
+export interface CellStyle{bold:boolean;italic:boolean;strike:boolean;underline:boolean;color:string|null;fill:string|null;h:'left'|'center'|'right'|'justify'|'general';rot?:number;ul2?:boolean;wrap:boolean;indent?:number;v?:'top'|'middle'|'bottom';fmt:string;font:string;size:number;borders:{l:BorderSide|null;r:BorderSide|null;t:BorderSide|null;b:BorderSide|null}}
 export interface BorderSide{w:number;style:'solid'|'dashed'|'dotted'|'double';color:string}
 export interface ViewCell extends RangeCell{text:string;numeric:boolean;fmtColor:string|null;style:CellStyle;cfBar?:[number,string,boolean]|null;cfIcon?:[string,number]|null}
 export interface ViewResult{sheet:number;row:number;col:number;rows:number;cols:number;cells:ViewCell[]}
@@ -51,6 +51,8 @@ export type ViewOp={zoom:number}|{gridlines:boolean}|{headings:boolean}|{zeros:b
 export interface ViewOpResult{zoom:number;gridlines:boolean;headings?:boolean;zeros?:boolean}
 /** Saved views: the sheet, the selected cell and the zoom under a name. */
 export type SavedViewOp={kind:'save'|'show'|'delete';name:string};
+/** Merge, justify, rotate, double underline and clear formats on the selected block (one undo step). */
+export type LayoutOp={kind:'merge';how:'cells'|'center'|'across'|'unmerge'}|{kind:'rotate';mode:'none'|'up'|'down'|'stacked'}|{kind:'doubleUnderline';on:boolean}|{kind:'justify'|'clearFormats'};
 /** Outline groups and subtotals on the selected lines or block (column offsets are inside the selection). */
 export type OutlineOp={kind:'group'|'ungroup'|'hide'|'show';axis:'rows'|'cols'}|{kind:'subtotal';groupBy:number;function:'sum'|'count'|'average'|'max'|'min'|'product';columns:number[]};
 export interface OutlineLines{lines:number;deepest:number;hidden:number}
@@ -158,6 +160,7 @@ export type SheetsRequest=
  |{id:number;op:'sparklines';sheet:number}
  |{id:number;op:'chartOp';sheet:number;row:number;col:number;rows:number;cols:number;chart:ChartOp}
  |{id:number;op:'sparklineOp';sheet:number;row:number;col:number;rows:number;cols:number;sparkline:SparklineOp}
+ |{id:number;op:'layoutOp';sheet:number;row:number;col:number;rows:number;cols:number;layout:LayoutOp}
  |{id:number;op:'outline';sheet:number}
  |{id:number;op:'outlineOp';sheet:number;row:number;col:number;rows:number;cols:number;outline:OutlineOp}
  |{id:number;op:'savedViews'}

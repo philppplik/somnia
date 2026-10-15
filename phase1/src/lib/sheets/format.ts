@@ -33,7 +33,7 @@ export function visibleWindow(scrollTop:number,scrollLeft:number,width:number,he
 export function cellText(cell:{text?:string;value:CellValue}|undefined):string{
  if(!cell)return '';return cell.text!==undefined?cell.text:displayValue(cell.value);}
 /** Explicit horizontal alignment from the file wins; General aligns numbers and dates right, errors and booleans centered like spreadsheets do, text left. */
-export function cellAlign(h:'left'|'center'|'right'|'general'|undefined,cell:{value:CellValue;numeric?:boolean}|undefined):'left'|'center'|'right'{
+export function cellAlign(h:'left'|'center'|'right'|'justify'|'general'|undefined,cell:{value:CellValue;numeric?:boolean}|undefined):'left'|'center'|'right'|'justify'{
  if(h&&h!=='general')return h;if(!cell)return 'left';
  if(cell.value.t==='Bool'||cell.value.t==='Error')return 'center';
  return cell.value.t==='Number'||cell.numeric?'right':'left';}

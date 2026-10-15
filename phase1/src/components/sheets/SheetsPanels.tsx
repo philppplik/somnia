@@ -19,6 +19,7 @@ import {headerProblem,MAX_HEADER_CHARS} from '../../lib/sheets/printOps';
 import {MAX_ZOOM,MIN_ZOOM} from '../../lib/sheets/viewOps';
 import {MAX_TITLE_CHARS,sparklineBlockProblem} from '../../lib/sheets/chartOps';
 import {OBJECT_GROUPS,SHAPE_FILLS,SHAPE_LINES,MAX_PICTURE_BYTES,MAX_SHAPE_TEXT,MAX_ALT,buildObjectOp,bytesToBase64,objectIsShape,objectNeedsPick,type ObjectAction} from '../../lib/sheets/objectOps';
+import {layoutBlockProblem,MERGE_HOWS,ROTATE_MODES} from '../../lib/sheets/layoutOps';
 import {SUBTOTAL_FUNCS,MAX_SUBTOTAL_ROWS,parseColumnList,type SubtotalFunc} from '../../lib/sheets/outlineOps';
 import {viewNameProblem,MAX_VIEW_NAME} from '../../lib/sheets/savedViews';
 import {WHATIF_GROUPS,buildWhatIfOp,whatIfNeeds,type WhatIfAction} from '../../lib/sheets/whatIfOps';
@@ -231,6 +232,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ProtectGroup/>
   <WhatIfGroup/>
   <ObjectsGroup/>
+  <CellLayoutGroup/>
   <SheetTabGroup/>
   <OutlineGroup/>
   <SavedViewsGroup/>
@@ -402,6 +404,24 @@ function WhatIfGroup(){
  </div>;
 }
 /** Pictures and shapes in one grouped menu. A picture is read from a chosen PNG or JPEG file; shapes and object changes are built from fields. One undo step each. */
+/** Merge, justify, rotate, double underline and clear formats in one grouped menu. One undo step each. */
+type LayoutAction='mergeCells'|'mergeCenter'|'mergeAcross'|'unmerge'|'justify'|'rotNone'|'rotUp'|'rotDown'|'rotStacked'|'ulOn'|'ulOff'|'clear';
+const LAYOUT_OPS:Record<LayoutAction,object>={mergeCells:{kind:'merge',how:'cells'},mergeCenter:{kind:'merge',how:'center'},mergeAcross:{kind:'merge',how:'across'},unmerge:{kind:'merge',how:'unmerge'},justify:{kind:'justify'},rotNone:{kind:'rotate',mode:'none'},rotUp:{kind:'rotate',mode:'up'},rotDown:{kind:'rotate',mode:'down'},rotStacked:{kind:'rotate',mode:'stacked'},ulOn:{kind:'doubleUnderline',on:true},ulOff:{kind:'doubleUnderline',on:false},clear:{kind:'clearFormats'}};
+function CellLayoutGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [act,setAct]=useState<LayoutAction>('mergeCells');
+ const r=s?.range;if(!s||!r)return null;
+ const op=LAYOUT_OPS[act] as Parameters<typeof layoutBlockProblem>[0],problem=layoutBlockProblem(op,r.r1-r.r0+1,r.c1-r.c0+1);
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.cl.title')}>
+  <span>{t('sheets.cl.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.cl.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as LayoutAction)} data-testid="sheets-cl-action">
+   <optgroup label={t('sheets.cl.groupMerge')}>{(['mergeCells','mergeCenter','mergeAcross','unmerge'] as LayoutAction[]).map(a=><option key={a} value={a}>{t('sheets.cl.'+a)}</option>)}</optgroup>
+   <optgroup label={t('sheets.cl.groupText')}>{(['justify','rotNone','rotUp','rotDown','rotStacked','ulOn','ulOff'] as LayoutAction[]).map(a=><option key={a} value={a}>{t('sheets.cl.'+a)}</option>)}</optgroup>
+   <optgroup label={t('sheets.cl.groupClear')}><option value="clear">{t('sheets.cl.clear')}</option></optgroup>
+  </NativeSelect></label>
+  <Button variant="outline" size="compact" disabled={action.busy||!!problem} onClick={()=>void action.run('sheets.cellLayout',LAYOUT_OPS[act])} data-testid="sheets-cl-apply">{t('sheets.cl.apply')}</Button>
+  <p className="text-ink-3">{t(problem==='two'?'sheets.cl.needTwo':'sheets.cl.hint',{range:rangeAddress(r)})}</p>
+ </div>;
+}
 /** Sheet tab: hide this sheet, show a hidden one, or set the tab color. One undo step each. */
 type TabAction='hide'|'unhide'|'color'|'noColor';
 function SheetTabGroup(){

@@ -2723,6 +2723,76 @@ impl HeadlessWorkbook {
         self.session.run(command, call).map(|v| v.to_string())
     }
 
+    /// Merges, unmerges, justifies, rotates or clears the formats of a block as ONE history entry. `op_json` is
+    /// `{"kind":"merge","how":"cells"|"center"|"across"|"unmerge"}`, `{"kind":"justify"}`, `{"kind":"rotate","mode":"none"|"up"|"down"|"stacked"}`,
+    /// `{"kind":"doubleUnderline","on":bool}` or `{"kind":"clearFormats"}`. Merging needs at least two cells and is REFUSED when it would discard
+    /// filled cells (only the upper-left value of a merge survives); protected sheets are refused for every kind; at most 1,000,000 cells.
+    pub fn layout_op(&mut self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op_json: &str) -> Result<String, String> {
+        if rows == 0 || cols == 0 || u64::from(rows) * u64::from(cols) > MAX_FORMAT_CELLS {
+            return Err("invalid block (1 to 1,000,000 cells)".into());
+        }
+        self.check_block(sheet, row, col, rows, cols, true)?;
+        let op: serde_json::Value = serde_json::from_str(op_json).map_err(|_| "operation must be a JSON object".to_string())?;
+        let map = op.as_object().ok_or("operation must be a JSON object")?;
+        let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported layout operation")?;
+        let known: &[&str] = match kind {
+            "merge" => &["kind", "how"],
+            "rotate" => &["kind", "mode"],
+            "doubleUnderline" => &["kind", "on"],
+            _ => &["kind"],
+        };
+        if map.keys().any(|k| !known.contains(&k.as_str())) {
+            return Err("unknown layout field".into());
+        }
+        let (command, mut params) = match kind {
+            "merge" => {
+                let how = map.get("how").and_then(|v| v.as_str()).ok_or("unsupported merge")?;
+                let command = match how {
+                    "cells" => "home.mergeCells",
+                    "center" => "home.mergeCenter",
+                    "across" => "home.mergeAcross",
+                    "unmerge" => "home.unmergeCells",
+                    _ => return Err("unsupported merge".into()),
+                };
+                if how != "unmerge" {
+                    if rows * cols < 2 || (how == "across" && cols < 2) {
+                        return Err("Select at least two cells to merge.".into());
+                    }
+                    let doc = self.session.doc().map_err(|e| e.to_string())?;
+                    let sh = doc.wb.sheet(sheet).ok_or("unknown sheet")?;
+                    let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
+                    let kept = |at: CellRef| if how == "across" { at.col == col } else { at.row == row && at.col == col };
+                    let lost = sh.cells.iter_range(block).filter(|(at, cell)| !kept(*at) && (cell.formula.is_some() || !cell.value.display().is_empty())).count();
+                    if lost > 0 {
+                        return Err(format!("Merging would discard {lost} filled cell(s). Only the upper-left value of a merge survives; clear or move them first."));
+                    }
+                }
+                (command, json!({}))
+            }
+            "justify" => ("home.justify", json!({})),
+            "rotate" => {
+                let angle = match map.get("mode").and_then(|v| v.as_str()) {
+                    Some("none") => json!(0),
+                    Some("up") => json!("up"),
+                    Some("down") => json!("down"),
+                    Some("stacked") => json!("vertical"),
+                    _ => return Err("rotation must be none, up, down or stacked".into()),
+                };
+                ("home.orientation", json!({"angle": angle}))
+            }
+            "doubleUnderline" => {
+                let on = map.get("on").and_then(|v| v.as_bool()).ok_or("`on` must be true or false")?;
+                ("home.underline", json!({"on": on, "style": "double"}))
+            }
+            "clearFormats" => ("edit.clearFormats", json!({})),
+            _ => return Err("unsupported layout operation".into()),
+        };
+        let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
+        params["sheet"] = json!(sheet);
+        params["range"] = json!(range);
+        self.session.run(command, params).map(|v| v.to_string())
+    }
+
     /// Increase/decrease decimals like a spreadsheet: the active cell (`at`, inside the block) decides the
     /// new number format, which is then applied to the whole block.
     fn decimals_command(&self, sheet: usize, row: u32, col: u32, rows: u32, cols: u32, op: &serde_json::Value) -> Result<(&'static str, serde_json::Value), String> {
@@ -2807,7 +2877,8 @@ fn style_json(st: &Style, theme: &gridcraft_engine::model::style::Theme) -> serd
         "bold": st.font.bold, "italic": st.font.italic, "strike": st.font.strike,
         "underline": st.font.underline != Underline::None,
         "color": hex(&st.font.color), "fill": fill,
-        "h": match st.align.h { HAlign::Left => "left", HAlign::Center | HAlign::CenterAcross => "center", HAlign::Right => "right", _ => "general" },
+        "h": match st.align.h { HAlign::Left => "left", HAlign::Center | HAlign::CenterAcross => "center", HAlign::Right => "right", HAlign::Justify => "justify", _ => "general" },
+        "rot": st.align.rotation, "ul2": st.font.underline == Underline::Double,
         "wrap": st.align.wrap, "indent": st.align.indent,
         "v": match st.align.v { VAlign::Top => "top", VAlign::Center => "middle", _ => "bottom" }, "fmt": st.num_fmt.as_str(),
         "font": st.font.name, "size": st.font.size,
@@ -3623,6 +3694,35 @@ mod tests {
         assert_eq!((lay["showHeadings"].as_bool(), lay["showZeros"].as_bool()), (Some(false), Some(false)));
         assert!(book.view_op(0, r#"{"headings":"no"}"#).is_err());
         assert!(book.view_op(0, r#"{"headings":true,"zeros":true}"#).is_err());
+    }
+    #[test]
+    fn layout_merges_rotates_and_clears_in_single_undo_steps_and_refuses_data_loss() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        for (a, v) in [("A900", "x"), ("B900", ""), ("A901", ""), ("B901", "")] {
+            book.session.run("cell.set", json!({"sheet": 0, "cell": a, "input": v})).unwrap();
+        }
+        let steps = |b: &HeadlessWorkbook| b.session.doc().unwrap().undo.len();
+        let before = steps(&book);
+        book.layout_op(0, 899, 0, 2, 2, r#"{"kind":"merge","how":"center"}"#).unwrap();
+        assert_eq!(steps(&book), before + 1);
+        assert!(book.layout(0).unwrap().contains(r#""r0":899"#));
+        book.layout_op(0, 899, 0, 2, 2, r#"{"kind":"merge","how":"unmerge"}"#).unwrap();
+        book.session.run("cell.set", json!({"sheet": 0, "cell": "B900", "input": "keep"})).unwrap();
+        assert!(book.layout_op(0, 899, 0, 2, 2, r#"{"kind":"merge","how":"cells"}"#).unwrap_err().contains("discard"));
+        assert!(book.layout_op(0, 899, 0, 1, 1, r#"{"kind":"merge","how":"cells"}"#).is_err());
+        book.layout_op(0, 899, 0, 1, 2, r#"{"kind":"rotate","mode":"up"}"#).unwrap();
+        let style: serde_json::Value = serde_json::from_str(&book.view_range(0, 899, 0, 1, 1).unwrap()).unwrap();
+        assert_eq!(style["cells"][0]["style"]["rot"], 90, "{style}");
+        book.layout_op(0, 899, 0, 1, 1, r#"{"kind":"justify"}"#).unwrap();
+        book.layout_op(0, 899, 0, 1, 1, r#"{"kind":"doubleUnderline","on":true}"#).unwrap();
+        book.layout_op(0, 899, 0, 1, 1, r#"{"kind":"clearFormats"}"#).unwrap();
+        for bad in ["nope", r#"{"kind":"merge"}"#, r#"{"kind":"merge","how":"x"}"#, r#"{"kind":"rotate","mode":"45"}"#, r#"{"kind":"doubleUnderline"}"#, r#"{"kind":"justify","extra":1}"#, r#"{"kind":"shrink"}"#] {
+            assert!(book.layout_op(0, 899, 0, 2, 2, bad).is_err(), "{bad}");
+        }
+        assert!(book.layout_op(0, 899, 0, 0, 2, r#"{"kind":"justify"}"#).is_err());
+        assert!(book.layout_op(9, 899, 0, 2, 2, r#"{"kind":"justify"}"#).is_err());
+        book.session.run("review.protectSheet", json!({})).unwrap();
+        assert!(book.layout_op(0, 899, 0, 2, 2, r#"{"kind":"justify"}"#).unwrap_err().contains("protected"));
     }
     #[test]
     fn objects_insert_move_and_delete_in_single_undo_steps_and_refuse_bad_input() {
