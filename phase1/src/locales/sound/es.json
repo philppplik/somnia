@@ -240,6 +240,8 @@
   "sound.arrange.removeTrack": "Eliminar pista",
   "sound.arrange.removeTrackConfirm": "¿Eliminar esta pista y todos sus clips? Se puede deshacer.",
   "sound.arrange.duplicateTrack": "Duplicar pista",
+  "sound.arrange.nudgeLeft": "Desplazar 0,1 s a la izquierda",
+  "sound.arrange.nudgeRight": "Desplazar 0,1 s a la derecha",
   "sound.arrange.closeConfirm": "Sesión de audio sin guardar: ¿cancelar para guardar primero o descartar y cerrar?",
   "sound.arrange.command.saveNative": "Organizar y mezclar: Guardar sesión en carpeta…",
   "cmd.sound.arrange.saveNative": "Organizar y mezclar: Guardar sesión en carpeta…",

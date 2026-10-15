@@ -240,6 +240,8 @@
   "sound.arrange.removeTrack": "Remove track",
   "sound.arrange.removeTrackConfirm": "Remove this track and all its clips? Undo remains available.",
   "sound.arrange.duplicateTrack": "Duplicate track",
+  "sound.arrange.nudgeLeft": "Nudge 0.1 s left",
+  "sound.arrange.nudgeRight": "Nudge 0.1 s right",
   "sound.arrange.closeConfirm": "Unsaved Sound session: cancel and save the session first, or discard changes and close?",
   "sound.arrange.command.saveNative": "Arrange & Mix: Save session to folder…",
   "cmd.sound.arrange.saveNative": "Arrange & Mix: Save session to folder…",

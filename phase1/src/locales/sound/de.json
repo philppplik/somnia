@@ -240,6 +240,8 @@
   "sound.arrange.removeTrack": "Spur entfernen",
   "sound.arrange.removeTrackConfirm": "Diese Spur mit allen Clips entfernen? Rückgängig bleibt verfügbar.",
   "sound.arrange.duplicateTrack": "Spur duplizieren",
+  "sound.arrange.nudgeLeft": "0,1 s nach links schieben",
+  "sound.arrange.nudgeRight": "0,1 s nach rechts schieben",
   "sound.arrange.closeConfirm": "Ungespeicherte Sound-Session: Abbrechen und zuerst speichern oder Änderungen verwerfen und schließen?",
   "sound.arrange.command.saveNative": "Arrangement & Mix: Session in Ordner speichern…",
   "cmd.sound.arrange.saveNative": "Arrangement & Mix: Session in Ordner speichern…",

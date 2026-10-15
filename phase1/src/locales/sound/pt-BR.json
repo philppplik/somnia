@@ -240,6 +240,8 @@
   "sound.arrange.removeTrack": "Remover faixa",
   "sound.arrange.removeTrackConfirm": "Remover esta faixa e todos os clipes? É possível desfazer.",
   "sound.arrange.duplicateTrack": "Duplicar faixa",
+  "sound.arrange.nudgeLeft": "Deslocar 0,1 s para a esquerda",
+  "sound.arrange.nudgeRight": "Deslocar 0,1 s para a direita",
   "sound.arrange.closeConfirm": "Sessão de áudio não salva: cancelar para salvar antes ou descartar e fechar?",
   "sound.arrange.command.saveNative": "Arranjo e mixagem: Salvar sessão na pasta…",
   "cmd.sound.arrange.saveNative": "Arranjo e mixagem: Salvar sessão na pasta…",

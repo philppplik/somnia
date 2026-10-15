@@ -240,6 +240,8 @@
   "sound.arrange.removeTrack": "Supprimer la piste",
   "sound.arrange.removeTrackConfirm": "Supprimer cette piste et ses clips ? L’action reste annulable.",
   "sound.arrange.duplicateTrack": "Dupliquer la piste",
+  "sound.arrange.nudgeLeft": "Décaler de 0,1 s à gauche",
+  "sound.arrange.nudgeRight": "Décaler de 0,1 s à droite",
   "sound.arrange.closeConfirm": "Session audio non enregistrée : annuler pour enregistrer ou abandonner et fermer ?",
   "sound.arrange.command.saveNative": "Arrangement et mixage: Enregistrer dans un dossier…",
   "cmd.sound.arrange.saveNative": "Arrangement et mixage: Enregistrer dans un dossier…",

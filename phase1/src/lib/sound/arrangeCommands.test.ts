@@ -41,3 +41,11 @@ test('track.duplicate copies a track with fresh ids right after the original and
  await commandDispatcher.runCommand('sound.arrange.undo');
  assert.equal(getArrangementState().document.tracks.length,1,'a second undo restores the original alone');
 }finally{off();resetArrangement();}});
+
+test('clip nudge never pushes a clip before zero: the validator rejects negative starts atomically',async()=>{resetArrangement();const off=registerArrangeCommands();try{
+ const source={id:'src',name:'tone.wav',frames:4800,sampleRate:48000,channels:2 as const};
+ editArrangement(s=>{s.sources.push(source);s.tracks.push({...newTrack('t1','Voice'),clips:[{...newClip('c1',source,0),length:4800}]});});
+ await commandDispatcher.runCommand('sound.arrange.clip.set',{id:'c1',start:4800});
+ await assert.rejects(commandDispatcher.runCommand('sound.arrange.clip.set',{id:'c1',start:-1}));
+ assert.equal(getArrangementState().document.tracks[0].clips[0].start,4800,'rejection preserves the position');
+}finally{off();resetArrangement();}});
