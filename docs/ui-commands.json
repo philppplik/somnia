@@ -4727,6 +4727,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.table.layout",
+      "title": "Set table layout",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.table.merge_down",
       "title": "Merge with cell below",
       "category": "View",

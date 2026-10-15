@@ -48,7 +48,7 @@ new file mode 100644
 index 0000000..5b80b79
 --- /dev/null
 +++ b/crates/somnia-worker/src/lib.rs
-@@ -0,0 +1,5002 @@
+@@ -0,0 +1,5155 @@
 +//! Experimental headless adapter. No DOM, egui, filesystem or UI thread access.
 +use wasm_bindgen::prelude::*;
 +use std::sync::Arc;
@@ -2025,6 +2025,124 @@ index 0000000..5b80b79
 +        self.pages = DocLayout::default();
 +        Ok(())
 +    }
++    /// The table, row and cell a cell-paragraph block id belongs to.
++    fn table_spot(&self, block: usize) -> Result<[usize; 4], String> {
++        if block < CELL_BASE {
++            return Err("the caret is not inside a table cell".into());
++        }
++        let spot = self.cell_paras().nth(block - CELL_BASE).ok_or_else(|| format!("no cell paragraph {block}"))?;
++        match self.doc.body.get(spot[0]).map(|x| &**x) {
++            Some(Block::Table(_)) => Ok(spot),
++            _ => Err("the caret is not inside a table".into()),
++        }
++    }
++    /// Layout of the table holding cell paragraph `block`: alignment, width, repeated header row (this row), rows kept whole, the cell's vertical alignment and alt text.
++    fn do_table_layout_state(&self, block: usize) -> Result<String, String> {
++        use wordcraft_doc::props::VAlign;
++        let [b, r, c, _] = self.table_spot(block)?;
++        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
++        let row = t.rows.get(r).ok_or("no such row")?;
++        let cell = row.cells.get(c).ok_or("no such cell")?;
++        let align = match t.props.align {
++            Some(wordcraft_doc::Align::Left) => serde_json::json!("left"),
++            Some(wordcraft_doc::Align::Center) => serde_json::json!("center"),
++            Some(wordcraft_doc::Align::Right) => serde_json::json!("right"),
++            _ => serde_json::Value::Null,
++        };
++        Ok(serde_json::json!({
++            "align": align,
++            "widthPct": t.props.width_pct,
++            "headerRow": row.props.header,
++            "keepRows": t.rows.iter().all(|x| x.props.cant_split),
++            "cellValign": match cell.props.valign { VAlign::Top => "top", VAlign::Center => "center", VAlign::Bottom => "bottom" },
++            "caption": t.props.caption.clone().unwrap_or_default(),
++        })
++        .to_string())
++    }
++    /// `{"align"?: "left"|"center"|"right"|null, "widthPct"?: null|10-100, "headerRow"?: bool (this row repeats at the top of each page),
++    /// "keepRows"?: bool (no row splits across pages), "cellValign"?: "top"|"center"|"bottom", "caption"?: text up to 500 characters}`.
++    /// Anything invalid refuses the whole patch.
++    fn do_set_table_layout(&mut self, block: usize, json: &str) -> Result<(), String> {
++        use wordcraft_doc::props::VAlign;
++        if json.len() > 2048 {
++            return Err("the table layout is too long".into());
++        }
++        let v: serde_json::Value = serde_json::from_str(json).map_err(|_| "the table layout is not valid JSON".to_string())?;
++        let obj = v.as_object().ok_or("the table layout must be an object")?;
++        if obj.is_empty() {
++            return Err("nothing to change".into());
++        }
++        let [b, r, c, _] = self.table_spot(block)?;
++        let mut align: Option<Option<wordcraft_doc::Align>> = None;
++        let mut width: Option<Option<f32>> = None;
++        let (mut header, mut keep, mut valign, mut caption) = (None, None, None, None);
++        for (k, val) in obj {
++            match k.as_str() {
++                "align" => {
++                    align = Some(match val {
++                        serde_json::Value::Null => None,
++                        serde_json::Value::String(x) if x == "left" => Some(wordcraft_doc::Align::Left),
++                        serde_json::Value::String(x) if x == "center" => Some(wordcraft_doc::Align::Center),
++                        serde_json::Value::String(x) if x == "right" => Some(wordcraft_doc::Align::Right),
++                        _ => return Err("table alignment is left, center, right or null".into()),
++                    })
++                }
++                "widthPct" => {
++                    width = Some(match val {
++                        serde_json::Value::Null => None,
++                        _ => {
++                            let x = val.as_f64().ok_or("the table width must be a number or null")? as f32;
++                            if !x.is_finite() || !(10.0..=100.0).contains(&x) {
++                                return Err("a table is 10 to 100 percent wide".into());
++                            }
++                            Some(x)
++                        }
++                    })
++                }
++                "headerRow" => header = Some(val.as_bool().ok_or("headerRow must be true or false")?),
++                "keepRows" => keep = Some(val.as_bool().ok_or("keepRows must be true or false")?),
++                "cellValign" => {
++                    valign = Some(match val.as_str() {
++                        Some("top") => VAlign::Top,
++                        Some("center") => VAlign::Center,
++                        Some("bottom") => VAlign::Bottom,
++                        _ => return Err("cell alignment is top, center or bottom".into()),
++                    })
++                }
++                "caption" => {
++                    let t = val.as_str().ok_or("caption must be text")?;
++                    Self::hf_validate(t).map_err(|_| "alt text is limited to 500 characters without line breaks".to_string())?;
++                    caption = Some(t.to_string());
++                }
++                _ => return Err(format!("unknown table layout field {k}")),
++            }
++        }
++        let Some(Block::Table(t)) = self.doc.body.get(b).map(|x| &**x) else { return Err("not a table".into()) };
++        let mut t2 = t.clone();
++        if let Some(a) = align {
++            t2.props.align = a;
++        }
++        if let Some(w) = width {
++            t2.props.width_pct = w;
++        }
++        if let Some(cap) = caption {
++            t2.props.caption = if cap.is_empty() { None } else { Some(cap) };
++        }
++        if let Some(h) = header {
++            t2.rows.get_mut(r).ok_or("no such row")?.props.header = h;
++        }
++        if let Some(k) = keep {
++            for row in t2.rows.iter_mut() {
++                row.props.cant_split = k;
++            }
++        }
++        if let Some(va) = valign {
++            t2.rows.get_mut(r).and_then(|row| row.cells.get_mut(c)).ok_or("no such cell")?.props.valign = va;
++        }
++        self.doc.body[b] = Arc::new(Block::Table(t2));
++        self.pages = DocLayout::default();
++        Ok(())
++    }
 +    fn do_table_edit(&mut self, block: usize, op: &str) -> Result<(), String> {
 +        use wordcraft_doc::props::VMerge;
 +        if block < CELL_BASE {
@@ -3396,6 +3514,14 @@ index 0000000..5b80b79
 +    pub fn remove_section_break(&mut self, block: usize) -> Result<(), JsValue> {
 +        self.do_remove_section_break(block).map_err(|e| js_err(&e))
 +    }
++    /// Layout of the table holding cell paragraph `block`, as JSON.
++    pub fn table_layout(&self, block: usize) -> Result<String, JsValue> {
++        self.do_table_layout_state(block).map_err(|e| js_err(&e))
++    }
++    /// Applies a table layout patch (see `do_set_table_layout`) atomically.
++    pub fn set_table_layout(&mut self, block: usize, patch_json: &str) -> Result<(), JsValue> {
++        self.do_set_table_layout(block, patch_json).map_err(|e| js_err(&e))
++    }
 +    pub fn set_header_footer(&mut self, header: Option<String>, footer: Option<String>, page_number: Option<bool>) -> Result<(), JsValue> {
 +        self.do_set_header_footer(header.as_deref(), footer.as_deref(), page_number).map_err(|e| js_err(&e))
 +    }
@@ -3863,6 +3989,33 @@ index 0000000..5b80b79
 +        s.do_table_edit(CELL_BASE, "split_down").unwrap();
 +        assert_eq!(s.cell_paras().count(), n);
 +        assert!(s.do_table_edit(CELL_BASE, "split_down").is_err());
++    }
++    #[test]
++    fn table_layout_sets_reads_refuses_and_roundtrips() {
++        let mut s = DocSession::from_bytes(FIXTURE).unwrap();
++        let v: serde_json::Value = serde_json::from_str(&s.block_list()).unwrap();
++        let Some(cell) = v.as_array().unwrap().iter().find(|b| b["kind"] == "cell").map(|b| b["index"].as_u64().unwrap() as usize) else { return };
++        let st = |s: &DocSession| -> serde_json::Value { serde_json::from_str(&s.do_table_layout_state(cell).unwrap()).unwrap() };
++        assert!(s.do_table_layout_state(0).is_err(), "not a cell");
++        let before = wordcraft_docx::write(&s.doc).unwrap();
++        for bad in ["", "[]", "{}", r#"{"x":1}"#, r#"{"align":"justify"}"#, r#"{"align":1}"#, r#"{"widthPct":9}"#, r#"{"widthPct":101}"#, r#"{"widthPct":"a"}"#, r#"{"headerRow":1}"#, r#"{"keepRows":"y"}"#, r#"{"cellValign":"mid"}"#, r#"{"caption":5}"#, "{\"caption\":\"a\\nb\"}"] {
++            assert!(s.do_set_table_layout(cell, bad).is_err(), "{bad}");
++        }
++        assert!(s.do_set_table_layout(cell, &format!("{{\"caption\":\"{}\"}}", "x".repeat(501))).is_err());
++        assert!(s.do_set_table_layout(0, r#"{"align":"left"}"#).is_err());
++        assert_eq!(wordcraft_docx::write(&s.doc).unwrap(), before, "refusals change nothing");
++        s.do_set_table_layout(cell, r#"{"align":"center","widthPct":60,"headerRow":true,"keepRows":true,"cellValign":"bottom","caption":"Sales"}"#).unwrap();
++        let x = st(&s);
++        assert_eq!((x["align"].as_str(), x["widthPct"].as_f64(), x["headerRow"].as_bool(), x["keepRows"].as_bool(), x["cellValign"].as_str(), x["caption"].as_str()), (Some("center"), Some(60.0), Some(true), Some(true), Some("bottom"), Some("Sales")));
++        let re = DocSession::from_bytes(&wordcraft_docx::write(&s.doc).unwrap()).unwrap();
++        let v2: serde_json::Value = serde_json::from_str(&re.block_list()).unwrap();
++        let cell2 = v2.as_array().unwrap().iter().find(|b| b["kind"] == "cell").map(|b| b["index"].as_u64().unwrap() as usize).unwrap();
++        let y: serde_json::Value = serde_json::from_str(&re.do_table_layout_state(cell2).unwrap()).unwrap();
++        assert_eq!((y["align"].as_str(), y["headerRow"].as_bool(), y["caption"].as_str()), (Some("center"), Some(true), Some("Sales")));
++        assert!(s.paginate() >= 1);
++        s.do_set_table_layout(cell, r#"{"align":null,"widthPct":null,"headerRow":false,"keepRows":false,"caption":""}"#).unwrap();
++        let x = st(&s);
++        assert_eq!((x["align"].is_null(), x["widthPct"].is_null(), x["headerRow"].as_bool(), x["caption"].as_str()), (true, true, Some(false), Some("")));
 +    }
 +    #[test]
 +    fn section_breaks_insert_report_roundtrip_and_remove() {

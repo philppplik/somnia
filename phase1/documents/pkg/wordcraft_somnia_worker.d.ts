@@ -62,6 +62,10 @@ export class DocSession {
     insert_section_break(block: number, kind: string): void;
     /** Removes the section break that ends at paragraph `block`. */
     remove_section_break(block: number): void;
+    /** Layout of the table holding cell paragraph `block`, as JSON. */
+    table_layout(block: number): string;
+    /** Applies {align?, widthPct?, headerRow?, keepRows?, cellValign?, caption?} atomically. */
+    set_table_layout(block: number, patch_json: string): void;
     set_footer_page_total(total: boolean): void;
     set_header_footer_align(header?: string | null, footer?: string | null): void;
     set_header_footer(header?: string | null, footer?: string | null, page_number?: boolean | null): void;

@@ -9,6 +9,7 @@ import {PageLookDialog} from './PageLookDialog';
 import {HeaderFooterVariantsDialog} from './HeaderFooterVariantsDialog';
 import {ImageControls} from './ImageControls';
 import {TableStyleDialog} from './TableStyleDialog';
+import {TableLayoutDialog} from './TableLayoutDialog';
 import {PageSetupDialog} from './PageSetupDialog';
 import {GoToPageDialog} from './GoToPageDialog';
 import {TextEffects} from './TextEffects';
@@ -35,7 +36,7 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
  const commentsOpen=useCommentsOpen();const docState=useDocuments();const styles=useStyleList();const customStyles=customParagraphStyles(styles);
  useEffect(()=>{if(docState.status==='ready')void refreshStyles();},[docState.status,docState.name,docState.rev]);
  const styleKnown=!!para?.style&&((DOC_STYLES as readonly string[]).includes(para.style)||customStyles.some(s=>s.id===para.style));
- const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[hfvOpen,setHfvOpen]=useState(false),[lookOpen,setLookOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
+ const [sizeOpen,setSizeOpen]=useState(false),[hfOpen,setHfOpen]=useState(false),[hfvOpen,setHfvOpen]=useState(false),[lookOpen,setLookOpen]=useState(false),[tlOpen,setTlOpen]=useState(false),[colW,setColW]=useState(''),[styleOpen,setStyleOpen]=useState(false),[pageOpen,setPageOpen]=useState(false),[gotoOpen,setGotoOpen]=useState(false);
  const colOk=/^\d+(\.\d+)?$/.test(colW)&&Number(colW)>=MIN_COL_PT&&Number(colW)<=MAX_COL_PT;
  const flag=(p:'bold'|'italic'|'underline')=>held?.[p]??format?.[p]==='on';
  const font=held?.font??format?.font??'';const size=held?.size??format?.size??null;const color=held?.color??format?.color??null;
@@ -92,6 +93,8 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
    <option value="" disabled>{t('documents.table.label')}</option>{TABLE_OPS.map(o=><option key={o} value={o} data-testid={'documents-table-'+o}>{t('documents.table.'+o)}</option>)}</NativeSelect>}
   {inCell&&<NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setStyleOpen(true)} data-testid="documents-table-style-open">{t('documents.tableStyle.title')}</NativeButton>}
   {styleOpen&&<TableStyleDialog onClose={()=>setStyleOpen(false)}/>}
+  {inCell&&<NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setTlOpen(true)} data-testid="documents-tl-open">{t('documents.tl.title')}</NativeButton>}
+  {tlOpen&&<TableLayoutDialog onClose={()=>setTlOpen(false)}/>}
   {inCell&&<span className="flex items-center gap-1"><NativeInput type="number" min={MIN_COL_PT} max={MAX_COL_PT} step={1} className={sel+' w-20 tabular-nums'} aria-label={t('documents.table.colWidth')} title={t('documents.table.colWidth')} placeholder={t('documents.table.colWidth')} value={colW} disabled={!enabled} onChange={e=>setColW(e.currentTarget.value)} onKeyDown={e=>{if(e.key==='Enter'&&colOk)void setColumnWidth(Number(colW));}} data-testid="documents-col-width"/>
    <NativeButton className={tool+' border border-subtle'} disabled={!enabled||!colOk} onClick={()=>void setColumnWidth(Number(colW))} data-testid="documents-col-width-set">{t('documents.table.colWidthSet')}</NativeButton></span>}
   <NativeSelect className={sel+' w-16 tabular-nums'} aria-label={t('documents.para.lineSpacing')} title={t('documents.para.lineSpacing')} disabled={!enabled} value={num(para?.lineSpacing)} onChange={e=>void setLineSpacing(Number(e.currentTarget.value))} data-testid="documents-line-spacing">

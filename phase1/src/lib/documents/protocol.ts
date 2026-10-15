@@ -159,6 +159,8 @@ export type DocumentsRequest=
  |{id:number;kind:'deleteComment';commentId:number}
  |{id:number;kind:'headerFooterState'}
  |{id:number;kind:'hfVariantsState'}
+ |{id:number;kind:'tableLayoutState';block:number}
+ |{id:number;kind:'setTableLayout';block:number;patch:TableLayoutPatch}
  |{id:number;kind:'insertSectionBreak';block:number;sectionKind:string}
  |{id:number;kind:'removeSectionBreak';block:number}
  |{id:number;kind:'setHfVariants';patch:HfVariantsPatch}
@@ -177,6 +179,7 @@ export type DocumentsResponse=
  |{id:number;ok:true;kind:'comments';comments:CommentItem[]}
  |{id:number;ok:true;kind:'headerFooter';state:HeaderFooterState}
  |{id:number;ok:true;kind:'hfVariants';state:HfVariantsState}
+ |{id:number;ok:true;kind:'tableLayout';state:TableLayoutState}
  |{id:number;ok:true;kind:'properties';state:PropertiesState}
  |{id:number;ok:true;kind:'styles';items:StyleItem[]}
  |{id:number;ok:true;kind:'styleSaved';styleId:string;document:OpenedDocument}
@@ -515,4 +518,25 @@ export function hfVariantsProblem(p:unknown):string|null{
   return `Unknown option "${k}".`;
  }
  return n===0?'Nothing to change.':null;
+}
+
+export const TABLE_ALIGNS=['left','center','right'] as const;export type TableAlign=typeof TABLE_ALIGNS[number];
+export const CELL_VALIGNS=['top','center','bottom'] as const;export type CellVAlign=typeof CELL_VALIGNS[number];
+/** Layout of the table under the caret: `headerRow` and `cellValign` describe the caret's row and cell, `keepRows` all rows. */
+export interface TableLayoutState{align:TableAlign|null;widthPct:number|null;headerRow:boolean;keepRows:boolean;cellValign:CellVAlign;caption:string}
+export interface TableLayoutPatch{align?:TableAlign|null;widthPct?:number|null;headerRow?:boolean;keepRows?:boolean;cellValign?:CellVAlign;caption?:string}
+/** Why a table layout patch is refused, or null. Mirrors the worker. */
+export function tableLayoutProblem(p:unknown):string|null{
+ if(typeof p!=='object'||p===null||Array.isArray(p))return 'The table layout is not valid.';
+ const o=p as Record<string,unknown>;const ks=Object.keys(o);if(ks.length===0)return 'Nothing to change.';
+ for(const k of ks){
+  const v=o[k];
+  if(k==='align'){if(v!==null&&!(TABLE_ALIGNS as readonly unknown[]).includes(v))return 'The table alignment is not valid.';}
+  else if(k==='widthPct'){if(v!==null&&(typeof v!=='number'||!Number.isFinite(v)||v<10||v>100))return 'A table is 10 to 100 percent wide.';}
+  else if(k==='headerRow'||k==='keepRows'){if(typeof v!=='boolean')return `Invalid "${k}".`;}
+  else if(k==='cellValign'){if(!(CELL_VALIGNS as readonly unknown[]).includes(v))return 'The cell alignment is not valid.';}
+  else if(k==='caption'){if(!validHfText(v))return `The alt text is limited to ${MAX_HF_CHARS} characters, without line breaks.`;}
+  else return `Unknown option "${k}".`;
+ }
+ return null;
 }

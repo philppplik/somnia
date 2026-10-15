@@ -2,7 +2,7 @@ import {scrollToPage} from './scrollPage';
 import {commentAuthor} from './author';
 import {setStyleList} from './styles';
 import {stylePatchProblem,STYLE_ID_RE,tocProblem,isListKind,listOptionsProblem,type ListStyleId} from './protocol';
-import {SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
+import {tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,HF_ALIGNS,propertiesProblem,linkProblem,commentProblem,type CommentItem,validHfText,type HeaderFooterState,checkFormatPatch,checkParaPatch,MAX_HF_CHARS,MAX_NEW_TABLE_COLS,MAX_NEW_TABLE_ROWS,TABLE_OPS,type TableOp,DOC_STYLES,type DocStyleId,type ListKindId,type ParaPatch,type ImageOp,type PageSetupPatch,type PageSetupState,pageSetupProblem,type TableStyle,type TableStyleScope,tableStyleProblem,MIN_COL_PT,MAX_COL_PT,imageProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGES} from './protocol';
 import {captureDocumentSelection} from './selectionCapture';
 import {CELL_BASE,caretAfterEdit,applyEdit,diffEdit,inverseOf,UndoStack,type TextEdit,type UndoEntry} from './edit';
 import {findMatches,nextMatchIndex,textStats,validFindQuery,validReplaceText,MAX_FIND_HIGHLIGHTS,MAX_REPLACE_BLOCKS,type FindMatch} from './find';
@@ -711,6 +711,18 @@ export const setHeaderFooter=(patch:{header?:string;footer?:string;pageNumber?:b
  await structural(eng=>eng.setHeaderFooter(patch),spot,spot);
 });
 
+/** Layout of the table under the caret, or null outside a table. */
+export async function readTableLayout():Promise<import('./protocol').TableLayoutState|null>{
+ const e=engine,c=getDocumentsState().caret;if(!e||!c||getDocumentsState().status!=='ready'||!cellOf(getDocumentsState().blocks,c.block))return null;
+ const check=ownerGuard();const st=await e.tableLayoutState(c.block);check();return st;
+}
+/** Alignment, width, repeated header row, rows kept whole, the caret cell's vertical alignment and alt text. One undo step; the caret stays. */
+export const setTableLayout=(patch:import('./protocol').TableLayoutPatch)=>run(async()=>{
+ const bad=tableLayoutProblem(patch);if(bad)throw new Error(bad);
+ const c=getDocumentsState().caret;if(!c||!cellOf(getDocumentsState().blocks,c.block))throw new Error('Place the caret in a table cell.');
+ goalX=null;const spot={block:c.block,off:c.head};
+ await structural(eng=>eng.setTableLayout(c.block,patch),spot,spot);
+});
 /** Starts a new section after the caret's paragraph (or the table holding the caret). One undo step; the caret stays. */
 export const insertSectionBreak=(kind:import('./protocol').SectionBreakKind)=>run(async()=>{
  if(!(SECTION_BREAKS as readonly unknown[]).includes(kind))throw new Error('The section break type is not valid.');

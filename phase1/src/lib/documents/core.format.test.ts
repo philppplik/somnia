@@ -138,3 +138,14 @@ test('section breaks: validated before the engine and passed through once',()=>{
  assert.equal(go({kind:'insertSectionBreak',block:3,sectionKind:'continuous'}),true);assert.equal(go({kind:'removeSectionBreak',block:4}),true);
  assert.deepEqual(calls,['ins 3 continuous','rm 4']);
 });
+test('table layout: validated before the engine; state read through',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}blocks(){return '[]';}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  table_layout(b:number){calls.push(`get ${b}`);return '{"align":null,"widthPct":null,"headerRow":false,"keepRows":false,"cellValign":"top","caption":""}';}set_table_layout(b:number,j:string){calls.push(`set ${b} ${j}`);}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return (k.handle({id:2,...r} as never).res as {ok:boolean}).ok;}catch{return false;}};
+ for(const bad of [{kind:'setTableLayout',block:-1,patch:{align:'left'}},{kind:'setTableLayout',block:1.5,patch:{align:'left'}},{kind:'setTableLayout',block:1048576,patch:{}},{kind:'setTableLayout',block:1048576,patch:{widthPct:5}},{kind:'tableLayoutState',block:2**31}])assert.equal(go(bad),false,JSON.stringify(bad));
+ assert.equal(calls.length,0);
+ assert.equal(go({kind:'setTableLayout',block:1048576,patch:{align:'left'}}),true);assert.equal(go({kind:'tableLayoutState',block:1048576}),true);
+ assert.deepEqual(calls,['set 1048576 {"align":"left"}','get 1048576']);
+});

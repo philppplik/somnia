@@ -1,11 +1,11 @@
 import {registerCommand} from '../commandRegistry';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
-import {insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
+import {setTableLayout,insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
 import {checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
 import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
-import {SECTION_BREAKS,hfVariantsProblem,tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
+import {tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
 import {CELL_BASE} from './edit';
 import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
@@ -212,6 +212,9 @@ export function registerDocumentsCommands(){
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.headerFooter.variants','Set first-page and odd/even headers and footers',async p=>{
    const bad=hfVariantsProblem(p);if(bad)throw expected(bad);await setHfVariants(p as import('./protocol').HfVariantsPatch);
+  },()=>ready()&&!!getDocumentsState().caret),
+  add('documents.table.layout','Set table layout',async p=>{
+   const bad=tableLayoutProblem(p);if(bad)throw expected(bad);await setTableLayout(p as import('./protocol').TableLayoutPatch);
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.sectionBreak.insert','Insert section break',async p=>{
    const k=(p as Record<string,unknown>|undefined)?.kind;if(!(SECTION_BREAKS as readonly unknown[]).includes(k))throw expected('Invalid "kind": use nextPage, continuous, evenPage or oddPage.');
