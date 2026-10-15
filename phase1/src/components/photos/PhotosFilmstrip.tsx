@@ -21,7 +21,7 @@ import {useCaption} from '../../lib/photos/captions';
 import {cullBatch,cullSetFlag,cullSetLabel,cullSetTags,cullAddTags,cullSetCaption} from '../../lib/photos/cullHistory';
 import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {SOFT_PROOF_MODEL_IDS} from '../../lib/photos/softProof';
-import {allCameras,useCaptureDates} from '../../lib/photos/captureDates';
+import {allCameras,allIsos,useCaptureDates} from '../../lib/photos/captureDates';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -229,6 +229,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
            <NativeSelect value={smart.orient??''} aria-label={t('photos.smart.orient')} title={t('photos.smart.orient')} onChange={e=>setSmart({...smart,orient:e.currentTarget.value})} className="h-7" data-testid="photos-smart-orient">
             <option value="">{t('photos.smart.anyOrient')}</option>
             {['landscape','portrait','square'].map(o=><option key={o} value={o}>{t(`photos.smart.orient.${o}`)}</option>)}
+           </NativeSelect>
+           <NativeSelect value={smart.iso??''} aria-label={t('photos.smart.iso')} title={t('photos.smart.iso')} onChange={e=>setSmart({...smart,iso:e.currentTarget.value})} className="h-7" data-testid="photos-smart-iso">
+            <option value="">{t('photos.smart.anyIso')}</option>
+            {allIsos().map(i=><option key={i} value={String(i)}>{`ISO ${i}`}</option>)}
            </NativeSelect>
            <Button variant="outline" size="compact" aria-pressed={!!smart.dup} onClick={()=>setSmart({...smart,dup:!smart.dup})} data-testid="photos-smart-dup">{t('photos.smart.dup')}</Button>
           </div>}

@@ -55,6 +55,8 @@ export function ensureCaptureDates(items:readonly {name:string;size:number;url:s
  pump();
 }
 /** Every distinct camera in the cache, sorted - the camera filter's options. */
+/** Every distinct ISO in the cache, ascending - the ISO filter's options. */
+export const allIsos=():number[]=>[...new Set(Object.values(state).map(e=>e.iso).filter((i):i is number=>typeof i==='number'))].sort((a,b)=>a-b);
 export const allCameras=():string[]=>[...new Set(Object.values(state).map(e=>e.cam).filter((c):c is string=>!!c))].sort((a,b)=>a.localeCompare(b));
 /** The duplicate key: byte size plus pixel dimensions. A heuristic, not a content hash - documented as candidates. */
 export const duplicateKey=(e:CaptureEntry):string|null=>e.w&&e.h?`${e.s}:${e.w}x${e.h}`:null;

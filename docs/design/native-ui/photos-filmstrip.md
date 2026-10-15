@@ -854,3 +854,16 @@ attribute assertions); the locale-parity panel test covers the
 four new row labels. The panel rows have no E2E harness (the
 gallery mounts the workspace without the inspector) - wiring is
 covered by the pure mapping and the shared-row rendering.
+
+## ISO smart-filter rule (P137)
+
+The smart filter gains an ISO rule: a select of the ISO values
+actually present in the EXIF cache (v4), ascending - "show the
+noisy high-ISO shots" is one click. Photos without a resolved
+cache entry never match, like every cache-backed rule; the rule
+composes with the rest of the smart block and completes the
+EXIF rule set (camera, type, orientation, ISO).
+
+Coverage: the light/dark gallery leg seeds two ISO values and
+narrows to one, options proven cache-driven
+(`test-results/ds-photos-smart-iso-{light,dark}.png`).

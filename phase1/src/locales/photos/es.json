@@ -280,5 +280,7 @@
  "photos.p.info.camera": "Cámara",
  "photos.p.info.lens": "Objetivo",
  "photos.p.info.exposure": "Exposición",
- "photos.p.info.date": "Fecha de captura"
+ "photos.p.info.date": "Fecha de captura",
+ "photos.smart.iso": "ISO",
+ "photos.smart.anyIso": "Cualquier ISO"
 }
