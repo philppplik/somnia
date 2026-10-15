@@ -17,6 +17,7 @@ import {setFlag,useFlags} from '../../lib/photos/flags';
 import {PHOTO_LABELS,setLabel,useLabels,type PhotoLabel} from '../../lib/photos/labels';
 import {addTags,allTags,setTags} from '../../lib/photos/tags';
 import {setCaption,useCaption} from '../../lib/photos/captions';
+import {copyMetadata,hasMetadataClip,pasteMetadata} from '../../lib/photos/metadataClipboard';
 import {groupForStrip,groupPhotos,setStackCover,ungroupStacks,useStackCovers,useStacks} from '../../lib/photos/stacks';
 import {hidePhotos,unhideAll,unhidePhotos} from '../../lib/photos/hidden';
 import {nextCopyName} from '../../lib/photos/virtualCopy';
@@ -80,6 +81,7 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
  const selected=photos.filter(p=>sel.includes(p.name));
  const activeSession=active?getPhotoSession(active):null;
  const caption=useCaption(active);
+ const [metaClip,setMetaClip]=useState(hasMetadataClip()); // session clipboard for culling metadata
  const snapNames=useSnapshots(active);
  const [collection,setCollection]=usePanelState<string>('photos.collection','');
  const [reference,setReference]=usePanelState<string>('photos.reference',''); // compare view: the photo the active one is measured against
@@ -266,6 +268,10 @@ export function PhotosFilmstrip({active,onSurvey}:{active:string;onSurvey?:(name
           }} data-testid="photos-filmstrip-paste-previous">{t('photos.quick.pastePrevious')}</Button>
           <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+3)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-left">{t('photos.quick.rotateLeft')}</Button>
           <Button variant="outline" size="compact" disabled={!activeSession} onClick={()=>commitPhotoSettings(active,cur=>({...cur,orientation:((cur.orientation+1)%4) as typeof cur.orientation}))} data-testid="photos-filmstrip-rotate-right">{t('photos.quick.rotateRight')}</Button>
+         </span>
+         <span className="flex flex-wrap gap-1">
+          <Button variant="outline" size="compact" disabled={!active} onClick={()=>{copyMetadata(active);setMetaClip(true);setApplyNote(t('photos.metadata.copied',{name:active}));}} data-testid="photos-filmstrip-metadata-copy">{t('photos.metadata.copy')}</Button>
+          <Button variant="outline" size="compact" disabled={!metaClip} onClick={()=>{const targets=selected.length>1?selected.map(p=>p.name):[active];const n=pasteMetadata(targets);setApplyNote(t('photos.metadata.pasted',{count:n}));}} data-testid="photos-filmstrip-metadata-paste">{t('photos.metadata.paste')}</Button>
          </span>
     </>)}
     {menuGroup('collections','photos.menu.groupCollections',<>

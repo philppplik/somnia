@@ -242,5 +242,9 @@
  "photos.menu.groupEdit": "Bearbeiten",
  "photos.menu.groupCollections": "Sammlungen",
  "photos.menu.groupInfo": "Info",
- "photos.caption": "Bildunterschrift"
+ "photos.caption": "Bildunterschrift",
+ "photos.metadata.copy": "Metadaten kopieren",
+ "photos.metadata.paste": "Metadaten einfügen",
+ "photos.metadata.copied": "Metadaten von {name} kopiert",
+ "photos.metadata.pasted": "Metadaten auf {count} Fotos eingefügt"
 }

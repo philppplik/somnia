@@ -615,3 +615,17 @@ so the strip and the live grid both narrow via `useVisiblePhotos`.
 Coverage: the light/dark gallery leg types a caption on the active
 photo, finds the photo back through the search, and clears it again
 (`test-results/ds-photos-caption-{light,dark}.png`).
+
+## Metadata clipboard (P119)
+
+"Copy metadata" / "Paste metadata" in the Edit group of the strip
+menu move the culling metadata - rating, flag, color label, tags
+and caption - between photos, Lightroom-style. The clipboard is
+session-level (`src/lib/photos/metadataClipboard.ts`); paste
+replaces the targets' metadata and applies to the multi-selection
+when one exists, else to the active photo. Original files are never
+touched.
+
+Coverage: the light/dark gallery leg rates strip-1, copies, pastes
+onto a two-photo selection and checks the badges, then cleans up
+(`test-results/ds-photos-metadata-{light,dark}.png`).

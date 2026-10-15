@@ -242,5 +242,9 @@
  "photos.menu.groupEdit": "Edicion",
  "photos.menu.groupCollections": "Colecciones",
  "photos.menu.groupInfo": "Info",
- "photos.caption": "Leyenda"
+ "photos.caption": "Leyenda",
+ "photos.metadata.copy": "Copiar metadatos",
+ "photos.metadata.paste": "Pegar metadatos",
+ "photos.metadata.copied": "Metadatos copiados de {name}",
+ "photos.metadata.pasted": "Metadatos pegados en {count} fotos"
 }
