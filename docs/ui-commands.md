@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1009 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1010 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -368,6 +368,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.export.copy` | Save a copy with a file name | Project | documents |  |
 | `documents.export.format` | Export as another format | Project | documents |  |
 | `documents.export.open` | Export document | Project | documents |  |
+| `documents.export.pagePng` | Save a page as a PNG image | View | documents |  |
 | `documents.export.pdf` | Export as PDF | Project | documents |  |
 | `documents.find.next` | Find next | View | documents |  |
 | `documents.find.open` | Find in document | View | documents |  |

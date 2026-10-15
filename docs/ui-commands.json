@@ -4733,6 +4733,17 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.export.pagePng",
+      "title": "Save a page as a PNG image",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.export.pdf",
       "title": "Export as PDF",
       "category": "Project",

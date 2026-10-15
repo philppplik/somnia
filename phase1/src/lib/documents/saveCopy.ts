@@ -47,6 +47,22 @@ export async function saveFormat(engine:DocumentsEngine,name:string,ext:ExportEx
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:EXPORT_FORMATS[ext].mime}));
  const a=document.createElement('a');a.href=url;a.download=fileName?safeFormatName(fileName,name,ext):formatName(name,ext);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
+/** Longest side, in pixels, the page renderer accepts. */
+export const MAX_PNG_SIDE=2400;
+/** Scale (at most 2, the renderer's limit) that keeps the longest side of a page of `width` x `height` inside MAX_PNG_SIDE; null for a page without size. */
+export function pngScale(width:number,height:number):number|null{
+ if(!(width>0)||!(height>0)||!Number.isFinite(width)||!Number.isFinite(height))return null;
+ return Math.floor(Math.min(2,MAX_PNG_SIDE/Math.max(width,height))*100)/100;
+}
+/** `name-page-3.png` for page 3 (1-based) of a document. */
+export const pngName=(name:string,page:number)=>(stripExt(baseName(name)).replace(/[\u0000-\u001f\u007f-\u009f<>:"|?*\\/]/g,'').trim().slice(0,100)||'document')+'-page-'+page+'.png';
+/** Renders one page (0-based) as a PNG image and downloads it. The opened document is untouched. */
+export async function savePagePng(engine:DocumentsEngine,name:string,index:number,width:number,height:number){
+ const scale=pngScale(width,height);if(scale===null)throw new Error('The page has no size.');
+ const blob=await engine.render(index,scale);
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download=pngName(name,index+1);a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
 export async function saveCopy(engine:DocumentsEngine,name:string,fileName?:string|null){
  const bytes=await engine.save(new Date().toISOString(),savedAuthor()||undefined);
  const url=URL.createObjectURL(new Blob([bytes as BlobPart],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));

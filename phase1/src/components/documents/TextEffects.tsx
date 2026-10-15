@@ -1,4 +1,5 @@
 import {useEffect,useState} from 'react';
+import {executeCommand} from '../../lib/commands';
 import {pickAndInsertText} from '../../lib/documents/insertFromFile';
 import {readParagraphSpacing,setParagraphSpacing,readBookmarks,setViewMarks,setTrackChanges,copyFormatting,pasteFormatting,setCharSpacing,insertPageBreak,clearFormatting,changeCase,hasTextSelection,setHighlight,setLink,toggleFormat,toggleVertAlign} from '../../lib/documents/session';
 import {PARAGRAPH_SPACINGS,type ParagraphSpacing,HIGHLIGHTS,MAX_LINK_CHARS,linkProblem,type FormatPatch,type FormatState,type HighlightName} from '../../lib/documents/protocol';
@@ -92,6 +93,7 @@ export function TextEffects({format,held,enabled}:{format:FormatState|null;held:
   <ActionMenu label={t('documents.menu.document')} testId="documents-menu-document" items={[
    {id:'props',label:t('documents.props.open'),enabled:true,run:()=>setInfoDialog('properties')},
    {id:'wc',label:t('documents.wc.open'),enabled:true,run:()=>setInfoDialog('wordCount')},
+   {id:'png',label:t('documents.export.pagePng'),enabled,run:()=>void executeCommand('documents.export.pagePng')},
    {id:'keys',label:t('documents.shortcuts.title')+' (Ctrl+/)',enabled:true,run:()=>setShortcutsOpen(true)}]}/>
   {linkOpen&&<LinkDialog current={format?.link??''} onClose={()=>setLinkOpen(false)}/>}
  </>;

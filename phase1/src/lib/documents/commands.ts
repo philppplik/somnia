@@ -9,7 +9,7 @@ import {tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,tableStyleProblem,IM
 import {CELL_BASE} from './edit';
 import {styleList} from './styles';
 import {goToBlock,scrollToPage} from './navigate';
-import {safeCopyName,safeFormatName,safePdfName} from './saveCopy';
+import {savePagePng,safeCopyName,safeFormatName,safePdfName} from './saveCopy';
 import {EXPORT_EXTS,PROOF_LANGS,type ExportExt} from './protocol';
 import {pickAndImport} from './importFormat';
 import {CASE_MODES,type CaseMode} from './textCase';
@@ -27,7 +27,7 @@ import {insertPageBreak,setParagraphOptions,setProperties,setTabStops} from './s
 import {parsePdfPages,checkParaPatch,PARA_FLAG_KEYS,propertiesProblem,tabsProblem} from './protocol';
 import {addComment,commentSelection,deleteComment,goToComment,readComments,replyComment,resolveComment} from './session';
 import {coverProblem,PARAGRAPH_SPACINGS,type ParagraphSpacing,bookmarkProblem,commentProblem,HIGHLIGHTS,linkProblem,type HighlightName} from './protocol';
-import {insertCoverPage,setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
+import {settleDocument,getEngine,insertCoverPage,setParagraphSpacing,selectUnitAtCaret,addBookmark,deleteBookmark,goToComment as goToBlock0,readBookmarks,bookmarkSelection,goToAdjacentChange,setViewMarks,textToTable,setTrackChanges,resolveChange,resolveAllChanges,changeAtCaret,setCharLook,setCharSpacing,setCharScale,setLineRule,setImageWrap,setImageCrop,setProofing,setShowHidden,changeCase,addToDictionary,copyFormatting,pasteFormatting,clearFormatting,hasTextSelection,setHighlight,setLink,toggleVertAlign} from './session';
 import {documentsExportReady,patchDocumentsExportUi,requestDocumentsExportFormat,requestDocumentsExportPdf,requestDocumentsSaveCopy} from './exportBridge';
 /**
  * Documents studio commands. Registered while the Documents canvas is mounted (registerDocumentsCommands),
@@ -55,6 +55,14 @@ export function registerDocumentsCommands(){
    for(const k of ['markup','tagged'])if(r?.[k]!==undefined&&typeof r[k]!=='boolean')throw expected(`Invalid "${k}".`);
    patchDocumentsExportUi({pdfPages:typeof pg==='string'?pg:'',pdfMarkup:r?.markup===true,pdfTagged:r?.tagged!==false,pdfName:typeof n==='string'&&n.trim()?safePdfName(n,getDocumentsState().name):null});await requestDocumentsExportPdf();
   },()=>documentsExportReady(),'Project',()=>'hero.export.none'),
+  add('documents.export.pagePng','Save a page as a PNG image',async p=>{
+   const st=getDocumentsState();const pg=(p as Record<string,unknown>|undefined)?.page;
+   const n=pg===undefined?(st.caretBox?.page??0)+1:pg;
+   if(typeof n!=='number'||!Number.isInteger(n)||n<1||n>st.pages)throw expected('Invalid "page".');
+   const e=getEngine();if(!e)throw expected('Open a document first.');
+   await settleDocument();const size=getDocumentsState().pageSizes[n-1];if(!size)throw expected('That page has no size.');
+   await savePagePng(e,st.name,n-1,size.width,size.height);
+  },()=>ready()),
   add('documents.import.file','Open a Markdown, HTML, text, RTF or ODT file as a document',async()=>{
    const r=await pickAndImport();if(r&&'error' in r)throw expected(r.error);
   }),
