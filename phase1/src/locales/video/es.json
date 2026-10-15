@@ -139,6 +139,7 @@
  "video.overlayText": "Texto",
  "video.overlayBgAlpha": "Fondo {percent}%",
  "video.overlayResize": "Redimensionar superposición",
+ "video.overlayResizeHint": "Arrastra para redimensionar; mantén Mayús para conservar la proporción",
  "video.overlayDuration": "Duración (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",

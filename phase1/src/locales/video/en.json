@@ -139,6 +139,7 @@
  "video.overlayText": "Text",
  "video.overlayBgAlpha": "Background {percent}%",
  "video.overlayResize": "Resize overlay",
+ "video.overlayResizeHint": "Drag to resize; hold Shift to keep the aspect ratio",
  "video.overlayDuration": "Duration (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",

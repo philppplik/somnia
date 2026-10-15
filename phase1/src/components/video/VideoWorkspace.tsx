@@ -319,13 +319,26 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
        const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
       };
-      const beginResize=(e:React.PointerEvent)=>{
+      // Eight handles: corners move two edges, edge handles move one. Shift on a corner keeps the pixel aspect
+      // ratio (computed in stage pixels, since the stage is not necessarily square in fraction space).
+      const beginResize=(edges:{l?:boolean;r?:boolean;t?:boolean;bb?:boolean})=>(e:React.PointerEvent)=>{
        e.preventDefault();e.stopPropagation();
-       const base={w:o.rect.w,h:o.rect.h},sx=e.clientX,sy=e.clientY;
+       const base={...o.rect},sx=e.clientX,sy=e.clientY,corner=(edges.l||edges.r)&&(edges.t||edges.bb);
        const move=(ev:PointerEvent)=>{
         const box=stageRef.current?.getBoundingClientRect();
         if(!box||box.width===0||box.height===0)return;
-        setOverlayRect(item.name,o.id,{...o.rect,w:base.w+(ev.clientX-sx)/box.width,h:base.h+(ev.clientY-sy)/box.height},`orect-resize:${o.id}`);
+        const dx=(ev.clientX-sx)/box.width,dy=(ev.clientY-sy)/box.height;
+        let{x,y,w,h}=base;
+        if(edges.r)w=base.w+dx;else if(edges.l){x=base.x+dx;w=base.w-dx;}
+        if(edges.bb)h=base.h+dy;else if(edges.t){y=base.y+dy;h=base.h-dy;}
+        if(corner&&ev.shiftKey){
+         const ratio=base.w*box.width/(base.h*box.height),wPx=w*box.width,hPx=h*box.height;
+         if(Math.abs(wPx-base.w*box.width)>=Math.abs(hPx-base.h*box.height)){const h2=wPx/ratio/box.height;if(edges.t)y=base.y+(base.h-h2);h=h2;}
+         else{const w2=hPx*ratio/box.width;if(edges.l)x=base.x+(base.w-w2);w=w2;}
+        }
+        if(w<0.01){if(edges.l)x=base.x+base.w-0.01;w=0.01;}
+        if(h<0.01){if(edges.t)y=base.y+base.h-0.01;h=0.01;}
+        setOverlayRect(item.name,o.id,{x,y,w,h},`orect-resize:${o.id}`);
        };
        const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);};
        window.addEventListener('pointermove',move);window.addEventListener('pointerup',up);
@@ -341,15 +354,25 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
          ?<img src={urlOf(o.source)} alt="" className="max-h-full max-w-full object-contain"/>
          :<PipPreview o={o} playhead={playhead} playing={playing} rate={rateMul} url={urlOf(o.source)}/>}
        </div>
-       {selOverlay&&<div role="slider" aria-label={t('video.overlayResize')} aria-valuemin={1} aria-valuemax={100} aria-valuenow={Math.round(o.rect.w*100)} aria-valuetext={`${Math.round(o.rect.w*100)} x ${Math.round(o.rect.h*100)} %`} tabIndex={0}
-        className="absolute bottom-[-5px] right-[-5px] h-2.5 w-2.5 cursor-nwse-resize rounded-sm bg-[var(--accent)]"
-        onPointerDown={beginResize}
-        onKeyDown={e=>{const d=e.shiftKey?0.05:0.01;
+       {selOverlay&&([
+        {k:'nw',edges:{l:true,t:true},pos:{left:'-5px',top:'-5px'},cur:'nwse-resize'},
+        {k:'ne',edges:{r:true,t:true},pos:{right:'-5px',top:'-5px'},cur:'nesw-resize'},
+        {k:'sw',edges:{l:true,bb:true},pos:{left:'-5px',bottom:'-5px'},cur:'nesw-resize'},
+        {k:'se',edges:{r:true,bb:true},pos:{right:'-5px',bottom:'-5px'},cur:'nwse-resize'},
+        {k:'n',edges:{t:true},pos:{left:'50%',top:'-5px',transform:'translateX(-50%)'},cur:'ns-resize'},
+        {k:'s',edges:{bb:true},pos:{left:'50%',bottom:'-5px',transform:'translateX(-50%)'},cur:'ns-resize'},
+        {k:'w',edges:{l:true},pos:{left:'-5px',top:'50%',transform:'translateY(-50%)'},cur:'ew-resize'},
+        {k:'e',edges:{r:true},pos:{right:'-5px',top:'50%',transform:'translateY(-50%)'},cur:'ew-resize'},
+       ] as const).map(hd=><div key={hd.k} role="separator" aria-label={t('video.overlayResize')} title={t('video.overlayResizeHint')} tabIndex={hd.k==='se'?0:-1}
+        className="absolute h-2.5 w-2.5 rounded-sm bg-[var(--accent)]"
+        style={{...(hd.pos as CSSProperties),cursor:hd.cur}}
+        onPointerDown={beginResize(hd.edges)}
+        onKeyDown={hd.k==='se'?e=>{const d=e.shiftKey?0.05:0.01;
          if(e.key==='ArrowLeft'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w-d},`orect-resize:${o.id}`);}
          else if(e.key==='ArrowRight'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,w:o.rect.w+d},`orect-resize:${o.id}`);}
          else if(e.key==='ArrowUp'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h-d},`orect-resize:${o.id}`);}
-         else if(e.key==='ArrowDown'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h+d},`orect-resize:${o.id}`);}}}
-        data-testid="overlay-resize-handle"/>}
+         else if(e.key==='ArrowDown'){e.preventDefault();setOverlayRect(item.name,o.id,{...o.rect,h:o.rect.h+d},`orect-resize:${o.id}`);}}:undefined}
+        data-testid="overlay-resize-handle" data-handle-pos={hd.k}/>)}
       </div>;
      })}
     </div>

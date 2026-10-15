@@ -139,6 +139,7 @@
  "video.overlayText": "Text",
  "video.overlayBgAlpha": "Hintergrund {percent}%",
  "video.overlayResize": "Overlay-Größe ändern",
+ "video.overlayResizeHint": "Ziehen zum Ändern der Größe; Shift hält das Seitenverhältnis",
  "video.overlayDuration": "Dauer (s)",
  "video.overlayRect.x": "X %",
  "video.overlayRect.y": "Y %",
