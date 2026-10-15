@@ -177,6 +177,8 @@
   "sound.arrange.bounceHint": "Legt den gerenderten Mix als neue Spur in der Session ab (neues Medium \"<session>-bounce.wav\")",
   "sound.arrange.freeze": "Freeze",
   "sound.arrange.freezeHint": "Rendert die Spur mit ihrem Rack als neue Mediendatei, ersetzt die Clips und umgeht das Rack (Undo = Unfreeze; Pegel/Pan bleiben live)",
+  "sound.arrange.stems": "Stems",
+  "sound.arrange.stemsHint": "Exportiert jede Spur als eigene WAV (mit Rack und Pegel/Pan, ohne Master) in einer ZIP",
   "sound.arrange.fit": "Einpassen",
   "sound.arrange.fitHint": "Gesamte Session in den sichtbaren Bereich zoomen",
   "sound.arrange.trimStart": "Anfang an Playhead",

@@ -177,6 +177,8 @@
   "sound.arrange.bounceHint": "Consolida o mix renderizado como nova faixa (nova mídia \"<session>-bounce.wav\")",
   "sound.arrange.freeze": "Congelar",
   "sound.arrange.freezeHint": "Renderiza a faixa com seu rack como nova mídia, substitui os clips e desativa o rack (desfazer descongela; nível e pan continuam ativos)",
+  "sound.arrange.stems": "Stems",
+  "sound.arrange.stemsHint": "Exporta cada faixa como WAV (com rack, nível e pan, sem master) em um ZIP",
   "sound.arrange.fit": "Ajustar",
   "sound.arrange.fitHint": "Ajustar o zoom para ver toda a sessão",
   "sound.arrange.trimStart": "Início no cursor",

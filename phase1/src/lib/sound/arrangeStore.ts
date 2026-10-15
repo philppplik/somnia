@@ -7,6 +7,7 @@ import {decodeSessionWav,encodeSessionWav,reverseSource} from './sessionWav';
 import {trackAnalysisSession} from './analysisSource';
 import {registerWorkProvider} from '../workDocs';
 import {addMediaFile,getMedia,uniqueMediaName} from '../media';
+import {buildZip} from './stemZip';
 import {t} from '../i18n';
 import {registerCloseGuard} from '../closeGuards';
 let history=new ArrangementHistory(emptyArrangement());
@@ -95,6 +96,21 @@ export async function freezeTrackToMedia(trackId:string){
   const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
   const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while freezing');await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while freezing');available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
   history.change(s=>{const target=s.tracks.find(t=>t.id===trackId);if(!target)throw Error('Track no longer exists');s.sources.push(ref);target.clips=[newClip(uid(),ref)];target.rack={...target.rack,bypass:true};});invalidate();
+ }finally{emit({busy:false});}
+}
+/** Exports every track as its own WAV (own inserts/level/pan, no master chain - the stems sum back to the mix) in one stored ZIP, honouring the current output range. Browser: one download; desktop: one save dialog. */
+export async function exportStems():Promise<'saved'|'cancelled'|'downloaded'>{
+ if(state.busy)throw Error('Sound is busy');const doc=history.snapshot;if(!doc.tracks.some(t=>t.clips.length))throw Error('Nothing to export');
+ const token=generation,range=state.rangeSelection;emit({busy:true,error:''});
+ try{
+  const result=await request({kind:'stems',session:doc,...(range?{range}:{})});if(token!==generation)throw Error('Session changed while exporting stems');
+  const used=new Set<string>();const entries=(result.stems as {name:string;wav:ArrayBuffer}[]).map(stem=>{const name=uniqueMediaName([...used],`${stem.name.replace(/[^a-z0-9 _-]/gi,'_')||'track'}.wav`);used.add(name);return{name,bytes:new Uint8Array(stem.wav)};});
+  const zip=buildZip(entries),fileName=`${doc.name.replace(/[^a-z0-9 _-]/gi,'_')}-stems.zip`;
+  const {isTauri,invoke}=await import('@tauri-apps/api/core');
+  if(!isTauri()){download(new Blob([zip.buffer as ArrayBuffer],{type:'application/zip'}),fileName);return'downloaded';}
+  const grant=await invoke<{token:string}|null>('audio_save_pick',{suggestedName:fileName});if(!grant)return'cancelled';
+  if(token!==generation)throw Error('Session changed during stem export review');
+  await invoke('audio_save_write',zip,{headers:{'x-somnia-token':grant.token}});return'saved';
  }finally{emit({busy:false});}
 }
 /** Analyses one rendered track (own inserts/level/pan, no master chain) in the mix worker. Bound to the session revision and the current output range, invalidated by edits like the full-mix report. */

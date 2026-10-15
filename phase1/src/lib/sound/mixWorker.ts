@@ -13,7 +13,7 @@ const dspModules=import.meta.glob('../../../sound/pkg/somnia_sound.js');
 let dsp:Promise<any>|undefined;
 async function rackDsp(){const load=dspModules['../../../sound/pkg/somnia_sound.js'];if(!load)throw Error('Build Sound WASM for effects rack processing');dsp??=load().then(async raw=>{const module=raw as any;await module.default({module_or_path:new URL('../../../sound/pkg/somnia_sound_bg.wasm',import.meta.url).href});return module as any;});try{return await dsp;}catch(e){dsp=undefined;throw e;}}
 const sources=new Map<string,DecodedSource>();
-self.onmessage=async({data}:{data:{id:number;kind:'source'|'render'|'clear'|'master'|'analyze'|'freeze';sourceId?:string;wav?:ArrayBuffer;session?:Arrangement;target?:MasterTarget;range?:{start:number;end:number};trackId?:string}})=>{
+self.onmessage=async({data}:{data:{id:number;kind:'source'|'render'|'clear'|'master'|'analyze'|'freeze'|'stems';sourceId?:string;wav?:ArrayBuffer;session?:Arrangement;target?:MasterTarget;range?:{start:number;end:number};trackId?:string}})=>{
  try{if(data.kind==='clear'){sources.clear();self.postMessage({id:data.id,ok:true});return;}
  if(data.kind==='source'){const source=decodeSessionWav(data.sourceId!,data.wav!);const total=[...sources.values()].filter(s=>s.id!==source.id).reduce((n,s)=>n+s.channels.reduce((m,ch)=>m+ch.length,0),0)+source.channels.reduce((n,ch)=>n+ch.length,0);if(total>ARRANGE_LIMITS.sourceFrames||(!sources.has(source.id)&&sources.size>=ARRANGE_LIMITS.sources))throw Error('Session worker source memory budget reached; save and reopen the session to release unused sources');sources.set(source.id,source);self.postMessage({id:data.id,ok:true,source:{id:source.id,frames:source.channels[0].length,sampleRate:source.sampleRate,channels:source.channels.length}});return;}
  const session=validateArrangement(data.session!);
@@ -22,6 +22,14 @@ self.onmessage=async({data}:{data:{id:number;kind:'source'|'render'|'clear'|'mas
   const mix=renderRackedArrangement(one,[...sources.values()],(channels,rack)=>{if(rack.bypass||!rack.slots.some(slot=>slot.enabled))return channels;if(typeof oneModule?.process_rack_pcm!=='function')throw Error('Sound WASM must be rebuilt for rack support');const planar:Float32Array=oneModule.process_rack_pcm(channels[0],channels[1],JSON.stringify(rack));const n=channels[0].length;if(planar.length!==n*2)throw Error('Unexpected rack output size');return[planar.slice(0,n),planar.slice(n)];},false,data.range);
   const analysis=basicAnalysis(mix.channels);try{const m=oneModule??await rackDsp();if(typeof m.analyze_mix_pcm==='function'){Object.assign(analysis,JSON.parse(m.analyze_mix_pcm(mix.channels[0],mix.channels[1])));analysis.loudnessStatus=analysis.integratedLufs===null?'insufficient':'measured-unverified';}}catch{/* Spectrum stays real; missing optional built analysis is labelled unavailable. */}
   self.postMessage({id:data.id,ok:true,analysis});return;
+ }
+ if(data.kind==='stems'){
+  const stemsActive=session.tracks.some(t=>!t.rack.bypass&&t.rack.slots.some(slot=>slot.enabled));const stemsModule=stemsActive?await rackDsp():null;
+  const stems:{name:string;wav:ArrayBuffer}[]=[];
+  for(const track of session.tracks){if(!track.clips.length)continue;const one=trackAnalysisSession(session,track.id);
+   const mix=renderRackedArrangement(one,[...sources.values()],(channels,rack)=>{if(rack.bypass||!rack.slots.some(slot=>slot.enabled))return channels;if(typeof stemsModule?.process_rack_pcm!=='function')throw Error('Sound WASM must be rebuilt for rack support');const planar:Float32Array=stemsModule.process_rack_pcm(channels[0],channels[1],JSON.stringify(rack));const n=channels[0].length;if(planar.length!==n*2)throw Error('Unexpected rack output size');return[planar.slice(0,n),planar.slice(n)];},false,data.range);
+   stems.push({name:track.name,wav:encodeMixWav(mix)});}
+  if(!stems.length)throw Error('Nothing to export');self.postMessage({id:data.id,ok:true,stems},stems.map(s=>s.wav));return;
  }
  if(data.kind==='freeze'){
   const frz=freezeSession(session,data.trackId!);const frzActive=frz.tracks.some(t=>!t.rack.bypass&&t.rack.slots.some(slot=>slot.enabled));const frzModule=frzActive?await rackDsp():null;

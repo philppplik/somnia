@@ -177,6 +177,8 @@
   "sound.arrange.bounceHint": "Commits the rendered mix as a new track (new media \"<session>-bounce.wav\")",
   "sound.arrange.freeze": "Freeze",
   "sound.arrange.freezeHint": "Renders the track with its rack as a new media item, replaces the clips and bypasses the rack (undo unfreezes; level and pan stay live)",
+  "sound.arrange.stems": "Stems",
+  "sound.arrange.stemsHint": "Exports every track as its own WAV (with its rack, level and pan, no master) in one ZIP",
   "sound.arrange.fit": "Fit",
   "sound.arrange.fitHint": "Zoom the whole session into view",
   "sound.arrange.trimStart": "Trim start to playhead",
