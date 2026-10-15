@@ -2,6 +2,7 @@
  "video.card.add": "Añadir tarjeta de título",
  "video.card.addHint": "Inserta una tarjeta de texto después del clip actual",
  "video.card.panel": "Tarjeta de título",
+ "video.card.bgAlpha": "Opacidad del fondo · {percent}%",
  "video.card.hint": "Una tarjeta de título no tiene archivo de origen. Se exporta como fotogramas reales más silencio, así el sonido sigue sincronizado.",
  "video.card.text": "Texto",
  "video.card.duration": "Duración (s)",

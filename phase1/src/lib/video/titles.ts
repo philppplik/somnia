@@ -19,6 +19,8 @@ export interface TitleSpec{
  font?:TitleFont;bold?:boolean;italic?:boolean;align?:TitleAlign;vAlign?:TitleVAlign;
  /** Fade from/to black at the card's boundaries, seconds (default 0 = hard cut). */
  fadeIn?:number;fadeOut?:number;
+ /** Opacity of the background colour over the black base, 0-1 (default 1 = solid). 0 gives a pure black card with text. */
+ bgAlpha?:number;
 }
 export type TitleClip=TimelineClip&{kind:'title';title:TitleSpec};
 
@@ -27,7 +29,7 @@ export const DEFAULT_TITLE_SECONDS=3;
 export const MAX_TITLE_SECONDS=3600;
 export const MAX_TITLE_CHARS=500;
 export const FONT_STACKS:Record<TitleFont,string>={sans:'system-ui, "Segoe UI", Helvetica, Arial, sans-serif',serif:'Georgia, "Times New Roman", serif',mono:'ui-monospace, Consolas, "Courier New", monospace'};
-export const DEFAULT_TITLE:Required<TitleSpec>={text:'Title',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0};
+export const DEFAULT_TITLE:Required<TitleSpec>={text:'Title',size:72,color:'#ffffff',background:'#111827',font:'sans',bold:true,italic:false,align:'center',vAlign:'middle',fadeIn:0,fadeOut:0,bgAlpha:1};
 
 export const isTitleClip=(c:TimelineClip):c is TitleClip=>(c as {kind?:string}).kind==='title'&&typeof (c as {title?:unknown}).title==='object'&&(c as {title?:unknown}).title!==null;
 /** Clips that need an opened media file to render; the pipeline and session skip title clips with this. */
@@ -51,6 +53,7 @@ export function sanitizeTitleSpec(input:Partial<TitleSpec>|null|undefined,base:R
   align:oneOf(s.align,['left','center','right'] as const,base.align),
   vAlign:oneOf(s.vAlign,['top','middle','bottom'] as const,base.vAlign),
   fadeIn:clamp(Number(s.fadeIn??base.fadeIn),0,10,base.fadeIn),fadeOut:clamp(Number(s.fadeOut??base.fadeOut),0,10,base.fadeOut),
+  bgAlpha:clamp(Number(s.bgAlpha??base.bgAlpha),0,1,base.bgAlpha),
  };
 }
 export const clampTitleSeconds=(d:number)=>Number(clamp(d,MIN_CLIP_SECONDS,MAX_TITLE_SECONDS,DEFAULT_TITLE_SECONDS).toFixed(3));
@@ -159,7 +162,7 @@ export function drawTitle(ctx:TitleContext,spec0:TitleSpec,w:number,h:number,t:n
  const spec=sanitizeTitleSpec(spec0);
  const alpha=titleAlphaAt(spec,duration,t);
  ctx.globalAlpha=1;ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
- ctx.globalAlpha=alpha;ctx.fillStyle=spec.background;ctx.fillRect(0,0,w,h);
+ ctx.globalAlpha=alpha*spec.bgAlpha;ctx.fillStyle=spec.background;ctx.fillRect(0,0,w,h);
  const layout=layoutTitle(spec,w,h,font=>{ctx.font=font;return s=>ctx.measureText(s).width;});
  ctx.font=fontShorthand(spec,layout.fontPx);ctx.textAlign=spec.align;ctx.textBaseline='middle';ctx.fillStyle=spec.color;
  layout.lines.forEach((line,i)=>{if(line)ctx.fillText(line,layout.x,layout.top+layout.lineHeight*(i+0.5));});

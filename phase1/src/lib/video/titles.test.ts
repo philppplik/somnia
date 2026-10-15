@@ -140,3 +140,15 @@ test('every video.card.* key used in code exists in the catalogue',()=>{
  assert.ok(used.size>15);
  for(const k of used)assert.ok(k in TITLE_CATALOGUES.en,k);
 });
+
+test('background opacity defaults to solid, clamps and multiplies the fade alpha on the background only',()=>{
+ assert.equal(sanitizeTitleSpec({}).bgAlpha,1);
+ assert.equal(sanitizeTitleSpec({bgAlpha:7}).bgAlpha,1);
+ assert.equal(sanitizeTitleSpec({bgAlpha:-2}).bgAlpha,0);
+ const ctx=fakeCtx();drawTitle(ctx,sanitizeTitleSpec({text:'Hi',background:'#112233',bgAlpha:0.5,fadeIn:1}),1280,720,0.5,4);
+ assert.ok(ctx.log.some(l=>l.startsWith('rect #112233 a=0.25')),'fade 0.5 x opacity 0.5');
+ const solid=fakeCtx();drawTitle(solid,sanitizeTitleSpec({text:'Hi',background:'#112233'}),1280,720,0.5,4);
+ assert.ok(solid.log.some(l=>l.startsWith('rect #112233 a=1.00')),'untouched specs stay solid');
+ const text=ctx.log.find(l=>l.startsWith('text Hi'))!;
+ assert.ok(ctx.log.indexOf(text)>ctx.log.findIndex(l=>l.startsWith('rect #112233')),'text still draws over the background');
+});

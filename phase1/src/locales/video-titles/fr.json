@@ -2,6 +2,7 @@
  "video.card.add": "Ajouter une carte titre",
  "video.card.addHint": "Insère une carte de texte après le clip actuel",
  "video.card.panel": "Carte titre",
+ "video.card.bgAlpha": "Opacité du fond · {percent}%",
  "video.card.hint": "Une carte titre n'a pas de fichier source. Elle est exportée en vraies images plus du silence, donc le son reste synchronisé.",
  "video.card.text": "Texte",
  "video.card.duration": "Durée (s)",

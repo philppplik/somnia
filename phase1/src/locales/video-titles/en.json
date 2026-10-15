@@ -2,6 +2,7 @@
  "video.card.add": "Add title card",
  "video.card.addHint": "Insert a text card after the current clip",
  "video.card.panel": "Title card",
+ "video.card.bgAlpha": "Background opacity · {percent}%",
  "video.card.hint": "A title card has no source file. It exports as real frames plus silence, so the sound stays in sync.",
  "video.card.text": "Text",
  "video.card.duration": "Length (s)",

@@ -17,7 +17,7 @@ const clip=()=>selected()??fail('Select a timeline clip first.');
 const object=(properties:Record<string,unknown>,required=Object.keys(properties)):CommandSchema=>({type:'object',properties,required,additionalProperties:false});
 const number=(minimum=0,maximum=86400)=>({type:'number',minimum,maximum});
 const id={type:'string',minLength:1,maxLength:1024};
-const titleProperties={text:{type:'string',maxLength:500},size:number(8,600),color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},background:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},font:{enum:['sans','serif','mono']},bold:{type:'boolean'},italic:{type:'boolean'},align:{enum:['left','center','right']},vAlign:{enum:['top','middle','bottom']},fadeIn:number(0,10),fadeOut:number(0,10)};
+const titleProperties={text:{type:'string',maxLength:500},size:number(8,600),color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},background:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},font:{enum:['sans','serif','mono']},bold:{type:'boolean'},italic:{type:'boolean'},align:{enum:['left','center','right']},vAlign:{enum:['top','middle','bottom']},fadeIn:number(0,10),fadeOut:number(0,10),bgAlpha:number(0,1)};
 /** Typed interactive specs. File encoding and all edits stay on the existing video session. */
 export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
  const spec=<P,>(id:string,title:string,run:(p:P)=>unknown,params?:CommandSchema,enabled=ready,category:CommandSpec['category']='Tools'):CommandSpec<P,unknown>=>({id,title,category,level:'ui',params,enabled,keywords:['video','timeline'],run});

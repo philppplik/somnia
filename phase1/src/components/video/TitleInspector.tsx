@@ -37,6 +37,9 @@ export function TitleInspector({clip,onChange,onDuration}:{clip:TitleClip;onChan
    <label>{t('video.card.fadeIn')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={10} step={0.1} value={s.fadeIn} onChange={e=>onChange({fadeIn:num(e.target.value,s.fadeIn)})} data-testid="video-title-fadein"/></label>
    <label>{t('video.card.fadeOut')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={10} step={0.1} value={s.fadeOut} onChange={e=>onChange({fadeOut:num(e.target.value,s.fadeOut)})} data-testid="video-title-fadeout"/></label>
   </div>
+  <label className="grid gap-1">{t('video.card.bgAlpha',{percent:Math.round(s.bgAlpha*100)})}
+   <NativeInput type="range" className="accent-[var(--accent)]" min={0} max={1} step={0.05} value={s.bgAlpha} onChange={e=>onChange({bgAlpha:num(e.target.value,s.bgAlpha)})} data-testid="video-title-bgalpha"/>
+  </label>
   <p className="m-0 text-ink-3">{t('video.card.hint')}</p>
  </div>;
 }
