@@ -1288,5 +1288,6 @@
  "animation.palette.shift.muted": "Más apagado",
  "cmd.animation.palette.shift": "Desplazar todos los colores de la composición (tono, saturación, luminosidad)",
  "animation.camera.focus": "Acercar a la capa seleccionada",
- "cmd.animation.camera.focus": "Hacer que la cámara se acerque a la capa seleccionada"
+ "cmd.animation.camera.focus": "Hacer que la cámara se acerque a la capa seleccionada",
+ "animation.rig.group.copies": "Copias y estelas"
 }

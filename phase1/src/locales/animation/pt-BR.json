@@ -1288,5 +1288,6 @@
  "animation.palette.shift.muted": "Mais apagado",
  "cmd.animation.palette.shift": "Deslocar todas as cores da composição (matiz, saturação, luminosidade)",
  "animation.camera.focus": "Aproximar da camada selecionada",
- "cmd.animation.camera.focus": "Fazer a câmera aproximar da camada selecionada"
+ "cmd.animation.camera.focus": "Fazer a câmera aproximar da camada selecionada",
+ "animation.rig.group.copies": "Cópias e rastros"
 }

@@ -1288,5 +1288,6 @@
  "animation.palette.shift.muted": "Plus terne",
  "cmd.animation.palette.shift": "Décaler toutes les couleurs de la composition (teinte, saturation, luminosité)",
  "animation.camera.focus": "Zoomer sur le calque sélectionné",
- "cmd.animation.camera.focus": "Faire zoomer la caméra sur le calque sélectionné"
+ "cmd.animation.camera.focus": "Faire zoomer la caméra sur le calque sélectionné",
+ "animation.rig.group.copies": "Copies et traînées"
 }

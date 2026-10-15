@@ -1288,5 +1288,6 @@
  "animation.palette.shift.muted": "Gedämpfter",
  "cmd.animation.palette.shift": "Alle Farben der Komposition verschieben (Farbton, Sättigung, Helligkeit)",
  "animation.camera.focus": "Auf gewählte Ebene zoomen",
- "cmd.animation.camera.focus": "Kamera auf die gewählte Ebene zoomen lassen"
+ "cmd.animation.camera.focus": "Kamera auf die gewählte Ebene zoomen lassen",
+ "animation.rig.group.copies": "Kopien und Spuren"
 }
