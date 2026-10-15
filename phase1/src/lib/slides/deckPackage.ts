@@ -2048,6 +2048,23 @@ export function emptySlides(bytes:Uint8Array):{items:NoNotesSlide[];total:number
   return {items,total};
 }
 
+/** Slides with text runs whose own explicit size is below the minimum (default 12 pt). Sizes inherited from layouts or masters are not read, so this is a lower bound. */
+export const MIN_READABLE_PT=12;
+export interface SmallTextSlide {slideId:number;slideIndex:number;runs:number}
+export function smallTextSlides(bytes:Uint8Array,minPt=MIN_READABLE_PT):{items:SmallTextSlide[];total:number}{
+  if(!Number.isFinite(minPt)||minPt<1||minPt>200)throw Error('Minimum size must be 1 to 200 pt');
+  const model=readDeckModel(bytes),zip=openPackage(bytes),items:SmallTextSlide[]=[];let total=0;
+  model.slides.forEach((slide,slideIndex)=>{
+    if(slide.problems.length)return;let runs=0;
+    for(const m of text(zip,slide.part).matchAll(/<a:r>([\s\S]*?)<\/a:r>/g)){
+      const sz=/<a:rPr\b[^>]*\ssz="(\d+)"/.exec(m[1]),t=/<a:t(?:\s[^>]*)?>([\s\S]*?)<\/a:t>/.exec(m[1]);
+      if(sz&&t&&dec(t[1]).trim()!==''&&Number(sz[1])<minPt*100)runs++;
+    }
+    if(runs){total++;if(items.length<MAX_ALT_REPORT)items.push({slideId:slide.id,slideIndex,runs});}
+  });
+  return {items,total};
+}
+
 /** Top-level object kinds that should carry alt text; text boxes and connectors are left out on purpose. */
 const ALT_KINDS:Partial<Record<ShapeKind,readonly [string,string]>>={picture:['p:pic','p:nvPicPr'],group:['p:grpSp','p:nvGrpSpPr'],table:['p:graphicFrame','p:nvGraphicFramePr'],chart:['p:graphicFrame','p:nvGraphicFramePr']};
 export function missingAltText(bytes:Uint8Array):{items:MissingAlt[];total:number}{

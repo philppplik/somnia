@@ -3,6 +3,7 @@ import {SlidesReadingOrder} from './SlidesReadingOrder';
 import {SlidesDeckCheck} from './SlidesDeckCheck';
 import {SlidesNotesReport} from './SlidesNotesReport';
 import {SlidesEmptyReport} from './SlidesEmptyReport';
+import {SlidesSmallTextReport} from './SlidesSmallTextReport';
 import {SlidesTitleReport} from './SlidesTitleReport';
 import {SlidesAltReport} from './SlidesAltReport';
 import {SlidesSectionsEditor} from './SlidesSectionsEditor';
@@ -64,6 +65,7 @@ export function SlidesOverviewPanel(){
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.titleReport.title')}</summary><SlidesTitleReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.notesReport.title')}</summary><SlidesNotesReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.emptyReport.title')}</summary><SlidesEmptyReport/></details>
+  <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.smallText.title')}</summary><SlidesSmallTextReport/></details>
   <details className="rounded-lg border border-subtle"><summary className="px-2 py-1.5 text-xs">{t('slides.reading.title')}</summary><SlidesReadingOrder/></details>
   <nav aria-label={t('slides.panel.overview')} className="flex flex-col gap-2">{rows.map(row=>{
    const id=s.slideIds[row.index],last=s.summary!.slides-1;
