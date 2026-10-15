@@ -1307,5 +1307,8 @@
  "animation.rig.wipe.out.down": "Auswischen von unten",
  "animation.rig.flicker.12": "Flackern wie ein defektes Schild, 12 Bilder",
  "animation.rig.flicker.36": "Flackern wie ein defektes Schild, 36 Bilder",
- "cmd.animation.layers.flicker": "Markierte Ebenen wie ein defektes Leuchtschild flackern lassen"
+ "cmd.animation.layers.flicker": "Markierte Ebenen wie ein defektes Leuchtschild flackern lassen",
+ "animation.rig.shake.6": "Rütteln ab Abspielkopf, leicht",
+ "animation.rig.shake.20": "Rütteln ab Abspielkopf, stark",
+ "cmd.animation.layers.shake": "Markierte Ebenen ab dem Abspielkopf wie bei einem Aufprall rütteln"
 }

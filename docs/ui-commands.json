@@ -2440,6 +2440,25 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.layers.shake",
+      "title": "Shake the ticked layers from the playhead like an impact",
+      "category": "Edit",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "bump",
+        "earthquake",
+        "hit",
+        "impact",
+        "position",
+        "rattle",
+        "rumble",
+        "shake",
+        "vibrate"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.layers.spin",
       "title": "Spin the ticked layers around their anchor",
       "category": "Edit",

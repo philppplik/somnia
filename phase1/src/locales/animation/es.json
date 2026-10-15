@@ -1307,5 +1307,8 @@
  "animation.rig.wipe.out.down": "Salir con cortinilla desde abajo",
  "animation.rig.flicker.12": "Parpadear como un letrero averiado, 12 fotogramas",
  "animation.rig.flicker.36": "Parpadear como un letrero averiado, 36 fotogramas",
- "cmd.animation.layers.flicker": "Hacer parpadear las capas marcadas como un letrero averiado"
+ "cmd.animation.layers.flicker": "Hacer parpadear las capas marcadas como un letrero averiado",
+ "animation.rig.shake.6": "Sacudir desde el cabezal, suave",
+ "animation.rig.shake.20": "Sacudir desde el cabezal, fuerte",
+ "cmd.animation.layers.shake": "Sacudir las capas marcadas desde el cabezal como un impacto"
 }

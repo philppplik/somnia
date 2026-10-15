@@ -1307,5 +1307,8 @@
  "animation.rig.wipe.out.down": "Saída em cortina de baixo",
  "animation.rig.flicker.12": "Piscar como um letreiro com defeito, 12 quadros",
  "animation.rig.flicker.36": "Piscar como um letreiro com defeito, 36 quadros",
- "cmd.animation.layers.flicker": "Fazer as camadas marcadas piscarem como um letreiro com defeito"
+ "cmd.animation.layers.flicker": "Fazer as camadas marcadas piscarem como um letreiro com defeito",
+ "animation.rig.shake.6": "Sacudir a partir do cursor, leve",
+ "animation.rig.shake.20": "Sacudir a partir do cursor, forte",
+ "cmd.animation.layers.shake": "Sacudir as camadas marcadas a partir do cursor como um impacto"
 }

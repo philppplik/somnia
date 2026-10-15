@@ -1807,3 +1807,21 @@ test('P273 flicker command writes hold opacity keys, skips animated, one undo',a
  s.undo();assert.equal(O('b').keys.length,0);
  s.dispatch({type:'layer.update',layer:'b',locked:true} as never);assert.throws(()=>run({layers:['b']}),/unlocked/);
 });
+
+test('P274 shake offsets decay, are seeded and start and end at zero',async()=>{
+ const {shakeOffsets}=await import('./shake');
+ const a=shakeOffsets(12,20,4);assert.deepEqual(a,shakeOffsets(12,20,4));assert.notDeepEqual(a,shakeOffsets(12,20,5));
+ assert.deepEqual(a[0],[0,0]);assert.deepEqual(a[12],[0,0]);assert.equal(a.length,13);
+ assert.ok(Math.abs(a[1][0])>Math.abs(a[11][0]));assert.ok(a.every(o=>Math.abs(o[0])<=20&&Math.abs(o[1])<=20));
+});
+test('P274 shake command keys position per frame from the playhead, one undo',async()=>{
+ const {shakeSpecs}=await import('./shakeCommands');const run=shakeSpecs()[0].run as (p?:unknown)=>unknown;
+ const s=open();setAnimationSession(s);s.dispatch({type:'layer.add',kind:'shape',id:'b'});s.setView({playhead:f(10)} as never);
+ const P=()=>findComp(s.document!)!.layers.find(l=>l.id==='b')!.transform.position;
+ assert.throws(()=>run({frames:1,layers:['b']}),/2 to/);
+ const p0=P().value as readonly number[];
+ const r=run({amount:10,frames:8,layers:['b']}) as {layers:number};assert.equal(r.layers,1);
+ const k=P().keys;assert.equal(k.length,9);assert.equal(k[0].t,f(10));assert.equal(k[8].t,f(18));assert.deepEqual(k[0].v,[...p0]);assert.deepEqual(k[8].v,[...p0]);
+ s.undo();assert.equal(P().keys.length,0);
+ s.setView({playhead:findComp(s.document!)!.duration-f(2)} as never);assert.throws(()=>run({layers:['b']}),/room/);
+});

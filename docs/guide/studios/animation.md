@@ -113,3 +113,4 @@ Back to [Studios](../studios.md).
 - Spin (Motion > Around a layer): the ticked layers turn 1 or 2 whole turns (or 1 backwards, or eased) around their anchor over the work area.
 - **Wipe** (Rig > Appearance > Wipe): opens (in) or closes (out) a rect mask across the ticked layers from the left, right, top or bottom. Layers that already have masks are skipped.
 - **Flicker** (Motion > effects): stutters the ticked layers like a failing neon sign from the work area start for 12 or 36 frames (seeded hold keys on opacity, each layer its own pattern) and settles on their opacity. Layers with animated opacity are skipped.
+- **Shake** (Motion > effects): rattles the ticked layers from the playhead like an impact, light (6 px) or strong (20 px) for 12 frames, decaying to rest. Baked linear position keys, one per frame, replacing the keys in that range.

@@ -1307,5 +1307,8 @@
  "animation.rig.wipe.out.down": "Volet sortant depuis le bas",
  "animation.rig.flicker.12": "Scintiller comme une enseigne défectueuse, 12 images",
  "animation.rig.flicker.36": "Scintiller comme une enseigne défectueuse, 36 images",
- "cmd.animation.layers.flicker": "Faire scintiller les calques cochés comme une enseigne défectueuse"
+ "cmd.animation.layers.flicker": "Faire scintiller les calques cochés comme une enseigne défectueuse",
+ "animation.rig.shake.6": "Secouer depuis la tête de lecture, léger",
+ "animation.rig.shake.20": "Secouer depuis la tête de lecture, fort",
+ "cmd.animation.layers.shake": "Secouer les calques cochés depuis la tête de lecture comme un choc"
 }

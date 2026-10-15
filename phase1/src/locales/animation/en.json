@@ -1307,5 +1307,8 @@
  "animation.rig.wipe.out.down": "Wipe out from the bottom",
  "animation.rig.flicker.12": "Flicker like a failing sign, 12 frames",
  "animation.rig.flicker.36": "Flicker like a failing sign, 36 frames",
- "cmd.animation.layers.flicker": "Flicker the ticked layers like a failing sign"
+ "cmd.animation.layers.flicker": "Flicker the ticked layers like a failing sign",
+ "animation.rig.shake.6": "Shake at the playhead, light",
+ "animation.rig.shake.20": "Shake at the playhead, strong",
+ "cmd.animation.layers.shake": "Shake the ticked layers from the playhead like an impact"
 }
