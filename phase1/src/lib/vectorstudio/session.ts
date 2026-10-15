@@ -56,7 +56,7 @@ export function commit(next:VectorDocument,patch:Partial<VectorSession>={}){
  validateDocument(next);
  const selection=selectionIds(next,patch.selection??state.selection);
  const nodePath=patch.nodePath===undefined?state.nodePath:patch.nodePath;
- const validNodePath=next.paths.find(p=>p.id===nodePath&&!p.hidden)?.id??null;
+ const validNodePath=next.paths.find(p=>p.id===nodePath&&!p.hidden&&!p.locked)?.id??null;
  past.push(state.doc);if(past.length>HISTORY_LIMIT)past.shift();future=[];
  set({...patch,doc:next,dirty:true,error:null,selection,nodePath:validNodePath,selectedNode:validNodePath?(patch.selectedNode===undefined?state.selectedNode:patch.selectedNode):null});}
 export function undo(){const prev=past.pop();if(!prev)return;future.push(state.doc);set({doc:prev,dirty:true,selection:selectionIds(prev,state.selection)});}

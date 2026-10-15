@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1078 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1079 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1079,6 +1079,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.splitPath` | Split vector path at node | Edit | vector |  |
 | `vector.toggleClosed` | Toggle closed vector path | Edit | vector |  |
 | `vector.toggleHidden` | Toggle vector path visibility | Edit | vector |  |
+| `vector.toggleLocked` | Lock or unlock vector object | Edit | vector |  |
 | `vector.tool.ellipse` | Ellipse | View | vector |  |
 | `vector.tool.line` | Line | View | vector |  |
 | `vector.tool.node` | Node edit | View | vector |  |

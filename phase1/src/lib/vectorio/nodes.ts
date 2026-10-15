@@ -50,6 +50,7 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
       if (p.group !== undefined) out.group = p.group;
       if (p.name !== undefined) out.name = p.name;
       if (p.hidden) out.hidden = true;
+      if (p.locked) out.locked = true;
       return out;
     }),
   };

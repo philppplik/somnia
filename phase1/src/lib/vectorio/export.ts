@@ -69,6 +69,7 @@ export function exportSvg(doc: VectorDocument, opts: ExportOptions = {}): string
     const attrs = [`d="${d}"`, ...styleAttrs(p.style)];
     if (p.name !== undefined) attrs.unshift(`data-name="${escapeAttr(p.name)}"`);
     if (p.hidden) attrs.push('display="none"');
+    if (p.locked) attrs.push('data-vs-locked="1"');
     emit((p.layer !== undefined ? 2 : 1) + (p.group !== undefined ? 1 : 0), `<path ${attrs.join(' ')}/>`);
   }
   close();

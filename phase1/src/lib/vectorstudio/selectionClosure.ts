@@ -6,10 +6,10 @@ export function selectedPaths(doc: VectorDocument, ids: readonly string[]): Vect
   // Compounds and groups both pull in all their visible members; repeat until nothing new joins (a group can hold compounds).
   for (let round = 0; round < 3; round++) {
     const compounds = new Set<string>(), groups = new Set<string>();
-    for (const p of doc.paths) if (chosen.has(p.id) && !p.hidden) { if (p.compound) compounds.add(p.compound); if (p.group) groups.add(p.group); }
+    for (const p of doc.paths) if (chosen.has(p.id) && !p.hidden && !p.locked) { if (p.compound) compounds.add(p.compound); if (p.group) groups.add(p.group); }
     let grew = false;
-    for (const p of doc.paths) if (!p.hidden && !chosen.has(p.id) && ((p.compound && compounds.has(p.compound)) || (p.group && groups.has(p.group)))) { chosen.add(p.id); grew = true; }
+    for (const p of doc.paths) if (!p.hidden && !p.locked && !chosen.has(p.id) && ((p.compound && compounds.has(p.compound)) || (p.group && groups.has(p.group)))) { chosen.add(p.id); grew = true; }
     if (!grew) break;
   }
-  return doc.paths.filter(p => !p.hidden && chosen.has(p.id));
+  return doc.paths.filter(p => !p.hidden && !p.locked && chosen.has(p.id));
 }

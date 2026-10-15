@@ -32,7 +32,7 @@ const style = object({
 const node = object({ id, x: number, y: number, kind: nodeKind, in: point, out: point }, ['id', 'x', 'y', 'kind']);
 const path = object({
   id, closed: { type: 'boolean' }, nodes: { type: 'array', items: node, maxItems: 200 },
-  style, layer: text, compound: id, group: id, name: text, hidden: { const: true },
+  style, layer: text, compound: id, group: id, name: text, hidden: { const: true }, locked: { const: true },
 }, ['id', 'closed', 'nodes']);
 const stop = object({ offset: { type: 'number', minimum: 0, maximum: 1 }, color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' }, opacity: { type: 'number', minimum: 0, maximum: 1 } }, ['offset', 'color', 'opacity']);
 const gradient = object({

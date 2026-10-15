@@ -39,7 +39,7 @@ const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
 /** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
 const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
-const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'pathLength', 'xml:space', 'baseProfile']);
+const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'pathLength', 'xml:space', 'baseProfile']);
 const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
 const IGNORED_NO_RENDER = new Set(['title', 'desc', 'metadata']); // contain no geometry; harmless to drop
 
@@ -303,6 +303,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (resolved === null) st.fill = 'none'; else st.fill = `url(#${resolved})`;
     }
     const baseName = label;
+    const locked = el.attrs['data-vs-locked'] === '1';
     for (const c of contours) {
       for (const n of c.nodes) {
         // a handle sitting on its node is a retracted handle: represent it as absent
@@ -318,6 +319,7 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (compound) p.compound = compound;
       if (baseName !== undefined) p.name = baseName;
       if (hidden) p.hidden = true;
+      if (locked) p.locked = true;
       paths.push(p);
     }
   }

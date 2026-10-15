@@ -49,6 +49,8 @@ export interface VectorPath {
   group?: string;
   name?: string;
   hidden?: true;
+  /** Extension. Locked paths cannot be selected or edited in the editor. Exported as `data-vs-locked="1"`. */
+  locked?: true;
 }
 
 export interface GradientStop { offset: number; color: string; opacity: number }

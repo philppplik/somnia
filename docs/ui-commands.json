@@ -12912,6 +12912,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.toggleLocked",
+      "title": "Lock or unlock vector object",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.tool.ellipse",
       "title": "Ellipse",
       "category": "View",
