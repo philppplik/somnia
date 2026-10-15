@@ -259,6 +259,7 @@ export function SheetsLayoutPanel({context}:PanelHostProps){
   <ObjectsGroup/>
   <CellLayoutGroup/>
   <CellToolsGroup/>
+  <SavedStylesGroup/>
   <InsertFunctionGroup/>
   <DataToolsGroup/>
   <SheetTabGroup/>
@@ -486,6 +487,22 @@ function CellToolsGroup(){
   {saving&&<label className="flex flex-col gap-1">{t('sheets.ct.styleName')}<NativeInput className={field} value={styleName} maxLength={60} aria-invalid={!savedName} onChange={e=>setStyleName(e.currentTarget.value)} data-testid="sheets-ct-style-name"/></label>}
   <Button variant="outline" size="compact" disabled={action.busy||!op||!!problem} onClick={()=>void action.run('sheets.cellTools',op)} data-testid="sheets-ct-apply">{t('sheets.ct.apply')}</Button>
   <p className="text-ink-3">{t(problem==='many'?'sheets.ct.many':saving?'sheets.ct.saveHint':'sheets.ct.hint',{range:rangeAddress(r)})}</p>
+  {action.notice?<p role="alert">{action.notice}</p>:null}
+ </div>;
+}
+/** Rename or delete a saved style. Cells that already wear it keep their look. One undo step. */
+function SavedStylesGroup(){
+ const {t}=useT(),s=useSheetsSelection(),action=useAction();const [pick,setPick]=useState(''),[act,setAct]=useState<'rename'|'delete'>('rename'),[to,setTo]=useState('');
+ const custom=s?.customStyles??[];if(!s||custom.length===0)return null;
+ const name=custom.includes(pick)?pick:custom[0],target=cleanStyleName(to),renaming=act==='rename';
+ const op=renaming?(target&&target!==name?{kind:'renameStyle' as const,name,newName:target}:null):{kind:'deleteStyle' as const,name};
+ return <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.ms.title')}>
+  <span>{t('sheets.ms.title')}</span>
+  <label className="flex flex-col gap-1">{t('sheets.ms.style')}<NativeSelect className={field} value={name} disabled={action.busy} onChange={e=>setPick(e.currentTarget.value)} data-testid="sheets-ms-style">{custom.map(n=><option key={n} value={n}>{n}</option>)}</NativeSelect></label>
+  <label className="flex flex-col gap-1">{t('sheets.ms.action')}<NativeSelect className={field} value={act} disabled={action.busy} onChange={e=>setAct(e.currentTarget.value as 'rename'|'delete')} data-testid="sheets-ms-action"><option value="rename">{t('sheets.ms.rename')}</option><option value="delete">{t('sheets.ms.delete')}</option></NativeSelect></label>
+  {renaming&&<label className="flex flex-col gap-1">{t('sheets.ms.newName')}<NativeInput className={field} value={to} maxLength={60} aria-invalid={!!to&&!target} onChange={e=>setTo(e.currentTarget.value)} data-testid="sheets-ms-name"/></label>}
+  <Button variant="outline" size="compact" disabled={action.busy||!op} onClick={()=>void action.run('sheets.cellTools',op).then(()=>setTo(''))} data-testid="sheets-ms-apply">{t('sheets.ms.apply')}</Button>
+  <p className="text-ink-3">{t('sheets.ms.hint')}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </div>;
 }

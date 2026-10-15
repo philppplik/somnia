@@ -27,6 +27,8 @@ test('the function library is parsed strictly and only opens a formula',()=>{
 test('custom styles: names are bounded and never shadow a built-in',()=>{
  assert.equal(cleanStyleName('  Brand  '),'Brand');assert.equal(cleanStyleName('good'),null);assert.equal(cleanStyleName(''),null);assert.equal(cleanStyleName('x'.repeat(61)),null);assert.equal(cleanStyleName('a\u0007b'),null);assert.equal(cleanStyleName(5),null);
  assert.deepEqual(parseCellToolCommand({kind:'newStyle',name:' Brand '}),{kind:'newStyle',name:'Brand'});
+ assert.deepEqual(parseCellToolCommand({kind:'deleteStyle',name:' Brand '}),{kind:'deleteStyle',name:'Brand'});assert.deepEqual(parseCellToolCommand({kind:'renameStyle',name:'Brand',newName:'Logo'}),{kind:'renameStyle',name:'Brand',newName:'Logo'});
+ for(const bad of [{kind:'deleteStyle',name:'Good'},{kind:'deleteStyle'},{kind:'renameStyle',name:'Brand'},{kind:'renameStyle',name:'Brand',newName:'Good'},{kind:'renameStyle',name:'Brand',newName:'A',x:1}])assert.throws(()=>parseCellToolCommand(bad),JSON.stringify(bad));
  assert.throws(()=>parseCellToolCommand({kind:'newStyle',name:'Good'}));assert.throws(()=>parseCellToolCommand({kind:'newStyle',name:'A',extra:1}));
  assert.deepEqual(parseCellToolCommand({kind:'style',name:'Brand'}),{kind:'style',name:'Brand'});assert.throws(()=>parseCellToolCommand({kind:'style',name:'x'.repeat(61)}));
  assert.deepEqual(toolFromChoice('custom:Brand: 2'),{kind:'style',name:'Brand: 2'});assert.equal(toolFromChoice('newStyle'),null);

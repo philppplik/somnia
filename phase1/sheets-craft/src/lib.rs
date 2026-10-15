@@ -4466,14 +4466,15 @@ impl HeadlessWorkbook {
         let map = op.as_object().ok_or("operation must be a JSON object")?;
         let kind = map.get("kind").and_then(|v| v.as_str()).ok_or("unsupported cell tool")?;
         let known: &[&str] = match kind {
-            "style" | "newStyle" => &["kind", "name"],
+            "style" | "newStyle" | "deleteStyle" => &["kind", "name"],
+            "renameStyle" => &["kind", "name", "newName"],
             "autoSum" => &["kind", "function"],
             _ => &["kind"],
         };
         if map.keys().any(|k| !known.contains(&k.as_str())) {
             return Err("unknown cell tool field".into());
         }
-        self.check_block(sheet, row, col, rows, cols, kind != "pickFormat" && kind != "newStyle")?;
+        self.check_block(sheet, row, col, rows, cols, !matches!(kind, "pickFormat" | "newStyle" | "deleteStyle" | "renameStyle"))?;
         let range = format!("{}:{}", CellRef::new(row, col).a1(), CellRef::new(row + rows - 1, col + cols - 1).a1());
         let block = gridcraft_engine::core::RangeRef::new(CellRef::new(row, col), CellRef::new(row + rows - 1, col + cols - 1));
         let (before_rev, before, snap_sel, snap_redo) = {
@@ -4507,6 +4508,46 @@ impl HeadlessWorkbook {
                         }
                     }
                     self.session.run("home.newCellStyle", json!({"name": name, "fromCell": CellRef::new(row, col).a1()})).map(|v| v.to_string())
+                }
+                "deleteStyle" | "renameStyle" => {
+                    // Saved styles are only a list of looks: cells that were given one keep it. The engine has no command for this, so one harmless
+                    // engine edit makes the undo snapshot and the list is changed in place right after it, inside the same history entry.
+                    const TMP: &str = "\u{1}pending";
+                    let clean = |key: &str| -> Result<String, String> {
+                        map.get(key).and_then(|v| v.as_str()).map(str::trim).filter(|n| !n.is_empty() && n.chars().count() <= MAX_STYLE_NAME && !n.chars().any(char::is_control)).map(str::to_string).ok_or_else(|| "Style name: 1 to 60 characters.".to_string())
+                    };
+                    let name = clean("name")?;
+                    let new_name = if kind == "renameStyle" { Some(clean("newName")?) } else { None };
+                    {
+                        let doc = self.session.doc().map_err(|e| e.to_string())?;
+                        if !doc.wb.cell_styles.iter().any(|(n, _)| n == &name) {
+                            return Err("There is no saved style with this name.".into());
+                        }
+                        if let Some(nn) = &new_name {
+                            if CELL_STYLE_NAMES.iter().any(|b| b.eq_ignore_ascii_case(nn)) {
+                                return Err("A built-in style already has this name.".into());
+                            }
+                            if !nn.eq_ignore_ascii_case(&name) && doc.wb.cell_styles.iter().any(|(n, _)| n.eq_ignore_ascii_case(nn)) {
+                                return Err("A saved style already has this name.".into());
+                            }
+                        }
+                    }
+                    self.session.run("home.newCellStyle", json!({"name": TMP, "fromCell": CellRef::new(row, col).a1()}))?;
+                    let doc = self.session.doc_mut().map_err(|e| e.to_string())?;
+                    let wb = std::sync::Arc::make_mut(&mut doc.wb);
+                    wb.cell_styles.retain(|(n, _)| n != TMP);
+                    match new_name {
+                        Some(nn) => {
+                            if let Some(slot) = wb.cell_styles.iter_mut().find(|(n, _)| n == &name) {
+                                slot.0 = nn.clone();
+                            }
+                            Ok(json!({"name": nn}).to_string())
+                        }
+                        None => {
+                            wb.cell_styles.retain(|(n, _)| n != &name);
+                            Ok(json!({"deleted": name}).to_string())
+                        }
+                    }
                 }
                 "autoSum" => {
                     let func = map.get("function").and_then(|v| v.as_str()).filter(|f| AUTOSUM_FUNCTIONS.contains(f)).ok_or("unsupported function")?;
@@ -6403,6 +6444,33 @@ mod tests {
         assert!(book.find_special(0, 800, 0, 3, 2, "invalidData").unwrap().contains("\"count\":0"), "no rule, nothing invalid");
         assert!(book.find_special(0, gridcraft_engine::core::MAX_ROWS - 1, 0, 5, 1, "blanks").is_err());
         assert!(book.find_special(7, 0, 0, 1, 1, "blanks").is_err(), "unknown sheet");
+    }
+    #[test]
+    fn saved_styles_can_be_renamed_and_deleted_in_one_undo_step() {
+        let mut book = HeadlessWorkbook::new(FIXTURE).unwrap();
+        let names = |b: &HeadlessWorkbook| b.custom_cell_styles().unwrap();
+        book.cell_tools_op(0, 950, 0, 1, 1, r#"{"kind":"newStyle","name":"Mine"}"#).unwrap();
+        assert!(names(&book).contains("Mine"));
+        let steps = book.session.doc().unwrap().undo.len();
+        book.cell_tools_op(0, 950, 0, 1, 1, r#"{"kind":"renameStyle","name":"Mine","newName":"Yours"}"#).unwrap();
+        assert!(names(&book).contains("Yours") && !names(&book).contains("Mine"));
+        assert!(!names(&book).contains("pending"), "the helper entry never stays");
+        assert_eq!(book.session.doc().unwrap().undo.len(), steps + 1);
+        book.undo().unwrap();
+        assert!(names(&book).contains("Mine"), "undo brings the old name back");
+        for bad in [
+            r#"{"kind":"renameStyle","name":"Mine","newName":"Good"}"#,
+            r#"{"kind":"renameStyle","name":"Nope","newName":"X"}"#,
+            r#"{"kind":"renameStyle","name":"Mine"}"#,
+            r#"{"kind":"deleteStyle","name":"Nope"}"#,
+            r#"{"kind":"deleteStyle","name":"Mine","x":1}"#,
+        ] {
+            assert!(book.cell_tools_op(0, 950, 0, 1, 1, bad).is_err(), "{bad}");
+        }
+        book.cell_tools_op(0, 950, 0, 1, 1, r#"{"kind":"deleteStyle","name":"Mine"}"#).unwrap();
+        assert!(!names(&book).contains("Mine"));
+        book.undo().unwrap();
+        assert!(names(&book).contains("Mine"));
     }
     #[test]
     fn shift_cells_moves_in_one_undo_step_and_refuses_what_the_engine_does_not_move() {

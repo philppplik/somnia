@@ -30,6 +30,8 @@ export function parseCellToolCommand(input:unknown):CellToolOp{
  const o=input as Record<string,unknown>,only=(...k:string[])=>{if(Object.keys(o).some(x=>!k.includes(x)))throw Error('Unknown cell tool field.');};
  if(o.kind==='style'){only('kind','name');if(typeof o.name!=='string'||!(CELL_STYLES.includes(o.name)||cleanStyleName(o.name)===o.name))throw Error('Unknown cell style.');return {kind:'style',name:o.name};}
  if(o.kind==='newStyle'){only('kind','name');const n=cleanStyleName(o.name);if(!n)throw Error('Invalid style name.');return {kind:'newStyle',name:n};}
+ if(o.kind==='deleteStyle'){only('kind','name');const n=cleanStyleName(o.name);if(!n)throw Error('Invalid style name.');return {kind:'deleteStyle',name:n};}
+ if(o.kind==='renameStyle'){only('kind','name','newName');const n=cleanStyleName(o.name),m=cleanStyleName(o.newName);if(!n||!m)throw Error('Invalid style name.');return {kind:'renameStyle',name:n,newName:m};}
  if(o.kind==='autoSum'){only('kind','function');if(!(AUTOSUM_FUNCTIONS as readonly unknown[]).includes(o.function))throw Error('Unsupported function.');return {kind:'autoSum',function:o.function as typeof AUTOSUM_FUNCTIONS[number]};}
  if((SIMPLE_CELL_TOOLS as readonly unknown[]).includes(o.kind)){only('kind');return {kind:o.kind as typeof SIMPLE_CELL_TOOLS[number]};}
  throw Error('Unsupported cell tool.');
