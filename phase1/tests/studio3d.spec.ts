@@ -1601,7 +1601,8 @@ test('3D studio import/export polish: selection-only export, import units and ax
  await run(page,'studio3d.select',{id:cube});
  const [dl]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
  const glb=readFileSync(await dl.path()!);
- await open3d(page);
+ // Fresh empty scene without a page reload: the file input stays mounted (same pattern as the roundtrip spec).
+ await run(page,'studio3d.scene.new',{});
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'sel.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect.poll(async()=>(await session(page)).status).toBe('ready');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').map(o=>o.name)).toEqual(['Cube']);
@@ -1615,7 +1616,7 @@ test('3D studio import/export polish: selection-only export, import units and ax
  await run(page,'studio3d.import.options',{unit:'mm',upAxis:'z'});
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'slab.obj',mimeType:'model/obj',buffer:Buffer.from(obj)});
  await expect.poll(async()=>(await session(page)).status).toBe('ready');
- await expect(page.getByTestId('studio3d-model-section')).toContainText('1 x 0.01 x 1');
+ await expect(page.getByTestId('studio3d-model-section')).toContainText('1.00 x 0.01 x 1.00');
  // The import options are visible in the panel and drove that open.
  await expect(page.getByTestId('studio3d-import').getByLabel('File units')).toHaveValue('mm');
  await expect(page.getByTestId('studio3d-import').getByLabel('Up axis')).toHaveValue('z');
