@@ -745,6 +745,40 @@ export class Stage{
   c.applyMatrix4(m.matrixWorld);
   return[c.x,c.y,c.z];
  }
+ /** Edit mode: nearest snap target for a world-space point - vertices or edge midpoints of any scene mesh, the edited one included. Rows that move with the selection (selected rows and their position twins, plus an armed duplicate-grab island) are skipped, so a grab never snaps onto itself. */
+ editSnapPoint(p:Vec3,mode:'vertex'|'midpoint',radius:number):Vec3|null{
+  const ed=this.editMesh();
+  this.root.updateMatrixWorld(true);
+  const v=new THREE.Vector3(finite(p.x,'x'),finite(p.y,'y'),finite(p.z,'z'));
+  const r=Math.max(0.01,finite(radius,'radius'));
+  const pos0=ed.geometry.getAttribute('position');
+  const pk=(x:number,y:number,z:number)=>`${Math.round(x*1e6)}_${Math.round(y*1e6)}_${Math.round(z*1e6)}`;
+  const skipPk=new Set<string>();for(const row of this.editSel.verts)skipPk.add(pk(pos0.getX(row),pos0.getY(row),pos0.getZ(row)));
+  const grab=this.editGrab;
+  const best:{p:THREE.Vector3|null}={p:null};let bd=r;
+  const w=new THREE.Vector3();
+  this.root.traverse(o=>{
+   const m=o as THREE.Mesh;if(!m.isMesh)return;
+   const geo=m.geometry as THREE.BufferGeometry;const pos=geo.getAttribute('position') as THREE.BufferAttribute|undefined;
+   if(!pos||pos.count>100000)return;
+   const own=m===ed;
+   const skipRow=(i:number)=>own&&(grab?.has(i)===true||skipPk.has(pk(pos.getX(i),pos.getY(i),pos.getZ(i))));
+   const consider=(x:number,y:number,z:number)=>{w.set(x,y,z);m.localToWorld(w);const d=w.distanceTo(v);if(d<bd){bd=d;best.p=w.clone();}};
+   if(mode==='vertex'){
+    for(let i=0;i<pos.count;i++){if(skipRow(i))continue;consider(pos.getX(i),pos.getY(i),pos.getZ(i));}
+   }else{
+    const idx=geo.getIndex();const tris=idx?idx.count/3:pos.count/3;
+    const at=(k:number)=>idx?idx.getX(k):k;
+    for(let t=0;t<tris;t++){const ia=at(t*3),ib=at(t*3+1),ic=at(t*3+2);
+     for(const[iu,iw]of[[ia,ib],[ib,ic],[ic,ia]]as const){
+      if(skipRow(iu)&&skipRow(iw))continue; // an edge that moves with the selection is no target
+      consider((pos.getX(iu)+pos.getX(iw))/2,(pos.getY(iu)+pos.getY(iw))/2,(pos.getZ(iu)+pos.getZ(iw))/2);
+     }
+    }
+   }
+  });
+  return best.p?{x:best.p.x,y:best.p.y,z:best.p.z}:null;
+ }
  /** World-space centre of a set of objects: the average of their world positions. Throws when the set is empty. */
  objectsCenter(ids:number[]):[number,number,number]{
   const objs=this.needMany(ids,1);
@@ -1058,6 +1092,19 @@ export class Stage{
  editToSphere(factor:number){this.editOp({key:'studio3d.hist.editToSphere'},m=>toSphereSelected(m,[...this.editSel.verts],factor));}
  /** Jitters the selected edit-mode vertices by a seeded random displacement, one undo step. The selection stays. */
  editRandomize(amount:number,seed:number){this.editOp({key:'studio3d.hist.editRandomize'},m=>randomizeSelected(m,[...this.editSel.verts],amount,seed));}
+ /** Translates the selected edit-mode vertices like editMove, but lands the selection centre exactly on the nearest vertex or edge midpoint within radius when one is in reach. Returns the offset actually applied. One undo step. Proportional editing does not combine with snapping: the snap lands exactly. */
+ editMoveSnapped(offset:[number,number,number],mode:'vertex'|'midpoint',radius:number):[number,number,number]{
+  if(!Array.isArray(offset)||offset.length!==3)throw new StageError('The offset must be three numbers.');
+  const d=offset.map((n,i)=>finite(n,`offset[${i}]`)) as [number,number,number];
+  const c=this.editSelectionCenter();
+  const hit=this.editSnapPoint({x:c[0]+d[0],y:c[1]+d[1],z:c[2]+d[2]},mode,radius);
+  if(!hit){this.editMove(d);return d;}
+  const m=this.editMesh();m.updateWorldMatrix(true,false);
+  const inv=m.matrixWorld.clone().invert();inv.setPosition(0,0,0);
+  const dl=new THREE.Vector3(hit.x-c[0],hit.y-c[1],hit.z-c[2]).applyMatrix4(inv);
+  const out:[number,number,number]=[dl.x,dl.y,dl.z];
+  this.editMove(out);return out;
+ }
  /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. */
  editMove(offset:[number,number,number],prop?:PropFalloff){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editMove'},m=>grab?moveSelected(m,[...grab],offset,undefined,true):moveSelected(m,[...this.editSel.verts],offset,prop),true);}
  editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editRotate'},m=>grab?rotateSelected(m,[...grab],axis,degrees,undefined,pivot,true):rotateSelected(m,[...this.editSel.verts],axis,degrees,prop,pivot),true);}

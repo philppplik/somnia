@@ -1479,7 +1479,10 @@ export default function Viewport3D(){
     if((e.key==='Delete'||e.key==='Backspace')&&currentSet().length){deleteSelection();e.preventDefault();return;}
     const stepNow=getStudio3DState().snap.on?getStudio3DState().snap.move:0.1;const n=e.shiftKey?nudgeFor(e.key,stepNow):null;
     if(n){const ed=getStudio3DState().edit;
-     if(ed!=null){if(ed.verts+ed.edges+ed.faces>0){const pr=getStudio3DState().proportional;stage.editMove([n.x??0,n.y??0,n.z??0],pr.on?{radius:pr.radius,falloff:pr.falloff,connected:pr.connected}:undefined);afterEditOp();}e.preventDefault();return;}
+     if(ed!=null){if(ed.verts+ed.edges+ed.faces>0){const pr=getStudio3DState().proportional;const snp=getStudio3DState().snap;
+      if(snp.on&&(snp.mode==='vertex'||snp.mode==='midpoint'))stage.editMoveSnapped([n.x??0,n.y??0,n.z??0],snp.mode,Math.max(snp.move,0.05));
+      else stage.editMove([n.x??0,n.y??0,n.z??0],pr.on?{radius:pr.radius,falloff:pr.falloff,connected:pr.connected}:undefined);
+      afterEditOp();}e.preventDefault();return;}
      if(sel!=null){nudgeBy(sel,n);e.preventDefault();return;}}
    }
    const off=camera.position.clone().sub(controls.target);const sph=new THREE.Spherical().setFromVector3(off);const step=Math.PI/36;let used=true;
