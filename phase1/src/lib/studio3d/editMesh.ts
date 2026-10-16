@@ -1,6 +1,6 @@
 /** Mesh edit operations on plain position/index arrays - no three.js, so every op is testable in Node and the viewport stays the only three consumer. All meshes are indexed triangle lists. */
 export class EditError extends Error{name='EditError';}
-export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];/** UVs parallel to positions (2 per vertex). Carried through by the bake ops that can preserve them (mirror/symmetrize/subdivide), dropped by the rest. */uvs?:number[];/** Explicit per-vertex normals (3 per vertex). Only the normals ops read or write them; every other op drops them and the geometry rebuild recomputes smooth normals. */normals?:number[];}
+export interface MeshData{positions:number[];index:number[];/** Per-vertex sculpt mask 0..1 (1 = fully protected). Dropped by topology-changing ops. */mask?:number[];/** UVs parallel to positions (2 per vertex). Carried through by the bake ops that can preserve them (mirror/symmetrize/subdivide), dropped by the rest. */uvs?:number[];/** Vertex colors parallel to positions (3 per vertex, linear rgb). Carried and interpolated exactly where UVs are, dropped by the rest. */colors?:number[];/** Explicit per-vertex normals (3 per vertex). Only the normals ops read or write them; every other op drops them and the geometry rebuild recomputes smooth normals. */normals?:number[];}
 /** Hard cap for one editable mesh; operations that would pass it are refused. */
 export const MAX_EDIT_VERTICES=200_000;
 export const MAX_EDIT_TRIANGLES=400_000;
@@ -21,6 +21,7 @@ const check=(m:MeshData)=>{
  const verts=m.positions.length/3,tris=m.index.length/3;
  if(!Number.isInteger(verts)||!Number.isInteger(tris)||m.positions.some(n=>!Number.isFinite(n)))throw new EditError('The mesh data is damaged.');
  if(m.uvs&&(m.uvs.length!==verts*2||m.uvs.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
+ if(m.colors&&(m.colors.length!==verts*3||m.colors.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
  if(m.normals&&(m.normals.length!==verts*3||m.normals.some(n=>!Number.isFinite(n))))throw new EditError('The mesh data is damaged.');
  if(verts>MAX_EDIT_VERTICES||tris>MAX_EDIT_TRIANGLES)throw new EditError(`This mesh is too large to edit (${Math.round(verts).toLocaleString('en-US')} vertices).`);
 };
@@ -327,8 +328,9 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
  const ai=axis==='x'?0:axis==='y'?1:2;
  const EPS=1e-9;
  const side=(i:number)=>m.positions[i*3+ai]>EPS?1:m.positions[i*3+ai]<-EPS?-1:0;
- const positions:number[]=[];const remap=new Map<number,number>();const uvs:number[]|undefined=m.uvs?[]:undefined;
- const keep=(i:number)=>{let n=remap.get(i);if(n===undefined){n=positions.length/3;remap.set(i,n);positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);if(Math.abs(m.positions[i*3+ai])<=EPS)positions[n*3+ai]=0;}return n;};
+ const positions:number[]=[];const remap=new Map<number,number>();const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
+ const keep=(i:number)=>{let n=remap.get(i);if(n===undefined){n=positions.length/3;remap.set(i,n);positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);
+  if(colors)colors.push(m.colors![i*3],m.colors![i*3+1],m.colors![i*3+2]);if(Math.abs(m.positions[i*3+ai])<=EPS)positions[n*3+ai]=0;}return n;};
  const cross=new Map<string,number>();
  const cut=(x:number,y:number)=>{
   const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cross.get(k);
@@ -337,6 +339,7 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
   n=positions.length/3;cross.set(k,n);
   positions.push(px[0]+(py[0]-px[0])*t,px[1]+(py[1]-px[1])*t,px[2]+(py[2]-px[2])*t);
   if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
+   if(colors)colors.push(m.colors![x*3]+(m.colors![y*3]-m.colors![x*3])*t,m.colors![x*3+1]+(m.colors![y*3+1]-m.colors![x*3+1])*t,m.colors![x*3+2]+(m.colors![y*3+2]-m.colors![x*3+2])*t);
   positions[n*3+ai]=0;return n;
  };
  const index:number[]=[];
@@ -355,7 +358,7 @@ export function bisectClip(m:MeshData,axis:MirrorAxis):MeshData{
   if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
   else if(poly.length===4)index.push(poly[0],poly[1],poly[2], poly[0],poly[2],poly[3]);
  }
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  if(!positions.length)throw new EditError('Nothing remains on the positive side of the mirror plane.');
  check(out);return out;
 }
@@ -369,7 +372,7 @@ export function symmetrizeMesh(m:MeshData,axis:MirrorAxis,side:'positive'|'negat
   for(let i=ai;i<positions.length;i+=3)positions[i]=-positions[i];
   const index:number[]=[];
   for(let f=0;f<d.index.length;f+=3)index.push(d.index[f],d.index[f+2],d.index[f+1]); // keep normals outward after mirroring
-  return d.uvs?{positions,index,uvs:[...d.uvs]}:{positions,index};
+  return {positions,index,...(d.uvs?{uvs:[...d.uvs]}:{}),...(d.colors?{colors:[...d.colors]}:{})};
  };
  return flip(mirrorCombine(flip(m),axis,merge,true));
 }
@@ -395,6 +398,7 @@ export function weldSelected(m:MeshData,verts:number[]):MeshData{
  if(!index.length)throw new EditError('Merging the selection would leave an empty mesh.');
  const out:MeshData={positions,index};
  if(m.uvs)out.uvs=m.uvs;
+ if(m.colors)out.colors=m.colors;
  return out;
 }
 /** Extends each selected edge to its edge loop (Blender Alt+click): walks both directions through vertices, continuing on the unique incident edge that shares no triangle with the arrival edge, stopping at ambiguous or boundary vertices. Vertex positions key the walk, so loops cross split shells; the result maps back to index edges. Replaces nothing else of the selection - returns the loop's index edges including the seeds. */
@@ -564,7 +568,7 @@ export function transformUvs(m:MeshData,sel:number[],du:number,dv:number,rotate:
   uvs[v*2]=u*c-w*sn+cu+du;
   uvs[v*2+1]=u*sn+w*c+cv+dv;
  }
- return {positions:[...m.positions],index:[...m.index],uvs};
+ return {positions:[...m.positions],index:[...m.index],uvs,...(m.colors?{colors:[...m.colors]}:{})};
 }
 /** Bridges the border loops of two selected face groups with a sewn triangle strip (bridge edge loops). The selected faces are removed; each group's border loop keeps its original vertices and the loops are sewn with an arc-length zigzag, so unequal loop lengths work. The start vertex and direction are chosen for the shortest strip, twist shifts the start by hand; winding is unified outward across the whole result. UVs survive untouched because no vertex is created; sculpt masks are dropped (topology changes). */
 export function bridgeFacesSelected(m:MeshData,sel:number[],twist:number):MeshData{
@@ -656,7 +660,7 @@ export function bridgeFacesSelected(m:MeshData,sel:number[],twist:number):MeshDa
   if(i<na&&(j>=nb||pa[i+1]<=pb[j+1])){index.push(Ai(i),Ai(i+1),Bi(j));i++;}
   else{index.push(Ai(i),Bi(j),Bi(j+1));j++;}
  }
- const out:MeshData=m.uvs?{positions:[...pos],index,uvs:[...m.uvs]}:{positions:[...pos],index};
+ const out:MeshData={positions:[...pos],index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{})};
  check(out);
  return outsideMesh(out).mesh;
 }
@@ -670,6 +674,7 @@ export function bisectEdit(m:MeshData,axis:'x'|'y'|'z',offset:number,fill:boolea
  const index=[...r.neg.index,...r.pos.index.map(i=>i+off)];
  const out:MeshData={positions,index};
  if(r.neg.uvs&&r.pos.uvs)out.uvs=[...r.neg.uvs,...r.pos.uvs];
+ if(r.neg.colors&&r.pos.colors)out.colors=[...r.neg.colors,...r.pos.colors];
  check(out);return out;
 }
 /** Welds selected vertices whose positions (and UVs, when present, so UV seams survive) lie within `distance` of each other onto the first occurrence; unselected vertices are never welded. Drops collapsed and duplicate faces plus unreferenced vertices, unifies winding per connected part and flips inside-out closed parts. Drops the sculpt mask like every topology-changing op. Fails when no selected pair is within the distance. */
@@ -679,7 +684,7 @@ export function mergeByDistanceSelected(m:MeshData,verts:number[],distance:numbe
  if(!Number.isFinite(distance)||distance<=0||distance>1e6)throw new EditError('The merge distance must be a positive number.');
  const nv=m.positions.length/3;
  for(const v of verts){if(!Number.isInteger(v)||v<0||v>=nv)throw new EditError(`Vertex ${v} does not exist.`);}
- const positions=[...m.positions];const uvs=m.uvs?[...m.uvs]:undefined;
+ const positions=[...m.positions];const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const sel=new Set(verts);
  const grid=new Map<string,number[]>();
  const map=new Array<number>(nv);
@@ -695,6 +700,7 @@ export function mergeByDistanceSelected(m:MeshData,verts:number[],distance:numbe
     const ddx=positions[j*3]-x,ddy=positions[j*3+1]-y,ddz=positions[j*3+2]-z;
     if(ddx*ddx+ddy*ddy+ddz*ddz>distance*distance)continue;
     if(uvs&&(Math.abs(uvs[j*2]-uvs[i*2])>1e-6||Math.abs(uvs[j*2+1]-uvs[i*2+1])>1e-6))continue;
+    if(colors&&(Math.abs(colors[j*3]-colors[i*3])>1e-6||Math.abs(colors[j*3+1]-colors[i*3+1])>1e-6||Math.abs(colors[j*3+2]-colors[i*3+2])>1e-6))continue;
     found=j;break;
    }
   }
@@ -715,15 +721,16 @@ export function mergeByDistanceSelected(m:MeshData,verts:number[],distance:numbe
  if(!kept.length)throw new EditError('The merge would leave no triangle.');
  index=kept;
  const used=[...new Set(index)].sort((a,b)=>a-b);
- const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;
+ const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;const ncol:number[]|undefined=colors?[]:undefined;
  for(const i of used){
   remap.set(i,np.length/3);
   np.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
   if(nuv)nuv.push(uvs![i*2],uvs![i*2+1]);
+  if(ncol)ncol.push(colors![i*3],colors![i*3+1],colors![i*3+2]);
  }
  index=index.map(i=>remap.get(i)!);
  const w=unifyWinding(np,index);
- const out:MeshData=nuv?{positions:np,index:w.index,uvs:nuv}:{positions:np,index:w.index};
+ const out:MeshData={positions:np,index:w.index,...(nuv?{uvs:nuv}:{}),...(ncol?{colors:ncol}:{})};
  check(out);return out;
 }
 /** Rotates each selected edge shared by exactly two triangles to the other diagonal of the quad (Blender Rotate Edge). Boundary, non-manifold, folded or degenerate-result edges are skipped; if none of the selected edges can flip the op fails. Vertices are unchanged, so UVs and masks are carried. */
@@ -779,7 +786,7 @@ export function flipEdges(m:MeshData,edges:[number,number][]):MeshData{
   flips++;
  }
  if(!flips)throw new EditError('None of the selected edges can be flipped.');
- const out:MeshData={positions:[...pos],index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions:[...pos],index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Faces whose geometric normal (from positions, so duplicated shells count alike) lies within `degrees` of the average normal of the seed faces. Returns face ordinals, seeds included. */
@@ -881,16 +888,18 @@ export function extractFaces(m:MeshData,faces:number[]):MeshData{
  if(sel.size===tris)throw new EditError('Separating everything would leave an empty mesh.');
  const remap=new Map<number,number>();
  const positions:number[]=[];
- const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
  const index:number[]=[];
  for(const f of sel)for(let e=0;e<3;e++){
   const v=m.index[f*3+e];
   let i=remap.get(v);
-  if(i===undefined){i=positions.length/3;remap.set(v,i);positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);}
+  if(i===undefined){i=positions.length/3;remap.set(v,i);positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);}
   index.push(i);
  }
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Rips the selected faces off the rest of the mesh in place: every vertex shared between selected and unselected faces is duplicated, the selected faces keep the originals and the unselected faces get the copies. Nothing moves - the mesh just stops being connected there. UVs travel with the copies; masks and explicit normals are dropped. */
@@ -907,12 +916,13 @@ export function ripSelected(m:MeshData,faces:number[]):MeshData{
  const shared=[...inSel].filter(v=>inRest.has(v));
  if(!shared.length)throw new EditError('The selection does not share vertices with the rest of the mesh.');
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const copy=new Map<number,number>();
  for(const v of shared){
   const i=positions.length/3;
   positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
   if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
   copy.set(v,i);
  }
  const index=[...m.index];
@@ -926,6 +936,7 @@ export function ripSelected(m:MeshData,faces:number[]):MeshData{
  }
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  check(out);return out;
 }
 /** Translates the selected vertices by an offset: position-equal twins move together so split sides never rip, and the strongest mask at a position protects the whole seam. Masks are carried; UVs are carried. */
@@ -998,7 +1009,7 @@ export function moveSelected(m:MeshData,verts:number[],offset:[number,number,num
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Vertices touched by non-manifold edges: position-keyed edges with more than two adjacent triangles. Every index twin of a touched position comes along. */
@@ -1047,7 +1058,7 @@ export function snapSelected(m:MeshData,verts:number[],target:[number,number,num
   if(withOffset){positions[v*3]+=offset[0]*f;positions[v*3+1]+=offset[1]*f;positions[v*3+2]+=offset[2]*f;}
   else{positions[v*3]+=(target[0]-m.positions[v*3])*f;positions[v*3+1]+=(target[1]-m.positions[v*3+1])*f;positions[v*3+2]+=(target[2]-m.positions[v*3+2])*f;}
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Slides one selected vertex along an incident edge by `factor` of the edge vector (0 = stay, 1 = the far endpoint, negative slides the other way along the edge line). The edge is matched position-keyed so twin indices work. Position-equal twins move together via moveSelected; masks and UVs are carried. */
@@ -1111,7 +1122,7 @@ export function shearSelected(m:MeshData,verts:number[],along:'x'|'y'|'z',by:'x'
   const f=base*(1-(damp.get(k)??0));if(f===0)continue;
   positions[v*3+ai]+=factor*(m.positions[v*3+bi]-c)*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Scales the selected vertices toward or away from the centroid of their distinct positions with per-axis factors: position-equal twins scale together, the strongest mask at a position dams the whole seam (as a partial scale). Masks are carried; UVs are carried. */
@@ -1146,7 +1157,7 @@ export function scaleSelected(m:MeshData,verts:number[],factors:[number,number,n
   const x=m.positions[v*3]-cx,y=m.positions[v*3+1]-cy,z=m.positions[v*3+2]-cz;
   positions[v*3]+=(x*factors[0]-x)*f;positions[v*3+1]+=(y*factors[1]-y)*f;positions[v*3+2]+=(z*factors[2]-z)*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Rotates the selected vertices around the centroid of their distinct positions (or an explicit pivot point) on a world axis: position-equal twins rotate together, the strongest mask at a position dams the whole seam (as a partial rotation toward the full angle). Masks are carried; UVs are carried. */
@@ -1186,7 +1197,7 @@ export function rotateSelected(m:MeshData,verts:number[],axis:'x'|'y'|'z',degree
   else{rx=x*cos-y*sin;ry=x*sin+y*cos;}
   positions[v*3]+=(rx-x)*f;positions[v*3+1]+=(ry-y)*f;positions[v*3+2]+=(rz-z)*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Jitters the selected vertices by a seeded pseudo-random displacement per distinct position: position-equal twins get the identical displacement so split sides never rip, the strongest mask at a position dams the whole seam, and the same seed always reproduces the same result. Masks are carried; UVs are carried. */
@@ -1216,7 +1227,7 @@ export function randomizeSelected(m:MeshData,verts:number[],amount:number,seed:n
   const f=1-damp.get(pk(v))!;if(f===0)continue;
   positions[v*3]+=d[0]*f;positions[v*3+1]+=d[1]*f;positions[v*3+2]+=d[2]*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Pulls the selected vertices onto a sphere: the sphere centre is the centroid of the distinct selected positions, its radius their mean distance, and each vertex moves along its own ray by the factor. Position-equal twins move together so split sides never rip; masks damp the pull and are carried; UVs are carried. */
@@ -1255,7 +1266,7 @@ export function toSphereSelected(m:MeshData,verts:number[],factor:number):MeshDa
   const move=(radius-dist)*f;
   positions[v*3]+=d[0]*move;positions[v*3+1]+=d[1]*move;positions[v*3+2]+=d[2]*move;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 /** Collapses each connected island of the selection into a single vertex at its centroid: weldSelected merges everything into one point, this keeps separate islands separate. Islands are linked through selected edges, faces and shared vertices; degenerate triangles are dropped. UVs stay with the kept vertices; masks and explicit normals are dropped. */
@@ -1296,6 +1307,7 @@ export function collapseSelected(m:MeshData,sel:{verts:number[];edges:[number,nu
  if(!index.length)throw new EditError('Collapsing the selection would leave an empty mesh.');
  const out:MeshData={positions,index};
  if(m.uvs)out.uvs=m.uvs;
+ if(m.colors)out.colors=m.colors;
  return out;
 }
 /** Splits each selected triangle into four by inserting edge midpoints (planar, no smoothing): midpoints are shared between neighbouring selected triangles, unselected triangles pass through unchanged. UVs interpolate with the positions; masks and explicit normals are dropped. */
@@ -1305,7 +1317,7 @@ export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
  const sel=new Set<number>();
  for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const mids=new Map<string,number>();
  const midpoint=(a:number,b:number):number=>{
   const k=a<b?`${a}_${b}`:`${b}_${a}`;
@@ -1313,6 +1325,7 @@ export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
   const i=positions.length/3;
   positions.push((positions[a*3]+positions[b*3])/2,(positions[a*3+1]+positions[b*3+1])/2,(positions[a*3+2]+positions[b*3+2])/2);
   if(uvs)uvs.push((uvs[a*2]+uvs[b*2])/2,(uvs[a*2+1]+uvs[b*2+1])/2);
+   if(colors)colors.push((colors[a*3]+colors[b*3])/2,(colors[a*3+1]+colors[b*3+1])/2,(colors[a*3+2]+colors[b*3+2])/2);
   mids.set(k,i);return i;
  };
  const index:number[]=[];
@@ -1324,6 +1337,7 @@ export function subdivideFaces(m:MeshData,faces:number[]):MeshData{
  }
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Pokes each selected triangle: inserts its centroid and splits it into three triangles fanning from the centroid. Every face gets its own centroid vertex. UVs interpolate with the positions; masks and explicit normals are dropped. */
@@ -1333,7 +1347,7 @@ export function pokeFaces(m:MeshData,faces:number[]):MeshData{
  const sel=new Set<number>();
  for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const index:number[]=[];
  for(let f=0;f<tris;f++){
   const a=m.index[f*3],b=m.index[f*3+1],c=m.index[f*3+2];
@@ -1341,10 +1355,12 @@ export function pokeFaces(m:MeshData,faces:number[]):MeshData{
   const i=positions.length/3;
   positions.push((m.positions[a*3]+m.positions[b*3]+m.positions[c*3])/3,(m.positions[a*3+1]+m.positions[b*3+1]+m.positions[c*3+1])/3,(m.positions[a*3+2]+m.positions[b*3+2]+m.positions[c*3+2])/3);
   if(uvs)uvs.push((m.uvs![a*2]+m.uvs![b*2]+m.uvs![c*2])/3,(m.uvs![a*2+1]+m.uvs![b*2+1]+m.uvs![c*2+1])/3);
+   if(colors)colors.push((m.colors![a*3]+m.colors![b*3]+m.colors![c*3])/3,(m.colors![a*3+1]+m.colors![b*3+1]+m.colors![c*3+1])/3,(m.colors![a*3+2]+m.colors![b*3+2]+m.colors![c*3+2])/3);
   index.push(a,b,i, b,c,i, c,a,i);
  }
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Duplicates the selected triangles as a detached shell inside the same mesh: every duplicated triangle gets fresh copies of its vertices, and copies share their vertices when the originals share them. UVs travel with the copies; masks and explicit normals are dropped. */
@@ -1354,19 +1370,21 @@ export function duplicateFaces(m:MeshData,faces:number[]):MeshData{
  const sel=new Set<number>();
  for(const f of faces){if(!Number.isInteger(f)||f<0||f>=tris)throw new EditError(`Face ${f} does not exist.`);sel.add(f);}
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const remap=new Map<number,number>();
  const copy=(v:number):number=>{
   const hit=remap.get(v);if(hit!==undefined)return hit;
   const i=positions.length/3;
   positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
   if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
   remap.set(v,i);return i;
  };
  const index=[...m.index];
  for(const f of sel)index.push(copy(m.index[f*3]),copy(m.index[f*3+1]),copy(m.index[f*3+2]));
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Flips the winding of the selected triangles, turning their normals inside out. Positions, UVs and masks stay; explicit normals are dropped. */
@@ -1379,6 +1397,7 @@ export function flipFaces(m:MeshData,faces:number[]):MeshData{
  for(const f of sel){const t=index[f*3+1];index[f*3+1]=index[f*3+2];index[f*3+2]=t;}
  const out:MeshData={positions:[...m.positions],index};
  if(m.uvs)out.uvs=[...m.uvs];
+ if(m.colors)out.colors=[...m.colors];
  if(m.mask)out.mask=[...m.mask];
  return out;
 }
@@ -1416,11 +1435,12 @@ export function dissolveFaces(m:MeshData,faces:number[]):MeshData{
  for(const f of sel)for(let e=0;e<3;e++){const v=m.index[f*3+e];if(!boundarySet.has(v)&&!usedOutside.has(v))drop.add(v);}
  const remap=new Map<number,number>();
  const positions:number[]=[];
- const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
  for(let v=0;v<m.positions.length/3;v++)if(!drop.has(v)){
   remap.set(v,positions.length/3);
   positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
   if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
  }
  const index:number[]=[];
  for(let f=0;f<tris;f++){
@@ -1431,6 +1451,7 @@ export function dissolveFaces(m:MeshData,faces:number[]):MeshData{
  for(let i=1;i+1<c.length;i++)index.push(c[0],c[i],c[i+1]);
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Fills one selected closed edge loop with a triangle fan around a new centroid vertex, the edit-mode counterpart to fillHoles. The fan winds against the faces that still touch the loop; UVs interpolate with the positions; masks and explicit normals are dropped. */
@@ -1472,16 +1493,18 @@ export function fillSelected(m:MeshData,edges:[number,number][]):MeshData{
  }
  const ring=vote>=0?[...loop].reverse():[...loop];
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
- let cx=0,cy=0,cz=0,cu=0,cv=0;
- for(const v of ring){cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];if(uvs){cu+=m.uvs![v*2];cv+=m.uvs![v*2+1];}}
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
+ let cx=0,cy=0,cz=0,cu=0,cv=0,cr=0,cg=0,cb=0;
+ for(const v of ring){cx+=m.positions[v*3];cy+=m.positions[v*3+1];cz+=m.positions[v*3+2];if(uvs){cu+=m.uvs![v*2];cv+=m.uvs![v*2+1];}if(colors){cr+=m.colors![v*3];cg+=m.colors![v*3+1];cb+=m.colors![v*3+2];}}
  const n=ring.length,c=positions.length/3;
  positions.push(cx/n,cy/n,cz/n);
  if(uvs)uvs.push(cu/n,cv/n);
+  if(colors)colors.push(cr/n,cg/n,cb/n);
  const index=[...m.index];
  for(let i=0;i<n;i++)index.push(ring[i],ring[(i+1)%n],c);
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  return out;
 }
 /** Fills one selected closed edge loop with an interpolated grid (a Coons patch): the loop needs an even edge count, its two halves between opposite corners become the grid sides, the sharpest corner splits the sides into rows and columns, and interior points and UVs blend bilinearly between the four sides. Boundary vertices are reused; the winding matches the faces around the loop like fill; masks and explicit normals are dropped. */
@@ -1538,7 +1561,7 @@ export function gridFillSelected(m:MeshData,edges:[number,number][]):MeshData{
  }
  const W=h-H;
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const G:number[][]=[];
  for(let i=0;i<=H;i++){G.push(new Array<number>(W+1).fill(-1));}
  for(let i=0;i<=H;i++){G[i][0]=A[i];G[i][W]=B[W+i];}
@@ -1554,6 +1577,7 @@ export function gridFillSelected(m:MeshData,edges:[number,number][]):MeshData{
   G[i][j]=positions.length/3;
   positions.push(blend(px),blend(py),blend(pz));
   if(uvs)uvs.push((1-sc)*m.uvs![A[i]*2]+sc*m.uvs![B[W+i]*2]+(1-tc)*m.uvs![B[j]*2]+tc*m.uvs![A[H+j]*2]-((1-sc)*(1-tc)*m.uvs![A[0]*2]+sc*(1-tc)*m.uvs![B[W]*2]+(1-sc)*tc*m.uvs![A[H]*2]+sc*tc*m.uvs![A[h]*2]),(1-sc)*m.uvs![A[i]*2+1]+sc*m.uvs![B[W+i]*2+1]+(1-tc)*m.uvs![B[j]*2+1]+tc*m.uvs![A[H+j]*2+1]-((1-sc)*(1-tc)*m.uvs![A[0]*2+1]+sc*(1-tc)*m.uvs![B[W]*2+1]+(1-sc)*tc*m.uvs![A[H]*2+1]+sc*tc*m.uvs![A[h]*2+1]));
+  if(colors)colors.push((1-sc)*m.colors![A[i]*3+0]+sc*m.colors![B[W+i]*3+0]+(1-tc)*m.colors![B[j]*3+0]+tc*m.colors![A[H+j]*3+0]-((1-sc)*(1-tc)*m.colors![A[0]*3+0]+sc*(1-tc)*m.colors![B[W]*3+0]+(1-sc)*tc*m.colors![A[H]*3+0]+sc*tc*m.colors![A[h]*3+0]),(1-sc)*m.colors![A[i]*3+1]+sc*m.colors![B[W+i]*3+1]+(1-tc)*m.colors![B[j]*3+1]+tc*m.colors![A[H+j]*3+1]-((1-sc)*(1-tc)*m.colors![A[0]*3+1]+sc*(1-tc)*m.colors![B[W]*3+1]+(1-sc)*tc*m.colors![A[H]*3+1]+sc*tc*m.colors![A[h]*3+1]),(1-sc)*m.colors![A[i]*3+2]+sc*m.colors![B[W+i]*3+2]+(1-tc)*m.colors![B[j]*3+2]+tc*m.colors![A[H+j]*3+2]-((1-sc)*(1-tc)*m.colors![A[0]*3+2]+sc*(1-tc)*m.colors![B[W]*3+2]+(1-sc)*tc*m.colors![A[H]*3+2]+sc*tc*m.colors![A[h]*3+2]));
  }
  const index=[...m.index];
  for(let i=0;i<H;i++)for(let j=0;j<W;j++){
@@ -1562,6 +1586,7 @@ export function gridFillSelected(m:MeshData,edges:[number,number][]):MeshData{
  }
  const out:MeshData={positions,index};
  if(uvs)out.uvs=uvs;
+ if(colors)out.colors=colors;
  check(out);return out;
 }
 /** Deletes selected elements: faces drop their own triangles, edges and vertices drop every triangle that touches them. Positions stay put (orphan vertices are allowed), so undo restores the exact geometry. Refuses an empty selection and a delete that would leave no triangle. */
@@ -1590,6 +1615,7 @@ export function deleteElements(m:MeshData,kind:'vertex'|'edge'|'face',sel:{verts
  for(let f=0;f<tris;f++)if(!drop.has(f))index.push(m.index[f*3],m.index[f*3+1],m.index[f*3+2]);
  const out:MeshData={positions:m.positions,index};
  if(m.uvs)out.uvs=m.uvs;
+ if(m.colors)out.colors=m.colors;
  return out;
 }
 /** One round of the Loop subdivision scheme: every triangle splits into four; new edge points weigh the edge ends 3/8 and the two opposite vertices 1/8 (boundary edges only average their ends), original vertices are pulled towards their neighbours (boundary vertices only along the boundary). */
@@ -1609,22 +1635,25 @@ const loopOnce=(m:MeshData):MeshData=>{
  const bnd:number[][]=Array.from({length:nv},()=>[]);
  for(const e of edges.values())if(e.opp.length===1){bnd[e.a].push(e.b);bnd[e.b].push(e.a);}
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  for(let i=0;i<nv;i++){
-  const p=v3(m,i);let q:[number,number,number];let wsum:[number,number]|null=null;
+  const p=v3(m,i);let q:[number,number,number];let wsum:[number,number]|null=null;let csum:[number,number,number]|null=null;
   if(bnd[i].length===2){
    const b0=v3(m,bnd[i][0]),b1=v3(m,bnd[i][1]);
    q=[p[0]*0.75+(b0[0]+b1[0])*0.125,p[1]*0.75+(b0[1]+b1[1])*0.125,p[2]*0.75+(b0[2]+b1[2])*0.125];
    if(uvs)wsum=[m.uvs![i*2]*0.75+(m.uvs![bnd[i][0]*2]+m.uvs![bnd[i][1]*2])*0.125,m.uvs![i*2+1]*0.75+(m.uvs![bnd[i][0]*2+1]+m.uvs![bnd[i][1]*2+1])*0.125];
+   if(colors)csum=[m.colors![i*3]*0.75+(m.colors![bnd[i][0]*3]+m.colors![bnd[i][1]*3])*0.125,m.colors![i*3+1]*0.75+(m.colors![bnd[i][0]*3+1]+m.colors![bnd[i][1]*3+1])*0.125,m.colors![i*3+2]*0.75+(m.colors![bnd[i][0]*3+2]+m.colors![bnd[i][1]*3+2])*0.125];
   }else if(bnd[i].length===0&&nbr[i].length>=3){
    const k=nbr[i].length,beta=(1/k)*(5/8-Math.pow(3/8+Math.cos(2*Math.PI/k)/4,2));
-   let sx=0,sy=0,sz=0,su=0,sv=0;for(const j of nbr[i]){sx+=m.positions[j*3];sy+=m.positions[j*3+1];sz+=m.positions[j*3+2];if(uvs){su+=m.uvs![j*2];sv+=m.uvs![j*2+1];}}
+   let sx=0,sy=0,sz=0,su=0,sv=0,sr=0,sg=0,sb=0;for(const j of nbr[i]){sx+=m.positions[j*3];sy+=m.positions[j*3+1];sz+=m.positions[j*3+2];if(uvs){su+=m.uvs![j*2];sv+=m.uvs![j*2+1];}if(colors){sr+=m.colors![j*3];sg+=m.colors![j*3+1];sb+=m.colors![j*3+2];}}
    const w=1-k*beta;
    q=[p[0]*w+sx*beta,p[1]*w+sy*beta,p[2]*w+sz*beta];
    if(uvs)wsum=[m.uvs![i*2]*w+su*beta,m.uvs![i*2+1]*w+sv*beta];
+   if(colors)csum=[m.colors![i*3]*w+sr*beta,m.colors![i*3+1]*w+sg*beta,m.colors![i*3+2]*w+sb*beta];
   }else q=p; // non-manifold or nearly isolated vertex: leave it in place
   positions[i*3]=q[0];positions[i*3+1]=q[1];positions[i*3+2]=q[2];
   if(uvs&&wsum){uvs[i*2]=wsum[0];uvs[i*2+1]=wsum[1];}
+  if(colors&&csum){colors[i*3]=csum[0];colors[i*3+1]=csum[1];colors[i*3+2]=csum[2];}
  }
  const mid=new Map<string,number>();
  for(const [k,e] of edges){
@@ -1638,6 +1667,10 @@ const loopOnce=(m:MeshData):MeshData=>{
    if(e.opp.length>=2)uvs.push((m.uvs![e.a*2]+m.uvs![e.b*2])*0.375+(m.uvs![e.opp[0]*2]+m.uvs![e.opp[1]*2])*0.125,(m.uvs![e.a*2+1]+m.uvs![e.b*2+1])*0.375+(m.uvs![e.opp[0]*2+1]+m.uvs![e.opp[1]*2+1])*0.125);
    else uvs.push((m.uvs![e.a*2]+m.uvs![e.b*2])/2,(m.uvs![e.a*2+1]+m.uvs![e.b*2+1])/2);
   }
+  if(colors){
+   if(e.opp.length>=2)colors.push((m.colors![e.a*3]+m.colors![e.b*3])*0.375+(m.colors![e.opp[0]*3]+m.colors![e.opp[1]*3])*0.125,(m.colors![e.a*3+1]+m.colors![e.b*3+1])*0.375+(m.colors![e.opp[0]*3+1]+m.colors![e.opp[1]*3+1])*0.125,(m.colors![e.a*3+2]+m.colors![e.b*3+2])*0.375+(m.colors![e.opp[0]*3+2]+m.colors![e.opp[1]*3+2])*0.125);
+   else colors.push((m.colors![e.a*3]+m.colors![e.b*3])/2,(m.colors![e.a*3+1]+m.colors![e.b*3+1])/2,(m.colors![e.a*3+2]+m.colors![e.b*3+2])/2);
+  }
  }
  const index:number[]=[];
  for(let f=0;f<nt;f++){
@@ -1645,7 +1678,7 @@ const loopOnce=(m:MeshData):MeshData=>{
   const ab=mid.get(key(a,b))!,bc=mid.get(key(b,c))!,ca=mid.get(key(c,a))!;
   index.push(a,ab,ca, ab,b,bc, ca,bc,c, ab,bc,ca);
  }
- return uvs?{positions,index,uvs}:{positions,index};
+ return {positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
 };
 
 /** What a cleanup changed: welded vertex pairs, dropped collapsed/duplicate faces, removed unreferenced vertices, flipped inside-out components. */
@@ -1654,7 +1687,7 @@ export interface CleanupResult{mesh:MeshData;welded:number;facesDropped:number;v
 export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
  check(m);
  if(!Number.isFinite(weld)||weld<0||weld>1e6)throw new EditError('The weld distance must be zero or a positive number.');
- let index=[...m.index];const uvs=m.uvs?[...m.uvs]:undefined;let positions=[...m.positions];
+ let index=[...m.index];const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;let positions=[...m.positions];
  let welded=0;
  if(weld>0){
   const grid=new Map<string,number[]>();
@@ -1669,7 +1702,8 @@ export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
     for(const j of bucket){
      const ddx=positions[j*3]-x,ddy=positions[j*3+1]-y,ddz=positions[j*3+2]-z;
      if(ddx*ddx+ddy*ddy+ddz*ddz>weld*weld)continue;
-     if(uvs&&(Math.abs(uvs[j*2]-uvs[i*2])>1e-6||Math.abs(uvs[j*2+1]-uvs[i*2+1])>1e-6))continue; // same spot, different texture coordinate: a UV seam, not a double
+     if(uvs&&(Math.abs(uvs[j*2]-uvs[i*2])>1e-6||Math.abs(uvs[j*2+1]-uvs[i*2+1])>1e-6))continue;
+    if(colors&&(Math.abs(colors[j*3]-colors[i*3])>1e-6||Math.abs(colors[j*3+1]-colors[i*3+1])>1e-6||Math.abs(colors[j*3+2]-colors[i*3+2])>1e-6))continue; // same spot, different texture coordinate: a UV seam, not a double
      found=j;break;
     }
    }
@@ -1691,16 +1725,17 @@ export function cleanupMesh(m:MeshData,weld:number):CleanupResult{
  index=kept;
  // Remove vertices no face references anymore.
  const used=[...new Set(index)].sort((a,b)=>a-b);
- const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;
+ const remap=new Map<number,number>();const np:number[]=[];const nuv:number[]|undefined=uvs?[]:undefined;const ncol:number[]|undefined=colors?[]:undefined;
  for(const i of used){
   remap.set(i,np.length/3);
   np.push(positions[i*3],positions[i*3+1],positions[i*3+2]);
   if(nuv)nuv.push(uvs![i*2],uvs![i*2+1]);
+  if(ncol)ncol.push(colors![i*3],colors![i*3+1],colors![i*3+2]);
  }
  const vertsDropped=positions.length/3-used.length;
  positions=np;index=index.map(i=>remap.get(i)!);
  const w=unifyWinding(positions,index);index=w.index;
- const mesh:MeshData=nuv?{positions,index,uvs:nuv}:{positions,index};
+ const mesh:MeshData={positions,index,...(nuv?{uvs:nuv}:{}),...(ncol?{colors:ncol}:{})};
  check(mesh);
  return{mesh,welded,facesDropped,vertsDropped,flipped:w.flipped};
 }
@@ -1747,7 +1782,7 @@ const unifyWinding=(positions:number[],src:number[]):{index:number[];flipped:num
 export function subdivideLoop(m:MeshData,iterations:number):MeshData{
  check(m);
  if(!Number.isInteger(iterations)||iterations<1||iterations>3)throw new EditError('Iterations must be a whole number between 1 and 3.');
- let cur:MeshData=m.uvs?{positions:[...m.positions],index:[...m.index],uvs:[...m.uvs]}:{positions:[...m.positions],index:[...m.index]};
+ let cur:MeshData={positions:[...m.positions],index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{})};
  for(let k=0;k<iterations;k++){
   if(cur.index.length/3*4>MAX_EDIT_TRIANGLES)throw new EditError(`Subdividing would exceed ${MAX_EDIT_TRIANGLES.toLocaleString('en-US')} triangles.`);
   cur=loopOnce(cur);
@@ -1761,10 +1796,11 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
  if(bisect)m=bisectClip(m,axis);
  const ai=axis==='x'?0:axis==='y'?1:2;
  const nv=m.positions.length/3;
- const positions:number[]=[];const map=new Array<number>(nv);const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const positions:number[]=[];const map=new Array<number>(nv);const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
  for(let i=0;i<nv;i++){
   const c=m.positions[i*3+ai];
   if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);
+  if(colors)colors.push(m.colors![i*3],m.colors![i*3+1],m.colors![i*3+2]);
   if(Math.abs(c)<=merge){positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);positions[positions.length-3+ai]=0;map[i]=i;}
   else{positions.push(m.positions[i*3],m.positions[i*3+1],m.positions[i*3+2]);map[i]=-1;}
  }
@@ -1773,7 +1809,8 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
   const x=m.positions[i*3],y=m.positions[i*3+1],z=m.positions[i*3+2];
   map[i]=positions.length/3;
   positions.push(axis==='x'?-x:x,axis==='y'?-y:y,axis==='z'?-z:z);
-  if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]); // mirrored twin reuses the source UVs
+  if(uvs)uvs.push(m.uvs![i*2],m.uvs![i*2+1]);
+  if(colors)colors.push(m.colors![i*3],m.colors![i*3+1],m.colors![i*3+2]); // mirrored twin reuses the source UVs
  }
  const welded=new Set<number>();for(let i=0;i<nv;i++)if(map[i]===i&&Math.abs(m.positions[i*3+ai])<=merge)welded.add(i);
  const index=[...m.index];
@@ -1784,7 +1821,7 @@ export function mirrorCombine(m:MeshData,axis:MirrorAxis,merge:number,bisect=fal
   if(a===b||b===c||a===c)continue; // face collapsed onto the plane
   index.push(a,c,b); // mirrored winding
  }
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};check(out);return out;
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};check(out);return out;
 }
 
 /** The normals toolbox operations. */
@@ -1801,7 +1838,7 @@ export function flipMesh(m:MeshData):MeshData{
 export function outsideMesh(m:MeshData):{mesh:MeshData;flipped:number}{
  check(m);
  const w=unifyWinding(m.positions,m.index);
- const mesh:MeshData={positions:[...m.positions],index:w.index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const mesh:MeshData={positions:[...m.positions],index:w.index,...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  return{mesh,flipped:w.flipped};
 }
 /** Rebuilds normals by angle: corners of the same vertex share a smoothed normal while the angle between their face normals stays within the limit; harder edges split into separate vertices with their own normals (0 splits everything = flat, 180 shares everything = smooth). UV seams survive automatically because seam twins are different vertices. Positions never move. Drops the sculpt mask. */
@@ -1858,21 +1895,23 @@ export function smoothMesh(m:MeshData,angleDeg:number):MeshData{
  }
  for(const a of acc.values()){const l=Math.hypot(a[0],a[1],a[2])||1;a[0]/=l;a[1]/=l;a[2]/=l;}
  const groups=new Map<string,number>();
- const positions:number[]=[];const normals:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;
+ const positions:number[]=[];const normals:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
  const index:number[]=[];
  for(let f=0;f<nt;f++)for(let e=0;e<3;e++){
   const c=f*3+e,r=find(c),v=m.index[c];
   const uk=uvs?`|${Math.round(m.uvs![v*2]*1e6)},${Math.round(m.uvs![v*2+1]*1e6)}`:'';
-  const gk=r+uk;let id=groups.get(gk);
+   const ck=colors?`|${Math.round(m.colors![v*3]*1e6)},${Math.round(m.colors![v*3+1]*1e6)},${Math.round(m.colors![v*3+2]*1e6)}`:'';
+  const gk=r+uk+ck;let id=groups.get(gk);
   if(id===undefined){
    id=positions.length/3;groups.set(gk,id);
    positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
    if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
    const a=acc.get(r)!;normals.push(a[0],a[1],a[2]);
   }
   index.push(id);
  }
- const out:MeshData=uvs?{positions,index,uvs,normals}:{positions,index,normals};
+ const out:MeshData={positions,index,normals,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(out);return out;
 }
 
@@ -1901,7 +1940,7 @@ export function separateMesh(m:MeshData):MeshData[]{
  return groups.map(faces=>{
   const map=new Map<number,number>();
   const positions:number[]=[];const index:number[]=[];
-  const uvs:number[]|undefined=m.uvs?[]:undefined;
+  const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
   const normals:number[]|undefined=m.normals?[]:undefined;
   const mask:number[]|undefined=m.mask?[]:undefined;
   for(const f of faces)for(let e=0;e<3;e++){
@@ -1910,12 +1949,13 @@ export function separateMesh(m:MeshData):MeshData[]{
     id=positions.length/3;map.set(v,id);
     positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
     if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
     if(normals)normals.push(m.normals![v*3],m.normals![v*3+1],m.normals![v*3+2]);
     if(mask)mask.push(m.mask![v]);
    }
    index.push(id);
   }
-  const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(normals?{normals}:{}),...(mask?{mask}:{})};
+  const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{}),...(normals?{normals}:{}),...(mask?{mask}:{})};
   check(out);return out;
  });
 }
@@ -1961,6 +2001,8 @@ export function solidifyMesh(m:MeshData,thickness:number,offset:number):MeshData
  }
  const uvs:number[]|undefined=m.uvs?new Array(nv*4):undefined;
  if(uvs)for(let v=0;v<nv*2;v++){uvs[v]=m.uvs![v];uvs[nv*2+v]=m.uvs![v];}
+ const colors:number[]|undefined=m.colors?new Array(nv*6):undefined;
+ if(colors)for(let v=0;v<nv*3;v++){colors[v]=m.colors![v];colors[nv*3+v]=m.colors![v];}
  const index:number[]=[];
  // All outer triangles first: the orientation pass below seeds on the first nt triangles.
  for(let f=0;f<nt;f++)index.push(m.index[f*3],m.index[f*3+1],m.index[f*3+2]); // outer skin keeps the original winding
@@ -2007,7 +2049,7 @@ export function solidifyMesh(m:MeshData,thickness:number,offset:number):MeshData
    seen[other.t]=true;queue.push(other.t);
   }
  }
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(out);return out;
 }
 
@@ -2045,19 +2087,20 @@ export function fillHolesMesh(m:MeshData):{mesh:MeshData;holes:number}{
  }
  if(!loops.length)throw new EditError('An open border is too tangled to fill (a border vertex is not manifold).');
  const positions=[...m.positions];
- const uvs=m.uvs?[...m.uvs]:undefined;
+ const uvs=m.uvs?[...m.uvs]:undefined;const colors=m.colors?[...m.colors]:undefined;
  const index=[...m.index];
  for(const loop of loops){
-  let cx=0,cy=0,cz=0,cu=0,cv=0;
-  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(uvs){cu+=m.uvs![e.a*2];cv+=m.uvs![e.a*2+1];}}
+  let cx=0,cy=0,cz=0,cu=0,cv=0,cr=0,cg=0,cb=0;
+  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(uvs){cu+=m.uvs![e.a*2];cv+=m.uvs![e.a*2+1];}if(colors){cr+=m.colors![e.a*3];cg+=m.colors![e.a*3+1];cb+=m.colors![e.a*3+2];}}
   const n=loop.length;
   const c=positions.length/3;
   positions.push(cx/n,cy/n,cz/n);
   if(uvs)uvs.push(cu/n,cv/n);
+  if(colors)colors.push(cr/n,cg/n,cb/n);
   // The surface traverses each border edge a->b, so the cap traverses it b->a.
   for(const e of loop)index.push(e.b,e.a,c);
  }
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(out);return{mesh:out,holes:loops.length};
 }
 
@@ -2112,7 +2155,7 @@ const relaxRun=(m:MeshData,iterations:number,factor:number,move:(g:number,groups
  }
  const positions=[...m.positions];
  for(let g=0;g<ng;g++)for(const v of groups[g]){positions[v*3]=cur[g*3];positions[v*3+1]=cur[g*3+1];positions[v*3+2]=cur[g*3+2];}
- return {positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ return {positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
 };
 const relaxCheck=(iterations:number,factor:number)=>{
  if(!Number.isInteger(iterations)||iterations<1||iterations>50)throw new EditError('The relax iterations must be a whole number between 1 and 50.');
@@ -2184,7 +2227,7 @@ export function fattenSelected(m:MeshData,verts:number[],amount:number):MeshData
   const f=amount*(1-(m.mask?m.mask[v]:0));if(f===0)continue;
   positions[v*3]+=nrm[v*3]*f;positions[v*3+1]+=nrm[v*3+1]*f;positions[v*3+2]+=nrm[v*3+2]*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 export function fattenMesh(m:MeshData,amount:number):MeshData{
@@ -2197,7 +2240,7 @@ export function fattenMesh(m:MeshData,amount:number):MeshData{
   const f=amount*(1-(m.mask?m.mask[v]:0));if(f===0)continue;
   positions[v*3]+=nrm[v*3]*f;positions[v*3+1]+=nrm[v*3+1]*f;positions[v*3+2]+=nrm[v*3+2]*f;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 
@@ -2234,12 +2277,13 @@ const capPlaneBorders=(m:MeshData,ai:number,at:number):number=>{
    cur=next;
   }
   if(!closed||loop.length<3)continue; // tangled or open cut: leave the border unfilled
-  let cx=0,cy=0,cz=0,cu=0,cv=0;
-  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(m.uvs){cu+=m.uvs[e.a*2];cv+=m.uvs[e.a*2+1];}}
+  let cx=0,cy=0,cz=0,cu=0,cv=0,cr=0,cg=0,cb=0;
+  for(const e of loop){cx+=m.positions[e.a*3];cy+=m.positions[e.a*3+1];cz+=m.positions[e.a*3+2];if(m.uvs){cu+=m.uvs[e.a*2];cv+=m.uvs[e.a*2+1];}if(m.colors){cr+=m.colors[e.a*3];cg+=m.colors[e.a*3+1];cb+=m.colors[e.a*3+2];}}
   const n=loop.length;
   const c=m.positions.length/3;
   m.positions.push(cx/n,cy/n,cz/n);
   if(m.uvs)m.uvs.push(cu/n,cv/n);
+  if(m.colors)m.colors.push(cr/n,cg/n,cb/n);
   // The surface traverses each border edge a->b, so the cap traverses it b->a.
   for(const e of loop)m.index.push(e.b,e.a,c);
   caps++;
@@ -2258,7 +2302,7 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
  const EPS=1e-9;
  const sideOf=(v:number)=>{const d=m.positions[v*3+ai]-offset;return d>EPS?1:d<-EPS?-1:0;};
  const clip=(target:1|-1):MeshData=>{
-  const positions:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;
+  const positions:number[]=[];const uvs:number[]|undefined=m.uvs?[]:undefined;const colors:number[]|undefined=m.colors?[]:undefined;
   const remap=new Map<number,number>();
   const keep=(v:number)=>{
    let n=remap.get(v);
@@ -2266,6 +2310,7 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
     n=positions.length/3;remap.set(v,n);
     positions.push(m.positions[v*3],m.positions[v*3+1],m.positions[v*3+2]);
     if(uvs)uvs.push(m.uvs![v*2],m.uvs![v*2+1]);
+  if(colors)colors.push(m.colors![v*3],m.colors![v*3+1],m.colors![v*3+2]);
     if(sideOf(v)===0)positions[n*3+ai]=offset;
    }
    return n;
@@ -2282,6 +2327,7 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
     m.positions[x*3+1]+(m.positions[y*3+1]-m.positions[x*3+1])*t,
     m.positions[x*3+2]+(m.positions[y*3+2]-m.positions[x*3+2])*t);
    if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
+   if(colors)colors.push(m.colors![x*3]+(m.colors![y*3]-m.colors![x*3])*t,m.colors![x*3+1]+(m.colors![y*3+1]-m.colors![x*3+1])*t,m.colors![x*3+2]+(m.colors![y*3+2]-m.colors![x*3+2])*t);
    positions[n*3+ai]=offset;return n;
   };
   const index:number[]=[];
@@ -2299,7 +2345,7 @@ export function bisectMesh(m:MeshData,axis:MirrorAxis,offset:number,fill:boolean
    if(poly.length===3)index.push(poly[0],poly[1],poly[2]);
    else if(poly.length===4)index.push(poly[0],poly[1],poly[2],poly[0],poly[2],poly[3]);
   }
-  const half:MeshData=uvs?{positions,index,uvs}:{positions,index};
+  const half:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
   if(fill)capPlaneBorders(half,ai,offset);
   check(half);return half;
  };
@@ -2351,7 +2397,7 @@ export function knifeMesh(m:MeshData,px:number,py:number,pz:number,nx:number,ny:
  const dist=(v:number)=>(m.positions[v*3]-px)*nx+(m.positions[v*3+1]-py)*ny+(m.positions[v*3+2]-pz)*nz;
  const sideOf=(v:number)=>{const d=dist(v);return d>EPS?1:d<-EPS?-1:0;};
  const positions=m.positions.slice();
- const uvs=m.uvs?m.uvs.slice():undefined;
+ const uvs=m.uvs?m.uvs.slice():undefined;const colors=m.colors?m.colors.slice():undefined;
  const cutCache=new Map<string,number>();
  const cut=(x:number,y:number)=>{
   const k=x<y?`${x}_${y}`:`${y}_${x}`;let n=cutCache.get(k);
@@ -2363,6 +2409,7 @@ export function knifeMesh(m:MeshData,px:number,py:number,pz:number,nx:number,ny:
    m.positions[x*3+1]+(m.positions[y*3+1]-m.positions[x*3+1])*t,
    m.positions[x*3+2]+(m.positions[y*3+2]-m.positions[x*3+2])*t);
   if(uvs)uvs.push(m.uvs![x*2]+(m.uvs![y*2]-m.uvs![x*2])*t,m.uvs![x*2+1]+(m.uvs![y*2+1]-m.uvs![x*2+1])*t);
+   if(colors)colors.push(m.colors![x*3]+(m.colors![y*3]-m.colors![x*3])*t,m.colors![x*3+1]+(m.colors![y*3+1]-m.colors![x*3+1])*t,m.colors![x*3+2]+(m.colors![y*3+2]-m.colors![x*3+2])*t);
   return n;
  };
  const index:number[]=[];let cuts=0;
@@ -2383,7 +2430,7 @@ export function knifeMesh(m:MeshData,px:number,py:number,pz:number,nx:number,ny:
   }
  }
  if(!cuts)throw new EditError('The plane does not cut through the selected faces.');
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(out);return out;
 }
 
@@ -2414,7 +2461,7 @@ export function twistMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
   positions[v*3+u]=pu+du*c-dw*s;
   positions[v*3+w]=pw+du*s+dw*c;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 
@@ -2443,7 +2490,7 @@ export function taperMesh(m:MeshData,axis:MirrorAxis,factor:number):MeshData{
   positions[v*3+u]=pu+(m.positions[v*3+u]-pu)*s;
   positions[v*3+w]=pw+(m.positions[v*3+w]-pw)*s;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 
@@ -2471,7 +2518,7 @@ export function bendMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
   positions[v*3+ai]=mn+r*sn*-1;
   positions[v*3+u]=pu+r*c-R;
  }
- const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
+ const out:MeshData={positions,index:[...m.index],...(m.uvs?{uvs:[...m.uvs]}:{}),...(m.colors?{colors:[...m.colors]}:{}),...(m.mask?{mask:[...m.mask]}:{})};
  check(out);return out;
 }
 
@@ -2501,7 +2548,7 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
  const rings=full?steps:steps+1;
  const fwd=degrees>0;
  const positions:number[]=new Array(rings*nv*3);
- const uvs:number[]|undefined=m.uvs?new Array(rings*nv*2):undefined;
+ const uvs:number[]|undefined=m.uvs?new Array(rings*nv*2):undefined;const colors:number[]|undefined=m.colors?new Array(rings*nv*3):undefined;
  for(let r=0;r<rings;r++){
   const rot=degrees*Math.PI/180*r/steps;
   const c=Math.cos(rot),s=Math.sin(rot);
@@ -2512,6 +2559,7 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
    positions[i+u]=center[u]+du*c-dw*s;
    positions[i+w]=center[w]+du*s+dw*c;
    if(uvs){uvs[(r*nv+v)*2]=m.uvs![v*2];uvs[(r*nv+v)*2+1]=m.uvs![v*2+1];}
+    if(colors){colors[(r*nv+v)*3]=m.colors![v*3];colors[(r*nv+v)*3+1]=m.colors![v*3+1];colors[(r*nv+v)*3+2]=m.colors![v*3+2];}
   }
  }
  const index:number[]=[];
@@ -2535,7 +2583,7 @@ export function spinMesh(m:MeshData,axis:MirrorAxis,degrees:number,steps:number,
    if(fwd)index.push(B,A,A2,B,A2,B2);else index.push(A,B,B2,A,B2,A2);
   }
  }
- const out:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const out:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(out);return out;
 }
 
@@ -2607,14 +2655,14 @@ export function bridgeMesh(a:MeshData,b:MeshData,twist:number):MeshData{
  const index:number[]=[];
  for(let f=0;f<a.index.length;f+=3)index.push(a.index[f],a.index[f+1],a.index[f+2]);
  for(let f=0;f<b.index.length;f+=3)index.push(nvA+b.index[f],nvA+b.index[f+1],nvA+b.index[f+2]);
- const uvs:number[]|undefined=a.uvs&&b.uvs?[...a.uvs,...b.uvs]:undefined;
+ const uvs:number[]|undefined=a.uvs&&b.uvs?[...a.uvs,...b.uvs]:undefined;const colors:number[]|undefined=a.colors&&b.colors?[...a.colors,...b.colors]:undefined;
  let i=0,j=0;
  const Ai=(k:number)=>A[k%na],Bi=(k:number)=>nvA+Bverts[k%nb];
  while(i<na||j<nb){
   if(i<na&&(j>=nb||pa[i+1]<=pb[j+1])){index.push(Ai(i),Ai(i+1),Bi(j));i++;}
   else{index.push(Ai(i),Bi(j),Bi(j+1));j++;}
  }
- const merged:MeshData=uvs?{positions,index,uvs}:{positions,index};
+ const merged:MeshData={positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{})};
  check(merged);
  return outsideMesh(merged).mesh;
 }

@@ -1066,5 +1066,11 @@
  "studio3d.hist.gridFill": "3D-Gitterfüllung",
  "studio3d.edit.proportionalConnected": "Nur verbundene",
  "studio3d.edit.mirror": "Transformationen spiegeln",
- "cmd.studio3d.edit.mirror": "Edit-Modus-Transformationen über eine lokale Achsenebene spiegeln: Verschieben, Drehen, Skalieren und Scheren bewegen auch die gespiegelten Gegenstücke"
+ "cmd.studio3d.edit.mirror": "Edit-Modus-Transformationen über eine lokale Achsenebene spiegeln: Verschieben, Drehen, Skalieren und Scheren bewegen auch die gespiegelten Gegenstücke",
+ "cmd.studio3d.mesh.vertexColors": "Vertexfarben zu 3D-Meshes hinzufügen (flächige Füllung, standardmäßig weiß) oder das Farbattribut entfernen",
+ "studio3d.mesh.vertexColors": "Vertexfarben",
+ "studio3d.hist.vertexColorsAdd_one": "Vertexfarben zu {name} hinzufügen",
+ "studio3d.hist.vertexColorsAdd_other": "Vertexfarben zu {count} Meshes hinzufügen",
+ "studio3d.hist.vertexColorsRemove_one": "Vertexfarben von {name} entfernen",
+ "studio3d.hist.vertexColorsRemove_other": "Vertexfarben von {count} Meshes entfernen"
 }

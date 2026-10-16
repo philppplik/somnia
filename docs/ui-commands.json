@@ -11335,6 +11335,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.mesh.vertexColors",
+      "title": "Add vertex colors to 3D meshes (a flat fill, white by default) or remove the color attribute",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.model.open",
       "title": "Open 3D model",
       "category": "Project",

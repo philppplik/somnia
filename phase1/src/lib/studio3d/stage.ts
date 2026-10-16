@@ -205,7 +205,19 @@ export class Stage{
  /** Joint limits keyed by bone uuid (uuid survives reloads; Object3D.id does not). */private boneLimits=new Map<string,AxisLimits>();
  constructor(){this.root.name='model';}
  onChange(l:()=>void){this.listeners.add(l);return()=>{this.listeners.delete(l);};}
- private emit(){this.revision++;this.listeners.forEach(l=>l());}
+ private emit(){
+  this.revision++;
+  // Keep material.vertexColors in step with the geometry: three renders black when the flag is on but the color attribute is gone (an edit op that drops colors), and ignores existing colors when the flag is off. The mesh gets its own material copy when the flag has to flip, so siblings sharing a material stay untouched.
+  this.root.traverse(o=>{
+   const m=o as THREE.Mesh;
+   if(!m.isMesh||Array.isArray(m.material))return;
+   const mat=m.material as THREE.MeshStandardMaterial;
+   if(!mat.isMeshStandardMaterial)return;
+   const want=!!m.geometry.getAttribute('color');
+   if(mat.vertexColors!==want){const c=mat.clone();c.vertexColors=want;m.material=c;}
+  });
+  this.listeners.forEach(l=>l());
+ }
  /** Number of history entries applied. Equal to the saved mark means clean. */
  get dirty(){return this.cursor!==this.saved;}
  markSaved(){this.saved=this.cursor;this.emit();}
@@ -693,15 +705,18 @@ export class Stage{
   const index=idx?Array.from(idx.array as ArrayLike<number>) as number[]:Array.from({length:pos.count},(_,i)=>i);
   const uv=g.getAttribute('uv');
   const uvs=uv&&uv.count===pos.count?Array.from(uv.array as ArrayLike<number>).slice(0,pos.count*2) as number[]:undefined;
+  const col=g.getAttribute('color');
+  const colors=col&&col.count===pos.count?Array.from(col.array as ArrayLike<number>).slice(0,pos.count*3) as number[]:undefined;
   const no=g.getAttribute('normal');
   const normals=no&&no.count===pos.count?Array.from(no.array as ArrayLike<number>).slice(0,pos.count*3) as number[]:undefined;
-  return{positions,index,...(uvs?{uvs}:{}),...(normals?{normals}:{})};
+  return{positions,index,...(uvs?{uvs}:{}),...(colors?{colors}:{}),...(normals?{normals}:{})};
  }
- /** Geometry from mesh data: positions and index always, UVs when the op carried them through, normals recomputed. */
+ /** Geometry from mesh data: positions and index always, UVs and vertex colors when the op carried them through, normals recomputed. */
  private buildGeometry(d:MeshData):THREE.BufferGeometry{
   const g=new THREE.BufferGeometry();
   g.setAttribute('position',new THREE.Float32BufferAttribute(d.positions,3));
   if(d.uvs)g.setAttribute('uv',new THREE.Float32BufferAttribute(d.uvs,2));
+  if(d.colors)g.setAttribute('color',new THREE.Float32BufferAttribute(d.colors,3));
   g.setIndex(d.index);
   if(d.normals)g.setAttribute('normal',new THREE.Float32BufferAttribute(d.normals,3));
   else g.computeVertexNormals();
@@ -2601,6 +2616,38 @@ export class Stage{
   set('after');
   this.push({label:{key:'studio3d.hist.fillHoles',params:{count:holes,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return holes;
+ }
+ /** Adds a per-vertex color attribute to the selected meshes (a flat fill: the given color, white by default) or removes it. Positions and topology stay untouched, so seams and primitive params survive; the material's vertexColors flag follows the attribute (see emit). One undo step for the whole set. */
+ setVertexColors(on:boolean,color:string|undefined,ids:number[]):number{
+  if(this.editId!=null)throw new StageError('Leave edit mode before changing vertex colors.');
+  const objs=this.topLevel(this.needMany(ids,1));
+  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Vertex colors work on meshes.`);
+  let fill:[number,number,number]|undefined;
+  if(color!==undefined){
+   if(!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(color))throw new StageError(`'${color}' is not a color. Use a hex color like #ff8800.`);
+   const c=new THREE.Color(color); // ColorManagement converts the sRGB hex into the linear working space
+   fill=[c.r,c.g,c.b];
+  }
+  const list:{mesh:THREE.Mesh;before:THREE.BufferGeometry;after:THREE.BufferGeometry}[]=[];
+  for(const mesh of objs as THREE.Mesh[]){
+   const data=this.meshDataOf(mesh);
+   if(on){
+    if(data.colors&&!fill)continue;
+    const f=fill??[1,1,1];const nv=data.positions.length/3;const cols=new Array<number>(nv*3);
+    for(let v=0;v<nv;v++){cols[v*3]=f[0];cols[v*3+1]=f[1];cols[v*3+2]=f[2];}
+    data.colors=cols;
+   }else{
+    if(!data.colors)continue;
+    delete data.colors;
+   }
+   list.push({mesh,before:mesh.geometry,after:this.buildGeometry(data)});
+  }
+  if(!list.length)throw new StageError(on?'Every selected mesh already has vertex colors.':'None of the selected meshes has vertex colors.');
+  const set=(k:'before'|'after')=>{for(const l of list)l.mesh.geometry=k==='after'?l.after:l.before;};
+  let owned=true;
+  set('after');
+  this.push({label:{key:on?'studio3d.hist.vertexColorsAdd':'studio3d.hist.vertexColorsRemove',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before:l.after).dispose();}});
+  return list.length;
  }
  /** Laplacian smoothing of whole meshes: vertices drift toward their neighbourhood average, borders pinned, sculpt masks protect, UV-seam twins move as one. One undo step for the whole set. */
  relax(iterations:number,factor:number,ids:number[]):number{

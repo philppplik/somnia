@@ -1066,5 +1066,11 @@
  "studio3d.hist.gridFill": "Relleno en rejilla 3D",
  "studio3d.edit.proportionalConnected": "Solo conectados",
  "studio3d.edit.mirror": "Reflejar transformaciones",
- "cmd.studio3d.edit.mirror": "Reflejar las transformaciones del modo de edición sobre un plano de eje local: mover, rotar, escalar y sesgar también mueven las filas homólogas reflejadas"
+ "cmd.studio3d.edit.mirror": "Reflejar las transformaciones del modo de edición sobre un plano de eje local: mover, rotar, escalar y sesgar también mueven las filas homólogas reflejadas",
+ "cmd.studio3d.mesh.vertexColors": "Añadir colores de vértice a mallas 3D (un relleno plano, blanco por defecto) o quitar el atributo de color",
+ "studio3d.mesh.vertexColors": "Colores de vértice",
+ "studio3d.hist.vertexColorsAdd_one": "Añadir colores de vértice a {name}",
+ "studio3d.hist.vertexColorsAdd_other": "Añadir colores de vértice a {count} mallas",
+ "studio3d.hist.vertexColorsRemove_one": "Quitar colores de vértice de {name}",
+ "studio3d.hist.vertexColorsRemove_other": "Quitar colores de vértice de {count} mallas"
 }

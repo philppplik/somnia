@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1111 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1112 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -935,6 +935,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.mesh.symmetrize` | Bake a symmetry into 3D meshes: keep one side of the local mirror plane, mirror it onto the other and weld the seam | Edit | studio3d |  |
 | `studio3d.mesh.taper` | Taper a 3D mesh along an axis | Edit | studio3d |  |
 | `studio3d.mesh.twist` | Twist a 3D mesh around an axis | Edit | studio3d |  |
+| `studio3d.mesh.vertexColors` | Add vertex colors to 3D meshes (a flat fill, white by default) or remove the color attribute | Edit | studio3d |  |
 | `studio3d.model.open` | Open 3D model | Project | studio3d |  |
 | `studio3d.motionpath` | Show the motion path of the selected bone | View | studio3d |  |
 | `studio3d.object.align` | Align 3D objects | Edit | studio3d |  |

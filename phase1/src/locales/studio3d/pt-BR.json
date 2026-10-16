@@ -1066,5 +1066,11 @@
  "studio3d.hist.gridFill": "Preenchimento em grade 3D",
  "studio3d.edit.proportionalConnected": "Somente conectados",
  "studio3d.edit.mirror": "Espelhar transformações",
- "cmd.studio3d.edit.mirror": "Espelhar as transformações do modo de edição sobre um plano de eixo local: mover, girar, escalar e cisalhar também movem as linhas espelhadas correspondentes"
+ "cmd.studio3d.edit.mirror": "Espelhar as transformações do modo de edição sobre um plano de eixo local: mover, girar, escalar e cisalhar também movem as linhas espelhadas correspondentes",
+ "cmd.studio3d.mesh.vertexColors": "Adicionar cores de vértice a malhas 3D (um preenchimento plano, branco por padrão) ou remover o atributo de cor",
+ "studio3d.mesh.vertexColors": "Cores de vértice",
+ "studio3d.hist.vertexColorsAdd_one": "Adicionar cores de vértice a {name}",
+ "studio3d.hist.vertexColorsAdd_other": "Adicionar cores de vértice a {count} malhas",
+ "studio3d.hist.vertexColorsRemove_one": "Remover cores de vértice de {name}",
+ "studio3d.hist.vertexColorsRemove_other": "Remover cores de vértice de {count} malhas"
 }

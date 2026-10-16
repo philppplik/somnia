@@ -47,6 +47,7 @@ export interface Studio3DController{
  separate(ids?:number[]):number;
  solidify(thickness:number,offset:number,ids?:number[]):number;
  fillHoles(ids?:number[]):number;
+ setVertexColors(on:boolean,color:string|undefined,ids?:number[]):number;
  relax(iterations:number,factor:number,ids?:number[]):number;
  fatten(amount:number,ids?:number[]):number;
  bisect(axis:'x'|'y'|'z',offset:number,fill:boolean,ids?:number[]):number;
@@ -447,6 +448,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[]}>('studio3d.mesh.separate','Split 3D meshes into one object per connected part','Edit',p=>need().separate(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{thickness:number;offset?:number;ids?:number[]}>('studio3d.mesh.solidify','Give a thin 3D mesh real thickness: offset shell with stitched side walls','Edit',p=>need().solidify(p.thickness,p.offset??0,p.ids),object({thickness:{type:'number',exclusiveMinimum:0,maximum:1000000},offset:{type:'number',minimum:-1,maximum:1},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['thickness']),hasScene),
   add<{ids?:number[]}>('studio3d.mesh.fillHoles','Cap the open borders of 3D meshes','Edit',p=>need().fillHoles(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{on:boolean;color?:string;ids?:number[]}>('studio3d.mesh.vertexColors','Add vertex colors to 3D meshes (a flat fill, white by default) or remove the color attribute','Edit',p=>need().setVertexColors(p.on,p.color,p?.ids),object({on:{type:'boolean'},color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['on']),hasScene),
   add<{iterations?:number;factor?:number;ids?:number[]}>('studio3d.mesh.relax','Smooth a 3D mesh: vertices drift toward their neighbourhood average, borders stay put','Edit',p=>need().relax(p.iterations??1,p.factor??0.5,p.ids),object({iterations:{type:'integer',minimum:1,maximum:50},factor:{type:'number',exclusiveMinimum:0,maximum:1},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{amount:number;ids?:number[]}>('studio3d.mesh.fatten','Shrink or fatten a 3D mesh along its normals (negative amounts shrink)','Edit',p=>need().fatten(p.amount,p.ids),object({amount:{type:'number',maximum:1000000,minimum:-1000000},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['amount']),hasScene),
   add<{axis:'x'|'y'|'z';offset?:number;fill?:boolean;ids?:number[]}>('studio3d.mesh.bisect','Cut a 3D mesh with a plane and keep both halves','Edit',p=>need().bisect(p.axis,p.offset??0,p.fill??true,p.ids),object({axis:{enum:['x','y','z']},offset:{type:'number',minimum:-1000000000,maximum:1000000000},fill:{type:'boolean'},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['axis']),hasScene),

@@ -1066,5 +1066,11 @@
  "studio3d.hist.gridFill": "Remplissage en grille 3D",
  "studio3d.edit.proportionalConnected": "Connectés uniquement",
  "studio3d.edit.mirror": "Symétriser les transformations",
- "cmd.studio3d.edit.mirror": "Symétriser les transformations du mode édition sur un plan d'axe local : déplacer, tourner, mettre à l'échelle et cisailler déplacent aussi les rangées symétriques"
+ "cmd.studio3d.edit.mirror": "Symétriser les transformations du mode édition sur un plan d'axe local : déplacer, tourner, mettre à l'échelle et cisailler déplacent aussi les rangées symétriques",
+ "cmd.studio3d.mesh.vertexColors": "Ajouter des couleurs de sommets aux maillages 3D (un remplissage uniforme, blanc par défaut) ou supprimer l'attribut de couleur",
+ "studio3d.mesh.vertexColors": "Couleurs de sommets",
+ "studio3d.hist.vertexColorsAdd_one": "Ajouter des couleurs de sommets à {name}",
+ "studio3d.hist.vertexColorsAdd_other": "Ajouter des couleurs de sommets à {count} maillages",
+ "studio3d.hist.vertexColorsRemove_one": "Supprimer les couleurs de sommets de {name}",
+ "studio3d.hist.vertexColorsRemove_other": "Supprimer les couleurs de sommets de {count} maillages"
 }
