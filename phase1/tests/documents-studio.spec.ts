@@ -323,6 +323,7 @@ test('D3b: heading style and lists from the format bar change the engine render,
  await page.getByTestId('documents-style').selectOption('Heading2');
  await expect(page.getByTestId('documents-style')).toHaveValue('Heading2');
  await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ const outlineBtn=page.getByRole('button',{name:'Outline panel'});if((await outlineBtn.getAttribute('aria-pressed'))!=='true')await outlineBtn.click();
  await expect(page.getByTestId('documents-outline-headings-only')).toBeVisible();
  await page.getByTestId('documents-outline-headings-only').check();
  await expect(page.getByTestId('documents-outline-panel').getByRole('listitem')).not.toHaveCount(0);

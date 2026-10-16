@@ -52,7 +52,7 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
  const at=(e:React.PointerEvent)=>{const r=ref.current!.getBoundingClientRect();return[(e.clientX-r.left)/zoom,(e.clientY-r.top)/zoom] as const;};
  const box=doc.caretBox&&doc.caretBox.page===index?doc.caretBox:null;
  return <div ref={ref} className="documents-page relative mx-auto shrink-0 cursor-text bg-white shadow-sm ring-1 ring-black/10" style={{width:width*zoom,height:height*zoom}} data-testid="documents-page" data-page={index+1} role="img" aria-label={t('documents.page',{n:index+1})}
-  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();if((e.ctrlKey||e.metaKey)&&!e.shiftKey){const [lx,ly]=at(e);void copyLinkAt(index,lx,ly).then(hit=>{if(!hit){down.current=true;void pointerAt(index,lx,ly,false);down.current=false;}});return;}const [x,y]=at(e);const k=clicks.current;const n=!e.shiftKey&&e.timeStamp-k.t<500&&Math.abs(e.clientX-k.x)<5&&Math.abs(e.clientY-k.y)<5?Math.min(3,k.n+1):1;clicks.current={t:e.timeStamp,x:e.clientX,y:e.clientY,n};if(n>1){void pointerAt(index,x,y,false).then(()=>{selectUnitAtCaret(n===2?'word':'paragraph');});return;}down.current=true;e.currentTarget.setPointerCapture(e.pointerId);void pointerAt(index,x,y,e.shiftKey);}}
+  onPointerDown={e=>{if(e.button!==0)return;e.preventDefault();if((e.ctrlKey||e.metaKey)&&!e.shiftKey){const [lx,ly]=at(e);void copyLinkAt(index,lx,ly).then(hit=>{if(!hit){down.current=true;void pointerAt(index,lx,ly,false);down.current=false;}});return;}const [x,y]=at(e);const k=clicks.current;const n=!e.shiftKey&&e.timeStamp-k.t<500&&Math.abs(e.clientX-k.x)<5&&Math.abs(e.clientY-k.y)<5?Math.min(3,k.n+1):1;clicks.current={t:e.timeStamp,x:e.clientX,y:e.clientY,n};if(n>1){void pointerAt(index,x,y,false).then(()=>{selectUnitAtCaret(n===2?'word':'paragraph');});return;}down.current=true;e.currentTarget.setPointerCapture(e.pointerId);void pointerAt(index,x,y,e.shiftKey).then(()=>{const i=document.querySelector<HTMLElement>('[data-testid="documents-input"]');if(i&&document.activeElement!==i&&focusIsReclaimable())i.focus({preventScroll:true});});}}
   onPointerMove={e=>{if(down.current&&e.buttons&1){const [x,y]=at(e);dragTo(index,x,y);}}} onPointerUp={()=>{down.current=false;}} onPointerCancel={()=>{down.current=false;}}>
   {src&&<img src={src} alt="" draggable={false} className="absolute inset-0 h-full w-full select-none"/>}
   {failed&&<span role="alert" className="absolute inset-0 grid place-items-center text-[12px] text-ink-3">{t('documents.pageFailed')}</span>}
@@ -62,9 +62,13 @@ function Page({engine,index,width,height,zoom,rev,visible,onVisible}:{engine:Doc
  </div>;
 }
 /** Invisible textarea that owns keyboard focus, IME and clipboard for the on-page caret. It never holds document text. */
+/** True when keyboard focus sits on something the caret input should win back: nothing, the page, or a toolbar control (not a text field, dialog or menu). */
+const focusIsReclaimable=()=>{const a=document.activeElement;if(!a||a===document.body)return true;if(a.closest('[role="dialog"],[role="alertdialog"],[role="menu"],[role="listbox"]'))return false;const tag=a.tagName;if(tag==='INPUT'||tag==='TEXTAREA'||a.getAttribute('contenteditable')==='true')return false;return tag==='BUTTON'||tag==='SELECT'||a.hasAttribute('data-testid')&&a.getAttribute('data-testid')==='documents-page';};
 function CaretInput({left,top}:{left:number;top:number}){
- const {t}=useT();const ref=useRef<HTMLTextAreaElement>(null);const composing=useRef(false);
+ const {t}=useT();const rev=useDocuments().rev;const ref=useRef<HTMLTextAreaElement>(null);const composing=useRef(false);
  useEffect(()=>{const el=ref.current;if(el)el.scrollIntoView({block:'nearest',inline:'nearest'});},[left,top]);
+ /* After an edit or a caret move made from a toolbar control, typing and shortcuts continue in the document. */
+ useEffect(()=>{const el=ref.current;if(el&&document.activeElement!==el&&focusIsReclaimable())el.focus({preventScroll:true});},[left,top,rev]);
  useEffect(()=>{const el=ref.current;if(!el)return;el.focus({preventScroll:true});
   /* React's onBeforeInput is a keypress shim without inputType, so this listens natively. */
   const h=(n:InputEvent)=>{if(composing.current||n.isComposing||n.inputType==='insertCompositionText')return;n.preventDefault();if((n.inputType==='insertText'||n.inputType==='insertReplacementText')&&n.data)void typeText(n.data);};

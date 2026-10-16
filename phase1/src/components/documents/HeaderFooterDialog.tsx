@@ -32,7 +32,7 @@ export function HeaderFooterDialog({onClose}:{onClose:()=>void}){
   <div className="grid max-w-md gap-3 rounded-[var(--r-popup,25px)] bg-surface p-5 shadow-xl" data-testid="documents-hf-dialog">
    <h2 id="documents-hf-title" className="text-sm font-medium">{t('documents.hf.title')}</h2>
    <label className="grid gap-1 text-xs text-ink-2">{t('documents.page.scope')}
-    <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={scope} onChange={e=>setScope(e.currentTarget.value==='section'&&block!==undefined?'section':'document')} data-testid="documents-hf-scope">
+    <NativeSelect className="h-7 rounded-sm border border-subtle bg-surface px-1 text-xs text-ink" value={scope} onChange={e=>setScope(e.currentTarget.value==='section'&&block!==undefined?'section':'document')} data-testid="documents-hf-scope" autoFocus>
      <option value="document">{t('documents.page.scope.document')}</option><option value="section" disabled={block===undefined}>{t('documents.page.scope.section')}</option></NativeSelect></label>
    {failed?<p className="text-xs text-ink-3" role="alert">{t('documents.hf.unavailable')}</p>:!st?<p className="text-xs text-ink-3">{t('documents.hf.loading')}</p>:<>
     <div className="flex items-end gap-2"><label className="grid gap-1 text-xs text-ink-2">{t('documents.hf.header')}
