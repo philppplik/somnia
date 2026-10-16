@@ -17,7 +17,7 @@ export function ExtensionsProof(){
  return <main data-testid="extensions-proof" key={revision}><h1>Extensions DS adoption</h1><p>Actual popup surfaces on fixture hosts; every control renders through native control primitives.</p>
   <NetworkNotice onViewActivity={()=>setEvents(old=>[...old,'notice:activity'])}/>
   <ExtensionNav view="installed" counts={{installed:FIXTURE_EXTENSIONS.length,updates:1}} onSelect={v=>setEvents(old=>[...old,`nav:${v}`])} onAdd={()=>setEvents(old=>[...old,'nav:add'])}/>
-  <InstalledView list={FIXTURE_EXTENSIONS} host={host} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} onOpen={id=>setEvents(old=>[...old,`open:${id}`])} onOverflow={id=>setEvents(old=>[...old,`overflow:${id}`])} onBrowse={()=>{}} onAdd={()=>{}} onChanged={changed}/>
+  <InstalledView list={FIXTURE_EXTENSIONS} host={host} query={query} setQuery={setQuery} filter={filter} setFilter={setFilter} onOpen={(id,section)=>setEvents(old=>[...old,`open:${id}${section?`:${section}`:''}`])} onBrowse={()=>{}} onAdd={()=>{}} onChanged={changed}/>
   <h2>Activity</h2><ExtensionActivityTable events={FIXTURE_EVENTS} tz="UTC"/>
   <h2>Store tabs</h2><TabList idPrefix="store-proof" label="Store detail tabs" value={tab} onChange={setTab} tabs={[{id:'overview',label:'Overview'},{id:'access',label:'Access'},{id:'evidence',label:'Evidence'}]}/>
   <pre data-testid="extensions-proof-events" aria-label="Fixture events">{events.join('\n')}</pre></main>;
