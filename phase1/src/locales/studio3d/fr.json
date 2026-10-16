@@ -1089,5 +1089,13 @@
  "cmd.studio3d.lattice.apply": "Appliquer la déformation du treillis 3D lié au maillage",
  "cmd.studio3d.lattice.reset": "Réinitialiser un treillis 3D lié à sa grille de repos",
  "cmd.studio3d.lattice.clear": "Retirer le treillis lié aux maillages 3D sélectionnés",
+ "studio3d.lattice.nx": "Points du treillis X",
+ "studio3d.lattice.ny": "Points du treillis Y",
+ "studio3d.lattice.nz": "Points du treillis Z",
+ "studio3d.lattice.create": "Créer un treillis",
+ "studio3d.lattice.apply": "Appliquer le treillis",
+ "studio3d.lattice.reset": "Réinitialiser le treillis",
+ "studio3d.lattice.clear": "Retirer le treillis",
+ "studio3d.lattice.bound": "Treillis lié",
  "studio3d.hist.editVcolFill": "Remplir les couleurs de sommets"
 }

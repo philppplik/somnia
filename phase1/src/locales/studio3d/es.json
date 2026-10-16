@@ -1089,5 +1089,13 @@
  "cmd.studio3d.lattice.apply": "Hornear la deformación de la retícula 3D vinculada en la malla",
  "cmd.studio3d.lattice.reset": "Restablecer una retícula 3D vinculada a su estado de reposo",
  "cmd.studio3d.lattice.clear": "Quitar la retícula vinculada a las mallas 3D seleccionadas",
+ "studio3d.lattice.nx": "Puntos de retícula X",
+ "studio3d.lattice.ny": "Puntos de retícula Y",
+ "studio3d.lattice.nz": "Puntos de retícula Z",
+ "studio3d.lattice.create": "Crear retícula",
+ "studio3d.lattice.apply": "Aplicar retícula",
+ "studio3d.lattice.reset": "Restablecer retícula",
+ "studio3d.lattice.clear": "Quitar retícula",
+ "studio3d.lattice.bound": "Retícula vinculada",
  "studio3d.hist.editVcolFill": "Rellenar colores de vértice"
 }

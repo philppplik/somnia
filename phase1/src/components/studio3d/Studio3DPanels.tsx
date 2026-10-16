@@ -804,6 +804,8 @@ function MeshTools(){
  const [biFill,setBiFill]=useState(true);
  const [twAxis,setTwAxis]=useState<'x'|'y'|'z'>('z');
  const [twDeg,setTwDeg]=useState(90);
+ const [latNx,setLatNx]=useState(2);const [latNy,setLatNy]=useState(2);const [latNz,setLatNz]=useState(2);
+ const latBound=s.selected!=null?s.lattices.find(l=>l.id===s.selected):undefined;
  const [tpAxis,setTpAxis]=useState<'x'|'y'|'z'>('z');
  const [tpFactor,setTpFactor]=useState(2);
  const [spAxis,setSpAxis]=useState<'x'|'y'|'z'>('y');
@@ -872,6 +874,14 @@ function MeshTools(){
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.boolean',{op:boolOp})}>{t('studio3d.mesh.boolean')}</Button></div>
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={8} max={128} step={1} value={rmRes} aria-label={t('studio3d.mesh.remeshRes')} className="w-16" onChange={e=>setRmRes(Math.min(128,Math.max(8,Math.round(Number(e.currentTarget.value)||32))))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.remesh',{resolution:rmRes})}>{t('studio3d.mesh.remesh')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={2} max={8} step={1} value={latNx} aria-label={t('studio3d.lattice.nx')} className="w-14" onChange={e=>setLatNx(Math.min(8,Math.max(2,Math.round(Number(e.currentTarget.value)||2))))}/>
+   <NativeInput type="number" min={2} max={8} step={1} value={latNy} aria-label={t('studio3d.lattice.ny')} className="w-14" onChange={e=>setLatNy(Math.min(8,Math.max(2,Math.round(Number(e.currentTarget.value)||2))))}/>
+   <NativeInput type="number" min={2} max={8} step={1} value={latNz} aria-label={t('studio3d.lattice.nz')} className="w-14" onChange={e=>setLatNz(Math.min(8,Math.max(2,Math.round(Number(e.currentTarget.value)||2))))}/>
+   <Button variant="outline" disabled={!ready||s.selected==null} onClick={()=>void executeCommand('studio3d.lattice.create',{dims:[latNx,latNy,latNz]})}>{t('studio3d.lattice.create')}</Button></div>
+  {latBound&&<div className="flex flex-wrap items-center gap-1"><span className="text-xs text-ink-2">{t('studio3d.lattice.bound')}: {latBound.dims.join(' × ')}</span>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.lattice.apply',{})}>{t('studio3d.lattice.apply')}</Button>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.lattice.reset',{})}>{t('studio3d.lattice.reset')}</Button>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.lattice.clear',{})}>{t('studio3d.lattice.clear')}</Button></div>}
   <div className="flex flex-wrap items-center gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.vertexColors',{on:true,color:s.vcolBrush.color})}>{t('studio3d.vcol.fill')}</Button>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.vertexColors',{on:false})}>{t('studio3d.vcol.remove')}</Button></div>
   <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.vcolBrush.on} onChange={e=>void executeCommand('studio3d.vcol.brush',{on:e.currentTarget.checked})}/>{t('studio3d.vcol.paint')}</label>

@@ -1089,5 +1089,13 @@
  "cmd.studio3d.lattice.apply": "Aplicar a deformação da grade 3D vinculada à malha",
  "cmd.studio3d.lattice.reset": "Redefinir uma grade 3D vinculada para o estado de repouso",
  "cmd.studio3d.lattice.clear": "Remover a grade vinculada às malhas 3D selecionadas",
+ "studio3d.lattice.nx": "Pontos da grade X",
+ "studio3d.lattice.ny": "Pontos da grade Y",
+ "studio3d.lattice.nz": "Pontos da grade Z",
+ "studio3d.lattice.create": "Criar grade",
+ "studio3d.lattice.apply": "Aplicar grade",
+ "studio3d.lattice.reset": "Redefinir grade",
+ "studio3d.lattice.clear": "Remover grade",
+ "studio3d.lattice.bound": "Grade vinculada",
  "studio3d.hist.editVcolFill": "Preencher cores de vértice"
 }

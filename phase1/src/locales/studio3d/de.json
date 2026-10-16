@@ -1089,5 +1089,13 @@
  "cmd.studio3d.lattice.apply": "Die Verformung des gebundenen 3D-Gitters ins Mesh backen",
  "cmd.studio3d.lattice.reset": "Ein gebundenes 3D-Gitter auf sein Ruheraster zurücksetzen",
  "cmd.studio3d.lattice.clear": "Das an die ausgewählten 3D-Meshes gebundene Gitter entfernen",
+ "studio3d.lattice.nx": "Gitterpunkte X",
+ "studio3d.lattice.ny": "Gitterpunkte Y",
+ "studio3d.lattice.nz": "Gitterpunkte Z",
+ "studio3d.lattice.create": "Gitter erstellen",
+ "studio3d.lattice.apply": "Gitter anwenden",
+ "studio3d.lattice.reset": "Gitter zurücksetzen",
+ "studio3d.lattice.clear": "Gitter entfernen",
+ "studio3d.lattice.bound": "Gitter gebunden",
  "studio3d.hist.editVcolFill": "Vertexfarben füllen"
 }

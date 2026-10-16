@@ -250,7 +250,7 @@ export default function Viewport3D(){
    if(an.clip>=infos.length&&an.clip>0){stopAnim();patchStudio3D({anim:{clip:0,playing:false,time:0,loop:true,speed:1,range:null}});}
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
-   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
+   patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),lattices:stage.latticeIds().map(id=>({id,dims:stage.latticePoints(id)?.dims??([2,2,2] as [number,number,number])})),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
    syncIk();syncFabrik();syncOnion();syncMotionPath();syncLattice();
    drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };
@@ -420,6 +420,7 @@ export default function Viewport3D(){
   const latGizmo=new TransformControls(camera,renderer.domElement);latGizmo.setMode('translate');
   const latGizmoHelper=latGizmo.getHelper();latGizmoHelper.visible=false;scene.add(latGizmoHelper);
   let latDrag:{meshId:number;index:number;moved:boolean}|null=null;
+  let latCancel=false;let latPoints0:number[]|null=null;
   /** World-space cage vertex positions for one bound mesh, from its current control points. */
   const latCagePositions=(mesh:THREE.Mesh,dims:[number,number,number],points:number[]):Float32Array=>{
    const [nx,ny,nz]=dims;const v=new THREE.Vector3();const world:number[]=[];
@@ -459,7 +460,7 @@ export default function Viewport3D(){
   /** Drag move: the gizmo dragged a marker - push the point into the stage (live preview) and refresh that mesh's cage. */
   const latDragUpdate=()=>{
    const d=latDrag;const marker=latGizmo.object as THREE.Mesh|undefined;
-   if(!d||!marker)return;
+   if(!d||!marker||latCancel)return;
    const mesh=stage.find(d.meshId) as THREE.Mesh|null;if(!mesh?.isMesh)return;
    const lp=mesh.worldToLocal(marker.position.clone());
    try{stage.latticeMovePoint(d.meshId,d.index,[lp.x,lp.y,lp.z]);}catch{return;}
@@ -471,10 +472,11 @@ export default function Viewport3D(){
    const on=!!(e as unknown as {value:boolean}).value;
    if(on){
     const meta=(latGizmo.object as THREE.Mesh|undefined)?.userData.lattice as {meshId:number;index:number}|undefined;
-    if(meta){latDrag={meshId:meta.meshId,index:meta.index,moved:false};controls.enabled=false;gizmo.enabled=false;}
+    if(meta){latDrag={meshId:meta.meshId,index:meta.index,moved:false};latCancel=false;latPoints0=stage.latticePoints(meta.meshId)?.points??null;controls.enabled=false;gizmo.enabled=false;}
    }else{
     const d=latDrag;latDrag=null;controls.enabled=true;gizmo.enabled=true;
-    if(d&&d.moved)try{stage.latticeBake(d.meshId);}catch(err){patchStudio3D({notice:err instanceof Error?err.message:String(err)});syncLattice();}
+    if(d&&latCancel){latCancel=false;if(latPoints0)try{stage.latticeSetPoints(latPoints0,[d.meshId]);}catch{/* keep the moved points */}try{stage.latticeRevert(d.meshId);}catch{/* the lattice may be gone */}latPoints0=null;syncLattice();invalidate();}
+    else if(d&&d.moved)try{stage.latticeBake(d.meshId);}catch(err){patchStudio3D({notice:err instanceof Error?err.message:String(err)});syncLattice();}
    }
   });
   latGizmo.addEventListener('change',()=>{if(latDrag){latDrag.moved=true;latDragUpdate();}invalidate();});
@@ -1556,6 +1558,8 @@ export default function Viewport3D(){
   };
   const onKey=(e:KeyboardEvent)=>{
    const sel=getStudio3DState().selected;
+   if(e.key==='Escape'&&latDrag){latCancel=true;latGizmo.reset();e.preventDefault();e.stopPropagation();return;}
+   if(e.key==='Escape'&&latGizmo.object){latGizmo.detach();latGizmoHelper.visible=false;invalidate();return;}
    if(!e.ctrlKey&&!e.metaKey&&!e.altKey){
     if(e.key==='w'||e.key==='W'){gizmo.setMode('translate');patchStudio3D({gizmo:'translate'});invalidate();e.preventDefault();return;}
     if(e.key==='e'||e.key==='E'){gizmo.setMode('rotate');patchStudio3D({gizmo:'rotate'});invalidate();e.preventDefault();return;}

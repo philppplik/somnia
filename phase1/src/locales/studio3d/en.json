@@ -1089,5 +1089,13 @@
  "cmd.studio3d.lattice.apply": "Bake the bound 3D lattice deformation into the mesh",
  "cmd.studio3d.lattice.reset": "Reset a bound 3D lattice to its rest grid",
  "cmd.studio3d.lattice.clear": "Remove the lattice bound to the selected 3D meshes",
+ "studio3d.lattice.nx": "Lattice points X",
+ "studio3d.lattice.ny": "Lattice points Y",
+ "studio3d.lattice.nz": "Lattice points Z",
+ "studio3d.lattice.create": "Create lattice",
+ "studio3d.lattice.apply": "Apply lattice",
+ "studio3d.lattice.reset": "Reset lattice",
+ "studio3d.lattice.clear": "Clear lattice",
+ "studio3d.lattice.bound": "Lattice bound",
  "studio3d.hist.editVcolFill": "Fill vertex colors"
 }

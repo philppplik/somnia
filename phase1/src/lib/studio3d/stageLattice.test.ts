@@ -129,3 +129,17 @@ test('bake refuses a mesh that changed since binding',()=>{
  st.latticeClear([mesh.id]);
  assert.deepEqual(st.latticeIds(),[]);
 });
+test('latticePoints returns copies and latticeIds tracks bindings',()=>{
+ const {st,mesh}=mk();
+ assert.deepEqual(st.latticeIds(),[]);
+ assert.equal(st.latticePoints(mesh.id),null);
+ st.latticeCreate([3,2,2],[mesh.id]);
+ assert.deepEqual(st.latticeIds(),[mesh.id]);
+ const info=st.latticePoints(mesh.id)!;
+ assert.deepEqual(info.dims,[3,2,2]);
+ assert.equal(info.points.length,3*2*2*3);
+ info.points[0]=999;info.dims[0]=8;
+ const again=st.latticePoints(mesh.id)!;
+ assert.notEqual(again.points[0],999,'mutating the copy does not touch the lattice');
+ assert.deepEqual(again.dims,[3,2,2]);
+});
