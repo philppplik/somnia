@@ -852,7 +852,8 @@ test('mesh edit mode: select boundary finds the rim after a delete',async({page}
  expect(await run(page,'studio3d.edit.selectBoundary',{kind:'edge'})).toBe(true);
  let s=await session(page);expect(s.edit).toMatchObject({edges:0});
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
- expect(await run(page,'studio3d.edit.delete',{})).toBe(true);
+ // Deleting defaults to the current edit mode; the faces were picked across modes, so name the kind (the stage unit tests do the same).
+ expect(await run(page,'studio3d.edit.delete',{kind:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectBoundary',{kind:'edge'})).toBe(true);
  s=await session(page);expect(s.edit).toMatchObject({edges:4});
  expect(await run(page,'studio3d.edit.selectBoundary',{kind:'vertex'})).toBe(true);
@@ -912,7 +913,10 @@ test('mesh edit mode: select linked keeps a duplicated shell separate',async({pa
  expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[24]})).toBe(true);
  expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(true);
  s=await session(page);expect(s.edit).toMatchObject({verts:4});
+ // Linked seeds from every selection kind (pinned by the stage unit test), so the refusal needs all three kinds empty; selectAll none clears only the current mode by default.
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none',kind:'edge'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none',kind:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(false);
  await expect(notice(page,'Select something first')).toBeVisible();
 });
@@ -949,7 +953,9 @@ test('mesh edit mode: fill closes a deleted side with a centroid fan',async({pag
  s=await session(page);expect(s.stats.triangles).toBe(14);
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(10);
+ // Fill works on the edge selection, which selectAll none in face mode leaves alone; clear the edges before expecting the refusal.
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
+ expect(await run(page,'studio3d.edit.selectAll',{op:'none',kind:'edge'})).toBe(true);
  expect(await run(page,'studio3d.edit.fill',{})).toBe(false);
  await expect(notice(page,'Select an edge loop to fill')).toBeVisible();
 });
@@ -1057,7 +1063,8 @@ test('mesh edit mode: select sharp edges by dihedral angle',async({page})=>{
  expect(await run(page,'studio3d.edit.selectSharp',{degrees:91})).toBe(true);
  s=await session(page);expect(s.edit.edges).toBe(0);
  expect(await run(page,'studio3d.edit.selectSharp',{degrees:-1})).toBe(false);
- await expect(notice(page,'between 0 and 180')).toBeVisible();
+ // Negative degrees are rejected by command parameter validation before the stage runs.
+ await expect(notice(page,'must be at least 0')).toBeVisible();
 });
 
 test('mesh edit mode: rotate turns the selected vertices around their centroid',async({page})=>{
