@@ -171,6 +171,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   if(e.button!==0)return;e.stopPropagation();
   const target=e.currentTarget;target.setPointerCapture(e.pointerId);
   const additive=e.shiftKey||e.ctrlKey||e.metaKey;const was=sel.some(k=>sameKey(k,ref));
+  const laneW=(target.parentElement as HTMLElement|null)?.clientWidth??0;
   let group=was?sel:clickSelect(sel,ref,additive);
   if(!was)animationSession().selectKeys(group);
   const from=ref.t;let moved=false;let applied=0;
@@ -184,7 +185,20 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
    if(moved&&commit){animationSession().commitPreview();animationSession().selectKeys(shiftSelection(group,applied));animationSession().setView({playhead:from+applied});return;}
    animationSession().cancelPreview();
    if(!commit)return;
-   if(was){group=additive?sel.filter(k=>!sameKey(k,ref)):[ref];animationSession().selectKeys(group);}
+   if(was){
+    let playTo=from;
+    if(additive){group=sel.filter(k=>!sameKey(k,ref));}
+    else{
+     // Adjacent frames stack their key diamonds on one pixel spot: clicking the selected key cycles the selection through the stack so every key stays reachable by mouse.
+     const row=comp.layers.find(l=>l.id===ref.layer)?.transform[ref.prop].keys??[];const px=(t:number)=>(t-win.t0)/win.span*laneW;
+     const stack=row.map(k=>k.t).filter(t=>Math.abs(px(t)-px(ref.t))<12).sort((a,b)=>a-b);
+     const next=stack.length>1?stack[(stack.indexOf(ref.t)+1)%stack.length]:ref.t;
+     group=[{...ref,t:next}];playTo=next;
+    }
+    animationSession().selectKeys(group);
+    if(!additive)animationSession().setView({playhead:playTo});
+    return;
+   }
    if(!additive)animationSession().setView({playhead:from});
   };
   const up=()=>finish(true);const key=(ev:KeyboardEvent)=>{if(ev.key==='Escape')finish(false);};
@@ -363,7 +377,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
      <Button size="tiny" variant="ghost" className="justify-start pl-6 text-ink-3" disabled={l.locked} aria-label={t('animation.keys.selectRow',{name:t(PROP_LABEL[k])})} onClick={()=>animationSession().selectKeys(l.transform[k].keys.map(key=>({layer:l.id,prop:k,t:key.t})))} data-testid={`animation-keyrow-label-${k}`}>{t(PROP_LABEL[k])}</Button>
      <div className="relative h-5 touch-none" data-lane onPointerDown={startMarquee}>
       {l.transform[k].keys.map((key,ki)=>{if(!inWin(key.t))return null;const ref:KeyRef={layer:l.id,prop:k,t:key.t};const on=sel.some(x=>sameKey(x,ref));
-       return <button key={ki} type="button" className={`absolute top-0.5 size-3 -translate-x-1/2 rotate-45 border ${on?'border-ink bg-ink ring-2 ring-accent':'border-line bg-accent-fill'}`} style={{left:pc(key.t)}} disabled={l.locked}
+       return <button key={ki} type="button" className={`absolute top-0.5 size-3 -translate-x-1/2 rotate-45 border ${on?'z-10 border-ink bg-ink ring-2 ring-accent':'border-line bg-accent-fill'}`} style={{left:pc(key.t)}} disabled={l.locked}
         data-key-layer={l.id} data-key-prop={k} data-key-t={key.t} aria-pressed={on} data-selected={on||undefined}
         aria-label={t('animation.key.at',{time:timecode(key.t,comp.fps)})} onPointerDown={dragKey(ref)} onKeyDown={keyDown(ref)}/>;})}
      </div></div>)}
