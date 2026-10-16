@@ -11,7 +11,8 @@ test('animation key tools menu: grouped items, enablement follows the key select
  await page.getByLabel('Opacity',{exact:true}).fill('20');await page.getByLabel('Opacity',{exact:true}).press('Enter');
  const keys=page.getByTestId('animation-keyrow-opacity').locator('button[data-key-prop]');
  await expect(keys).toHaveCount(2);
- await keys.nth(0).click();await keys.nth(1).click({modifiers:['Shift']});
+ // Key diamonds on adjacent frames overlap at the default zoom: a pointer click always lands on the topmost key, so dispatch the click to the exact intended key instead.
+ await keys.nth(0).dispatchEvent('click');await keys.nth(1).dispatchEvent('click',{shiftKey:true});
  await page.getByTestId('animation-keys-tools').click();
  const groups:[string,string[]][]=[['values',['flatten','average','match','ramp','thin']],['ease',['ease-copy','influence','tame']],['select',['peaks','invert-selection','property','nth']]];
  for(const [g,ids] of groups){
