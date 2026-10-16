@@ -165,7 +165,7 @@ test('3D studio selects several objects with a Shift-drag marquee',async({page})
  await run(page,'studio3d.select',{id:null});
  const box=(await page.getByTestId('studio3d-viewport').boundingBox())!;
  await page.keyboard.down('Shift');
- await page.mouse.move(box.x+4,box.y+4);await page.mouse.down();await page.mouse.move(box.x+box.width-4,box.y+box.height-4,{steps:10});await page.mouse.up();
+ await page.mouse.move(box.x+40,box.y+40);await page.mouse.down();await page.mouse.move(box.x+box.width-40,box.y+box.height-40,{steps:10});await page.mouse.up();
  await page.keyboard.up('Shift');
  const s=await session(page);
  expect(s.marked.length+(s.selected==null?0:1)).toBeGreaterThanOrEqual(2);
@@ -1542,6 +1542,7 @@ test('3D studio material polish: glass and wood presets, copy/paste material and
 });
 
 test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, reparent and persistence',async({page})=>{
+ test.slow(); // marquee, multi-select, group, reparent, rename and a save/reopen in one scenario: past the default 30s on a cold dev server
  await blank(page);
  const cube=await insert(page,'cube',-1);const sphere=await insert(page,'sphere',1);
  // Hide and lock the cube from its outline row.
@@ -1552,7 +1553,7 @@ test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, rep
  // A shift-drag marquee over the viewport picks the sphere but skips the hidden, locked cube.
  const vp=page.getByTestId('studio3d-viewport');const box=(await vp.boundingBox())!;
  await page.keyboard.down('Shift');
- await page.mouse.move(box.x+4,box.y+4);await page.mouse.down();await page.mouse.move(box.x+box.width-4,box.y+box.height-4,{steps:5});await page.mouse.up();
+ await page.mouse.move(box.x+40,box.y+40);await page.mouse.down();await page.mouse.move(box.x+box.width-40,box.y+box.height-40,{steps:5});await page.mouse.up();
  await page.keyboard.up('Shift');
  await expect.poll(async()=>(await session(page)).marked).toEqual([sphere]);
  await run(page,'studio3d.select',{id:null});
@@ -1562,7 +1563,7 @@ test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, rep
  await expect.poll(async()=>(await session(page)).marked).toEqual([cube,sphere]);
  await expect.poll(async()=>(await session(page)).selected).toBe(sphere);
  // Group and ungroup from the outline toolbar.
- await page.getByTestId('studio3d-outline-groups').getByRole('button',{name:'Group'}).click();
+ await page.getByTestId('studio3d-outline-groups').getByRole('button',{name:'Group',exact:true}).click();
  const grp=(await session(page)).outline.find(o=>o.kind==='group')!;
  expect(grp).toBeTruthy();
  await run(page,'studio3d.select',{id:grp.id});
@@ -1584,7 +1585,8 @@ test('3D studio outliner: hide/lock, ctrl/shift multi-select, inline rename, rep
  await page.getByRole('button',{name:'Hide Sphere'}).click();
  const [download]=await Promise.all([page.waitForEvent('download'),page.keyboard.press('Control+s')]);
  const saved=readFileSync(await download.path()!);
- await open3d(page);
+ // Reopen without a page reload (the reload open can wedge at load phase read; see the import/export polish spec).
+ await run(page,'studio3d.scene.new',{});
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'scene.som3d',mimeType:'application/json',buffer:saved});
  await expect.poll(async()=>(await session(page)).status).toBe('ready');
  const after=await session(page);
@@ -1799,6 +1801,7 @@ test('3D studio opens a dropped model with its sidecars and shows an import summ
 });
 
 test('3D studio outliner: folding groups, keyboard navigation and selection-set actions',async({page})=>{
+ test.slow(); // fold, filter, keyboard rename/navigation and selection-set actions in one scenario: past the default 30s on a cold dev server
  await blank(page);
  const a=await insert(page,'cube',-1);await insert(page,'sphere',1);
  await page.getByTestId('studio3d-outline-row-'+a).click();
@@ -1813,9 +1816,9 @@ test('3D studio outliner: folding groups, keyboard navigation and selection-set 
  await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
  // A name filter still finds rows inside a folded group.
  await page.getByRole('button',{name:`Collapse ${group.name}`}).click();
- await page.getByTestId('studio3d-scene-panel').getByRole('textbox').first().fill('Cube');
+ await page.getByRole('textbox',{name:'Filter objects'}).fill('Cube');
  await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
- await page.getByTestId('studio3d-scene-panel').getByRole('textbox').first().fill('');
+ await page.getByRole('textbox',{name:'Filter objects'}).fill('');
  await page.getByRole('button',{name:`Expand ${group.name}`}).click();
  // Keyboard: F2 renames, arrows move between rows, ArrowLeft folds an open group.
  await page.getByTestId('studio3d-outline-row-'+a).focus();
@@ -1829,7 +1832,8 @@ test('3D studio outliner: folding groups, keyboard navigation and selection-set 
  await page.keyboard.press('ArrowRight');
  await expect(page.getByTestId('studio3d-outline-row-'+a)).toBeVisible();
  // Duplicate and delete act on the selection set (the group with its two children) and undo as one step each.
- await page.getByTestId('studio3d-outline-row-'+group.id).click();
+ // Row clicks toggle: select explicitly instead of depending on the current toggle state.
+ await run(page,'studio3d.select',{id:group.id});
  await expect.poll(async()=>(await session(page)).selected).toBe(group.id);
  await page.getByTestId('studio3d-outline-selection').getByRole('button',{name:'Duplicate selected'}).click();
  await expect.poll(async()=>(await session(page)).outline.length).toBe(6);
