@@ -1162,6 +1162,24 @@ export class Stage{
   if(mir.length)d=shearSelected(d,mir,along,by,(along===ma)!==(by===ma)?-factor:factor,undefined,pivot?this.mirrorDelta(pivot):undefined,true);
   return d;},true);}
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
+ /** Fills the selected vertices of the edited mesh with a vertex color; the mesh gets a white color attribute first when it has none. */
+ editVcolFill(color:[number,number,number]){this.editOp({key:'studio3d.hist.editVcolFill'},m=>{
+  const sel=[...this.editSel.verts];
+  if(!sel.length)throw new StageError('Select vertices to fill.');
+  const nv=m.positions.length/3;
+  const colors=m.colors?[...m.colors]:new Array<number>(nv*3).fill(1);
+  for(const v of sel){colors[v*3]=color[0];colors[v*3+1]=color[1];colors[v*3+2]=color[2];}
+  return{...m,colors};
+ });}
+ /** Reads the vertex color of the edited mesh (linear rgb), for the eyedropper. */
+ editVcolPick(vertex:number):[number,number,number]{
+  const m=this.editMesh();
+  const verts=m.geometry.getAttribute('position').count;
+  if(!Number.isInteger(vertex)||vertex<0||vertex>=verts)throw new StageError(`Vertex ${vertex} does not exist.`);
+  const c=m.geometry.getAttribute('color') as THREE.BufferAttribute|undefined;
+  if(!c)throw new StageError(`${m.name} has no vertex colors to pick.`);
+  return[c.getX(vertex),c.getY(vertex),c.getZ(vertex)];
+ }
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Selects the shortest edge path between two vertices (Dijkstra by edge length), replacing the vertex or edge selection. Selection changes are not undo steps. */

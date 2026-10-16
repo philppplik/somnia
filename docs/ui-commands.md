@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1114 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1116 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -874,6 +874,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.subdivide` | Split selected triangles into four by edge midpoints | Edit | studio3d |  |
 | `studio3d.edit.symmetrize` | Bake a mirror symmetry into the edited 3D mesh: keep one side of the local mirror plane, mirror it onto the other and weld the seam | Edit | studio3d |  |
 | `studio3d.edit.toSphere` | Pull the selected vertices onto a sphere | Edit | studio3d |  |
+| `studio3d.edit.vcolFill` | Fill the selected vertices of the edited 3D mesh with a vertex color (the brush color by default; creates the attribute on first use) | Edit | studio3d |  |
+| `studio3d.edit.vcolPick` | Pick the vertex color of a vertex of the edited 3D mesh as the brush color | Edit | studio3d |  |
 | `studio3d.edit.vertSlide` | Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector | Edit | studio3d |  |
 | `studio3d.edit.weld` | Merge selected vertices at centre | Edit | studio3d |  |
 | `studio3d.env.open` | Open an HDR environment map | View | studio3d |  |

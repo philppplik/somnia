@@ -143,3 +143,35 @@ test('falloff shapes the dab and errors stay readable',()=>{
  assert.ok(sawMid,'smooth falloff leaves a gradient ring');
  st.vcolPaintEnd(mesh.id); // no open stroke: safe no-op
 });
+test('edit-mode fill colors only the selection, creates the attribute, undoes',()=>{
+ const {st,mesh}=mk();
+ st.editStart(mesh.id);
+ st.editSelect('vertex',[0,1,2]);
+ st.editVcolFill([1,0,0]);
+ const c=colAttr(mesh)!;
+ assert.ok(c,'the attribute is created by the fill');
+ for(let v=0;v<c.count;v++){
+  if(v<3)assert.ok(Math.abs(c.getX(v)-1)<1e-6&&Math.abs(c.getY(v))<1e-6,'the selection is red');
+  else assert.ok(Math.abs(c.getX(v)-1)<1e-6&&Math.abs(c.getY(v)-1)<1e-6,'the rest stays white');
+ }
+ assert.equal((mesh.material as THREE.MeshStandardMaterial).vertexColors,true);
+ st.undo();
+ assert.ok(!colAttr(mesh),'undo removes the created attribute');
+ st.redo();
+ st.editVcolFill([0,1,0]); // recolor the same selection
+ assert.ok(Math.abs(colAttr(mesh)!.getY(0)-1)<1e-6);
+ st.editEnd();
+});
+test('edit-mode fill needs a selection; pick reads a color back',()=>{
+ const {st,mesh}=mk();
+ st.editStart(mesh.id);
+ assert.throws(()=>st.editVcolFill([1,0,0]),/Select vertices to fill/);
+ st.editSelect('vertex',[5]);
+ st.editVcolFill([0.25,0.5,0.75]);
+ assert.deepEqual(st.editVcolPick(5),[0.25,0.5,0.75]);
+ const plain=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial());plain.name='Plain';st.loadMany([plain]);
+ st.editEnd();st.editStart(plain.id);
+ assert.throws(()=>st.editVcolPick(0),/no vertex colors to pick/);
+ assert.throws(()=>st.editVcolPick(99),/does not exist/);
+ st.editEnd();
+});

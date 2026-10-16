@@ -48,6 +48,8 @@ export interface Studio3DController{
  solidify(thickness:number,offset:number,ids?:number[]):number;
  fillHoles(ids?:number[]):number;
  setVertexColors(on:boolean,color:string|undefined,ids?:number[]):number;
+ editVcolFill(color?:string):void;
+ editVcolPick(vertex:number):void;
  setVcolBrush(patch:Partial<{on:boolean;color:string;radius:number;strength:number;falloff:'smooth'|'linear'|'constant'}>):void;
  vcolPaintDab(x:number,y:number,z:number,opts?:{color?:string;radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number;
  relax(iterations:number,factor:number,ids?:number[]):number;
@@ -362,6 +364,8 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.edit.subdivide','Split each selected triangle of the edited 3D mesh into four by edge midpoints','Edit',()=>need().editSubdivide(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.poke','Split each selected triangle of the edited 3D mesh into three at its centroid','Edit',()=>need().editPoke(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.duplicate','Duplicate the selected triangles of the edited 3D mesh as a detached shell','Edit',()=>need().editDuplicate(),undefined,()=>getStudio3DState().edit!=null),
+  add<{color?:string}>('studio3d.edit.vcolFill','Fill the selected vertices of the edited 3D mesh with a vertex color (the brush color by default; creates the attribute on first use)','Edit',p=>need().editVcolFill(p?.color),object({color:{type:'string',pattern:'^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$'}},[]),()=>getStudio3DState().edit!=null),
+  add<{vertex:number}>('studio3d.edit.vcolPick','Pick the vertex color of a vertex of the edited 3D mesh as the brush color','Edit',p=>need().editVcolPick(p.vertex),object({vertex:{type:'integer',minimum:0}},['vertex']),()=>getStudio3DState().edit!=null),
   add<{amount?:number}>('studio3d.edit.fatten','Move the selected vertices of the edited 3D mesh along their normals (negative shrinks)','Edit',p=>need().editFatten(p?.amount??0.1),object({amount:{type:'number',minimum:-1000,maximum:1000}},[]),()=>getStudio3DState().edit!=null),
   add<{iterations?:number;factor?:number}>('studio3d.edit.relax','Smooth the selected vertices of the edited 3D mesh towards their neighbourhood average','Edit',p=>need().editRelax(p?.iterations??1,p?.factor??0.5),object({iterations:{type:'integer',minimum:1,maximum:50},factor:{type:'number',exclusiveMinimum:0,maximum:1}},[]),()=>getStudio3DState().edit!=null),
   add('studio3d.edit.flip','Flip the normals of the selected triangles of the edited 3D mesh','Edit',()=>need().editFlip(),undefined,()=>getStudio3DState().edit!=null),

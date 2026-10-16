@@ -1079,5 +1079,8 @@
  "studio3d.vcol.remove": "Supprimer les couleurs de sommets",
  "studio3d.vcol.paint": "Peindre les couleurs de sommets",
  "studio3d.vcol.color": "Couleur de la brosse",
- "studio3d.hist.paintVcol": "Peindre les couleurs de sommets"
+ "studio3d.hist.paintVcol": "Peindre les couleurs de sommets",
+ "cmd.studio3d.edit.vcolFill": "Remplir les sommets sélectionnés du maillage 3D édité avec une couleur de sommet (la couleur de la brosse par défaut ; crée l'attribut à la première utilisation)",
+ "cmd.studio3d.edit.vcolPick": "Prendre la couleur de sommet d'un sommet du maillage 3D édité comme couleur de brosse",
+ "studio3d.hist.editVcolFill": "Remplir les couleurs de sommets"
 }

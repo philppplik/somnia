@@ -1079,5 +1079,8 @@
  "studio3d.vcol.remove": "Quitar colores de vértice",
  "studio3d.vcol.paint": "Pintar colores de vértice",
  "studio3d.vcol.color": "Color del pincel",
- "studio3d.hist.paintVcol": "Pintar colores de vértice"
+ "studio3d.hist.paintVcol": "Pintar colores de vértice",
+ "cmd.studio3d.edit.vcolFill": "Rellenar los vértices seleccionados de la malla 3D editada con un color de vértice (el color del pincel por defecto; crea el atributo la primera vez)",
+ "cmd.studio3d.edit.vcolPick": "Tomar el color de vértice de un vértice de la malla 3D editada como color del pincel",
+ "studio3d.hist.editVcolFill": "Rellenar colores de vértice"
 }

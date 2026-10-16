@@ -10542,6 +10542,32 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.vcolFill",
+      "title": "Fill the selected vertices of the edited 3D mesh with a vertex color (the brush color by default; creates the attribute on first use)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.edit.vcolPick",
+      "title": "Pick the vertex color of a vertex of the edited 3D mesh as the brush color",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.vertSlide",
       "title": "Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector",
       "category": "Edit",

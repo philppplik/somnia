@@ -1079,5 +1079,8 @@
  "studio3d.vcol.remove": "Remove vertex colors",
  "studio3d.vcol.paint": "Paint vertex colors",
  "studio3d.vcol.color": "Brush color",
- "studio3d.hist.paintVcol": "Paint vertex colors"
+ "studio3d.hist.paintVcol": "Paint vertex colors",
+ "cmd.studio3d.edit.vcolFill": "Fill the selected vertices of the edited 3D mesh with a vertex color (the brush color by default; creates the attribute on first use)",
+ "cmd.studio3d.edit.vcolPick": "Pick the vertex color of a vertex of the edited 3D mesh as the brush color",
+ "studio3d.hist.editVcolFill": "Fill vertex colors"
 }
