@@ -46,7 +46,7 @@ test('three.js stays in the lazy viewport chunk',()=>{
  const hits:string[]=[];
  const walk=(d:string)=>{for(const f of readdirSync(d)){const p=join(d,f);if(statSync(p).isDirectory()){if(f!=='node_modules'&&f!=='generated')walk(p);}else if(/\.tsx?$/.test(f)&&!/\.test\./.test(f)){const t=readFileSync(p,'utf8');if(/from\s+['"]three(\/|['"])/.test(t)||/import\(['"]three/.test(t))hits.push(p.slice(src.length));}}};
  walk(src);
- assert.deepEqual(hits.sort(),['components/studio3d/Viewport3D.tsx','lib/studio3d/convexHull.ts','lib/studio3d/shrinkwrap.ts','lib/studio3d/stage.ts']);
+ assert.deepEqual(hits.sort(),['components/studio3d/Viewport3D.tsx','lib/studio3d/convexHull.ts','lib/studio3d/shading.ts','lib/studio3d/shrinkwrap.ts','lib/studio3d/stage.ts','lib/studio3d/text3d.ts']);
  const stageUsers:string[]=[];
  const scan=(d:string)=>{for(const f of readdirSync(d)){const p=join(d,f);if(statSync(p).isDirectory()){if(f!=='node_modules'&&f!=='generated')scan(p);}else if(/\.tsx?$/.test(f)&&!/\.test\./.test(f)&&/^import\s+(?!\s*type)[^\n]*(studio3d\/stage'|'\.\/stage')/m.test(readFileSync(p,'utf8')))stageUsers.push(p.slice(src.length));}};
  scan(src);
