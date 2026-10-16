@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1123 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1124 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1034,6 +1034,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.view.remove` | Delete a saved named view | View | studio3d |  |
 | `studio3d.view.rename` | Rename a saved view | View | studio3d |  |
 | `studio3d.view.reset` | Reset 3D view | View | studio3d |  |
+| `studio3d.view.safeFrames` | Show or hide the camera safe-frame guides (action-safe and title-safe areas) | View | studio3d |  |
 | `studio3d.view.save` | Save the current viewport as a named view | View | studio3d |  |
 | `studio3d.view.shading` | Set the 3D viewport shading (normal-color or matcap preview; the document stays unchanged) | View | studio3d |  |
 | `studio3d.view.turntable` | Start or stop the turntable preview (view only) | View | studio3d |  |

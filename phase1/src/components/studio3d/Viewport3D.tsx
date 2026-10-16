@@ -29,6 +29,7 @@ import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs'
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
 import {applyShading,createMatcapMaterial} from '../../lib/studio3d/shading';
+import {SAFE_FRAMES,SAFE_FRAME_COLOR} from '../../lib/studio3d/safeFrames';
 import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,snapMeasurePoint,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
@@ -234,6 +235,19 @@ export default function Viewport3D(){
   const shadedOrig=new WeakMap<THREE.Mesh,THREE.Material|THREE.Material[]>();
   /** Re-applies the shading preview to every document mesh (also after scene loads and material edits). */
   const syncShading=()=>{applyShading(holder,getStudio3DState().shading,normalMat,shadedOrig,matcapMat);invalidate();};
+  let safeEl:HTMLElement|null=null;
+  /** DOM overlay for the camera safe frames: guides over the canvas, never in renders or exports. */
+  const syncSafeFrames=()=>{
+   const on=getStudio3DState().safeFrames;
+   if(on&&!safeEl){
+    safeEl=document.createElement('div');
+    safeEl.style.cssText='position:absolute;inset:0;pointer-events:none;z-index:5;';
+    safeEl.dataset.testid='studio3d-safe-frames';
+    for(const r of SAFE_FRAMES){const d=document.createElement('div');d.style.cssText=`position:absolute;left:${r.inset*100}%;top:${r.inset*100}%;right:${r.inset*100}%;bottom:${r.inset*100}%;border:1px dashed ${SAFE_FRAME_COLOR};`;safeEl.appendChild(d);}
+    if(getComputedStyle(el).position==='static')el.style.position='relative';
+    el.appendChild(safeEl);
+   }else if(!on&&safeEl){safeEl.remove();safeEl=null;}
+  };
   const drawSelection=()=>{
    clearSelection();const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
    if(obj){const box=new THREE.Box3().setFromObject(obj);
@@ -259,7 +273,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),lattices:stage.latticeIds().map(id=>({id,dims:stage.latticePoints(id)?.dims??([2,2,2] as [number,number,number])})),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
    syncIk();syncFabrik();syncOnion();syncMotionPath();syncLattice();
-   drawSelection();applyWire(getStudio3DState().wireframe);syncShading();applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncShading();syncSafeFrames();applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
   let previewRaf=0;
@@ -1382,6 +1396,7 @@ export default function Viewport3D(){
    setGrid:on=>{grid.visible=on;patchStudio3D({grid:on});invalidate();},
    setWireframe:on=>{applyWire(on);patchStudio3D({wireframe:on});invalidate();},
    viewShading:mode=>{patchStudio3D({shading:mode});syncShading();},
+   viewSafeFrames:on=>{patchStudio3D({safeFrames:on});syncSafeFrames();},
    setUvChecker:on=>{patchStudio3D({uvChecker:on});syncUvChecker();invalidate();},
    uvSeamMark:mark=>{stage.uvSeamMark(mark);afterEditOp();},
    uvSeamsFromIslands:()=>{stage.uvSeamsFromIslands();afterEditOp();},

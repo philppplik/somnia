@@ -12622,6 +12622,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.view.safeFrames",
+      "title": "Show or hide the camera safe-frame guides (action-safe and title-safe areas)",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.view.save",
       "title": "Save the current viewport as a named view",
       "category": "View",
