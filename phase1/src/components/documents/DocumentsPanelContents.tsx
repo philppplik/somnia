@@ -3,7 +3,9 @@ import type {InspectorSectionProps,PanelHostProps} from '../../lib/shell/types';
 import {findDocumentMatches,documentStatistics} from '../../lib/documents/panels';
 import {documentPanelReady,runDocumentPanelCommand} from '../../lib/documents/panelCommands';
 import {useDocuments} from '../../lib/documents/store';
-import {utf8ToUtf16Offset} from '../../lib/documents/text';
+import {safeSliceUtf8} from '../../lib/documents/text';
+import {selectedText} from '../../lib/documents/session';
+const safeSelectedText=()=>{try{return selectedText();}catch{return '';}};
 import {usePanelState} from '../../store/panelStateStore';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
@@ -59,7 +61,8 @@ export function DocumentsSelectionPanel({context}:InspectorSectionProps){
 function ParagraphProperties({index,text,editable}:{index:number;text:string;editable:boolean}){
  const {t}=useT(),d=useDocuments(),a=useAction();const [draft,setDraft]=useState(text),[base,setBase]=useState(text);const changed=text!==base;
  useEffect(()=>{if(draft===base){setDraft(text);setBase(text);}},[text,draft,base]);
- const c=d.caret;const selected=c?text.slice(utf8ToUtf16Offset(text,Math.min(c.anchor,c.head)),utf8ToUtf16Offset(text,Math.max(c.anchor,c.head))):'';
+ const c=d.caret;/* A selection across paragraphs has its anchor in another paragraph: its offsets do not belong to this text. */
+ const selected=c?(c.anchorBlock!==undefined&&c.anchorBlock!==c.block?safeSelectedText():safeSliceUtf8(text,c.anchor,c.head)):'';
  return <><DocumentsSelectionPreview/><Message error={a.error}/><p>{t('documents.edit.paragraph',{n:index+1})}</p>
   <dl className="doc-panel-stats"><div><dt>{t('documents.panels.characters')}</dt><dd>{Array.from(text).length}</dd></div><div><dt>{t('documents.panels.selectedCharacters')}</dt><dd>{Array.from(selected).length}</dd></div></dl>
   {editable?<><label>{t('documents.panels.paragraphText')}<Textarea rows={6} value={draft} onChange={e=>setDraft(e.target.value.replace(/[\r\n]+/g,' '))} disabled={!documentPanelReady(true)}/></label>

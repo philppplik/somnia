@@ -113,7 +113,7 @@ function TocDialog({onClose}:{onClose:()=>void}){
 }
 function WordCountDialog({onClose}:{onClose:()=>void}){
  const {t}=useT();const doc=useDocuments();
- const all=detailedStats(doc.blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));const sel=selectedText();const part=sel?detailedStats(sel):null;
+ const all=detailedStats(doc.blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));const sel=(()=>{try{return selectedText();}catch{return '';}})();const part=sel?detailedStats(sel):null;
  const rd=readability(doc.blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n')),rs=sel?readability(sel):null;
  const rows:[string,number,number|null][]=[['pages',doc.pages,null],['words',all.words,part?part.words:null],['characters',all.chars,part?part.chars:null],['charactersNoSpaces',all.charsNoSpaces,part?part.charsNoSpaces:null],['sentences',all.sentences,part?part.sentences:null],['paragraphs',all.paragraphs,part?part.paragraphs:null],['readingMinutes',all.readingMinutes,null],...(rd?[['uniqueWords',rd.uniqueWords,rs?rs.uniqueWords:null],['wordsPerSentence',rd.wordsPerSentence,rs?rs.wordsPerSentence:null],['charsPerWord',rd.charsPerWord,rs?rs.charsPerWord:null],['fleschEase',rd.fleschEase,rs?rs.fleschEase:null]] as [string,number,number|null][]:[])];
  return shell('documents-wc-title',onClose,<>

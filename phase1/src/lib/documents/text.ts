@@ -16,6 +16,10 @@ export function utf8ToUtf16Offset(text:string,utf8:number):number{
 }
 const seg=typeof Intl!=='undefined'&&'Segmenter' in Intl?new Intl.Segmenter(undefined,{granularity:'grapheme'}):null;
 /** UTF-16 index of the previous/next user-perceived character boundary (grapheme cluster when available). */
+/** The part of `text` between two UTF-8 offsets in either order, or '' when an offset is outside the text or inside a character (a stale caret during a render). */
+export function safeSliceUtf8(text:string,a:number,b:number):string{
+ try{return text.slice(utf8ToUtf16Offset(text,Math.min(a,b)),utf8ToUtf16Offset(text,Math.max(a,b)));}catch{return '';}
+}
 export function stepBoundary(text:string,i:number,dir:-1|1):number{
  if(dir<0&&i<=0)return 0;if(dir>0&&i>=text.length)return text.length;
  if(seg){const bs=[0];for(const g of seg.segment(text))bs.push(g.index+g.segment.length);return dir>0?(bs.find(x=>x>i)??text.length):([...bs].reverse().find(x=>x<i)??0);}
