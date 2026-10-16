@@ -89,8 +89,7 @@ test('3D studio opens a GLB, shows its stats and exports a still',async({page})=
  await page.goto('/');
  await page.getByRole('radio',{name:/3D/}).first().click();
  await expect(page.getByTestId('3d-start')).toBeVisible();
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'tri.glb',mimeType:'model/gltf-binary',buffer:triangleGlb()});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible();
+ await openModel(page,{name:'tri.glb',mimeType:'model/gltf-binary',buffer:triangleGlb()});
  await expect(page.getByTestId('studio3d-model-section')).toContainText('GLB');
  await expect(page.getByTestId('studio3d-model-section')).toContainText('1');
  await expect(page.getByTestId('studio3d-scene-panel')).toContainText('Triangle');
@@ -108,7 +107,12 @@ type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
 const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();};
-const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
+/** Opens a model through the file input and waits for the viewport. The first open mounts the lazy three.js chunk: on a cold dev server that takes well over the default timeout, so the first wait gets a minute. */
+const openModel=async(page:P,file:{name:string;mimeType:string;buffer:Buffer})=>{
+ await page.getByTestId('studio3d-file-input').setInputFiles(file);
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});
+};
+const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
 const positionOf=async(page:P,id:number)=>{await run(page,'studio3d.select',{id});return (await session(page)).info!.position;};
 function zipEntries(buf:Buffer):number{for(let i=buf.length-22;i>=0;i--)if(buf.readUInt32LE(i)===0x06054b50)return buf.readUInt16LE(i+10);return -1;}
@@ -353,8 +357,7 @@ test('3D studio zooms the timeline, shifts and pastes key selections, duplicates
 test('3D studio shows a skeleton overlay, keys a bone rotation and exports the skin back',async({page})=>{
  const glb=await skinnedGlb();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // Bones are picked from the bone list, not the scene list.
  await expect(page.getByTestId('studio3d-scene-panel')).not.toContainText('Knee');
@@ -402,8 +405,7 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
 test('3D studio binds a primitive onto a bone chain, previews a weight and undoes it',async({page})=>{
  const glb=await skinnedGlb();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // A fresh cube next to the rig is not skinned yet.
  await run(page,'studio3d.insert.primitive',{kind:'cube'});
@@ -427,8 +429,7 @@ test('3D studio binds a primitive onto a bone chain, previews a weight and undoe
 test('3D studio paints bone weights with the brush and undoes the stroke',async({page})=>{
  const glb=await skinnedGlb();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // Bind a fresh cube, then paint with the brush through the command surface.
  await run(page,'studio3d.insert.primitive',{kind:'cube'});
@@ -457,8 +458,7 @@ test('3D studio opens an OBJ, picks export clips and exports glTF textures as a 
  // OBJ import: bounded and local, the mesh lands in the scene list.
  await open3d(page);
  const obj=Buffer.from('v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\nf 1 2 3\nf 1 3 4\n');
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'tetra.obj',mimeType:'model/obj',buffer:obj});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'tetra.obj',mimeType:'model/obj',buffer:obj});
  await expect.poll(async()=>(await session(page)).stats.meshes).toBe(1);
  // Two clips with one key each (empty clips never export); the export options select which leave the app.
  const meshId=(await session(page)).outline[0].id as number;
@@ -495,8 +495,7 @@ test('3D studio opens an OBJ, picks export clips and exports glTF textures as a 
 test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
  const glb=await skinnedGlb();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // A selected bone shows the pose library of its rig.
  await page.getByLabel('Bone').selectOption({index:1});
@@ -524,8 +523,7 @@ test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
 test('3D studio drives a chain with IK, moves the target and sets joint limits',async({page})=>{
  const glb=await skinnedGlb3();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // The chain root shows the IK switch; toggling on snaps the target to the end effector without moving the pose.
  await page.getByLabel('Bone').selectOption({index:1});
@@ -555,8 +553,7 @@ test('3D studio drives a chain with IK, moves the target and sets joint limits',
 test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({page})=>{
  const glb=await skinnedGlb4();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig4.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig4.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-skeleton')).toBeVisible();
  // The chain root shows the FABRIK switch; toggling on snaps the target to the end effector without moving the pose.
  await page.getByLabel('Bone').selectOption({index:1});
@@ -585,8 +582,7 @@ test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({p
 test('3D studio records keyframe poses at the playhead for selected or all bones',async({page})=>{
  const glb=await skinnedGlb3();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
  await expect(page.getByTestId('studio3d-record')).toBeVisible();
  await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
  // Pose the middle bone and record the selected chain root at the playhead.
@@ -613,8 +609,7 @@ test('3D studio records keyframe poses at the playhead for selected or all bones
 test('3D studio reviews animation with onion skin, motion path and retarget',async({page})=>{
  const glb=await skinnedGlbTwoRigs();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'two-rigs.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'two-rigs.glb',mimeType:'model/gltf-binary',buffer:glb});
  // A clip with source motion: rotate a bone of rig A and record everything.
  await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
  await page.getByLabel('Bone').selectOption({index:2});
@@ -644,8 +639,7 @@ test('3D studio reviews animation with onion skin, motion path and retarget',asy
 test('3D studio inserts a three-point light rig as one undo step',async({page})=>{
  const glb=await skinnedGlb3();
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
  await page.getByRole('button',{name:'3-point rig'}).click();
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(3);
  const names=(await session(page)).outline.filter(o=>o.kind==='light').map(o=>o.name);
@@ -740,8 +734,7 @@ function skinnedGltf():Buffer{
 
 test('3D studio round-trips a skinned glTF with its clip: import, export as GLB, import again',async({page})=>{
  await open3d(page);
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'skinned.gltf',mimeType:'model/gltf+json',buffer:skinnedGltf()});
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:20_000});
+ await openModel(page,{name:'skinned.gltf',mimeType:'model/gltf+json',buffer:skinnedGltf()});
  await expect.poll(async()=>(await session(page)).bones.length).toBe(2);
  await expect.poll(async()=>((await session(page)).clips??[]).map(c=>c.name)).toEqual(['Wave']);
  const [download]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.export.glb',{})]);

@@ -28,10 +28,10 @@ export function Studio3DCanvas(){
  useEffect(()=>registerStudio3DOpener(pick),[]);
  useEffect(()=>registerStudio3DSaveShortcut(),[]);
  useEffect(()=>{void refreshRecent();},[]);
- /** The viewport mounts after the first request, so a request made from the start screen waits for its controller. */
+ /** The viewport mounts after the first request, so a request made from the start screen waits for its controller. The lazy chunk can take tens of seconds on a cold dev server: wait it out instead of failing an open that is merely slow. */
  const withController=async(run:(c:NonNullable<ReturnType<typeof studio3DController>>)=>void|Promise<void>)=>{
   patchStudio3D({status:'loading',error:''});
-  for(let i=0;i<100&&!studio3DController();i++)await sleep(50);
+  for(let i=0;i<150&&!studio3DController();i++)await sleep(200);
   const c=studio3DController();if(!c){patchStudio3D({status:'error',error:'The 3D viewport could not start.'});return;}
   await run(c);
  };
