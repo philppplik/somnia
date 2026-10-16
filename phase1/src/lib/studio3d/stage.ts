@@ -16,7 +16,7 @@ import {extrudeFaces,extrudeFacesIndividual,insetFaces,bevelVertices,deleteEleme
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
-import {uvIslands,unwrapBox,unfoldAngles,planarProject,seamsAround,islandBorders,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
+import {uvIslands,unwrapBox,unfoldAngles,planarProject,packExistingUv,seamsAround,islandBorders,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
 import {checkPoseName,mirrorPose,blendPoses,PoseError,MAX_POSES} from './poses';import type {Pose,PoseBone} from './poses';
@@ -1399,6 +1399,20 @@ export class Stage{
   const m=this.uvTarget(id);
   let r:UvResult;try{r=planarProject(this.meshDataOf(m),axis);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
   this.applyUv(m,r,{key:'studio3d.hist.planarUv'});
+ }
+ /** Pack the existing UV islands into the 0..1 square: shelf packing with padding, tight and non-overlapping, tall islands rotated 90 degrees. Topology stays, one undo step. */
+ uvPack(id:number,opts?:{padding?:number}){
+  const m=this.uvTarget(id);
+  let r:UvResult;
+  try{r=packExistingUv(this.meshDataOf(m),this.seamsOf(m),opts?.padding??0.02);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
+  const attr=m.geometry.getAttribute('uv') as THREE.BufferAttribute|undefined;
+  if(!attr||attr.count!==r.uv.length)throw new StageError('The mesh has no UVs to pack.');
+  const beforeAttr=attr;
+  const afterAttr=new THREE.Float32BufferAttribute(r.uv.flat(),2);
+  const beforePrim=m.userData.somniaPrimitive as unknown;
+  const set=(a2:THREE.BufferAttribute,prim:unknown)=>{m.geometry.setAttribute('uv',a2);if(prim===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=prim;};
+  set(afterAttr,undefined);
+  this.push({label:{key:'studio3d.hist.uvPack'},undo:()=>set(beforeAttr,beforePrim),redo:()=>set(afterAttr,undefined)});
  }
  /** Read-only UV layout for the island view: one uv pair per face corner (index order) and the island id per face; null when the mesh has no uvs or too many faces. */
  uvLayout(id:number):{uv:[number,number][];islands:number[]}|null{

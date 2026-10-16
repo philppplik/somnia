@@ -1383,6 +1383,7 @@ export default function Viewport3D(){
    uvSeamsFromIslands:()=>{stage.uvSeamsFromIslands();afterEditOp();},
    uvUnwrap:(id,opts)=>{stage.uvUnwrap(id,opts);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    uvPlanar:(id,axis)=>{stage.uvPlanar(id,axis);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
+   uvPack:(id,opts)=>{stage.uvPack(id,opts);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
   });
   // Pick by click (no drag) and keyboard orbit/zoom.
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();

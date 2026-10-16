@@ -12336,6 +12336,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.uv.pack",
+      "title": "Pack the existing UV islands of a 3D mesh into the 0..1 square (shelf packing, tight and non-overlapping)",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.uv.planar",
       "title": "Planar UV projection",
       "category": "Edit",

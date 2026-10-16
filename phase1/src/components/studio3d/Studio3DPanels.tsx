@@ -303,6 +303,7 @@ function UvFields({id}:{id:number}){
    </div>
    <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={pack} onChange={e=>setPack(e.currentTarget.checked)}/>{t('studio3d.uvtools.pack')}</label>
    {pack&&<NumField label={t('studio3d.uvtools.padding')} value={padding} min={0} max={0.2} step={0.005} onCommit={setPadding}/>}
+   <div className="flex gap-1"><Button variant="outline" onClick={()=>void executeCommand('studio3d.uv.pack',{id,padding})}>{t('studio3d.uvtools.packNow')}</Button></div>
    <div className="flex gap-1">
     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={axis} aria-label={t('studio3d.uvtools.axis')} onChange={e=>setAxis(e.currentTarget.value as 'x'|'y'|'z')}>
      {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>

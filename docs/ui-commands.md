@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1122 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1123 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1012,6 +1012,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.undo` | Undo 3D change | Edit | studio3d |  |
 | `studio3d.ungroup` | Dissolve a 3D group, keeping its children | Edit | studio3d |  |
 | `studio3d.unit.set` | Set the unit used for STL and OBJ export | Project | studio3d |  |
+| `studio3d.uv.pack` | Pack the existing UV islands of a 3D mesh into the 0..1 square (shelf packing, tight and non-overlapping) | Edit | studio3d |  |
 | `studio3d.uv.planar` | Planar UV projection | Edit | studio3d |  |
 | `studio3d.uv.preview` | UV checker preview | View | studio3d |  |
 | `studio3d.uv.seam` | Mark UV seam | Edit | studio3d |  |

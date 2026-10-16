@@ -193,6 +193,7 @@ export interface Studio3DController{
  uvSeamsFromIslands():void;
  uvUnwrap(id:number,opts?:{method?:'box'|'angle';pack?:boolean;padding?:number}):void;
  uvPlanar(id:number,axis:'x'|'y'|'z'):void;
+ uvPack(id:number,opts?:{padding?:number}):void;
  setUvChecker(on:boolean):void;
  sculptBrush(patch:Partial<{on:boolean;brush:'grab'|'smooth'|'inflate'|'crease'|'pinch'|'flatten'|'mask';radius:number;strength:number;falloff:'smooth'|'linear'|'constant';symmetry:'none'|'x'|'y'|'z'}>):void;
  sculptBegin(id:number):void;
@@ -431,6 +432,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{mark?:boolean}>('studio3d.uv.seam','Mark or clear the selected edges of the edited 3D mesh as UV seams','Edit',p=>need().uvSeamMark(p?.mark??true),object({mark:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
   add<{id:number;method?:'box'|'angle';pack?:boolean;padding?:number}>('studio3d.uv.unwrap','Unwrap a 3D mesh: box projection per island or angle-based unfolding, packed with padding (grid layout when pack is off)','Edit',p=>need().uvUnwrap(p.id,{method:p.method,pack:p.pack,padding:p.padding}),object({id:{type:'integer',minimum:0},method:{enum:['box','angle']},pack:{type:'boolean'},padding:{type:'number',minimum:0,maximum:0.2}}),hasScene),
   add<{id:number;axis:'x'|'y'|'z'}>('studio3d.uv.planar','Planar UV projection of a 3D mesh along one axis','Edit',p=>need().uvPlanar(p.id,p.axis),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']}}),hasScene),
+  add<{id:number;padding?:number}>('studio3d.uv.pack','Pack the existing UV islands of a 3D mesh into the 0..1 square (shelf packing, tight and non-overlapping)','Edit',p=>need().uvPack(p.id,{padding:p?.padding}),object({id:{type:'integer',minimum:0},padding:{type:'number',minimum:0,maximum:0.2}}),hasScene),
   add<{on?:boolean}>('studio3d.uv.preview','Show or hide the UV checker texture on the selected 3D mesh','View',p=>need().setUvChecker(p?.on??!getStudio3DState().uvChecker),object({on:{type:'boolean'}},[]),hasScene),
   add<{id:number;axis:'x'|'y'|'z';merge?:number;on:boolean;bisect?:boolean}>('studio3d.mesh.mirrorMod','Toggle the non-destructive mirror modifier of a 3D mesh (applied on export; bisect cuts away the negative side)','Edit',p=>need().mirrorMod(p.id,p.axis,p.merge??0,p.on,!!p.bisect),object({id:{type:'integer',minimum:0},axis:{enum:['x','y','z']},merge:{type:'number',minimum:0,maximum:1000},on:{type:'boolean'},bisect:{type:'boolean'}}),hasScene),
   add('studio3d.sculpt.end','Finish the current sculpt stroke (one undo step)','Edit',()=>need().sculptEnd(),undefined,hasScene),

@@ -86,12 +86,22 @@ export function gridUv(r:UvResult):UvResult{
  });
  return{...r,uv};
 }
-/** Packs islands non-overlapping with padding: bounding-box shelf packing, scaled into the 0..1 square with a half-padding margin. */
-export function packUv(r:UvResult,padding=0.02):UvResult{
+/** Packs islands non-overlapping with padding: bounding-box shelf packing, scaled into the 0..1 square with a half-padding margin. With rotate, islands taller than wide are turned 90 degrees first so the shelves stay shallow. */
+export function packUv(r:UvResult,padding=0.02,rotate=false):UvResult{
  const pad=Math.min(Math.max(padding,0),0.5);
- const boxes=islandSlots(r).map(sl=>{
+ let w=r;
+ if(rotate){
+  const uv=r.uv.map(([u,v]):Uv=>[u,v]);
+  for(const sl of islandSlots(r)){
+   let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
+   for(const i of sl){const[u,v]=r.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
+   if(mxv-mnv>mxu-mnu)for(const i of sl){const[u,v]=r.uv[i];uv[i]=[mnu+(v-mnv),mnv+(mxu-u)];}
+  }
+  w={...r,uv};
+ }
+ const boxes=islandSlots(w).map(sl=>{
   let mnu=Infinity,mnv=Infinity,mxu=-Infinity,mxv=-Infinity;
-  for(const i of sl){const[u,v]=r.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
+  for(const i of sl){const[u,v]=w.uv[i];mnu=Math.min(mnu,u);mnv=Math.min(mnv,v);mxu=Math.max(mxu,u);mxv=Math.max(mxv,v);}
   return{sl,mnu,mnv,w:Math.max(mxu-mnu,1e-9),h:Math.max(mxv-mnv,1e-9)};
  });
  boxes.sort((a,b)=>b.h-a.h);
@@ -107,9 +117,18 @@ export function packUv(r:UvResult,padding=0.02):UvResult{
  const maxH=y+rowH;
  const s=Math.min(1/maxW,1/maxH);
  const ox=(1-maxW*s)/2,oy=(1-maxH*s)/2;
- const uv=r.uv.map(([u,v]):Uv=>[u,v]);
- for(const p of placed)for(const i of p.b.sl){const[u,v]=r.uv[i];uv[i]=[ox+(p.x+u-p.b.mnu)*s,oy+(p.y+v-p.b.mnv)*s];}
+ const uv=w.uv.map(([u,v]):Uv=>[u,v]);
+ for(const p of placed)for(const i of p.b.sl){const[u,v]=w.uv[i];uv[i]=[ox+(p.x+u-p.b.mnu)*s,oy+(p.y+v-p.b.mnv)*s];}
  return{...r,uv};
+}
+/** Packs the existing UV layout of a mesh without changing its topology: islands follow the real UV borders plus the marked seams, shelf-packed with padding and uniformly scaled into 0..1 (relative island areas are preserved, tall islands rotate 90 degrees). */
+export function packExistingUv(m:MeshData,seams:[number,number][],padding=0.02):UvResult{
+ check(m);
+ const verts=m.positions.length/3;
+ if(!m.uvs||m.uvs.length!==verts*2)throw new UvError('The mesh has no UVs to pack.');
+ const uv:Uv[]=[];
+ for(let v=0;v<verts;v++)uv.push([m.uvs[v*2],m.uvs[v*2+1]]);
+ return packUv({uv,uvIndex:m.index.slice(),islands:uvIslands(m,[...seams,...islandBorders(m)]),vertCount:verts},padding,true);
 }
 /** Seam-aware box unwrap: every island gets the planar projection of its dominant axis, laid out per the chosen layout. */
 export function unwrapBox(m:MeshData,seams:[number,number][],opts?:UvLayoutOpts):UvResult{
