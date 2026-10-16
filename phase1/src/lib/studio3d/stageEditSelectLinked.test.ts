@@ -11,7 +11,7 @@ test('stage editSelectLinked: a whole cube links from one seed, a duplicated she
  assert.deepEqual(st.editSelection().verts,[0,1,2,3],'the split cube sides are index islands: one side links');
  st.editSelect('face',[4,5]);
  st.editDuplicate();
- assert.deepEqual(st.editSelection(),{verts:[],edges:[],faces:[]},'duplicate cleared the selection');
+ assert.deepEqual(st.editSelection(),{verts:[24,25,26,27],edges:[],faces:[12,13]},'duplicate keeps the selection on the fresh island (grab mode)');
  st.editSelect('vertex',[24]);
  st.editSelectLinked('vertex');
  assert.deepEqual(st.editSelection().verts,[24,25,26,27],'the fresh shell links only its own vertices');

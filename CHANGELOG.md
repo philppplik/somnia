@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: duplicate keeps the selection on the fresh island, so following transforms move it apart from the original (Blender-style grab, held until the selection changes).
 - 3D Studio: Shift+arrow nudge moves the edit-mode selection by the snap step (proportional editing applies), not the whole object.
 - 3D Studio: proportional editing can follow mesh connectivity, so unconnected islands no longer move along.
 - 3D Studio: grid fill closes an even edge loop with an interpolated grid instead of a triangle fan.

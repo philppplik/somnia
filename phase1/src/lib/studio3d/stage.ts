@@ -222,8 +222,8 @@ export class Stage{
   for(const dropped of this.entries.splice(this.cursor))dropped.release?.();
   this.entries.push(e);this.cursor=this.entries.length;this.emit();
  }
- undo(){if(!this.canUndo)return false;this.entries[--this.cursor].undo();this.emit();return true;}
- redo(){if(!this.canRedo)return false;this.entries[this.cursor++].redo();this.emit();return true;}
+ undo(){this.editGrab=null;if(!this.canUndo)return false;this.entries[--this.cursor].undo();this.emit();return true;}
+ redo(){this.editGrab=null;if(!this.canRedo)return false;this.entries[this.cursor++].redo();this.emit();return true;}
  /** Scene content a file open replaces: children, clips and the rig helper maps. */
  private sceneState(){return {children:[...this.root.children],clips:this.clipList,poses:this.poseLibs,ik:this.ikChains,fabrik:this.fabrikChains,limits:this.boneLimits,baked:this.bakedCache};}
  private swapState(s:ReturnType<Stage['sceneState']>){
@@ -650,6 +650,8 @@ export class Stage{
  /** Edit mode: one mesh edited at a time, selection lives here so undo of ops stays coherent. */
  private editId:number|null=null;
  private editSel={verts:new Set<number>(),edges:new Map<string,[number,number]>(),faces:new Set<number>()};
+ /** Rows of the freshest edit-duplicate island: transform ops move exactly these rows (position twins outside the island stay put, even when the island passes through the original's coordinates). Ends on reselection, a non-transform edit op, undo/redo or edit end. */
+ private editGrab:Set<number>|null=null;
  private sculptShot:{id:number;positions:Float32Array;mask:Float32Array|null}|null=null;
  private editableMesh(id:number):THREE.Mesh{
   const o=this.need(id);const m=o as THREE.Mesh;
@@ -702,15 +704,17 @@ export class Stage{
  }
  /** Enters mesh edit mode on a mesh. Returns the vertex and triangle counts. */
  editStart(id:number):{vertices:number;triangles:number}{
+  this.editGrab=null;
   const m=this.editableMesh(id);this.editId=id;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
   return{vertices:m.geometry.getAttribute('position').count,triangles:m.geometry.getIndex()?m.geometry.getIndex()!.count/3:m.geometry.getAttribute('position').count/3};
  }
- editEnd(){this.editId=null;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
+ editEnd(){this.editGrab=null;this.editId=null;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  private editMesh():THREE.Mesh{
   if(this.editId==null)throw new StageError('No mesh is being edited. Choose Edit mesh first.');
   return this.editableMesh(this.editId);
  }
  editSelect(kind:'vertex'|'edge'|'face',ids:(number|[number,number])[],toggle=false){
+  this.editGrab=null;
   const m=this.editMesh();const verts=m.geometry.getAttribute('position').count,idx=m.geometry.getIndex();const tris=(idx?idx.count:verts)/3;
   if(kind==='vertex')for(const id of ids as number[]){if(!Number.isInteger(id)||id<0||id>=verts)throw new StageError(`Vertex ${id} does not exist.`);
    if(toggle&&this.editSel.verts.has(id))this.editSel.verts.delete(id);else this.editSel.verts.add(id);}
@@ -802,6 +806,7 @@ export class Stage{
  }
  /** Selects every element of one kind, clears that kind or inverts it. Works on the current selection mode's kind; selection changes are not undo steps. */
  editSelectAll(op:'all'|'none'|'invert',kind:'vertex'|'edge'|'face'){
+  this.editGrab=null;
   const m=this.editMesh();
   const verts=m.geometry.getAttribute('position').count,idx=m.geometry.getIndex();
   const tris=(idx?idx.count:verts)/3;
@@ -821,6 +826,7 @@ export class Stage{
  }
  /** Grows the current selection to neighbouring elements, or shrinks it by peeling the layer that touches unselected elements. Vertices grow over edges, edges over shared vertices, faces over shared edges. One step per count; selection changes are not undo steps. */
  editSelectGrow(steps:number,shrink:boolean,kind:'vertex'|'edge'|'face'){
+  this.editGrab=null;
   const m=this.editMesh();
   const edges=this.allEdges(m);
   const empty=kind==='vertex'?!this.editSel.verts.size:kind==='face'?!this.editSel.faces.size:!this.editSel.edges.size;
@@ -860,7 +866,8 @@ export class Stage{
    }
   }
  }
- private editOp(label:HistoryLabel,run:(m:MeshData)=>MeshData){
+ private editOp(label:HistoryLabel,run:(m:MeshData)=>MeshData,keepGrab=false){
+  if(!keepGrab)this.editGrab=null;
   const mesh=this.editMesh();
   let out:MeshData;
   try{out=run(this.meshDataOf(mesh));}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -879,6 +886,7 @@ export class Stage{
  editLoopSlide(factor:number){this.editOp({key:'studio3d.hist.loopSlide'},m=>slideEdges(m,[...this.editSel.edges.values()],factor));}
  /** Extends the selected edges to their full edge loops (walking to the unique non-triangle-sharing edge at each vertex, position-keyed so loops cross split shells). Replaces the edge selection; selection changes are not undo steps. */
  editSelectLoop(){
+  this.editGrab=null;
   const m=this.editMesh();
   let edges:[number,number][];
   try{edges=edgeLoop(this.meshDataOf(m),[...this.editSel.edges.values()]);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -887,6 +895,7 @@ export class Stage{
  }
  /** Extends the selected edges to their full edge rings (walking across each adjacent quad to the opposite edge, position-keyed so rings cross split shells; the straightest continuation wins at junctions). Replaces the edge selection; selection changes are not undo steps. */
  editSelectRing(){
+  this.editGrab=null;
   const m=this.editMesh();
   let edges:[number,number][];
   try{edges=edgeRing(this.meshDataOf(m),[...this.editSel.edges.values()]);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -895,6 +904,7 @@ export class Stage{
  }
  /** Selects the vertices touched by non-manifold edges (position-keyed edges with more than two adjacent triangles). Replaces the vertex selection; selection changes are not undo steps. */
  editSelectNonManifold(){
+  this.editGrab=null;
   const m=this.editMesh();
   this.editSel.verts=new Set(nonManifoldVerts(this.meshDataOf(m)));
  }
@@ -927,6 +937,7 @@ export class Stage{
  editBridgeFaces(twist:number){this.editOp({key:'studio3d.hist.editBridgeFaces'},m=>bridgeFacesSelected(m,[...this.editSel.faces],twist));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Extends the face selection to every face whose normal lies within `degrees` of the current selection's average normal. Replaces the face selection; selection changes are not undo steps. */
  editSelectSimilar(degrees=15){
+  this.editGrab=null;
   const m=this.editMesh();
   let faces:number[];
   try{faces=similarFaces(this.meshDataOf(m),[...this.editSel.faces],degrees);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -934,6 +945,7 @@ export class Stage{
  }
  /** Selects faces whose normal points within `degrees` of a mesh axis direction (for example '+y' for the top faces). Replaces the face selection; selection changes are not undo steps. */
  editSelectFacing(dir:'+x'|'-x'|'+y'|'-y'|'+z'|'-z'='+y',degrees=45){
+  this.editGrab=null;
   const m=this.editMesh();
   const VEC={'+x':[1,0,0],'-x':[-1,0,0],'+y':[0,1,0],'-y':[0,-1,0],'+z':[0,0,1],'-z':[0,0,-1]} as const;
   let faces:number[];
@@ -942,6 +954,7 @@ export class Stage{
  }
  /** Selects edges whose adjacent faces meet at a dihedral angle of at least `degrees` (position-keyed, so duplicated shells read as one surface). Replaces the edge selection; selection changes are not undo steps. */
  editSelectSharp(degrees=30){
+  this.editGrab=null;
   const m=this.editMesh();
   let edges:[number,number][];
   try{edges=sharpEdges(this.meshDataOf(m),degrees);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -950,6 +963,7 @@ export class Stage{
  }
  /** Extends the selection to everything topologically linked to it (index-based connectivity, so duplicated shells at the same positions stay separate). Seeds come from any currently selected element; the linked set replaces the selection of the given kind. Selection changes are not undo steps. */
  editSelectLinked(kind:'vertex'|'edge'|'face'){
+  this.editGrab=null;
   const m=this.editMesh();
   const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
   const nv=pos.count;const n=idx?idx.count:nv;const at=(i:number)=>idx?idx.getX(i):i;
@@ -974,6 +988,7 @@ export class Stage{
  }
  /** Selects the boundary edges or vertices of the edited mesh: position-keyed borders (1e6 rounding) used by exactly one triangle, so split UV seams do not read as holes. Replaces the current selection of that kind; selection changes are not undo steps. */
  editSelectBoundary(kind:'vertex'|'edge'='edge'){
+  this.editGrab=null;
   const m=this.editMesh();
   const pos=m.geometry.getAttribute('position'),idx=m.geometry.getIndex();
   const n=idx?idx.count:pos.count;const at=(i:number)=>idx?idx.getX(i):i;
@@ -1017,8 +1032,13 @@ export class Stage{
  }
  /** Duplicates the selected edit-mode triangles as a detached shell with fresh vertices, one undo step. The selection is cleared afterwards because face ordinals shift. */
  editDuplicate(){
+  const m0=this.meshDataOf(this.editMesh());const v0=m0.positions.length/3,f0=m0.index.length/3;
   this.editOp({key:'studio3d.hist.editDuplicate'},m=>duplicateFaces(m,[...this.editSel.faces]));
-  this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
+  const m1=this.meshDataOf(this.editMesh());const v1=m1.positions.length/3,f1=m1.index.length/3;
+  const verts=new Set<number>();for(let v=v0;v<v1;v++)verts.add(v);
+  const faces=new Set<number>();for(let f=f0;f<f1;f++)faces.add(f);
+  this.editSel={verts,edges:new Map(),faces};
+  this.editGrab=verts;
  }
  /** Moves the selected edit-mode vertices along their normals (negative amounts shrink) with one undo step. The selection stays. */
  editFatten(amount:number){this.editOp({key:'studio3d.hist.editFatten'},m=>fattenSelected(m,[...this.editSel.verts],amount));}
@@ -1039,15 +1059,16 @@ export class Stage{
  /** Jitters the selected edit-mode vertices by a seeded random displacement, one undo step. The selection stays. */
  editRandomize(amount:number,seed:number){this.editOp({key:'studio3d.hist.editRandomize'},m=>randomizeSelected(m,[...this.editSel.verts],amount,seed));}
  /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. */
- editMove(offset:[number,number,number],prop?:PropFalloff){this.editOp({key:'studio3d.hist.editMove'},m=>moveSelected(m,[...this.editSel.verts],offset,prop));}
- editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editRotate'},m=>rotateSelected(m,[...this.editSel.verts],axis,degrees,prop,pivot));}
- editScale(factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editScale'},m=>scaleSelected(m,[...this.editSel.verts],factors,prop,pivot));}
- editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]){this.editOp({key:'studio3d.hist.editShear'},m=>shearSelected(m,[...this.editSel.verts],along,by,factor,prop,pivot));}
+ editMove(offset:[number,number,number],prop?:PropFalloff){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editMove'},m=>grab?moveSelected(m,[...grab],offset,undefined,true):moveSelected(m,[...this.editSel.verts],offset,prop),true);}
+ editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editRotate'},m=>grab?rotateSelected(m,[...grab],axis,degrees,undefined,pivot,true):rotateSelected(m,[...this.editSel.verts],axis,degrees,prop,pivot),true);}
+ editScale(factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editScale'},m=>grab?scaleSelected(m,[...grab],factors,undefined,pivot,true):scaleSelected(m,[...this.editSel.verts],factors,prop,pivot),true);}
+ editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editShear'},m=>grab?shearSelected(m,[...grab],along,by,factor,undefined,pivot,true):shearSelected(m,[...this.editSel.verts],along,by,factor,prop,pivot),true);}
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
  /** Selects the shortest edge path between two vertices (Dijkstra by edge length), replacing the vertex or edge selection. Selection changes are not undo steps. */
  editSelectPath(from:number,to:number,kind:'vertex'|'edge'){
+  this.editGrab=null;
   const m=this.editMesh();
   const data=this.meshDataOf(m);
   let path:string[];
@@ -1071,6 +1092,7 @@ export class Stage{
  }
  /** Selects a seeded random share of every element of one kind, replacing the selection of that kind. The seed makes the pick deterministic and repeatable; selection changes are not undo steps. */
  editSelectRandom(kind:'vertex'|'edge'|'face',ratio:number,seed:number){
+  this.editGrab=null;
   if(!Number.isFinite(ratio)||ratio<=0||ratio>1)throw new StageError('The random ratio must be a number greater than 0 and at most 1.');
   if(!Number.isInteger(seed)||seed<1||seed>1000000000)throw new StageError('The random seed must be a whole number between 1 and 1000000000.');
   const m=this.editMesh();
@@ -1091,6 +1113,7 @@ export class Stage{
  }
  /** Mirrors the current selection across an axis plane through the origin of the edited mesh, position-keyed so UV-seam twins mirror together: the mirrored vertex set replaces (or with extend joins) the vertex selection, and selected edges/faces mirror to the elements fully inside it. Throws when nothing mirrored exists. Selection changes are not undo steps. */
  editSelectMirror(axis:'x'|'y'|'z',extend:boolean){
+  this.editGrab=null;
   const m=this.editMesh();
   const data=this.meshDataOf(m);
   const ai=axis==='x'?0:axis==='y'?1:2;
@@ -1122,6 +1145,7 @@ export class Stage{
  }
  /** Checker-deselects: drops every nth element of the current selection (sorted by id), starting at the offset. Deterministic; selection changes are not undo steps. */
  editSelectChecker(kind:'vertex'|'edge'|'face',nth:number,offset:number){
+  this.editGrab=null;
   if(!Number.isInteger(nth)||nth<2||nth>1000)throw new StageError('The checker step must be a whole number of 2 or more.');
   if(!Number.isInteger(offset)||offset<0||offset>=nth)throw new StageError('The checker offset must be a whole number below the step.');
   const drop=(i:number)=>((i-offset)%nth)===0;
