@@ -48,6 +48,7 @@ import type {KeyPath} from '../../lib/studio3d/clips';
 import type {KeyRef,KeyData} from '../../lib/studio3d/keyEdit';
 import {advance,clampTime,checkClip,checkRange,checkSpeed,startTime,rangeFits,AnimationError,type ClipInfo,type LoopRange} from '../../lib/studio3d/animation';
 import {exportBlocker,LIMITS,validateScene} from '../../lib/studio3d/validate';
+import {validateGlb} from '../../lib/studio3d/glbValidate';
 import {SLOT_CONFIG,DEFAULT_PRESET_EMISSIVE,inspectImage,isTextureSlot,MAX_TEXTURE_FILE_BYTES,MaterialError,type TextureSlot} from '../../lib/studio3d/materials';
 import {generateTexture as generateTexturePixels,type TexgenSpec} from '../../lib/studio3d/texgen';
 import {viewDirection,orthoHalfHeight,type ViewPreset} from '../../lib/studio3d/viewPresets';
@@ -992,8 +993,10 @@ export default function Viewport3D(){
   const exportGlb=async(opts?:{clips?:string[]|null})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
    const sel=selRoot();const x=sel?{input:sel as THREE.Object3D,animations:undefined}:exportInput(false,opts?.clips);
-   const result=await newExporter().parseAsync(x.input,{...exportOpts(true),...(x.animations?{animations:x.animations}:{})});
-   download(new Blob([result as ArrayBuffer],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
+   const result=await newExporter().parseAsync(x.input,{...exportOpts(true),...(x.animations?{animations:x.animations}:{})}) as ArrayBuffer;
+   const glbProblems=validateGlb(new Uint8Array(result));
+   if(glbProblems.length)patchStudio3D({notice:`The exported GLB may be damaged: ${glbProblems[0].detail}${glbProblems.length>1?` (+${glbProblems.length-1} more structural problems)`:''}`});
+   download(new Blob([result],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
    stage.markSaved();
   };
   /** glTF 2.0 as one self-contained .gltf file, or as a ZIP with the .gltf and its textures as separate files. */
