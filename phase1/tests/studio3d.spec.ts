@@ -1839,6 +1839,11 @@ test('3D studio outliner: folding groups, keyboard navigation and selection-set 
  await expect.poll(async()=>(await session(page)).outline.length).toBe(6);
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.length).toBe(3);
+ // The undo removed the duplicates that held the marks: with nothing live selected the button is disabled.
+ await expect(page.getByTestId('studio3d-outline-selection').getByRole('button',{name:'Delete selected'})).toBeDisabled();
+ // Re-select the group, as a user would.
+ await run(page,'studio3d.select',{id:group.id});
+ await expect.poll(async()=>(await session(page)).selected).toBe(group.id);
  await page.getByTestId('studio3d-outline-selection').getByRole('button',{name:'Delete selected'}).click();
  await expect.poll(async()=>(await session(page)).outline.length).toBe(0);
  await run(page,'studio3d.undo');
@@ -1925,11 +1930,12 @@ test('3D studio asset drags: primitive lands at the drop point, material assigns
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(1);
- // A scene material dragged from the material list assigns to the mesh under the cursor.
+ // A scene material dragged from the material list assigns to the mesh under the cursor; an unknown key is a polite notice.
  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-somnia3d-asset',JSON.stringify({kind:'material',key:'missing'}));
   const el=document.querySelector('[data-testid="studio3d-viewport"] > div')!;
-  el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:10,clientY:10}));});
- await expect(notice(page,/no preset called/)).toBeVisible();
+  const r=el.getBoundingClientRect();
+  el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:r.left+r.width/2,clientY:r.top+r.height/2}));});
+ await expect(notice(page,/no longer in the scene/)).toBeVisible();
 });
 
 test('3D studio pins: insert at the cursor, label in the inspector, one undo',async({page})=>{

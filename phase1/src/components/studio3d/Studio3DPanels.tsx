@@ -40,7 +40,10 @@ export function ScenePanel(_:PanelHostProps){
  // Drop target while dragging outline rows: groups accept drops into the middle, every row reorders at its top/bottom edge.
  const [dropAt,setDropAt]=useState<{id:number;where:'before'|'after'|'into'}|null>(null);
  const[text3d,setText3d]=useState('Text');const[textSize,setTextSize]=useState(1);const[textDepth,setTextDepth]=useState(0.25);
- const currentSet=s.marked.length?[...s.marked]:s.selected!=null?[s.selected]:[];
+ // Undo can remove objects the marks still point at: only live ids count (same filter as the viewport's currentSet).
+ const liveIds=new Set(s.outline.map(o=>o.id));
+ const liveMarked=s.marked.filter(id=>liveIds.has(id));
+ const currentSet=liveMarked.length?liveMarked:s.selected!=null&&liveIds.has(s.selected)?[s.selected]:[];
  const collapsed=s.collapsed;
  // A name filter searches the whole tree; without one, folded groups hide their children.
  const vis=filter?null:outlineVisible(s.outline,collapsed);
