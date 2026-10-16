@@ -2786,53 +2786,115 @@ export class Stage{
   this.push({label:{key:'studio3d.hist.bend',params:{count:list.length,name:list[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{for(const l of list)(owned?l.before.g:l.after).dispose();}});
   return list.length;
  }
- /** Bernstein control lattices bound to mesh ids. Transient tool state, not part of the document; moving points deforms nothing until latticeApply bakes the result. */
- private lattices=new Map<number,LatticeGrid>();
+ /** Bernstein control lattices bound to mesh ids. Transient tool state, not part of the document; each entry keeps the bind-time mesh data so previews and bakes never accumulate error. */
+ private lattices=new Map<number,{grid:LatticeGrid;base:MeshData}>();
  private needLatticeMeshes(ids:number[]){
   const objs=this.topLevel(this.needMany(ids,1));
   return objs.map(o=>{
    const mesh=o as THREE.Mesh;
    if(!mesh.isMesh)throw new StageError(`${o.name} is not a mesh. Lattice works on meshes.`);
-   const grid=this.lattices.get(mesh.id);
-   if(!grid)throw new StageError(`${o.name} has no lattice. Create one first.`);
-   return{mesh,grid};
+   const entry=this.lattices.get(mesh.id);
+   if(!entry)throw new StageError(`${o.name} has no lattice. Create one first.`);
+   return{mesh,entry};
   });
  }
- /** Binds an nx by ny by nz control lattice to each mesh's local bounding box. No undo: tool state. */
+ private needLattice(id:number){
+  const o=this.need(id);const mesh=o as THREE.Mesh;
+  const entry=this.lattices.get(mesh.id);
+  if(!mesh.isMesh||!entry)throw new StageError(`${o.name} has no lattice. Create one first.`);
+  return{mesh,entry};
+ }
+ /** Writes positions into the live geometry of a lattice-bound mesh (preview/revert helper; no history, no emit). */
+ private writeLatticePositions(mesh:THREE.Mesh,positions:number[]){
+  const attr=mesh.geometry.getAttribute('position') as THREE.BufferAttribute|undefined;
+  if(!attr||attr.count!==positions.length/3)throw new StageError('The mesh changed since the lattice was created. Create the lattice again.');
+  for(let v=0;v<positions.length/3;v++)attr.setXYZ(v,positions[v*3],positions[v*3+1],positions[v*3+2]);
+  attr.needsUpdate=true;mesh.geometry.computeVertexNormals();mesh.geometry.computeBoundingSphere();
+ }
+ /** Mesh ids with a bound lattice. */
+ latticeIds():number[]{return[...this.lattices.keys()];}
+ /** The current control points (mesh-local, flat nx*ny*nz*3) and dims of the lattice bound to a mesh, or null. */
+ latticePoints(id:number):{dims:[number,number,number];points:number[]}|null{const e=this.lattices.get(id);return e?{dims:[...e.grid.dims],points:[...e.grid.points]}:null;}
+ /** Binds an nx by ny by nz control lattice to each mesh's local bounding box, capturing the bind-time mesh data. No undo: tool state. */
  latticeCreate(dims:[number,number,number],ids:number[]):number{
   if(this.editId!=null)throw new StageError('Leave edit mode before creating a lattice.');
   const objs=this.topLevel(this.needMany(ids,1));
   for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Lattice works on meshes.`);
   for(const mesh of objs as THREE.Mesh[]){
+   const data=this.meshDataOf(mesh);
    let grid:LatticeGrid;
-   try{grid=latticeGrid(this.meshDataOf(mesh),dims);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
-   this.lattices.set(mesh.id,grid);
+   try{grid=latticeGrid(data,dims);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   this.lattices.set(mesh.id,{grid,base:data});
   }
+  this.emit();
   return objs.length;
  }
  /** Replaces the current control points of the bound lattices (flat nx*ny*nz*3, x fastest, mesh-local). No undo: tool state. */
  latticeSetPoints(points:number[],ids:number[]):number{
   const list=this.needLatticeMeshes(ids);
-  for(const {grid} of list){
-   if(!Array.isArray(points)||points.length!==grid.rest.length||points.some(p=>!Number.isFinite(p)))throw new StageError(`The lattice needs exactly ${grid.rest.length} finite control point coordinates.`);
-   grid.points=[...points];
+  for(const {entry} of list){
+   if(!Array.isArray(points)||points.length!==entry.grid.rest.length||points.some(p=>!Number.isFinite(p)))throw new StageError(`The lattice needs exactly ${entry.grid.rest.length} finite control point coordinates.`);
+   entry.grid.points=[...points];
   }
+  this.emit();
   return list.length;
  }
  /** Restores the bound lattices' control points to their rest grids. */
- latticeReset(ids:number[]):number{const list=this.needLatticeMeshes(ids);for(const {grid} of list)grid.points=[...grid.rest];return list.length;}
+ latticeReset(ids:number[]):number{const list=this.needLatticeMeshes(ids);for(const {entry} of list)entry.grid.points=[...entry.grid.rest];this.emit();return list.length;}
  /** Drops the bound lattices without deforming. */
- latticeClear(ids:number[]):number{const list=this.needLatticeMeshes(ids);for(const {mesh} of list)this.lattices.delete(mesh.id);return list.length;}
+ latticeClear(ids:number[]):number{const list=this.needLatticeMeshes(ids);for(const {mesh} of list)this.lattices.delete(mesh.id);this.emit();return list.length;}
+ /** Moves one control point (mesh-local) and refreshes the drag preview. No history: the drag ends in latticeBake. */
+ latticeMovePoint(id:number,index:number,point:[number,number,number]):void{
+  const {entry}=this.needLattice(id);
+  if(!Number.isInteger(index)||index<0||index*3+2>=entry.grid.points.length)throw new StageError('No such lattice control point.');
+  if(!Array.isArray(point)||point.length!==3||point.some(p=>!Number.isFinite(p)))throw new StageError('The control point needs three finite coordinates.');
+  entry.grid.points[index*3]=point[0];entry.grid.points[index*3+1]=point[1];entry.grid.points[index*3+2]=point[2];
+  this.latticePreview(id);
+ }
+ /** Writes the current lattice deformation into the live geometry without touching history - the drag preview. */
+ latticePreview(id:number):void{
+  const {mesh,entry}=this.needLattice(id);
+  let out:MeshData;
+  try{out=applyLattice(entry.base,entry.grid);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  this.writeLatticePositions(mesh,out.positions);
+ }
+ /** Restores the bind-time positions into the live geometry, dropping any drag preview. */
+ latticeRevert(id:number):void{
+  const {mesh,entry}=this.needLattice(id);
+  this.writeLatticePositions(mesh,entry.base.positions);
+ }
+ /** Bakes the current deformation into the mesh and rebinds a fresh lattice to the result, so dragging can continue. One undo step covering geometry and lattice state. */
+ latticeBake(id:number):void{
+  if(this.editId!=null)throw new StageError('Leave edit mode before applying a lattice.');
+  const {mesh,entry}=this.needLattice(id);
+  let out:MeshData;let next:LatticeGrid;
+  try{out=applyLattice(entry.base,entry.grid);next=latticeGrid(out,entry.grid.dims);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+  const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
+  if(seams0.length){try{seams1=remapSeams(entry.base,seams0,out);}catch{seams1=[];}}
+  // The live geometry may hold a drag preview; restore the bind-time positions so undo returns to the pristine pre-drag mesh.
+  this.writeLatticePositions(mesh,entry.base.positions);
+  const after=this.buildGeometry(out);
+  const before={g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0};
+  const afterEntry={grid:next,base:out};
+  const set=(k:'before'|'after')=>{
+   if(k==='after'){mesh.geometry=after;delete mesh.userData.somniaPrimitive;this.setSeams(mesh,seams1);this.lattices.set(mesh.id,afterEntry);}
+   else{mesh.geometry=before.g;if(before.d!==undefined)mesh.userData.somniaPrimitive=before.d;this.setSeams(mesh,before.s);this.lattices.set(mesh.id,entry);}
+  };
+  let owned=true;
+  set('after');
+  this.push({label:{key:'studio3d.hist.lattice',params:{count:1,name:mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},release:()=>{(owned?before.g:after).dispose();}});
+ }
  /** Bakes the bound lattice deformations into the meshes and drops the lattices. One undo step for the whole set. */
  latticeApply(ids:number[]):number{
   if(this.editId!=null)throw new StageError('Leave edit mode before applying a lattice.');
-  const list=this.needLatticeMeshes(ids).map(({mesh,grid})=>{
-   const data=this.meshDataOf(mesh);
+  const list=this.needLatticeMeshes(ids).map(({mesh,entry})=>{
+   const live=this.meshDataOf(mesh);
+   if(live.positions.length!==entry.base.positions.length)throw new StageError('The mesh changed since the lattice was created. Create the lattice again.');
    let out:MeshData;
-   try{out=applyLattice(data,grid);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
+   try{out=applyLattice(entry.base,entry.grid);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
    const g=this.buildGeometry(out);
    const seams0=this.seamsOf(mesh);let seams1:[number,number][]=[];
-   if(seams0.length){try{seams1=remapSeams(data,seams0,out);}catch{seams1=[];}}
+   if(seams0.length){try{seams1=remapSeams(entry.base,seams0,out);}catch{seams1=[];}}
    return{mesh,before:{g:mesh.geometry,d:mesh.userData.somniaPrimitive,s:seams0},after:g,seams1};
   });
   const set=(k:'before'|'after')=>{for(const l of list){if(k==='after'){l.mesh.geometry=l.after;delete l.mesh.userData.somniaPrimitive;this.setSeams(l.mesh,l.seams1);}else{l.mesh.geometry=l.before.g;if(l.before.d!==undefined)l.mesh.userData.somniaPrimitive=l.before.d;this.setSeams(l.mesh,l.before.s);}}};

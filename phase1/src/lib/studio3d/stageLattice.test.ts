@@ -85,3 +85,47 @@ test('bad dimensions, wrong point counts and changed meshes are readable errors'
  st.subdivide(1,[mesh.id]);
  assert.throws(()=>st.latticeApply([mesh.id]),/changed since the lattice was created/);
 });
+test('preview is undo-free, revert restores, and bake rebinding keeps the lattice alive',()=>{
+ const {st,mesh}=mk(4);
+ st.latticeCreate([2,2,2],[mesh.id]);
+ const base=posOf(mesh);
+ const moved=rest222();moved[7*3]+=0.4;
+ st.latticeSetPoints(moved,[mesh.id]);
+ st.latticePreview(mesh.id);
+ const prev=posOf(mesh);
+ assert.notDeepEqual(prev,base,'the preview deforms the live geometry');
+ st.latticeRevert(mesh.id);
+ assert.deepEqual(posOf(mesh),base,'revert restores the bind-time positions exactly');
+ st.latticePreview(mesh.id);
+ st.latticeBake(mesh.id);
+ assert.deepEqual(posOf(mesh),prev,'bake lands exactly the previewed deformation');
+ assert.ok(st.latticePoints(mesh.id),'the lattice stays bound after baking');
+ st.undo();
+ assert.deepEqual(posOf(mesh),base,'one undo returns to the pre-drag mesh');
+ assert.ok(st.latticePoints(mesh.id),'undo restores the lattice state too');
+ st.redo();
+ assert.deepEqual(posOf(mesh),prev,'redo rebakes');
+ assert.ok(st.latticePoints(mesh.id),'redo restores the rebound lattice');
+});
+test('latticeMovePoint moves one point with live preview; bad input is a readable error',()=>{
+ const {st,mesh}=mk();
+ st.latticeCreate([2,2,2],[mesh.id]);
+ const before=posOf(mesh);
+ st.latticeMovePoint(mesh.id,7,[0.9,0.5,0.5]);
+ const after=posOf(mesh);
+ let corner=0;
+ for(let v=0;v<before.length/3;v++)if(Math.abs(before[v*3]-0.5)<1e-6&&Math.abs(before[v*3+1]-0.5)<1e-6&&Math.abs(before[v*3+2]-0.5)<1e-6)corner=after[v*3];
+ assert.ok(Math.abs(corner-0.9)<1e-6,`the corner vertex follows its control point, got ${corner}`);
+ assert.throws(()=>st.latticeMovePoint(mesh.id,99,[0,0,0]),/No such lattice control point/);
+ assert.throws(()=>st.latticeMovePoint(mesh.id,0,[0,0,NaN]),/finite/);
+ assert.throws(()=>st.latticePreview(98765),/no lattice|No object/);
+});
+test('bake refuses a mesh that changed since binding',()=>{
+ const {st,mesh}=mk();
+ st.latticeCreate([2,2,2],[mesh.id]);
+ st.subdivide(1,[mesh.id]);
+ assert.throws(()=>st.latticePreview(mesh.id),/changed since the lattice was created/);
+ assert.throws(()=>st.latticeBake(mesh.id),/changed since the lattice was created/);
+ st.latticeClear([mesh.id]);
+ assert.deepEqual(st.latticeIds(),[]);
+});

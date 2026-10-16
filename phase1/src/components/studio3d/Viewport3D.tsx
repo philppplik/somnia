@@ -251,7 +251,7 @@ export default function Viewport3D(){
    const head=sel==null?null:stage.ikChainHead(sel);const ik=head?{...stage.ikState(head.id)!,root:head.id}:null;
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
-   syncIk();syncFabrik();syncOnion();syncMotionPath();
+   syncIk();syncFabrik();syncOnion();syncMotionPath();syncLattice();
    drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
@@ -384,7 +384,7 @@ export default function Viewport3D(){
     next.position.copy(camera.position);next.quaternion.copy(camera.quaternion);next.near=camera.near;next.far=camera.far;
     if(next===orthoCam){const halfH=orthoHalfHeight(perspCam.fov,dist),a=perspCam.aspect||1;orthoCam.top=halfH;orthoCam.bottom=-halfH;orthoCam.left=-halfH*a;orthoCam.right=halfH*a;orthoCam.zoom=1;}
     next.updateProjectionMatrix();camera=next;controls.object=next;
-    for(const g of [gizmo,ikGizmo,poleGizmo,fkGizmo,lookGizmo])g.camera=next;
+    for(const g of [gizmo,ikGizmo,poleGizmo,fkGizmo,lookGizmo,latGizmo])g.camera=next;
     controls.update();
    }
    if(getStudio3DState().viewKind!==kind)patchStudio3D({viewKind:kind});
@@ -412,6 +412,72 @@ export default function Viewport3D(){
     if(!fkDrag)fkLook.position.fromArray(fk.look.target);
    }else if(fkLook.parent){scene.remove(fkLook);lookGizmo.detach();}
   };
+  // Lattice: one marker per control point plus a cage per bound mesh. Clicking a marker attaches the shared translate gizmo; the drag previews live and bakes as one undo step (latticeBake rebinds, so dragging can continue).
+  const latGroup=new THREE.Group();latGroup.name='lattice handles';scene.add(latGroup);
+  const latDotGeo=new THREE.SphereGeometry(0.04,8,6);
+  const latDotMat=new THREE.MeshBasicMaterial({color:0xfacc15,depthTest:false,transparent:true,opacity:0.95});
+  const latLineMat=new THREE.LineBasicMaterial({color:0xfacc15,depthTest:false,transparent:true,opacity:0.35});
+  const latGizmo=new TransformControls(camera,renderer.domElement);latGizmo.setMode('translate');
+  const latGizmoHelper=latGizmo.getHelper();latGizmoHelper.visible=false;scene.add(latGizmoHelper);
+  let latDrag:{meshId:number;index:number;moved:boolean}|null=null;
+  /** World-space cage vertex positions for one bound mesh, from its current control points. */
+  const latCagePositions=(mesh:THREE.Mesh,dims:[number,number,number],points:number[]):Float32Array=>{
+   const [nx,ny,nz]=dims;const v=new THREE.Vector3();const world:number[]=[];
+   for(let i=0;i<nx*ny*nz;i++){v.set(points[i*3],points[i*3+1],points[i*3+2]);mesh.localToWorld(v);world.push(v.x,v.y,v.z);}
+   const at=(i:number,j:number,k:number)=>((k*ny)+j)*nx+i;
+   const idx:number[]=[];
+   for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+    if(i+1<nx)idx.push(at(i,j,k),at(i+1,j,k));
+    if(j+1<ny)idx.push(at(i,j,k),at(i,j+1,k));
+    if(k+1<nz)idx.push(at(i,j,k),at(i,j,k+1));
+   }
+   const out=new Float32Array(idx.length*3);
+   for(let n=0;n<idx.length;n++){out[n*3]=world[idx[n]*3];out[n*3+1]=world[idx[n]*3+1];out[n*3+2]=world[idx[n]*3+2];}
+   return out;
+  };
+  /** Rebuilds the lattice handles and cages from the stage; hidden while edit mode or a modal tool owns the viewport. */
+  const syncLattice=()=>{
+   latGizmo.detach();latGizmoHelper.visible=false;latDrag=null;
+   for(const c of [...latGroup.children]){latGroup.remove(c);const l=c as THREE.LineSegments;if(l.isLineSegments)l.geometry.dispose();}
+   if(getStudio3DState().edit!=null)return;
+   const v=new THREE.Vector3();
+   for(const id of stage.latticeIds()){
+    const info=stage.latticePoints(id);const mesh=stage.find(id) as THREE.Mesh|null;
+    if(!info||!mesh?.isMesh)continue;
+    const [nx,ny,nz]=info.dims;
+    for(let i=0;i<nx*ny*nz;i++){
+     v.set(info.points[i*3],info.points[i*3+1],info.points[i*3+2]);mesh.localToWorld(v);
+     const dot=new THREE.Mesh(latDotGeo,latDotMat);dot.position.copy(v);dot.renderOrder=20;dot.name='lattice handle';dot.userData.lattice={meshId:id,index:i};
+     latGroup.add(dot);
+    }
+    const cage=new THREE.LineSegments(new THREE.BufferGeometry(),latLineMat);
+    cage.geometry.setAttribute('position',new THREE.BufferAttribute(latCagePositions(mesh,info.dims,info.points),3));
+    cage.renderOrder=19;cage.name='lattice cage';cage.userData.cageMesh=id;
+    latGroup.add(cage);
+   }
+  };
+  /** Drag move: the gizmo dragged a marker - push the point into the stage (live preview) and refresh that mesh's cage. */
+  const latDragUpdate=()=>{
+   const d=latDrag;const marker=latGizmo.object as THREE.Mesh|undefined;
+   if(!d||!marker)return;
+   const mesh=stage.find(d.meshId) as THREE.Mesh|null;if(!mesh?.isMesh)return;
+   const lp=mesh.worldToLocal(marker.position.clone());
+   try{stage.latticeMovePoint(d.meshId,d.index,[lp.x,lp.y,lp.z]);}catch{return;}
+   const info=stage.latticePoints(d.meshId);
+   const cage=latGroup.children.find(c=>c.userData.cageMesh===d.meshId) as THREE.LineSegments|undefined;
+   if(info&&cage){cage.geometry.setAttribute('position',new THREE.BufferAttribute(latCagePositions(mesh,info.dims,info.points),3));}
+  };
+  latGizmo.addEventListener('dragging-changed',e=>{
+   const on=!!(e as unknown as {value:boolean}).value;
+   if(on){
+    const meta=(latGizmo.object as THREE.Mesh|undefined)?.userData.lattice as {meshId:number;index:number}|undefined;
+    if(meta){latDrag={meshId:meta.meshId,index:meta.index,moved:false};controls.enabled=false;gizmo.enabled=false;}
+   }else{
+    const d=latDrag;latDrag=null;controls.enabled=true;gizmo.enabled=true;
+    if(d&&d.moved)try{stage.latticeBake(d.meshId);}catch(err){patchStudio3D({notice:err instanceof Error?err.message:String(err)});syncLattice();}
+   }
+  });
+  latGizmo.addEventListener('change',()=>{if(latDrag){latDrag.moved=true;latDragUpdate();}invalidate();});
   // Onion skin: tinted ghost clones of every skinned rig at frames around the playhead. Kept out of the stage root so they never export or alter bounds.
   const ghosts=new THREE.Group();ghosts.name='onion skin';scene.add(ghosts);
   let ghostKey='';
@@ -1370,6 +1436,12 @@ export default function Viewport3D(){
    if(st.vcolBrush.on&&e.button===0&&gizmo.axis===null){
     const mesh=st.selected==null?null:stage.find(st.selected) as THREE.Mesh|null;
     if(mesh?.isMesh){stage.vcolPaintStart(mesh.id);vcolPainting=true;controls.enabled=false;gizmo.enabled=false;vcolHit(e);e.stopPropagation();return;}
+   }
+   if(e.button===0&&gizmo.axis===null&&latGizmo.axis===null&&latGroup.children.length>0&&st.edit==null&&!st.sculpt.on&&!st.weightBrush.on&&!st.vcolBrush.on&&!st.measure){
+    const rect=renderer.domElement.getBoundingClientRect();
+    ray.setFromCamera(new THREE.Vector2(((e.clientX-rect.left)/rect.width)*2-1,-(((e.clientY-rect.top)/rect.height)*2-1)),camera);
+    const hit=ray.intersectObjects(latGroup.children.filter(c=>c.userData.lattice),false)[0]??null;
+    if(hit){latGizmo.attach(hit.object);latGizmoHelper.visible=true;e.stopPropagation();invalidate();return;}
    }
    if(e.shiftKey&&e.button===0&&gizmo.axis===null){shiftDrag=true;controls.enabled=false;}
   };
