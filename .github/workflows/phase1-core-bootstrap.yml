@@ -15,6 +15,10 @@ on:
         description: Run the full 3-platform matrix including macOS (tags always run it, except alpha tags)
         type: boolean
         default: false
+      e2e_filter:
+        description: Run only this playwright selection (spec path and/or -g pattern) with failure details, instead of the full suite
+        type: string
+        default: ''
 permissions:
   contents: read
 jobs:
@@ -91,7 +95,19 @@ jobs:
             phase1/test-results/ds-palette*.png
             phase1/test-results/ds-stress*.png
             phase1/test-results/ds-importer*.png
+      - name: E2E subset (dispatch filter, completes before job timeout and prints failure details)
+        if: ${{ inputs.e2e_filter != '' }}
+        run: npx playwright test ${{ inputs.e2e_filter }} --reporter=line --max-failures=5
       - run: npm run test:e2e
+        if: ${{ inputs.e2e_filter == '' }}
+      - name: Retain e2e failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-e2e-results-${{ github.sha }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: phase1/test-results
       - name: Render corpus guards
         if: ${{ !cancelled() }}
         run: npm run test:render-corpus
