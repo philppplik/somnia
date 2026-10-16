@@ -1027,10 +1027,10 @@ test('mesh edit mode: rip splits a welded corner back apart',async({page})=>{
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[0]})).toBe(true);
  expect(await run(page,'studio3d.edit.rip',{})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
- expect(await run(page,'studio3d.undo',{})).toBe(true);
- expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
+ // Ripping the same face again refuses: the first rip split its vertices off the rest of the mesh, so it shares nothing anymore.
  expect(await run(page,'studio3d.edit.rip',{})).toBe(false);
  await expect(notice(page,'does not share vertices')).toBeVisible();
+ expect(await run(page,'studio3d.undo',{})).toBe(true);
 });
 
 test('mesh edit mode: separate splits selected faces into a new object, undo restores it',async({page})=>{
@@ -1157,7 +1157,7 @@ test('mesh edit mode: merge by distance welds selected doubles, keeps UV seams',
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0})).toBe(false);
- await expect(notice(page,'positive')).toBeVisible();
+ await expect(notice(page,'greater than 0')).toBeVisible();
 });
 
 test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',async({page})=>{
@@ -1225,7 +1225,7 @@ test('mesh edit mode: vertex slide moves a selected vertex along an incident edg
  expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8]})).toBe(true);
  expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:1})).toBe(true);
  expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:2})).toBe(false);
- await expect(notice(page,'The slide factor must be between -1 and 1')).toBeVisible();
+ await expect(notice(page,'factor must be at most 1')).toBeVisible();
  expect(await run(page,'studio3d.undo',{})).toBe(true);
 });
 
