@@ -12622,6 +12622,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.view.shading",
+      "title": "Set the 3D viewport shading (normal-color preview; the document stays unchanged)",
+      "category": "View",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.view.turntable",
       "title": "Start or stop the turntable preview (view only)",
       "category": "View",

@@ -240,6 +240,7 @@ export interface Studio3DController{
  frameSelection():void;
  setGrid(on:boolean):void;
  setWireframe(on:boolean):void;
+ viewShading(mode:'shaded'|'normals'):void;
  select(id:number|null):void;
  setLight(id:number,patch:LightPatch):void;
  setPivot(id:number,at:PivotAt):void;
@@ -307,6 +308,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add('studio3d.view.frame','Frame selection in 3D view','View',()=>need().frameSelection()),
   add<{on?:boolean}>('studio3d.view.grid','Show or hide the 3D grid','View',p=>need().setGrid(p?.on??!getStudio3DState().grid),object({on:{type:'boolean'}},[]),()=>!!controller),
   add<{on?:boolean}>('studio3d.view.wireframe','Show or hide wireframe','View',p=>need().setWireframe(p?.on??!getStudio3DState().wireframe),object({on:{type:'boolean'}},[])),
+  add<{mode:'shaded'|'normals'}>('studio3d.view.shading','Set the 3D viewport shading: a normal-color preview that ignores materials (the document stays unchanged)','View',p=>need().viewShading(p.mode),object({mode:{enum:['shaded','normals']}},['mode'])),
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
   add<{x?:number;y?:number;z?:number}>('studio3d.insert.pin','Insert an annotation pin at the 3D cursor or a given point','Insert',p=>{need().addPin([p?.x,p?.y,p?.z].every(v=>typeof v==='number')?{x:p!.x!,y:p!.y!,z:p!.z!}:undefined);},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},[]),()=>!!controller),

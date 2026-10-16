@@ -28,6 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
+import {applyShading} from '../../lib/studio3d/shading';
 import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,snapMeasurePoint,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
@@ -227,6 +228,10 @@ export default function Viewport3D(){
   const clearSelection=()=>{clearMarks();if(selection){scene.remove(selection);selection.dispose();selection=null;}};
   const clearModel=()=>{clearSelection();stage.clear();bounds=null;};
   const applyWire=(on:boolean)=>holder.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.MeshBasicMaterial).wireframe=on;});
+  const normalMat=new THREE.MeshNormalMaterial();
+  const shadedOrig=new WeakMap<THREE.Mesh,THREE.Material|THREE.Material[]>();
+  /** Re-applies the shading preview to every document mesh (also after scene loads and material edits). */
+  const syncShading=()=>{applyShading(holder,getStudio3DState().shading,normalMat,shadedOrig);invalidate();};
   const drawSelection=()=>{
    clearSelection();const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
    if(obj){const box=new THREE.Box3().setFromObject(obj);
@@ -252,7 +257,7 @@ export default function Viewport3D(){
    const fhead=sel==null?null:stage.fabrikChainHead(sel);const fabrik=fhead?{...stage.fabrikState(fhead.id)!,root:fhead.id}:null;
    patchStudio3D({clips:infos,clipKeys:keys,stats:m.stats,outline:m.outline,materialList:stage.materialUsage(),bones:stage.bones(),bounds:m.bounds,selected:info?sel:null,selectedInfo:info,poses:sel==null?[]:stage.poseList(sel),ik,fabrik,rigs:stage.bones().filter(b=>b.depth===0).map(b=>({id:b.id,name:b.name})),boneLimits:sel==null?null:stage.boneLimitsOf(sel),uvView:sel==null?null:stage.uvLayout(sel),lattices:stage.latticeIds().map(id=>({id,dims:stage.latticePoints(id)?.dims??([2,2,2] as [number,number,number])})),dirty:stage.dirty,canUndo:stage.canUndo,canRedo:stage.canRedo,undoLabel:stage.undoLabel,history:stage.historyLabels()});
    syncIk();syncFabrik();syncOnion();syncMotionPath();syncLattice();
-   drawSelection();applyWire(getStudio3DState().wireframe);applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
+   drawSelection();applyWire(getStudio3DState().wireframe);syncShading();applyShadowQuality();syncSkeleton();syncWeightPreview();syncMaskOverlay();syncUvChecker();syncSeams();for(const h of syncHooks)h();updatePinLabels();invalidate();
   };
   /** Turntable preview: the orbit controls auto-rotate while a rAF loop renders. View only - it never touches the stage, documents or exports. */
   let previewRaf=0;
@@ -1372,6 +1377,7 @@ export default function Viewport3D(){
    remove:id=>{stage.remove(id);},duplicate:id=>{const o=stage.duplicate(id);select(o.id);return o.id;},undo:()=>stage.undo(),redo:()=>stage.redo(),
    setGrid:on=>{grid.visible=on;patchStudio3D({grid:on});invalidate();},
    setWireframe:on=>{applyWire(on);patchStudio3D({wireframe:on});invalidate();},
+   viewShading:mode=>{patchStudio3D({shading:mode});syncShading();},
    setUvChecker:on=>{patchStudio3D({uvChecker:on});syncUvChecker();invalidate();},
    uvSeamMark:mark=>{stage.uvSeamMark(mark);afterEditOp();},
    uvSeamsFromIslands:()=>{stage.uvSeamsFromIslands();afterEditOp();},
