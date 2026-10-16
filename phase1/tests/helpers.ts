@@ -20,3 +20,13 @@ export async function showInspectorSection(page:Page,id:string){const section=pa
 
 /** Code has a Preview hero; Publish is the last action in its menu, not the main hero button. */
 export async function openPublish(page:Page){await page.getByTestId('hero-action-menu').click();await page.getByTestId('hero-action-popup').locator('[data-command="deploy.open"]').click();await expect(page.getByTestId('publish-dialog')).toBeVisible();}
+
+/** Chat-only panel: inspection is an explicit control under AI > Privacy & data. */
+export async function allowAgentDocumentInspection(page:Page){
+ const panel=page.getByRole('complementary',{name:'Somnia Agent'});
+ await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
+ const settings=page.getByRole('dialog');await settings.getByRole('tab',{name:'Privacy & data',exact:true}).click();
+ const inspect=settings.getByRole('checkbox',{name:/Allow inspecting the active document/});await inspect.check();await expect(inspect).toBeChecked();
+ await expect(panel.getByRole('checkbox',{name:/Allow inspecting/})).toHaveCount(0);
+ await settings.getByRole('button',{name:'Close settings',exact:true}).click();
+}

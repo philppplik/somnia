@@ -62,7 +62,7 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
    {tabs.map(id=><TabsTrigger id={'ai-tab-'+id} value={id} aria-controls={'ai-content-'+id} key={id}>{labels[id]}</TabsTrigger>)}
   </TabsList>
   <TabsContent keepMounted value="local" id="ai-content-local" aria-labelledby="ai-tab-local"><LocalModelsSettings active={visible('local')}/>{visible('local')&&<details className="local-runtime-discovery"><summary>{t('local.search.title')}</summary><LocalSearchPanelHost/></details>}<AlternateRuntimeDiscovery/><NativeVoiceSettings/><LocalModelComparison/><LocalEvaluationHarness/><LocalPrivacySettings/><LocalToolDiagnostics/><OfflineModeSettings value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalTaskRouting value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalStudioModels value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/>{settings.config.provider==='ollama'&&<LocalQualityProbes model={settings.config.model} options={settings.config.localRuntime}/>}
-{settings.config.provider==='ollama'&&<LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/>}<ProviderRoutingSettings value={cfg.localRuntime} model={cfg.model} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalRuntimeAdvanced model={cfg.model} value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><Button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</Button>{saved&&<p role="status">Configuration saved.</p>}</TabsContent>
+{settings.config.provider==='ollama'&&<LocalVisionTest model={settings.config.model} options={settings.config.localRuntime}/>}<ProviderRoutingSettings value={cfg.localRuntime} model={cfg.model} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><LocalRuntimeAdvanced model={cfg.model} value={cfg.localRuntime} disabled={locked} onChange={localRuntime=>{setCfg({...cfg,localRuntime});setSaved(false);}}/><Button type="button" disabled={locked||authBusy||invalid} onClick={()=>void saveConfiguration()}>{saving?'Saving...':t('agent.settings.save')}</Button></TabsContent>
   {settings.running&&<p role="status">Stop the current generation before changing AI configuration.</p>}
   {settings.pendingReview&&<p role="status">Accept or discard pending proposals before changing AI configuration.</p>}
   <p hidden={tab!=='providers'&&tab!=='instructions'}>Saving starts a new AI session. Your visible chat history stays. API key actions apply immediately; cloud consent is separate.</p>
@@ -91,10 +91,11 @@ export function AgentSettings({searchQuery='',legacyPrivacy=false}:{searchQuery?
      <NativeButton type="button" disabled={(cfg.customPrompts?.length??0)>=20} onClick={()=>setCfg({...cfg,customPrompts:[...(cfg.customPrompts??[]),{id:crypto.randomUUID(),name:'',text:'',enabled:true}]})}>Add custom prompt</NativeButton>
     </fieldset>
     </TabsContent>
-    <NativeButton type="submit" disabled={locked||authBusy||invalid}>{saving?'Saving...':t('agent.settings.save')}</NativeButton>{saved&&<p role="status">Configuration saved.</p>}
+    <NativeButton type="submit" disabled={locked||authBusy||invalid}>{saving?'Saving...':t('agent.settings.save')}</NativeButton>
 
    </fieldset>
   </form>
   </Tabs>
+  {saved&&<p role="status">Configuration saved.</p>}
  </div>;
 }
