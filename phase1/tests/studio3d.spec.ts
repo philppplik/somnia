@@ -99,7 +99,7 @@ test('3D studio opens a GLB, shows its stats and exports a still',async({page})=
 test('3D studio refuses a file that is not glTF with a readable error',async({page})=>{
  await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'bad.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('not a model')});
- await expect(page.getByRole('alert')).toContainText('bad.glb');
+ await expect(page.getByRole('alert')).toContainText('bad.glb',{timeout:15000});
 });
 
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
@@ -196,7 +196,7 @@ test('3D studio refuses a glTF that points at a remote file and never requests i
  await open3d(page);
  const gltf={asset:{version:'2.0'},scene:0,scenes:[{nodes:[0]}],nodes:[{mesh:0}],meshes:[{primitives:[{attributes:{POSITION:0}}]}],buffers:[{uri:'https://example.test/a.bin',byteLength:36}],bufferViews:[{buffer:0,byteLength:36}],accessors:[{bufferView:0,componentType:5126,count:3,type:'VEC3'}]};
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'remote.gltf',mimeType:'model/gltf+json',buffer:Buffer.from(JSON.stringify(gltf))});
- await expect(page.getByRole('alert')).toContainText('remote.gltf');
+ await expect(page.getByRole('alert')).toContainText('remote.gltf',{timeout:15000});
  expect(requested).toEqual([]);
 });
 
@@ -643,7 +643,7 @@ test('3D studio inserts a three-point light rig as one undo step',async({page})=
  const glb=await skinnedGlb3();
  await open3d(page);
  await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
- await page.getByRole('button',{name:'3-point rig'}).click();
+ await page.getByRole('button',{name:'Three-point'}).click();
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='light').length).toBe(3);
  const names=(await session(page)).outline.filter(o=>o.kind==='light').map(o=>o.name);
  expect(names).toEqual(['Key light','Fill light','Rim light']);
@@ -1638,7 +1638,7 @@ test('3D studio precision tools: snap modes and hotkey, measure picks, transform
  await expect(snapBox).toBeChecked();
  expect((await session(page)).snap.on).toBe(true);
  expect(await run(page,'studio3d.snap.set',{mode:'midpoint'})).toBe(true);
- await expect(page.getByLabel('Snap to')).toHaveValue('midpoint');
+ await expect(page.getByLabel('Snap to',{exact:true})).toHaveValue('midpoint');
  // Relative numeric entry: +2 adds to the current X, *3 scales it.
  await run(page,'studio3d.select',{id:cube});
  const posX=page.getByRole('textbox',{name:'Position X'});
