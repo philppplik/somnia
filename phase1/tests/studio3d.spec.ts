@@ -87,7 +87,7 @@ function triangleGlb():Buffer{
 }
 test('3D studio opens a GLB, shows its stats and exports a still',async({page})=>{
  await page.goto('/');
- await page.getByRole('button',{name:/3D/}).first().click();
+ await page.getByRole('radio',{name:/3D/}).first().click();
  await expect(page.getByTestId('3d-start')).toBeVisible();
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'tri.glb',mimeType:'model/gltf-binary',buffer:triangleGlb()});
  await expect(page.getByTestId('studio3d-viewport')).toBeVisible();
@@ -98,7 +98,7 @@ test('3D studio opens a GLB, shows its stats and exports a still',async({page})=
  expect(download.suggestedFilename()).toBe('tri-still.png');
 });
 test('3D studio refuses a file that is not glTF with a readable error',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();
+ await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'bad.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('not a model')});
  await expect(page.getByRole('alert')).toContainText('bad.glb');
 });
@@ -107,7 +107,7 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
 const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
-const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('button',{name:/3D/}).first().click();};
+const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();};
 const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible();};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
 const positionOf=async(page:P,id:number)=>{await run(page,'studio3d.select',{id});return (await session(page)).info!.position;};
