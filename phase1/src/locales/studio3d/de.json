@@ -1008,6 +1008,8 @@
  "cmd.studio3d.edit.selectPath": "Den kürzesten Kantenpfad zwischen zwei Vertices des bearbeiteten 3D-Meshs auswählen",
  "studio3d.hist.bend_one": "{name} biegen",
  "studio3d.hist.bend_other": "{count} Objekte biegen",
+ "studio3d.hist.lattice_one": "Gitter: {name}",
+ "studio3d.hist.lattice_other": "Gitter: {count} Objekte",
  "cmd.studio3d.mesh.bend": "Ein 3D-Mesh seitlich um die Achse senkrecht zur Verformungsachse biegen",
  "studio3d.mesh.bend": "Biegen",
  "studio3d.mesh.bendAxis": "Verformungsachse",
@@ -1082,5 +1084,10 @@
  "studio3d.hist.paintVcol": "Vertexfarben malen",
  "cmd.studio3d.edit.vcolFill": "Die gewählten Vertices des bearbeiteten 3D-Meshes mit einer Vertexfarbe füllen (standardmäßig die Pinselfarbe; legt das Attribut beim ersten Mal an)",
  "cmd.studio3d.edit.vcolPick": "Die Vertexfarbe eines Vertex des bearbeiteten 3D-Meshes als Pinselfarbe übernehmen",
+ "cmd.studio3d.lattice.create": "Ein N×M×K-Kontrollgitter an die ausgewählten 3D-Meshes binden (Freiform-Verformung)",
+ "cmd.studio3d.lattice.set": "Die Kontrollpunkte eines gebundenen 3D-Gitters bewegen",
+ "cmd.studio3d.lattice.apply": "Die Verformung des gebundenen 3D-Gitters ins Mesh backen",
+ "cmd.studio3d.lattice.reset": "Ein gebundenes 3D-Gitter auf sein Ruheraster zurücksetzen",
+ "cmd.studio3d.lattice.clear": "Das an die ausgewählten 3D-Meshes gebundene Gitter entfernen",
  "studio3d.hist.editVcolFill": "Vertexfarben füllen"
 }

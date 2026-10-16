@@ -1008,6 +1008,8 @@
  "cmd.studio3d.edit.selectPath": "Sélectionne le plus court chemin d'arêtes entre deux sommets du maillage 3D édité",
  "studio3d.hist.bend_one": "Courber {name}",
  "studio3d.hist.bend_other": "Courber {count} objets",
+ "studio3d.hist.lattice_one": "Treillis : {name}",
+ "studio3d.hist.lattice_other": "Treillis : {count} objets",
  "cmd.studio3d.mesh.bend": "Courbe un maillage 3D latéralement autour de l'axe perpendiculaire à l'axe de déformation",
  "studio3d.mesh.bend": "Courber",
  "studio3d.mesh.bendAxis": "Axe de déformation",
@@ -1082,5 +1084,10 @@
  "studio3d.hist.paintVcol": "Peindre les couleurs de sommets",
  "cmd.studio3d.edit.vcolFill": "Remplir les sommets sélectionnés du maillage 3D édité avec une couleur de sommet (la couleur de la brosse par défaut ; crée l'attribut à la première utilisation)",
  "cmd.studio3d.edit.vcolPick": "Prendre la couleur de sommet d'un sommet du maillage 3D édité comme couleur de brosse",
+ "cmd.studio3d.lattice.create": "Lier un treillis de contrôle N×M×K aux maillages 3D sélectionnés (déformation libre)",
+ "cmd.studio3d.lattice.set": "Déplacer les points de contrôle d'un treillis 3D lié",
+ "cmd.studio3d.lattice.apply": "Appliquer la déformation du treillis 3D lié au maillage",
+ "cmd.studio3d.lattice.reset": "Réinitialiser un treillis 3D lié à sa grille de repos",
+ "cmd.studio3d.lattice.clear": "Retirer le treillis lié aux maillages 3D sélectionnés",
  "studio3d.hist.editVcolFill": "Remplir les couleurs de sommets"
 }

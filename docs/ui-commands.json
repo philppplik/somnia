@@ -10945,6 +10945,71 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.lattice.apply",
+      "title": "Bake the bound 3D lattice deformation into the mesh",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.lattice.clear",
+      "title": "Remove the lattice bound to the selected 3D meshes",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.lattice.create",
+      "title": "Bind an N by M by K control lattice to the selected 3D meshes for free-form deformation",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.lattice.reset",
+      "title": "Reset a bound 3D lattice to its rest grid",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.lattice.set",
+      "title": "Move the control points of a bound 3D lattice",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.light.helpers",
       "title": "Show or hide the viewport helper of the selected light",
       "category": "View",

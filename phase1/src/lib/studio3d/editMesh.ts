@@ -2495,6 +2495,54 @@ export function taperMesh(m:MeshData,axis:MirrorAxis,factor:number):MeshData{
 }
 
 /** Bends the mesh around the axis perpendicular to the deform axis: cross-sections follow concentric arcs, so the high end swings sideways by the given angle over the mesh span (arc length preserved, like a simple-deform bend). Sculpt masks scale the effect down to zero. UVs and masks are carried, explicit normals are dropped (rebuilt smooth on the stage). */
+/** Largest lattice resolution per axis, so the control point count stays bounded (8^3 = 512 points). */
+export const MAX_LATTICE_DIM=8;
+/** A Bernstein control lattice bound to a mesh: the rest grid, the current control points (flat nx*ny*nz*3, x fastest) and the per-vertex local coordinates captured at bind time, all in mesh-local space. */
+export interface LatticeGrid{dims:[number,number,number];rest:number[];points:number[];coords:number[];}
+const LATTICE_BINOM=[[1],[1,1],[1,2,1],[1,3,3,1],[1,4,6,4,1],[1,5,10,10,5,1],[1,6,15,20,15,6,1],[1,7,21,35,35,21,7,1]];
+/** Binds an nx by ny by nz control lattice to the mesh's local bounding box; each dimension is an integer from 2 to 8. */
+export function latticeGrid(m:MeshData,dims:[number,number,number]):LatticeGrid{
+ check(m);
+ if(!Array.isArray(dims)||dims.length!==3||dims.some(d=>!Number.isInteger(d)||d<2||d>MAX_LATTICE_DIM))throw new EditError(`Lattice dimensions must be three integers from 2 to ${MAX_LATTICE_DIM}.`);
+ const nv=m.positions.length/3;
+ const mn=[Infinity,Infinity,Infinity],mx=[-Infinity,-Infinity,-Infinity];
+ for(let v=0;v<nv;v++)for(let a=0;a<3;a++){const p=m.positions[v*3+a];if(p<mn[a])mn[a]=p;if(p>mx[a])mx[a]=p;}
+ const coords=new Array<number>(nv*3);
+ for(let v=0;v<nv;v++)for(let a=0;a<3;a++){const s=mx[a]-mn[a];coords[v*3+a]=s<1e-12?0:(m.positions[v*3+a]-mn[a])/s;}
+ const [nx,ny,nz]=dims;
+ const rest=new Array<number>(nx*ny*nz*3);
+ let w=0;
+ for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++){
+  rest[w++]=mn[0]+(mx[0]-mn[0])*i/(nx-1);
+  rest[w++]=mn[1]+(mx[1]-mn[1])*j/(ny-1);
+  rest[w++]=mn[2]+(mx[2]-mn[2])*k/(nz-1);
+ }
+ return{dims:[...dims],rest,points:[...rest],coords};
+}
+/** Displaces the mesh from the lattice rest grid toward the current control points (Bernstein interpolation; the rest grid is the identity). Sculpt masks scale the effect. UVs, vertex colors and the mask carry through. */
+export function applyLattice(m:MeshData,g:LatticeGrid):MeshData{
+ check(m);
+ const nv=m.positions.length/3;
+ if(g.coords.length!==nv*3)throw new EditError('The mesh changed since the lattice was created. Create the lattice again.');
+ const [nx,ny,nz]=g.dims;
+ if(!Array.isArray(g.points)||g.points.length!==nx*ny*nz*3||g.points.some(p=>!Number.isFinite(p)))throw new EditError(`The lattice needs exactly ${nx*ny*nz*3} finite control point coordinates.`);
+ const delta=new Array<number>(nx*ny*nz*3);
+ for(let i=0;i<delta.length;i++)delta[i]=g.points[i]-g.rest[i];
+ const bx=new Array<number>(nx),by=new Array<number>(ny),bz=new Array<number>(nz);
+ const basis=(n:number,s:number,out:number[])=>{const b=LATTICE_BINOM[n-1];for(let i=0;i<n;i++)out[i]=b[i]*Math.pow(s,i)*Math.pow(1-s,n-1-i);};
+ const positions=[...m.positions];
+ for(let v=0;v<nv;v++){
+  const f=1-(m.mask?m.mask[v]:0);if(f===0)continue;
+  basis(nx,g.coords[v*3],bx);basis(ny,g.coords[v*3+1],by);basis(nz,g.coords[v*3+2],bz);
+  let dx=0,dy=0,dz=0,ci=0;
+  for(let k=0;k<nz;k++)for(let j=0;j<ny;j++)for(let i=0;i<nx;i++,ci++){
+   const w=bz[k]*by[j]*bx[i];if(w===0)continue;
+   dx+=w*delta[ci*3];dy+=w*delta[ci*3+1];dz+=w*delta[ci*3+2];
+  }
+  positions[v*3]+=dx*f;positions[v*3+1]+=dy*f;positions[v*3+2]+=dz*f;
+ }
+ return{...m,positions};
+}
 export function bendMesh(m:MeshData,axis:MirrorAxis,degrees:number):MeshData{
  check(m);
  if(!Number.isFinite(degrees)||degrees===0||Math.abs(degrees)>360)throw new EditError('The bend angle must be a non-zero number of degrees between -360 and 360.');

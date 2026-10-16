@@ -1008,6 +1008,8 @@
  "cmd.studio3d.edit.selectPath": "Select the shortest edge path between two vertices of the edited 3D mesh",
  "studio3d.hist.bend_one": "Bend {name}",
  "studio3d.hist.bend_other": "Bend {count} objects",
+ "studio3d.hist.lattice_one": "Lattice {name}",
+ "studio3d.hist.lattice_other": "Lattice {count} objects",
  "cmd.studio3d.mesh.bend": "Bend a 3D mesh sideways around the axis perpendicular to the deform axis",
  "studio3d.mesh.bend": "Bend",
  "studio3d.mesh.bendAxis": "Deform axis",
@@ -1082,5 +1084,10 @@
  "studio3d.hist.paintVcol": "Paint vertex colors",
  "cmd.studio3d.edit.vcolFill": "Fill the selected vertices of the edited 3D mesh with a vertex color (the brush color by default; creates the attribute on first use)",
  "cmd.studio3d.edit.vcolPick": "Pick the vertex color of a vertex of the edited 3D mesh as the brush color",
+ "cmd.studio3d.lattice.create": "Bind an N by M by K control lattice to the selected 3D meshes for free-form deformation",
+ "cmd.studio3d.lattice.set": "Move the control points of a bound 3D lattice",
+ "cmd.studio3d.lattice.apply": "Bake the bound 3D lattice deformation into the mesh",
+ "cmd.studio3d.lattice.reset": "Reset a bound 3D lattice to its rest grid",
+ "cmd.studio3d.lattice.clear": "Remove the lattice bound to the selected 3D meshes",
  "studio3d.hist.editVcolFill": "Fill vertex colors"
 }

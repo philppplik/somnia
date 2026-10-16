@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1116 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1121 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -905,6 +905,11 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.key.remove` | Remove a position, rotation or scale key of a 3D object in the current clip | View | studio3d |  |
 | `studio3d.key.set` | Add or replace a position, rotation or scale key of a 3D object in the current clip | View | studio3d |  |
 | `studio3d.key.shift` | Move several keys of a 3D object in time by the same amount | View | studio3d |  |
+| `studio3d.lattice.apply` | Bake the bound 3D lattice deformation into the mesh | Edit | studio3d |  |
+| `studio3d.lattice.clear` | Remove the lattice bound to the selected 3D meshes | Edit | studio3d |  |
+| `studio3d.lattice.create` | Bind an N by M by K control lattice to the selected 3D meshes for free-form deformation | Edit | studio3d |  |
+| `studio3d.lattice.reset` | Reset a bound 3D lattice to its rest grid | Edit | studio3d |  |
+| `studio3d.lattice.set` | Move the control points of a bound 3D lattice | Edit | studio3d |  |
 | `studio3d.light.helpers` | Show or hide the viewport helper of the selected light | View | studio3d |  |
 | `studio3d.light.rig` | Insert a three-point light rig | Insert | studio3d |  |
 | `studio3d.light.set` | Change a 3D light | Edit | studio3d |  |

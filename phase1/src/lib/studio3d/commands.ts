@@ -50,6 +50,11 @@ export interface Studio3DController{
  setVertexColors(on:boolean,color:string|undefined,ids?:number[]):number;
  editVcolFill(color?:string):void;
  editVcolPick(vertex:number):void;
+ latticeCreate(dims:[number,number,number],ids?:number[]):number;
+ latticeSetPoints(points:number[],ids?:number[]):number;
+ latticeApply(ids?:number[]):number;
+ latticeReset(ids?:number[]):number;
+ latticeClear(ids?:number[]):number;
  setVcolBrush(patch:Partial<{on:boolean;color:string;radius:number;strength:number;falloff:'smooth'|'linear'|'constant'}>):void;
  vcolPaintDab(x:number,y:number,z:number,opts?:{color?:string;radius?:number;strength?:number;falloff?:'smooth'|'linear'|'constant'}):number;
  relax(iterations:number,factor:number,ids?:number[]):number;
@@ -468,6 +473,11 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{ids?:number[];twist?:number}>('studio3d.mesh.bridge','Bridge two 3D meshes with a tunnel between their open borders','Edit',p=>need().bridge(p.ids??[],p.twist??0),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},twist:{type:'integer',minimum:-64,maximum:64}},[]),hasScene),
   add<{op:'union'|'subtract'|'intersect';ids?:number[]}>('studio3d.mesh.boolean','Combine two 3D meshes with a boolean: union, subtract or intersect','Edit',p=>need().booleanOp(p.op,p.ids??[]),object({op:{enum:['union','subtract','intersect']},ids:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2}},['op']),hasScene),
   add<{resolution?:number;ids?:number[]}>('studio3d.mesh.remesh','Rebuild meshes as an even voxel grid (remesh): uniform triangles, watertight','Edit',p=>need().remesh(p.resolution??32,p.ids??[]),object({resolution:{type:'integer',minimum:8,maximum:128},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1}},[]),hasScene),
+  add<{dims:[number,number,number];ids?:number[]}>('studio3d.lattice.create','Bind an nx by ny by nz control lattice to the bounding box of a 3D mesh for free-form deformation','Edit',p=>need().latticeCreate(p.dims,p.ids),object({dims:{type:'array',items:{type:'integer',minimum:2,maximum:8},minItems:3,maxItems:3},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['dims']),hasScene),
+  add<{points:number[];ids?:number[]}>('studio3d.lattice.set','Move the control points of a bound 3D lattice (flat nx*ny*nz*3 coordinates in mesh-local space)','Edit',p=>need().latticeSetPoints(p.points,p.ids),object({points:{type:'array',items:{type:'number'},minItems:24,maxItems:1536},ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},['points']),hasScene),
+  add<{ids?:number[]}>('studio3d.lattice.apply','Bake the deformation of a bound 3D lattice into the mesh (one undo step)','Edit',p=>need().latticeApply(p.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{ids?:number[]}>('studio3d.lattice.reset','Reset the control points of a bound 3D lattice to their rest grid','Edit',p=>need().latticeReset(p.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{ids?:number[]}>('studio3d.lattice.clear','Drop the lattice bound to a 3D mesh without deforming','Edit',p=>need().latticeClear(p.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{id?:number;keep:number}>('studio3d.mesh.simplify','Simplify a 3D mesh: remove vertices while keeping its shape, UVs and normals','Edit',async p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');return need().simplify(id,p.keep);},object({id:{type:'integer',minimum:0},keep:{type:'number',exclusiveMinimum:0,exclusiveMaximum:1}},['keep']),hasScene),
   add<{preset:ViewPreset}>('studio3d.view.preset','Look at the 3D scene from the front, back, left, right, top, bottom or an isometric angle','View',p=>need().viewPreset(p.preset),object({preset:{enum:[...VIEW_PRESETS]}}),hasScene),
   add<{id?:number;slot:TextureSlot;reset?:boolean}&Partial<TextureTransform>>('studio3d.texture.transform','Move, scale or rotate the image of a texture slot (UV mapping)','Edit',p=>{const{id,slot,reset,...patch}=p;need().setTextureTransform(id??getStudio3DState().selected??-1,slot,reset?'reset':patch);},object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]},reset:{type:'boolean'},offsetX:{type:'number',minimum:-100,maximum:100},offsetY:{type:'number',minimum:-100,maximum:100},scaleX:{type:'number'},scaleY:{type:'number'},rotation:{type:'number',minimum:-360,maximum:360}},['slot']),()=>hasScene()&&getStudio3DState().selectedInfo?.material!=null),

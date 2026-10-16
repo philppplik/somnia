@@ -1008,6 +1008,8 @@
  "cmd.studio3d.edit.selectPath": "Selecionar o caminho de arestas mais curto entre dois vértices da malha 3D editada",
  "studio3d.hist.bend_one": "Curvar {name}",
  "studio3d.hist.bend_other": "Curvar {count} objetos",
+ "studio3d.hist.lattice_one": "Grade: {name}",
+ "studio3d.hist.lattice_other": "Grade: {count} objetos",
  "cmd.studio3d.mesh.bend": "Curvar uma malha 3D lateralmente ao redor do eixo perpendicular ao eixo de deformação",
  "studio3d.mesh.bend": "Curvar",
  "studio3d.mesh.bendAxis": "Eixo de deformação",
@@ -1082,5 +1084,10 @@
  "studio3d.hist.paintVcol": "Pintar cores de vértice",
  "cmd.studio3d.edit.vcolFill": "Preencher os vértices selecionados da malha 3D editada com uma cor de vértice (a cor do pincel por padrão; cria o atributo no primeiro uso)",
  "cmd.studio3d.edit.vcolPick": "Tomar a cor de vértice de um vértice da malha 3D editada como cor do pincel",
+ "cmd.studio3d.lattice.create": "Vincular uma grade de controle N×M×K às malhas 3D selecionadas (deformação livre)",
+ "cmd.studio3d.lattice.set": "Mover os pontos de controle de uma grade 3D vinculada",
+ "cmd.studio3d.lattice.apply": "Aplicar a deformação da grade 3D vinculada à malha",
+ "cmd.studio3d.lattice.reset": "Redefinir uma grade 3D vinculada para o estado de repouso",
+ "cmd.studio3d.lattice.clear": "Remover a grade vinculada às malhas 3D selecionadas",
  "studio3d.hist.editVcolFill": "Preencher cores de vértice"
 }

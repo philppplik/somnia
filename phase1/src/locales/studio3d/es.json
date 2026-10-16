@@ -1008,6 +1008,8 @@
  "cmd.studio3d.edit.selectPath": "Selecciona la ruta de aristas más corta entre dos vértices de la malla 3D editada",
  "studio3d.hist.bend_one": "Curvar {name}",
  "studio3d.hist.bend_other": "Curvar {count} objetos",
+ "studio3d.hist.lattice_one": "Retícula: {name}",
+ "studio3d.hist.lattice_other": "Retícula: {count} objetos",
  "cmd.studio3d.mesh.bend": "Curva una malla 3D lateralmente alrededor del eje perpendicular al eje de deformación",
  "studio3d.mesh.bend": "Curvar",
  "studio3d.mesh.bendAxis": "Eje de deformación",
@@ -1082,5 +1084,10 @@
  "studio3d.hist.paintVcol": "Pintar colores de vértice",
  "cmd.studio3d.edit.vcolFill": "Rellenar los vértices seleccionados de la malla 3D editada con un color de vértice (el color del pincel por defecto; crea el atributo la primera vez)",
  "cmd.studio3d.edit.vcolPick": "Tomar el color de vértice de un vértice de la malla 3D editada como color del pincel",
+ "cmd.studio3d.lattice.create": "Vincular una retícula de control N×M×K a las mallas 3D seleccionadas (deformación libre)",
+ "cmd.studio3d.lattice.set": "Mover los puntos de control de una retícula 3D vinculada",
+ "cmd.studio3d.lattice.apply": "Hornear la deformación de la retícula 3D vinculada en la malla",
+ "cmd.studio3d.lattice.reset": "Restablecer una retícula 3D vinculada a su estado de reposo",
+ "cmd.studio3d.lattice.clear": "Quitar la retícula vinculada a las mallas 3D seleccionadas",
  "studio3d.hist.editVcolFill": "Rellenar colores de vértice"
 }
