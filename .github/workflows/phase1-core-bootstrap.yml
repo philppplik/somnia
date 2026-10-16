@@ -19,6 +19,10 @@ on:
         description: Run only this playwright selection (spec path and/or -g pattern) with failure details, instead of the full suite
         type: string
         default: ''
+      e2e_max_failures:
+        description: Max failed tests before the e2e subset stops
+        type: string
+        default: '5'
 permissions:
   contents: read
 jobs:
@@ -97,7 +101,7 @@ jobs:
             phase1/test-results/ds-importer*.png
       - name: E2E subset (dispatch filter, completes before job timeout and prints failure details)
         if: ${{ inputs.e2e_filter != '' }}
-        run: npx playwright test ${{ inputs.e2e_filter }} --reporter=line --max-failures=5
+        run: npx playwright test ${{ inputs.e2e_filter }} --reporter=line --max-failures=${{ inputs.e2e_max_failures }}
       - run: npm run test:e2e
         if: ${{ inputs.e2e_filter == '' }}
       - name: Retain e2e failure evidence
