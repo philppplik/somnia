@@ -1035,7 +1035,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.view.rename` | Rename a saved view | View | studio3d |  |
 | `studio3d.view.reset` | Reset 3D view | View | studio3d |  |
 | `studio3d.view.save` | Save the current viewport as a named view | View | studio3d |  |
-| `studio3d.view.shading` | Set the 3D viewport shading (normal-color preview; the document stays unchanged) | View | studio3d |  |
+| `studio3d.view.shading` | Set the 3D viewport shading (normal-color or matcap preview; the document stays unchanged) | View | studio3d |  |
 | `studio3d.view.turntable` | Start or stop the turntable preview (view only) | View | studio3d |  |
 | `studio3d.view.update` | Overwrite a saved view with the current viewport | View | studio3d |  |
 | `studio3d.view.wireframe` | Show or hide wireframe | View | studio3d |  |

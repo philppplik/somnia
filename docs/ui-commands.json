@@ -12636,7 +12636,7 @@
     },
     {
       "id": "studio3d.view.shading",
-      "title": "Set the 3D viewport shading (normal-color preview; the document stays unchanged)",
+      "title": "Set the 3D viewport shading (normal-color or matcap preview; the document stays unchanged)",
       "category": "View",
       "source": "studio3d",
       "keywords": [

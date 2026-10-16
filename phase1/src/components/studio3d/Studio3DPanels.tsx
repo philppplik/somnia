@@ -574,8 +574,8 @@ export function ViewSection(_:InspectorSectionProps){
  return <div className="grid gap-2 p-3" data-testid="studio3d-view-section">
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.grid} onChange={e=>void executeCommand('studio3d.view.grid',{on:e.target.checked})}/>{t('studio3d.view.grid')}</label>
   <label className="flex items-center gap-2 text-xs text-ink-2"><input type="checkbox" checked={s.wireframe} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.wireframe',{on:e.target.checked})}/>{t('studio3d.view.wireframe')}</label>
-  <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.shading} disabled={!ready} aria-label={t('studio3d.view.shading')} onChange={e=>void executeCommand('studio3d.view.shading',{mode:e.currentTarget.value as 'shaded'|'normals'})}>
-   {(['shaded','normals'] as const).map(m=><option key={m} value={m}>{t('studio3d.view.shading.'+m)}</option>)}</NativeSelect>
+  <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.shading} disabled={!ready} aria-label={t('studio3d.view.shading')} onChange={e=>void executeCommand('studio3d.view.shading',{mode:e.currentTarget.value as 'shaded'|'normals'|'matcap'})}>
+   {(['shaded','normals','matcap'] as const).map(m=><option key={m} value={m}>{t('studio3d.view.shading.'+m)}</option>)}</NativeSelect>
   <Checkbox label={t('studio3d.light.helpers')} checked={s.lightHelpers} onChange={e=>void executeCommand('studio3d.light.helpers',{on:e.currentTarget.checked})}/>
   <Checkbox label={t('studio3d.ao.toggle')} checked={s.ao.on} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.ao',{on:e.currentTarget.checked})}/>
   <Checkbox label={t('studio3d.view.perf')} checked={!!s.perf} disabled={!ready} onChange={e=>void executeCommand('studio3d.view.perf',{on:e.currentTarget.checked})}/>

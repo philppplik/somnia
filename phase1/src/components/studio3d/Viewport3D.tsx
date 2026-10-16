@@ -28,7 +28,7 @@ import {getState as getAppState} from '../../store/appStore';
 import {readProjectUnit,writeProjectUnit} from '../../lib/studio3d/projectPrefs';
 import {checkPreset,presetPatch,readPresets,removePreset,savePreset,MaterialPresetError,type MaterialPreset} from '../../lib/studio3d/materialPresets';
 import type {MaterialSnapshot} from '../../lib/studio3d/stage';
-import {applyShading} from '../../lib/studio3d/shading';
+import {applyShading,createMatcapMaterial} from '../../lib/studio3d/shading';
 import {ASSET_MIME,parseAssetDrag} from '../../lib/studio3d/assetDrag';
 import {toggleSelection,marqueeRect,inRect,turntablePlan,frameName,exportFileName,unitScale,isUnit,isMeshFormat,mergeSnap,snapTo,snapMeasurePoint,measureInfo,formatMeasure,stlUnitHint,mtlReferences,mtlTextures,externalGltfNeeds,clampRenderSize,shadowMapSize,formatPerf,webmMime,MAX_MTL_BYTES,MAX_TEXTURE_BYTES,MAX_TEXTURE_FILES,SnapError,mergeEnv,envFormatFor,isShadowQuality,isShadowType,nudgeFor,EnvError,modelFormatFor,readModelHeader,ModelError,boundsValid,boundsCenter,boundsRadius,frameDistance,clipPlanes,pickClips,extractGltfTextures,GLTF_TEXTURE_MODES} from '../../lib/studio3d/model';
 import type {Bounds} from '../../lib/studio3d/model';
@@ -229,9 +229,10 @@ export default function Viewport3D(){
   const clearModel=()=>{clearSelection();stage.clear();bounds=null;};
   const applyWire=(on:boolean)=>holder.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;for(const mat of Array.isArray(m.material)?m.material:[m.material])(mat as THREE.MeshBasicMaterial).wireframe=on;});
   const normalMat=new THREE.MeshNormalMaterial();
+  const matcapMat=createMatcapMaterial(); // own-drawn neutral studio matcap, no asset
   const shadedOrig=new WeakMap<THREE.Mesh,THREE.Material|THREE.Material[]>();
   /** Re-applies the shading preview to every document mesh (also after scene loads and material edits). */
-  const syncShading=()=>{applyShading(holder,getStudio3DState().shading,normalMat,shadedOrig);invalidate();};
+  const syncShading=()=>{applyShading(holder,getStudio3DState().shading,normalMat,shadedOrig,matcapMat);invalidate();};
   const drawSelection=()=>{
    clearSelection();const id=getStudio3DState().selected;const obj=id==null?null:stage.find(id);
    if(obj){const box=new THREE.Box3().setFromObject(obj);

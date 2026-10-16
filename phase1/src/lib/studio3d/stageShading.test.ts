@@ -42,3 +42,20 @@ test('array materials round-trip',()=>{
  applyShading(root,'shaded',normal,orig);
  assert.equal(a.material,pair);
 });
+
+test('matcap swaps through its own material, previews never become originals, direct mode switch round-trips',()=>{
+ const {root,a,normal,orig}=mk();
+ const matcap=new THREE.MeshMatcapMaterial();
+ const ma=a.material;
+ applyShading(root,'normals',normal,orig,matcap);
+ assert.equal(a.material,normal);
+ applyShading(root,'matcap',normal,orig,matcap); // direct normals -> matcap
+ assert.equal(a.material,matcap);
+ assert.equal(orig.get(a),ma,'the normals preview was not stored as the original');
+ applyShading(root,'normals',normal,orig,matcap); // and back
+ assert.equal(a.material,normal);
+ assert.equal(orig.get(a),ma);
+ applyShading(root,'shaded',normal,orig,matcap);
+ assert.equal(a.material,ma);
+ assert.equal(orig.has(a),false);
+});
