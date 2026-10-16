@@ -20,6 +20,8 @@ export const commandRegistry = new Map<string, Command>();
 let registryVersion = 0;
 const registryListeners = new Set<() => void>();
 const bump = () => { registryVersion++; registryListeners.forEach((fn) => fn()); };
+/** Enabled states read live stores, not the registry: consumers re-resolve on this without a register/unregister cycle. */
+export const notifyCommandRegistry = () => bump();
 export const getCommandRegistryVersion = () => registryVersion;
 export const subscribeCommandRegistry = (fn: () => void) => { registryListeners.add(fn); return () => { registryListeners.delete(fn); }; };
 export const registerCommand = (command: Command) => {

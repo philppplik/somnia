@@ -951,6 +951,11 @@ function AnimationControls(){
     <NumField resetKey={`onion-a${s.onion.after}`} label={t('studio3d.onion.after')} value={s.onion.after} min={0} max={4} step={1} onCommit={v=>void executeCommand('studio3d.onion.skin',{on:true,after:v})}/></>}
     {s.bones.length>0&&<label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.motionPath} onChange={e=>void executeCommand('studio3d.motionpath',{on:e.currentTarget.checked})}/>{t('studio3d.motionpath.on')}</label>}
    </div>
+   {sel?<div className="grid gap-1" data-testid="studio3d-keys" role="group" aria-label={t('studio3d.key.title',{name:sel!.name})}>
+    <p className="m-0 text-xs text-ink-3">{t('studio3d.key.title',{name:sel!.name})}</p>
+    <ClipTimeline/>
+    <p className="m-0 text-xs text-ink-3">{t('studio3d.anim.note')}</p></div>:<p className="m-0 text-xs text-ink-3">{t('studio3d.key.select')}</p>}</>}
+   {/* Bones belong to the scene, not to a clip: the picker, overlay and retarget fields stay reachable without one. */}
    {s.rigs.length>1&&sel?.kind==='bone'&&<RetargetFields targetId={sel.id}/>}
    {s.bones.length>0&&<div className="flex flex-wrap items-center gap-3" data-testid="studio3d-skeleton">
     <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.skeleton.bone')}
@@ -959,9 +964,5 @@ function AnimationControls(){
       {s.bones.map(b=><option key={b.id} value={b.id}>{'  '.repeat(b.depth)+b.name}</option>)}</NativeSelect></label>
     <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.skeleton} onChange={e=>void executeCommand('studio3d.skeleton.show',{on:e.currentTarget.checked})}/>{t('studio3d.skeleton.show')}</label>
    </div>}
-   {sel?<div className="grid gap-1" data-testid="studio3d-keys" role="group" aria-label={t('studio3d.key.title',{name:sel!.name})}>
-    <p className="m-0 text-xs text-ink-3">{t('studio3d.key.title',{name:sel!.name})}</p>
-    <ClipTimeline/>
-    <p className="m-0 text-xs text-ink-3">{t('studio3d.anim.note')}</p></div>:<p className="m-0 text-xs text-ink-3">{t('studio3d.key.select')}</p>}</>}
  </fieldset>;
 }
