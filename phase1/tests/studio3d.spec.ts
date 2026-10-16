@@ -105,7 +105,9 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
+/** Refused commands surface as a polite status-bar notice (role=status); only hard open failures render as an assertive viewport alert. */
+const notice=(page:P,text:RegExp|string)=>page.getByRole('status').filter({hasText:text});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
 const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();};
 /** Opens a model through the file input and waits for the viewport. The first open mounts the lazy three.js chunk: on a cold dev server that takes well over the default timeout, so the first wait gets a minute. */
 const openModel=async(page:P,file:{name:string;mimeType:string;buffer:Buffer})=>{
@@ -371,7 +373,7 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  await expect(page.getByTestId('studio3d-keyrow-position')).toHaveCount(0);
  // Position keys on a bone are refused with a readable error.
  await run(page,'studio3d.key.set',{path:'position',time:0});
- await expect(page.getByRole('alert')).toContainText('rotation keys only');
+ await expect(notice(page,'rotation keys only')).toBeVisible();
  // A second clip on the other bone sits next to the first, with its own keys.
  await run(page,'studio3d.clip.add',{name:'Twist',duration:1.5});
  await page.getByLabel('Bone').selectOption({index:1});
@@ -447,7 +449,7 @@ test('3D studio paints bone weights with the brush and undoes the stroke',async(
  // Painting without a bone refuses with a notice instead of throwing.
  await run(page,'studio3d.skin.preview',{bone:null});
  await run(page,'studio3d.skin.paint',{x:0,y:0,z:0});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/first\./)).toBeVisible();
  // Undo removes the whole stroke, then the bind itself.
  await run(page,'studio3d.undo');
  await run(page,'studio3d.undo');
@@ -489,7 +491,7 @@ test('3D studio opens an OBJ, picks export clips and exports glTF textures as a 
  expect(embedded.animations.length).toBe(2);
  // An unknown clip name refuses with a notice instead of throwing.
  await run(page,'studio3d.export.gltf',{clips:['Nope']});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/no animation clip named/)).toBeVisible();
 });
 
 test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
@@ -514,7 +516,7 @@ test('3D studio saves, blends and undoes poses on a rig',async({page})=>{
  expect(await run(page,'studio3d.pose.mirror',{id:bone,name:'Bent'})).not.toBe(false);
  // A pose name that does not exist refuses with a notice instead of throwing.
  await run(page,'studio3d.pose.apply',{id:bone,name:'Nope'});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/no pose named/)).toBeVisible();
  // Undoing empties the library again (mirror, blend, apply and both saves are one step each).
  for(let i=0;i<8&&(await session(page)).poses.length>0;i++)await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).poses.length).toBe(0);
@@ -541,13 +543,13 @@ test('3D studio drives a chain with IK, moves the target and sets joint limits',
  await expect.poll(async()=>(await session(page)).ik?.target[0]).toBeCloseTo(snapped[0],3);
  // Joint limits land in the panel state and clear again.
  await run(page,'studio3d.bone.limits',{id:bone,min:[-30,null,null],max:[30,null,null]});
- await expect.poll(async()=>(await session(page)).boneLimits?.min[0]).toBe(-30);
+ await expect.poll(async()=>(await session(page)).boneLimits?.min[0]).toBeCloseTo(-30,6); // degrees round-trip through radians, so the readout is not exact
  await page.getByRole('button',{name:'Clear limits'}).click();
  await expect.poll(async()=>(await session(page)).boneLimits).toBe(null);
  // With IK off again, target moves refuse with a notice instead of throwing.
  await page.getByLabel('IK drives this chain').uncheck();
  await run(page,'studio3d.ik.target',{x:0,y:1,z:0});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/IK is off/)).toBeVisible();
 });
 
 test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({page})=>{
@@ -576,7 +578,7 @@ test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({p
  // With FABRIK off again, target moves refuse with a notice instead of throwing.
  await page.getByLabel('FABRIK drives this chain').uncheck();
  await run(page,'studio3d.fabrik.target',{x:0,y:1,z:0});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/FABRIK is off/)).toBeVisible();
 });
 
 test('3D studio records keyframe poses at the playhead for selected or all bones',async({page})=>{
@@ -603,7 +605,7 @@ test('3D studio records keyframe poses at the playhead for selected or all bones
  // Without a clip the record refuses with a notice instead of throwing.
  await run(page,'studio3d.clip.remove',{});
  await run(page,'studio3d.clip.record',{all:true});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/no animation clip 0/)).toBeVisible();
 });
 
 test('3D studio reviews animation with onion skin, motion path and retarget',async({page})=>{
@@ -664,13 +666,13 @@ test('3D studio adds an orthographic camera, edits zoom and manages named views'
  await expect.poll(async()=>(await session(page)).views.length).toBe(2);
  await run(page,'studio3d.view.apply',{name:'Wide'});
  await run(page,'studio3d.view.save',{name:'Wide'});
- await expect(page.getByRole('alert')).toContainText(/already exists/);
+ await expect(notice(page,/already exists/)).toBeVisible();
  await run(page,'studio3d.view.apply',{name:'Nope'});
- await expect(page.getByRole('alert')).toContainText(/no saved view/);
+ await expect(notice(page,/no saved view/)).toBeVisible();
  await run(page,'studio3d.view.remove',{name:'Wide'});
  await expect.poll(async()=>(await session(page)).views.length).toBe(1);
  await run(page,'studio3d.camera.set',{id:camId,fov:50});
- await expect(page.getByRole('alert')).toContainText(/set zoom, not fov/);
+ await expect(notice(page,/set zoom, not fov/)).toBeVisible();
  await run(page,'studio3d.undo');
  await expect.poll(async()=>{const c=(await session(page)).info?.camera;return c?.kind==='orthographic'?c.zoom:-1;}).toBe(1);
  await run(page,'studio3d.undo');
@@ -697,7 +699,7 @@ test('3D studio groups, ungroups, builds a linear array and picks snap modes',as
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).outline.filter(o=>o.kind==='mesh').length).toBe(2);
  await run(page,'studio3d.object.array',{ids:[a],mode:'linear',count:2,dx:0,dy:0,dz:0});
- await expect(page.getByRole('alert')).toContainText(/offset cannot be zero/);
+ await expect(notice(page,/offset cannot be zero/)).toBeVisible();
  await run(page,'studio3d.snap.set',{on:true,mode:'vertex'});
  await expect.poll(async()=>(await session(page)).notice).toBe('');
 });
@@ -783,7 +785,7 @@ test('mesh edit mode: select all, invert and grow update the selection counts',a
  s=await session(page);expect(s.edit).toMatchObject({verts:1});
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectGrow',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select something first');
+ await expect(notice(page,'Select something first')).toBeVisible();
 });
 
 test('mesh edit mode: delete selected faces removes triangles, undo restores them',async({page})=>{
@@ -797,7 +799,7 @@ test('mesh edit mode: delete selected faces removes triangles, undo restores the
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.delete',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to delete');
+ await expect(notice(page,'Select faces to delete')).toBeVisible();
 });
 
 test('mesh edit mode: subdivide splits selected faces into four, undo restores them',async({page})=>{
@@ -811,7 +813,7 @@ test('mesh edit mode: subdivide splits selected faces into four, undo restores t
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.subdivide',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to subdivide');
+ await expect(notice(page,'Select faces to subdivide')).toBeVisible();
 });
 
 test('mesh edit mode: poke splits selected faces at their centroid, undo restores them',async({page})=>{
@@ -825,7 +827,7 @@ test('mesh edit mode: poke splits selected faces at their centroid, undo restore
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.poke',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to poke');
+ await expect(notice(page,'Select faces to poke')).toBeVisible();
 });
 
 test('mesh edit mode: duplicate copies selected faces as a detached shell, undo restores them',async({page})=>{
@@ -839,7 +841,7 @@ test('mesh edit mode: duplicate copies selected faces as a detached shell, undo 
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.duplicate',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to duplicate');
+ await expect(notice(page,'Select faces to duplicate')).toBeVisible();
 });
 
 test('mesh edit mode: select boundary finds the rim after a delete',async({page})=>{
@@ -866,7 +868,7 @@ test('mesh edit mode: fatten pushes selected vertices along their normals, undo 
  await run(page,'studio3d.undo');
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.fatten',{amount:0.25})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to shrink or fatten');
+ await expect(notice(page,'Select vertices to shrink or fatten')).toBeVisible();
 });
 
 test('mesh edit mode: relax smooths selected vertices towards their neighbours, undo restores them',async({page})=>{
@@ -879,7 +881,7 @@ test('mesh edit mode: relax smooths selected vertices towards their neighbours, 
  await run(page,'studio3d.undo');
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.relax',{iterations:1,factor:0.5})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to relax');
+ await expect(notice(page,'Select vertices to relax')).toBeVisible();
 });
 
 test('mesh edit mode: flip reverses only the selected faces, undo restores them',async({page})=>{
@@ -893,7 +895,7 @@ test('mesh edit mode: flip reverses only the selected faces, undo restores them'
  await run(page,'studio3d.undo');
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.flip',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to flip');
+ await expect(notice(page,'Select faces to flip')).toBeVisible();
 });
 
 test('mesh edit mode: select linked keeps a duplicated shell separate',async({page})=>{
@@ -911,7 +913,7 @@ test('mesh edit mode: select linked keeps a duplicated shell separate',async({pa
  s=await session(page);expect(s.edit).toMatchObject({verts:4});
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectLinked',{kind:'vertex'})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select something first');
+ await expect(notice(page,'Select something first')).toBeVisible();
 });
 
 test('mesh edit mode: dissolve merges poked triangles back into one face',async({page})=>{
@@ -931,7 +933,7 @@ test('mesh edit mode: dissolve merges poked triangles back into one face',async(
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.dissolve',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Dissolve needs a single simple face region');
+ await expect(notice(page,'Dissolve needs a single simple face region')).toBeVisible();
 });
 
 test('mesh edit mode: fill closes a deleted side with a centroid fan',async({page})=>{
@@ -948,7 +950,7 @@ test('mesh edit mode: fill closes a deleted side with a centroid fan',async({pag
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(10);
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.fill',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select an edge loop to fill');
+ await expect(notice(page,'Select an edge loop to fill')).toBeVisible();
 });
 
 test('mesh edit mode: collapse merges each selected island at its centroid',async({page})=>{
@@ -962,7 +964,7 @@ test('mesh edit mode: collapse merges each selected island at its centroid',asyn
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.collapse',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select something to collapse');
+ await expect(notice(page,'Select something to collapse')).toBeVisible();
 });
 
 test('mesh edit mode: to sphere rounds a grown vertex selection, undo restores it',async({page})=>{
@@ -977,7 +979,7 @@ test('mesh edit mode: to sphere rounds a grown vertex selection, undo restores i
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.toSphere',{factor:1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to pull onto a sphere');
+ await expect(notice(page,'Select vertices to pull onto a sphere')).toBeVisible();
 });
 
 test('mesh edit mode: randomize jitters the selection reproducibly by seed',async({page})=>{
@@ -992,7 +994,7 @@ test('mesh edit mode: randomize jitters the selection reproducibly by seed',asyn
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.randomize',{amount:0.2,seed:42})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to randomize');
+ await expect(notice(page,'Select vertices to randomize')).toBeVisible();
 });
 
 test('mesh edit mode: move translates the selection by a typed offset',async({page})=>{
@@ -1005,7 +1007,7 @@ test('mesh edit mode: move translates the selection by a typed offset',async({pa
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.move',{y:0.5})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to move');
+ await expect(notice(page,'Select vertices to move')).toBeVisible();
 });
 
 test('mesh edit mode: rip splits a welded corner back apart',async({page})=>{
@@ -1021,7 +1023,7 @@ test('mesh edit mode: rip splits a welded corner back apart',async({page})=>{
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
  expect(await run(page,'studio3d.edit.rip',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('does not share vertices');
+ await expect(notice(page,'does not share vertices')).toBeVisible();
 });
 
 test('mesh edit mode: separate splits selected faces into a new object, undo restores it',async({page})=>{
@@ -1039,10 +1041,10 @@ test('mesh edit mode: separate splits selected faces into a new object, undo res
  expect(s.outline.length).toBe(1);
  expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.separate',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces to separate');
+ await expect(notice(page,'Select faces to separate')).toBeVisible();
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.separate',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('empty mesh');
+ await expect(notice(page,'empty mesh')).toBeVisible();
 });
 
 test('mesh edit mode: select sharp edges by dihedral angle',async({page})=>{
@@ -1054,7 +1056,7 @@ test('mesh edit mode: select sharp edges by dihedral angle',async({page})=>{
  expect(await run(page,'studio3d.edit.selectSharp',{degrees:91})).toBe(true);
  s=await session(page);expect(s.edit.edges).toBe(0);
  expect(await run(page,'studio3d.edit.selectSharp',{degrees:-1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('between 0 and 180');
+ await expect(notice(page,'between 0 and 180')).toBeVisible();
 });
 
 test('mesh edit mode: rotate turns the selected vertices around their centroid',async({page})=>{
@@ -1062,14 +1064,14 @@ test('mesh edit mode: rotate turns the selected vertices around their centroid',
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:90})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to rotate');
+ await expect(notice(page,'Select vertices to rotate')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8,9,10,11]})).toBe(true);
  expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:90})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.rotate',{axis:'y',degrees:0})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('non-zero');
+ await expect(notice(page,'non-zero')).toBeVisible();
 });
 
 test('mesh edit mode: scale pulls the selected vertices toward their centroid',async({page})=>{
@@ -1077,14 +1079,14 @@ test('mesh edit mode: scale pulls the selected vertices toward their centroid',a
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.scale',{x:0.5,y:1,z:0.5})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to scale');
+ await expect(notice(page,'Select vertices to scale')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8,9,10,11]})).toBe(true);
  expect(await run(page,'studio3d.edit.scale',{x:0.5,y:1,z:0.5})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.scale',{x:1,y:1,z:1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('differ from 1');
+ await expect(notice(page,'differ from 1')).toBeVisible();
 });
 
 test('mesh edit mode: select faces with a similar normal',async({page})=>{
@@ -1092,7 +1094,7 @@ test('mesh edit mode: select faces with a similar normal',async({page})=>{
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectSimilar',{degrees:15})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select faces first');
+ await expect(notice(page,'Select faces first')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4]})).toBe(true);
  expect(await run(page,'studio3d.edit.selectSimilar',{degrees:15})).toBe(true);
  let s=await session(page);expect(s.edit.faces).toBe(2);
@@ -1108,14 +1110,14 @@ test('mesh edit mode: shear offsets the selection along one axis by another',asy
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.shear',{along:'x',by:'y',factor:1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to shear');
+ await expect(notice(page,'Select vertices to shear')).toBeVisible();
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.shear',{along:'x',by:'y',factor:1})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.shear',{along:'x',by:'x',factor:1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('must differ');
+ await expect(notice(page,'must differ')).toBeVisible();
 });
 
 test('mesh edit mode: flip edge rotates a shared edge to the other diagonal',async({page})=>{
@@ -1123,7 +1125,7 @@ test('mesh edit mode: flip edge rotates a shared edge to the other diagonal',asy
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
  expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select edges to flip');
+ await expect(notice(page,'Select edges to flip')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[9,10]]})).toBe(true);
  expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
@@ -1132,7 +1134,7 @@ test('mesh edit mode: flip edge rotates a shared edge to the other diagonal',asy
  expect(await run(page,'studio3d.edit.selectAll',{op:'none'})).toBe(true);
  expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[8,9]]})).toBe(true);
  expect(await run(page,'studio3d.edit.flipEdge',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('can be flipped');
+ await expect(notice(page,'can be flipped')).toBeVisible();
 });
 
 test('mesh edit mode: merge by distance welds selected doubles, keeps UV seams',async({page})=>{
@@ -1140,14 +1142,14 @@ test('mesh edit mode: merge by distance welds selected doubles, keeps UV seams',
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0.001})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to merge');
+ await expect(notice(page,'Select vertices to merge')).toBeVisible();
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0.001})).toBe(true);
  let s=await session(page);expect(s.stats.triangles).toBe(12);
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.mergeByDistance',{distance:0})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('positive');
+ await expect(notice(page,'positive')).toBeVisible();
 });
 
 test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',async({page})=>{
@@ -1160,7 +1162,7 @@ test('mesh edit mode: bisect cuts the mesh by a plane and keeps both halves',asy
  await run(page,'studio3d.undo');
  s=await session(page);expect(s.stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.bisect',{axis:'y',offset:5,fill:true})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('does not cut through the mesh');
+ await expect(notice(page,'does not cut through the mesh')).toBeVisible();
 });
 
 test('mesh edit mode: shrinkwrap projects selected vertices onto another mesh',async({page})=>{
@@ -1170,7 +1172,7 @@ test('mesh edit mode: shrinkwrap projects selected vertices onto another mesh',a
  expect(await run(page,'studio3d.object.transform',{id:target,position:{x:0,y:2,z:0},scale:{x:2,y:1,z:2}})).toBe(true);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.shrinkwrap',{target,offset:0})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices to shrinkwrap');
+ await expect(notice(page,'Select vertices to shrinkwrap')).toBeVisible();
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.shrinkwrap',{target,offset:0})).toBe(true);
  expect(await run(page,'studio3d.undo',{})).toBe(true);
@@ -1194,7 +1196,7 @@ test('mesh edit mode: convex hull replaces the mesh with the hull of the selecte
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.convexHull',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select vertices for the convex hull');
+ await expect(notice(page,'Select vertices for the convex hull')).toBeVisible();
  expect(await run(page,'studio3d.edit.mode',{mode:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.subdivide',{})).toBe(true);
@@ -1211,11 +1213,11 @@ test('mesh edit mode: vertex slide moves a selected vertex along an incident edg
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'vertex'})).toBe(true);
  expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:1})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select exactly one vertex to slide');
+ await expect(notice(page,'Select exactly one vertex to slide')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'vertex',ids:[8]})).toBe(true);
  expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:1})).toBe(true);
  expect(await run(page,'studio3d.edit.vertSlide',{edge:[8,10],factor:2})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('The slide factor must be between -1 and 1');
+ await expect(notice(page,'The slide factor must be between -1 and 1')).toBeVisible();
  expect(await run(page,'studio3d.undo',{})).toBe(true);
 });
 
@@ -1224,12 +1226,12 @@ test('mesh edit mode: bridge faces sews two selected face groups into a strip',a
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select two groups of faces to bridge');
+ await expect(notice(page,'Select two groups of faces to bridge')).toBeVisible();
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[0,1,2,3]})).toBe(true);
  expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(true);
  expect((await session(page)).stats.triangles).toBe(16);
  expect(await run(page,'studio3d.edit.bridgeFaces',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select two groups of faces to bridge');
+ await expect(notice(page,'Select two groups of faces to bridge')).toBeVisible();
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  expect((await session(page)).stats.triangles).toBe(12);
 });
@@ -1239,7 +1241,7 @@ test('mesh edit mode: select edge loop grows a seed edge into its loop',async({p
  const id=await insert(page,'cube',0);
  expect(await run(page,'studio3d.edit.start',{id,mode:'edge'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectLoop',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select edges to grow into loops');
+ await expect(notice(page,'Select edges to grow into loops')).toBeVisible();
  expect(await run(page,'studio3d.edit.mode',{mode:'face'})).toBe(true);
  expect(await run(page,'studio3d.edit.selectAll',{op:'all'})).toBe(true);
  expect(await run(page,'studio3d.edit.subdivide',{})).toBe(true);
@@ -1260,7 +1262,7 @@ test('mesh edit mode: weld merges selected vertices at their centre, undo restor
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.weld',{})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select at least two vertices');
+ await expect(notice(page,'Select at least two vertices')).toBeVisible();
 });
 
 test('mesh edit: extrude without a selection is refused readably',async({page})=>{
@@ -1268,9 +1270,9 @@ test('mesh edit: extrude without a selection is refused readably',async({page})=
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.edit.start',{id,mode:'face'});
  expect(await run(page,'studio3d.edit.extrude',{offset:0.5})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Select at least one face');
+ await expect(notice(page,'Select at least one face')).toBeVisible();
  expect(await run(page,'studio3d.edit.loopCut')).toBe(false);
- await expect(page.getByRole('alert')).toContainText('exactly one edge');
+ await expect(notice(page,'exactly one edge')).toBeVisible();
 });
 
 test('sculpt: one stroke moves vertices, one undo restores them',async({page})=>{
@@ -1297,7 +1299,7 @@ test('sculpt on a light is refused readably',async({page})=>{
  const s=await session(page);
  const lightId=s.outline.find(o=>o.kind==='light')!.id;
  expect(await run(page,'studio3d.sculpt.begin',{id:lightId})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('not a mesh');
+ await expect(notice(page,'not a mesh')).toBeVisible();
 });
 
 test('edge bevel and loop slide work through commands with undo',async({page})=>{
@@ -1325,7 +1327,7 @@ test('mirror modifier doubles the cube in the session and exports, undo restores
  expect((await session(page)).info!.mirror).toMatchObject({axis:'x'});
  // editing is refused while the modifier is on
  expect(await run(page,'studio3d.edit.start',{id,mode:'face'})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('mirror modifier');
+ await expect(notice(page,'mirror modifier')).toBeVisible();
  expect(await run(page,'studio3d.mesh.mirrorMod',{id,axis:'x',merge:0,on:false})).toBe(true);
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect((await session(page)).info!.mirror).toBeNull();
@@ -1369,7 +1371,7 @@ test('round bevel profile and mirror bisect work through commands',async({page})
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(before);
  expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1,segments:9})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('segments');
+ await expect(notice(page,'segments')).toBeVisible();
  await run(page,'studio3d.edit.end');
  // mirror with bisect on the whole cube: clip at the plane, mirror back to a whole cube
  expect(await run(page,'studio3d.mesh.mirrorMod',{id,axis:'x',merge:0.001,on:true,bisect:true})).toBe(true);
@@ -1400,9 +1402,9 @@ test('uv seams, unwrap, planar and checker preview work through commands',async(
  expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(true);
  await expect.poll(async()=>(await session(page)).info!.uv!.seams).toBe(2);
  expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('already seams');
+ await expect(notice(page,'already seams')).toBeVisible();
  expect(await run(page,'studio3d.uv.unwrap',{id})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('edit mode');
+ await expect(notice(page,'edit mode')).toBeVisible();
  await run(page,'studio3d.edit.end');
  const before=(await session(page)).stats.vertices;
  expect(await run(page,'studio3d.uv.unwrap',{id})).toBe(true);
@@ -1432,7 +1434,7 @@ test('uv unwrap packs islands by default and angle unfolding works through comma
  expect((await session(page)).info!.uv!.hasUv).toBe(true);
  expect(await run(page,'studio3d.uv.unwrap',{id,method:'angle',pack:true,padding:0.1})).toBe(true);
  expect(await run(page,'studio3d.uv.unwrap',{id,padding:0.5})).toBe(false);
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/padding/)).toBeVisible();
  expect(await run(page,'studio3d.undo')).toBe(true);
 });
 
@@ -1457,7 +1459,7 @@ test('3D studio saves, applies and removes local material presets',async({page})
  await box.getByRole('button',{name:'Remove preset Blue steel'}).click();
  await expect.poll(async()=>(await session(page)).materialPresets?.length).toBe(0);
  await run(page,'studio3d.material.preset.remove',{name:'Blue steel'});
- await expect(page.getByRole('alert')).toContainText('no preset called');
+ await expect(notice(page,'no preset called')).toBeVisible();
 });
 
 test('3D studio lights and scene basics: ambient light, env presets and background modes',async({page})=>{
@@ -1470,7 +1472,7 @@ test('3D studio lights and scene basics: ambient light, env presets and backgrou
  await run(page,'studio3d.light.set',{id:amb,color:'#224466',intensity:1.1});
  await expect.poll(async()=>(await session(page)).info?.light?.color).toBe('#224466');
  await run(page,'studio3d.light.set',{id:amb,shadow:true});
- await expect(page.getByRole('alert')).toContainText('Ambient lights cannot cast shadows');
+ await expect(notice(page,'Ambient lights cannot cast shadows')).toBeVisible();
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).info?.light?.color).toBe('#ffffff');
  await run(page,'studio3d.env.set',{preset:'outdoor'});
@@ -1497,7 +1499,7 @@ test('3D studio material polish: glass and wood presets, copy/paste material and
  const sphere=await insert(page,'sphere',2);
  // Pasting with an empty clipboard is refused.
  expect(await run(page,'studio3d.material.paste',{id:cube})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('Copy a material first');
+ await expect(notice(page,'Copy a material first')).toBeVisible();
  // The glass preset makes the selected cube transparent.
  await run(page,'studio3d.select',{id:cube});
  await page.getByTestId('studio3d-material-presets').getByRole('button',{name:'Glass'}).click();
@@ -1771,7 +1773,7 @@ test('3D studio opens a dropped model with its sidecars and shows an import summ
  await blank(page);
  // Dropping a batch without a model file keeps the scene and shows a readable error naming every openable format.
  await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(()=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(8)],'notes.txt'));return dt;})});
- await expect(page.getByRole('alert')).toContainText('Choose a .som3d');
+ await expect(notice(page,'Choose a .som3d')).toBeVisible();
  // A real model drop imports and reports the summary. The scene was left intact by the failed drop above.
  await blank(page);
  const glb=triangleGlb();
@@ -1889,7 +1891,7 @@ test('3D studio turntable renders a WebM video and refuses transparency for it',
  await insert(page,'cube',0);
  // Transparent frames stay exclusive to the PNG outputs.
  expect(await run(page,'studio3d.render.turntable',{out:'webm',transparent:true})).toBe(false);
- await expect(page.getByRole('alert')).toContainText('keeps the background');
+ await expect(notice(page,'keeps the background')).toBeVisible();
  // A short WebM records and downloads.
  const [download]=await Promise.all([page.waitForEvent('download'),run(page,'studio3d.render.turntable',{frames:3,fps:10,out:'webm',width:160,height:120})]);
  expect(download.suggestedFilename()).toMatch(/-turntable\.webm$/);
@@ -1914,7 +1916,7 @@ test('3D studio asset drags: primitive lands at the drop point, material assigns
  await page.evaluate(()=>{const dt=new DataTransfer();dt.setData('application/x-somnia3d-asset',JSON.stringify({kind:'material',key:'missing'}));
   const el=document.querySelector('[data-testid="studio3d-viewport"] > div')!;
   el.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true,clientX:10,clientY:10}));});
- await expect(page.getByRole('alert')).toBeVisible();
+ await expect(notice(page,/no preset called/)).toBeVisible();
 });
 
 test('3D studio pins: insert at the cursor, label in the inspector, one undo',async({page})=>{
