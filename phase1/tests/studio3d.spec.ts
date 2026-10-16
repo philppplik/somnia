@@ -1290,8 +1290,8 @@ test('sculpt: one stroke moves vertices, one undo restores them',async({page})=>
  const s0=await session(page);
  expect(s0.sculpt).toMatchObject({brush:'grab',radius:2,strength:1,symmetry:'none'});
  expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
- expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5],delta:[0,0.4,0]})).toBe(true);
- expect(await run(page,'studio3d.sculpt.dab',{id,center:[0,1,0],delta:[0.2,0,0]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,x:0.5,y:1,z:0.5,dy:0.4})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,x:0,y:1,z:0,dx:0.2})).toBe(true);
  expect(await run(page,'studio3d.sculpt.end')).toBe(true);
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12); // sculpt keeps topology
  expect(await run(page,'studio3d.undo')).toBe(true); // single undo for the whole stroke
@@ -1316,7 +1316,7 @@ test('edge bevel and loop slide work through commands with undo',async({page})=>
  await run(page,'studio3d.edit.start',{id,mode:'edge'});
  // BoxGeometry: vert 0 = (0.5,0.5,0.5), vert 2 = (0.5,-0.5,0.5) - a vertical edge
  // select edge [0,4]: vertical on the indexed box geometry (corner 0 bottom, 4 top on BoxGeometry)
- expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[0,2]]})).toBe(true);
  const s1=await session(page);expect(s1.edit!.edges).toBe(1);
  const before=s1.stats.triangles;
  expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1})).toBe(true);
@@ -1346,11 +1346,11 @@ test('mask brush protects vertices and clears with undo',async({page})=>{
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.sculpt.brush',{brush:'mask',radius:2,strength:1});
  expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
- expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,x:0.5,y:1,z:0.5})).toBe(true);
  expect(await run(page,'studio3d.sculpt.end')).toBe(true);
  await run(page,'studio3d.sculpt.brush',{brush:'grab'});
  expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
- expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5],delta:[0,0.5,0]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,x:0.5,y:1,z:0.5,dy:0.5})).toBe(true);
  expect(await run(page,'studio3d.sculpt.end')).toBe(true);
  expect(await run(page,'studio3d.sculpt.maskClear',{id})).toBe(true);
  expect(await run(page,'studio3d.undo')).toBe(true); // clear undone
@@ -1362,7 +1362,7 @@ test('crease, pinch and flatten brushes run through the dab command',async({page
  for(const brush of['crease','pinch','flatten']){
   await run(page,'studio3d.sculpt.brush',{brush,radius:2,strength:0.8});
   expect(await run(page,'studio3d.sculpt.begin',{id})).toBe(true);
-  expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+  expect(await run(page,'studio3d.sculpt.dab',{id,x:0.5,y:1,z:0.5})).toBe(true);
   expect(await run(page,'studio3d.sculpt.end')).toBe(true);
   expect(await run(page,'studio3d.undo')).toBe(true);
  }
@@ -1372,7 +1372,7 @@ test('round bevel profile and mirror bisect work through commands',async({page})
  await blank(page);
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.edit.start',{id,mode:'edge'});
- expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[0,2]]})).toBe(true);
  const before=(await session(page)).stats.triangles;
  expect(await run(page,'studio3d.edit.bevelEdge',{width:0.1,segments:4})).toBe(true);
  await expect.poll(async()=>(await session(page)).stats.triangles).toBeGreaterThan(before+4);
@@ -1396,7 +1396,7 @@ test('sculpt mask overlay paints are visible in the session while sculpt mode is
  await run(page,'studio3d.sculpt.brush',{on:true,brush:'mask',radius:2,strength:1});
  expect((await session(page)).sculpt.on).toBe(true);
  await run(page,'studio3d.sculpt.begin',{id});
- expect(await run(page,'studio3d.sculpt.dab',{id,center:[0.5,1,0.5]})).toBe(true);
+ expect(await run(page,'studio3d.sculpt.dab',{id,x:0.5,y:1,z:0.5})).toBe(true);
  await run(page,'studio3d.sculpt.end');
  // overlay itself is WebGL viewport state (CI verifies pixels); here the mask attribute drives it
  expect(await run(page,'studio3d.sculpt.maskClear',{id})).toBe(true);
@@ -1406,7 +1406,7 @@ test('uv seams, unwrap, planar and checker preview work through commands',async(
  await blank(page);
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.edit.start',{id,mode:'edge'});
- expect(await run(page,'studio3d.edit.select',{kind:'edge',ids:[[0,2]]})).toBe(true);
+ expect(await run(page,'studio3d.edit.select',{kind:'edge',edges:[[0,2]]})).toBe(true);
  expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(true);
  await expect.poll(async()=>(await session(page)).info!.uv!.seams).toBe(2);
  expect(await run(page,'studio3d.uv.seam',{mark:true})).toBe(false);
@@ -1416,7 +1416,7 @@ test('uv seams, unwrap, planar and checker preview work through commands',async(
  await run(page,'studio3d.edit.end');
  const before=(await session(page)).stats.vertices;
  expect(await run(page,'studio3d.uv.unwrap',{id})).toBe(true);
- await expect.poll(async()=>(await session(page)).stats.vertices).toBeGreaterThan(before);
+ expect((await session(page)).stats.vertices).toBe(before); // an unwelded box keeps its 24 corners: a single seam edge does not split the island (island splits are unit-tested in uvUnwrap.test.ts)
  const s=await session(page);
  expect(s.info!.uv).toMatchObject({hasUv:true,seams:2});
  expect(s.info!.uv!.islands).toBe(1);
