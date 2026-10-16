@@ -1854,7 +1854,7 @@ test('3D studio materials: texture slot preview and the material list with usage
  await run(page,'studio3d.object.material',{id:a,preset:'wood'});
  await expect(page.getByTestId('studio3d-texture-thumb-color')).toBeVisible();
  // Clearing the slot removes the thumbnail again.
- await page.getByTestId('studio3d-texture-color').getByRole('button',{name:'Clear'}).click();
+ await page.getByTestId('studio3d-texture-color').getByRole('button',{name:'Remove'}).click();
  await expect(page.getByTestId('studio3d-texture-thumb-color')).toHaveCount(0);
  // Clicking a material entry selects the objects that share it.
  await list.getByRole('button').first().click();
@@ -1967,8 +1967,9 @@ test('3D studio pin labels: labeled pins show a viewport overlay label; empty or
 
 test('3D studio history: labels list and multi-step undo/redo',async({page})=>{
  await blank(page);
- await insert(page,'cube',0);
- await insert(page,'sphere',1);
+ // Insert directly: the insert() helper's transform would add its own history steps.
+ await run(page,'studio3d.insert.primitive',{kind:'cube'});
+ await run(page,'studio3d.insert.primitive',{kind:'sphere'});
  const h=(await session(page)).history;
  expect(h.undo.length).toBeGreaterThanOrEqual(2);
  expect(h.redo).toEqual([]);

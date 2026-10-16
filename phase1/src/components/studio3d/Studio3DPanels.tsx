@@ -7,6 +7,7 @@ import {lightRigLabelKey} from '../../lib/studio3d/lightRigLabel';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {TEXGEN_DEFAULT_COLORS} from '../../lib/studio3d/texgen';
 import {executeCommand} from '../../lib/commands';
+import {commandDispatcher} from '../../lib/commandDispatcher';
 import {dropTextureFile} from '../../lib/studio3d/commands';
 import {useT} from '../../lib/useT';
 import {formatBytes} from '../../lib/media';
@@ -165,7 +166,7 @@ function VecField({id,field,label,step}:{id:number;field:'position'|'rotation'|'
 function TextureThumb({id,slot,name}:{id:number;slot:TextureSlot;name:string}){
  const {t}=useT();const [url,setUrl]=useState<string|null>(null);
  useEffect(()=>{let live=true;setUrl(null);
-  void executeCommand('studio3d.texture.preview',{id,slot}).then(u=>{if(live)setUrl(typeof u==='string'?u:null);}).catch(()=>{if(live)setUrl(null);});
+  void commandDispatcher.runCommand<unknown>('studio3d.texture.preview',{id,slot},{origin:'ui'}).then(u=>{if(live)setUrl(typeof u==='string'?u:null);}).catch(()=>{if(live)setUrl(null);});
   return()=>{live=false;};},[id,slot,name]);
  return url?<img src={url} alt={t('studio3d.texture.previewAlt',{slot:t('studio3d.texture.'+slot)})} className="h-8 w-8 shrink-0 rounded-sm border border-subtle object-cover" data-testid={'studio3d-texture-thumb-'+slot}/>:null;
 }

@@ -1287,11 +1287,21 @@ export default function Viewport3D(){
     for(const m of mats){const t=(m as THREE.MeshStandardMaterial)[SLOT_CONFIG[slot].prop] as THREE.Texture|null;if(t){tex=t;break;}}
     if(!tex)return null;
     const hit=previewCache.get(tex.uuid);if(hit)return hit;
-    const img=tex.image as (CanvasImageSource&{width?:number;height?:number})|undefined;
-    if(!img||!img.width||!img.height)return null;
+    const raw=tex.image as ({width?:number;height?:number;data?:ArrayLike<number>|ArrayBufferView})|undefined;
+    if(!raw||!raw.width||!raw.height)return null;
+    // DataTexture images are raw pixels, not a CanvasImageSource: stage them through putImageData first.
+    let src:CanvasImageSource&{width:number;height:number};
+    if(raw.data!==undefined&&!(raw instanceof HTMLImageElement)&&!(raw instanceof HTMLCanvasElement)&&!(raw instanceof ImageBitmap)&&!(raw instanceof HTMLVideoElement)&&!(raw instanceof ImageData)){
+     const px=new Uint8ClampedArray(raw.data as ArrayLike<number>);
+     if(px.length<raw.width*raw.height*4)return null;
+     const stage2=document.createElement('canvas');stage2.width=raw.width;stage2.height=raw.height;
+     const sctx=stage2.getContext('2d');if(!sctx)return null;
+     sctx.putImageData(new ImageData(px,raw.width,raw.height),0,0);
+     src=stage2;
+    }else src=raw as CanvasImageSource&{width:number;height:number};
     const c=document.createElement('canvas');c.width=64;c.height=64;const ctx=c.getContext('2d');if(!ctx)return null;
-    const side=Math.min(img.width,img.height);
-    ctx.drawImage(img,(img.width-side)/2,(img.height-side)/2,side,side,0,0,64,64);
+    const side=Math.min(src.width,src.height);
+    ctx.drawImage(src,(src.width-side)/2,(src.height-side)/2,side,side,0,0,64,64);
     const url=c.toDataURL('image/png');
     if(previewCache.size>200)previewCache.clear();
     previewCache.set(tex.uuid,url);
