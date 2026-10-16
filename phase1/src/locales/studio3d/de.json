@@ -1112,5 +1112,11 @@
  "studio3d.lattice.reset": "Gitter zurücksetzen",
  "studio3d.lattice.clear": "Gitter entfernen",
  "studio3d.lattice.bound": "Gitter gebunden",
- "studio3d.hist.editVcolFill": "Vertexfarben füllen"
+ "studio3d.hist.editVcolFill": "Vertexfarben füllen",
+ "cmd.studio3d.object.makeSingleUser": "Verknüpfter Instanz eine eigene Geometrie geben, damit sie eigenständig bearbeitet werden kann",
+ "cmd.studio3d.selection.duplicateLinked": "Ausgewählte 3D-Objekte als verknüpfte Instanzen mit gemeinsamer Geometrie duplizieren",
+ "studio3d.hist.duplicateLinked": "Verknüpft duplizieren ({count})",
+ "studio3d.hist.makeSingleUser": "Einzelnutzer erstellen ({name})",
+ "studio3d.outline.linked": "verknüpft",
+ "studio3d.outline.linkedTip": "Verknüpfte Instanz: Geometrie mit {count} Objekten geteilt"
 }

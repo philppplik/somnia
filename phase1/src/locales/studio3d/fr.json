@@ -1112,5 +1112,11 @@
  "studio3d.lattice.reset": "Réinitialiser le treillis",
  "studio3d.lattice.clear": "Retirer le treillis",
  "studio3d.lattice.bound": "Treillis lié",
- "studio3d.hist.editVcolFill": "Remplir les couleurs de sommets"
+ "studio3d.hist.editVcolFill": "Remplir les couleurs de sommets",
+ "cmd.studio3d.object.makeSingleUser": "Donner à une instance liée sa propre géométrie pour pouvoir l'éditer séparément",
+ "cmd.studio3d.selection.duplicateLinked": "Dupliquer les objets 3D sélectionnés en instances liées partageant la géométrie",
+ "studio3d.hist.duplicateLinked": "Dupliquer en lié ({count})",
+ "studio3d.hist.makeSingleUser": "Rendre utilisateur unique ({name})",
+ "studio3d.outline.linked": "lié",
+ "studio3d.outline.linkedTip": "Instance liée : géométrie partagée avec {count} objets"
 }

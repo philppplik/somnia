@@ -1112,5 +1112,11 @@
  "studio3d.lattice.reset": "Restablecer retícula",
  "studio3d.lattice.clear": "Quitar retícula",
  "studio3d.lattice.bound": "Retícula vinculada",
- "studio3d.hist.editVcolFill": "Rellenar colores de vértice"
+ "studio3d.hist.editVcolFill": "Rellenar colores de vértice",
+ "cmd.studio3d.object.makeSingleUser": "Dar a una instancia vinculada su propia geometría para poder editarla por separado",
+ "cmd.studio3d.selection.duplicateLinked": "Duplicar los objetos 3D seleccionados como instancias vinculadas que comparten geometría",
+ "studio3d.hist.duplicateLinked": "Duplicar vinculado ({count})",
+ "studio3d.hist.makeSingleUser": "Hacer usuario único ({name})",
+ "studio3d.outline.linked": "vinculado",
+ "studio3d.outline.linkedTip": "Instancia vinculada: geometría compartida con {count} objetos"
 }

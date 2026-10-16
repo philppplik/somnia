@@ -11569,6 +11569,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.object.makeSingleUser",
+      "title": "Give a linked instance its own geometry so it can be edited on its own",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.object.material",
       "title": "Change the material of a 3D object",
       "category": "Edit",
@@ -12117,6 +12130,19 @@
     {
       "id": "studio3d.selection.duplicate",
       "title": "Duplicate the selected 3D objects",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "studio3d.selection.duplicateLinked",
+      "title": "Duplicate the selected 3D objects as linked instances sharing geometry",
       "category": "Edit",
       "source": "studio3d",
       "keywords": [

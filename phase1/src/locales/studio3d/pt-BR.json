@@ -1112,5 +1112,11 @@
  "studio3d.lattice.reset": "Redefinir grade",
  "studio3d.lattice.clear": "Remover grade",
  "studio3d.lattice.bound": "Grade vinculada",
- "studio3d.hist.editVcolFill": "Preencher cores de vértice"
+ "studio3d.hist.editVcolFill": "Preencher cores de vértice",
+ "cmd.studio3d.object.makeSingleUser": "Dar a uma instância vinculada sua própria geometria para poder editá-la separadamente",
+ "cmd.studio3d.selection.duplicateLinked": "Duplicar os objetos 3D selecionados como instâncias vinculadas compartilhando a geometria",
+ "studio3d.hist.duplicateLinked": "Duplicar vinculado ({count})",
+ "studio3d.hist.makeSingleUser": "Tornar usuário único ({name})",
+ "studio3d.outline.linked": "vinculado",
+ "studio3d.outline.linkedTip": "Instância vinculada: geometria compartilhada com {count} objetos"
 }

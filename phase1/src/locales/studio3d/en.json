@@ -1112,5 +1112,11 @@
  "studio3d.lattice.reset": "Reset lattice",
  "studio3d.lattice.clear": "Clear lattice",
  "studio3d.lattice.bound": "Lattice bound",
- "studio3d.hist.editVcolFill": "Fill vertex colors"
+ "studio3d.hist.editVcolFill": "Fill vertex colors",
+ "cmd.studio3d.object.makeSingleUser": "Give a linked instance its own geometry so it can be edited on its own",
+ "cmd.studio3d.selection.duplicateLinked": "Duplicate the selected 3D objects as linked instances sharing geometry",
+ "studio3d.hist.duplicateLinked": "Duplicate linked ({count})",
+ "studio3d.hist.makeSingleUser": "Make single-user ({name})",
+ "studio3d.outline.linked": "linked",
+ "studio3d.outline.linkedTip": "Linked instance: geometry shared with {count} objects"
 }

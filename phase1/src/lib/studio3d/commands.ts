@@ -265,6 +265,8 @@ export interface Studio3DController{
  save(sidecar?:boolean,embedEnv?:boolean):Promise<void>;
  deleteSelection(ids?:number[]):void;
  duplicateSelection(ids?:number[]):number[];
+ duplicateLinkedSelection(ids?:number[]):number[];
+ makeSingleUser(id:number):void;
  exportMesh(format:Exclude<ExportFormat,'glb'>):Promise<void>;
  setUnit(unit:ExportUnit):void;
  renderTurntable(opts?:TurntableOptions):Promise<void>;
@@ -326,6 +328,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id:number;name:string}>('studio3d.object.rename','Rename a 3D object','Edit',p=>need().rename(p.id,p.name),object({id:{type:'integer',minimum:0},name:{type:'string',minLength:1,maxLength:120}}),hasScene),
   add<{id:number}>('studio3d.object.delete','Delete a 3D object','Edit',p=>need().remove(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id:number}>('studio3d.object.duplicate','Duplicate a 3D object','Edit',p=>need().duplicate(p.id),object({id:{type:'integer',minimum:0}}),hasScene),
+  add<{id:number}>('studio3d.object.makeSingleUser','Give a linked instance its own geometry so it can be edited on its own','Edit',p=>{need().makeSingleUser(p.id);},object({id:{type:'integer',minimum:0}}),hasScene),
   add<{id?:number;on?:boolean}>('studio3d.object.visible','Show or hide a 3D object in the scene','Edit',p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');const cur=getStudio3DState().outline.find(o=>o.id===id);need().setObjectVisible(id,p.on??(cur?cur.hidden:false));},object({id:{type:'integer',minimum:0},on:{type:'boolean'}},[]),hasScene),
   add<{id?:number;on?:boolean}>('studio3d.object.locked','Lock or unlock a 3D object against viewport selection','Edit',p=>{const id=p.id??getStudio3DState().selected;if(id==null)throw new Error('Select an object first.');const cur=getStudio3DState().outline.find(o=>o.id===id);need().setObjectLocked(id,p.on??(cur?!cur.locked:false));},object({id:{type:'integer',minimum:0},on:{type:'boolean'}},[]),hasScene),
   add<{ids:number[];parent:number|null}>('studio3d.object.reparent','Move 3D objects under a new parent, keeping their world transforms','Edit',p=>need().reparent(p.ids,p.parent),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500},parent:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['ids','parent']),hasScene),
@@ -543,6 +546,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
+  add<{ids?:number[]}>('studio3d.selection.duplicateLinked','Duplicate the selected 3D objects as linked instances sharing geometry','Edit',p=>need().duplicateLinkedSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
   add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames, a PNG sequence in a chosen folder, or a WebM video','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'},out:{enum:['zip','folder','webm']},fps:{type:'integer',minimum:1,maximum:60}},[]),hasScene),

@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src/lib/studio3d",
+    "src/components/studio3d",
+    "src/lib/studios/3d.ts",
+    "src/lib/commandContracts.ts",
+    "src/vite-env.d.ts",
+    "src/lib/markdown-it-footnote.d.ts",
+    "src/lib/svgedit/vendor.d.ts",
+    "src/lib/conversion/modules.d.ts",
+    "src/components/vibespace/assets.d.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ]
+  }
+}

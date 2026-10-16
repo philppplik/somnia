@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: linked instances (`studio3d.selection.duplicateLinked`, `studio3d.object.makeSingleUser`) - duplicate objects sharing one geometry with a linked badge and user count in the outliner; geometry edits (edit mode, sculpt, UV ops, mirror modifier, mesh tools) are refused on a linked mesh until it is made single-user, and deleting one instance never disposes geometry the others still use.
 - 3D Studio: edit-mode vertex color fill and pick (`studio3d.edit.vcolFill`, `studio3d.edit.vcolPick`) - fill the selected vertices with the brush color (creates the color attribute on first use), pick a vertex color back into the brush.
 - 3D Studio: lattice free-form deformation (`studio3d.lattice.create`, `.set`, `.apply`, `.reset`, `.clear`) - bind an NxMxK Bernstein control lattice to a mesh's bounding box, move control points, and bake the deformation into the mesh as one undo step (bake tool, no modifier stack).
 - 3D Studio: lattice viewport handles - a bound lattice shows its control cage in the viewport; dragging a control point deforms the mesh live and bakes as one undo step, rebinding the lattice so dragging can continue.

@@ -186,10 +186,16 @@ function flipWinding(g:THREE.BufferGeometry){
   for(let v=0;v+2<a.count;v+=3)for(let k=0;k<n;k++){const i1=(v+1)*n+k,i2=(v+2)*n+k;const t=arr[i1];arr[i1]=arr[i2];arr[i2]=t;}a.needsUpdate=true;}
 }
 const label=(s:string)=>s.charAt(0).toUpperCase()+s.slice(1);
-function disposeObject(root:THREE.Object3D){
+function disposeObject(root:THREE.Object3D,keep?:ReadonlySet<unknown>){
  root.traverse(o=>{
-  const m=o as THREE.Mesh;m.geometry?.dispose?.();
-  for(const mat of Array.isArray(m.material)?m.material:m.material?[m.material]:[]){for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture)v.dispose();mat.dispose();}
+  const m=o as THREE.Mesh;
+  if(m.geometry&&keep?.has(m.geometry)){/* geometry still shared with a live mesh: leave it (and its GPU buffers) alone */}
+  else m.geometry?.dispose?.();
+  for(const mat of Array.isArray(m.material)?m.material:m.material?[m.material]:[]){
+   if(keep?.has(mat))continue;
+   for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture&&!keep?.has(v))v.dispose();
+   mat.dispose();
+  }
  });
 }
 /** Undo/redo history label as an i18n key plus interpolation params; the UI translates at display time so the history list follows the locale. */
@@ -254,7 +260,7 @@ export class Stage{
   const done=()=>{
    const next=this.sceneState();let live:'before'|'next'='next';
    this.push({label,undo:()=>{this.swapState(before);live='before';},redo:()=>{this.swapState(next);live='next';},
-    release:()=>{for(const c of (live==='next'?before:next).children)disposeObject(c);}});
+    release:()=>{for(const c of (live==='next'?before:next).children)disposeObject(c,this.liveAssets());}});
    this.saved=this.cursor;this.emit();
   };
   const r=after?.();
@@ -278,7 +284,7 @@ export class Stage{
  }
  private attach(obj:THREE.Object3D,parent:THREE.Object3D,index:number,text:HistoryLabel){
   this.attach0(obj,parent,index);let owned=true;
-  this.push({label:text,undo:()=>{parent.remove(obj);owned=false;},redo:()=>{this.attach0(obj,parent,index);owned=true;},release:()=>{if(!owned)disposeObject(obj);}});
+  this.push({label:text,undo:()=>{parent.remove(obj);owned=false;},redo:()=>{this.attach0(obj,parent,index);owned=true;},release:()=>{if(!owned)disposeObject(obj,this.liveAssets());}});
  }
  private attach0(obj:THREE.Object3D,parent:THREE.Object3D,at:number){parent.add(obj);const i=parent.children.indexOf(obj);if(i!==at&&at<parent.children.length){parent.children.splice(i,1);parent.children.splice(at,0,obj);}}
  addPrimitive(kind:PrimitiveKind,at?:{x:number;z:number}):THREE.Mesh{
@@ -389,7 +395,7 @@ export class Stage{
   this.push({label,
    undo:()=>{for(const o of added)this.root.remove(o);owned=false;},
    redo:()=>{for(const o of added)this.root.add(o);owned=true;},
-   release:()=>{if(!owned)for(const l of lights)disposeObject(l);}});
+   release:()=>{if(!owned)for(const l of lights)disposeObject(l,this.liveAssets());}});
   return lights;
  }
  addCamera(pose?:{position:Vec3;quaternion:[number,number,number,number]},fov=40,kind:CameraKind='perspective'):THREE.PerspectiveCamera|THREE.OrthographicCamera{
@@ -550,7 +556,7 @@ export class Stage{
   const items=objs.map(o=>({o,parent:o.parent!,at:o.parent!.children.indexOf(o)})).sort((a,b)=>a.parent.id-b.parent.id||a.at-b.at);
   for(const i of [...items].reverse())i.parent.remove(i.o);
   let owned=false;
-  this.push({label:{key:'studio3d.hist.deleteObjects',params:{count:items.length}},undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.deleteObjects',params:{count:items.length}},undo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},redo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o,this.liveAssets());}});
  }
  /** Duplicates several objects in one undo step. Copies get their own materials and a small offset. */
  /** Wraps two or more objects sharing a parent in a new group placed at their combined centre. One undo step. */
@@ -617,7 +623,7 @@ export class Stage{
    items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:{key:'studio3d.hist.arrayCopies',params:{count:objs.length*(count-1)}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.arrayCopies',params:{count:objs.length*(count-1)}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o,this.liveAssets());}});
   return items.map(i=>i.o);
  }
  /** Nearest snap target for a world-space point: another mesh's vertex, or a point on another mesh's surface, within radius. */
@@ -670,8 +676,44 @@ export class Stage{
    const parent=src.parent??this.root;items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:{key:'studio3d.hist.duplicateObjects',params:{count:items.length}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.duplicateObjects',params:{count:items.length}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o,this.liveAssets());}});
   return items.map(i=>i.o);
+ }
+ /** Scene assets (geometries, materials, material textures) still referenced by a live mesh. Dispose paths skip them so linked instances never lose shared data. */
+ private liveAssets():Set<unknown>{
+  const s=new Set<unknown>();
+  this.root.traverse(o=>{const m=o as THREE.Mesh;if(!m.isMesh)return;s.add(m.geometry);
+   for(const mat of Array.isArray(m.material)?m.material:m.material?[m.material]:[]){s.add(mat);for(const v of Object.values(mat as unknown as Record<string,unknown>))if(v instanceof THREE.Texture)s.add(v);}});
+  return s;
+ }
+ /** How many live scene meshes share this geometry. */
+ geometryUsers(g:THREE.BufferGeometry):number{let n=0;this.root.traverse(o=>{const m=o as THREE.Mesh;if(m.isMesh&&m.geometry===g)n++;});return n;}
+ /** A mesh is linked when it carries the linked-instance marker AND its geometry is still shared with another live mesh (an unmarked plain duplicate shares geometry too, but stays freely editable and diverges on the first edit, as before). */
+ isLinked(m:THREE.Mesh):boolean{return m.userData.somniaLinked===true&&this.geometryUsers(m.geometry)>1;}
+ private refuseIfLinked(m:THREE.Mesh){if(this.isLinked(m))throw new StageError(`${m.name} is a linked instance: its geometry is shared with ${this.geometryUsers(m.geometry)-1} other object(s). Use Make single-user first.`);}
+ /** Duplicates objects as linked instances: the copies share the source geometry (materials stay per-object so material edits never propagate sideways). Geometry edits on a linked mesh are refused until it is made single-user. Source and copies get the marker. One undo step. */
+ duplicateLinkedMany(ids:number[]):THREE.Object3D[]{
+  const objs=this.topLevel(this.needMany(ids,1));const items:{o:THREE.Object3D;parent:THREE.Object3D;at:number}[]=[];
+  for(const src of objs){
+   const copy=src.clone(true);copy.traverse(c=>{const m=c as THREE.Mesh;if(m.isMesh&&!Array.isArray(m.material))m.material=(m.material as THREE.Material).clone();});
+   copy.name=this.uniqueName(src.name+' linked');copy.position.x+=0.5;
+   const parent=src.parent??this.root;items.push({o:copy,parent,at:parent.children.length});this.attach0(copy,parent,parent.children.length);
+  }
+  for(const o of [...objs,...items.map(i=>i.o)])o.traverse(c=>{const m=c as THREE.Mesh;if(m.isMesh)m.userData.somniaLinked=true;});
+  let owned=true;
+  this.push({label:{key:'studio3d.hist.duplicateLinked',params:{count:items.length}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o,this.liveAssets());}});
+  return items.map(i=>i.o);
+ }
+ /** Gives a linked instance its own geometry copy and clears the marker, so it can be edited on its own. One undo step. */
+ makeSingleUser(id:number){
+  const o=this.need(id);const m=o as THREE.Mesh;
+  if(!m.isMesh)throw new StageError(`${o.name} is not a mesh.`);
+  if(m.userData.somniaLinked!==true)throw new StageError(`${o.name} is not a linked instance.`);
+  if(this.geometryUsers(m.geometry)<2)throw new StageError(`${o.name} does not share its geometry with another object.`);
+  const before=m.geometry;const after=before.clone();let owned=true;
+  const set=(g:THREE.BufferGeometry,mark:boolean)=>{m.geometry=g;if(mark)m.userData.somniaLinked=true;else delete m.userData.somniaLinked;};
+  set(after,false);
+  this.push({label:{key:'studio3d.hist.makeSingleUser',params:{name:o.name}},undo:()=>{set(before,true);owned=false;},redo:()=>{set(after,false);owned=true;},release:()=>{const g=owned?before:after;if(!this.liveAssets().has(g))g.dispose();}});
  }
  /** Edit mode: one mesh edited at a time, selection lives here so undo of ops stays coherent. */
  private editId:number|null=null;
@@ -743,6 +785,7 @@ export class Stage{
   return{...data,...(mask?{mask}:{})};
  }
  private applyMeshData(m:THREE.Mesh,data:MeshData,label:HistoryLabel){
+  this.refuseIfLinked(m);
   const before=m.geometry,beforeData=m.userData.somniaPrimitive;
   const make=(d:MeshData)=>this.buildGeometry(d);
   const after=make(data);
@@ -752,12 +795,12 @@ export class Stage{
   let owned=true;
   const set=(g:THREE.BufferGeometry,param:unknown,seams:[number,number][])=>{m.geometry=g;if(param===undefined)delete m.userData.somniaPrimitive;else m.userData.somniaPrimitive=param;this.setSeams(m,seams);};
   set(after,undefined,seams1);
-  this.push({label,undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,seams1);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  this.push({label,undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,seams1);owned=true;},release:()=>{const g=owned?before:after;if(!this.liveAssets().has(g))g.dispose();}});
  }
  /** Enters mesh edit mode on a mesh. Returns the vertex and triangle counts. */
  editStart(id:number):{vertices:number;triangles:number}{
   this.editGrab=null;
-  const m=this.editableMesh(id);this.editId=id;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
+  const m=this.editableMesh(id);this.refuseIfLinked(m);this.editId=id;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
   return{vertices:m.geometry.getAttribute('position').count,triangles:m.geometry.getIndex()?m.geometry.getIndex()!.count/3:m.geometry.getAttribute('position').count/3};
  }
  editEnd(){this.editGrab=null;this.editId=null;this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
@@ -1319,7 +1362,7 @@ export class Stage{
   };
   set('after');
   this.push({label:{key:'studio3d.hist.editSeparate'},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
-   release:()=>{if(owned)before.dispose();else{after.dispose();disposeObject(m2);}}});
+   release:()=>{if(owned)before.dispose();else{after.dispose();disposeObject(m2,this.liveAssets());}}});
   this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};
  }
  /** Collapses each connected island of the selection into one vertex at its centroid, one undo step. The selection is cleared afterwards because face ordinals shift. */
@@ -1374,6 +1417,7 @@ export class Stage{
  }
  /** Applies a UV layout: vertices split along seams (one copy per UV slot) and every attribute follows. One undo step. */
  private applyUv(m:THREE.Mesh,r:UvResult,label:HistoryLabel){
+  this.refuseIfLinked(m);
   const data=this.meshDataOf(m);
   if(r.uvIndex.length!==data.index.length||r.uvIndex.some(i=>i<0||i>=r.uv.length))throw new StageError('The UV layout is damaged.');
   const slotVert=new Array<number>(r.uv.length).fill(-1);
@@ -1411,12 +1455,14 @@ export class Stage{
  /** Planar UV projection of the whole mesh along one axis, normalized to 0..1. One undo step. */
  uvPlanar(id:number,axis:'x'|'y'|'z'){
   const m=this.uvTarget(id);
+  this.refuseIfLinked(m);
   let r:UvResult;try{r=planarProject(this.meshDataOf(m),axis);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
   this.applyUv(m,r,{key:'studio3d.hist.planarUv'});
  }
  /** Pack the existing UV islands into the 0..1 square: shelf packing with padding, tight and non-overlapping, tall islands rotated 90 degrees. Topology stays, one undo step. */
  uvPack(id:number,opts?:{padding?:number}){
   const m=this.uvTarget(id);
+  this.refuseIfLinked(m);
   let r:UvResult;
   try{r=packExistingUv(this.meshDataOf(m),this.seamsOf(m),opts?.padding??0.02);}catch(e){throw e instanceof UvError?new StageError(e.message):e;}
   const attr=m.geometry.getAttribute('uv') as THREE.BufferAttribute|undefined;
@@ -1451,6 +1497,7 @@ export class Stage{
   const cur=o.userData.somniaMirror as {axis:MirrorAxis;merge:number;bisect?:boolean}|undefined;
   if(on&&cur)throw new StageError(`${o.name} already has a mirror modifier. Turn it off first.`);
   if(!on&&!cur)throw new StageError(`${o.name} has no mirror modifier.`);
+  if(on)this.refuseIfLinked(m);
   if(on){
    const base=m.geometry;
    const baseData=this.meshDataOf(m);
@@ -1476,6 +1523,7 @@ export class Stage{
  /** Starts a sculpt stroke: the positions snapshot becomes one undo step when the stroke ends. */
  sculptBegin(id:number){
   const m=this.editableMesh(id);
+  this.refuseIfLinked(m);
   if(this.sculptShot)this.sculptEnd();
   const ma=m.geometry.getAttribute('somniaMask');
   this.sculptShot={id,positions:new Float32Array((m.geometry.getAttribute('position').array as ArrayLike<number>) as number[]),mask:ma?new Float32Array(ma.array as ArrayLike<number> as number[]):null};
@@ -1634,12 +1682,13 @@ export class Stage{
  setPrimitive(id:number,patch:Record<string,unknown>){
   const o=this.need(id);const mesh=o as THREE.Mesh;const cur=this.primitiveOf(o);
   if(!cur)throw new StageError(`${o.name} is not a parametric primitive.`);
+  this.refuseIfLinked(mesh);
   let params:PrimitiveParams;try{params=patchParams(cur.kind,cur.params,patch);}catch(e){throw e instanceof PrimitiveError?new StageError(e.message):e;}
   if(Object.keys(params).every(k=>params[k]===cur.params[k]))return;
   const before=mesh.geometry,beforeData=o.userData.somniaPrimitive;const after=geometryFor(cur.kind,params);const afterData={kind:cur.kind,params};
   let owned=true;const apply=(g:THREE.BufferGeometry,d:unknown)=>{mesh.geometry=g;o.userData.somniaPrimitive=d;};
   apply(after,afterData);
-  this.push({label:{key:'studio3d.hist.shape',params:{name:o.name}},undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  this.push({label:{key:'studio3d.hist.shape',params:{name:o.name}},undo:()=>{apply(before,beforeData);owned=false;},redo:()=>{apply(after,afterData);owned=true;},release:()=>{const g=owned?before:after;if(!this.liveAssets().has(g))g.dispose();}});
  }
  setMaterial(id:number,request:MaterialPatch){
   const o=this.need(id);const mesh=o as THREE.Mesh;let patch:{color?:string;metalness?:number;roughness?:number};
@@ -2425,13 +2474,13 @@ export class Stage{
    c.name=this.uniqueName(src.name+' mirror');items.push({o:c,parent,at:parent.children.length});this.attach0(c,parent,parent.children.length);
   }
   let owned=true;
-  this.push({label:{key:'studio3d.hist.mirrorCopy',params:{count:items.length,name:objs[0].name}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o);}});
+  this.push({label:{key:'studio3d.hist.mirrorCopy',params:{count:items.length,name:objs[0].name}},undo:()=>{for(const i of items)i.parent.remove(i.o);owned=false;},redo:()=>{for(const i of items)this.attach0(i.o,i.parent,i.at);owned=true;},release:()=>{if(!owned)for(const i of items)disposeObject(i.o,this.liveAssets());}});
   return items.map(i=>i.o);
  }
  /** Bakes each mesh's scale into its geometry and resets the scale to 1. The look does not change. A mesh with children is refused, because the children would change size. */
  applyScale(ids:number[]){
   const objs=this.topLevel(this.needMany(ids,1));
-  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Apply scale works on meshes.`);if(o.children.length)throw new StageError(`${o.name} has child objects, so its scale cannot be applied.`);}
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Apply scale works on meshes.`);if(o.children.length)throw new StageError(`${o.name} has child objects, so its scale cannot be applied.`);this.refuseIfLinked(o as THREE.Mesh);}
   const list=objs.map(o=>o as THREE.Mesh).filter(m=>Math.abs(m.scale.x-1)>1e-9||Math.abs(m.scale.y-1)>1e-9||Math.abs(m.scale.z-1)>1e-9).map(m=>{
    const g=m.geometry.clone();g.applyMatrix4(new THREE.Matrix4().makeScale(m.scale.x,m.scale.y,m.scale.z));
    if(m.scale.x*m.scale.y*m.scale.z<0)flipWinding(g);g.computeBoundingBox();g.computeBoundingSphere();
@@ -2466,13 +2515,14 @@ export class Stage{
   const at=this.root.children.length;this.attach0(result,this.root,at);
   let owned=true;
   this.push({label:{key:'studio3d.hist.mergeMeshes',params:{count:meshes.length}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
-   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o,this.liveAssets());else disposeObject(result,this.liveAssets());}});
   return result;
  }
  /** Simplifies a mesh with the meshopt simplifier: removes roughly the given fraction of vertices while keeping shape, UVs and normals. Primitive params and UV seam marks do not survive the new topology and are cleared. One undo step. */
  async simplify(id:number,keep:number):Promise<{before:number;after:number;tris:number}>{
   if(this.editId!=null)throw new StageError('Leave edit mode before simplifying.');
   const o=this.need(id);if(!(o instanceof THREE.Mesh))throw new StageError('Only meshes can be simplified.');
+  this.refuseIfLinked(o);
   const k=finite(keep,'keep');if(k<=0||k>=1)throw new StageError('keep must be between 0 and 1 (exclusive).');
   const before=o.geometry;const verts=before.getAttribute('position').count;
   if(verts>250000)throw new StageError('This mesh is too large to simplify (over 250,000 vertices).');
@@ -2485,7 +2535,7 @@ export class Stage{
   let owned=true;
   const set=(g:THREE.BufferGeometry,param:unknown,seams:[number,number][])=>{o.geometry=g;if(param===undefined)delete o.userData.somniaPrimitive;else o.userData.somniaPrimitive=param;this.setSeams(o,seams);};
   set(after,undefined,[]);
-  this.push({label:{key:'studio3d.hist.simplify',params:{name:o.name}},undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,[]);owned=true;},release:()=>{(owned?before:after).dispose();}});
+  this.push({label:{key:'studio3d.hist.simplify',params:{name:o.name}},undo:()=>{set(before,beforeData,seams0);owned=false;},redo:()=>{set(after,undefined,[]);owned=true;},release:()=>{const g=owned?before:after;if(!this.liveAssets().has(g))g.dispose();}});
   return {before:verts,after:after.getAttribute('position').count,tris};
  }
  /** Bakes a symmetry into meshes: keeps one side of each mesh's local mirror plane, mirrors it onto the other side and welds the seam. One undo step for the whole set. */
@@ -2493,7 +2543,7 @@ export class Stage{
   if(this.editId!=null)throw new StageError('Leave edit mode before symmetrizing.');
   const m=finite(merge,'merge');if(m<0||m>1e6)throw new StageError('The merge distance must be zero or a positive number.');
   const objs=this.topLevel(this.needMany(ids,1));
-  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Symmetrize works on meshes.`);
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Symmetrize works on meshes.`);this.refuseIfLinked(o as THREE.Mesh);}
   const list=(objs as THREE.Mesh[]).map(mesh=>{
    const data=this.meshDataOf(mesh);const out=symmetrizeMesh(data,axis,side,m);
    const g=this.buildGeometry(out);
@@ -2512,7 +2562,7 @@ export class Stage{
   if(this.editId!=null)throw new StageError('Leave edit mode before subdividing.');
   if(!Number.isInteger(iterations)||iterations<1||iterations>3)throw new StageError('Iterations must be a whole number between 1 and 3.');
   const objs=this.topLevel(this.needMany(ids,1));
-  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Subdivide works on meshes.`);
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Subdivide works on meshes.`);this.refuseIfLinked(o as THREE.Mesh);}
   const list=(objs as THREE.Mesh[]).map(mesh=>{
    const data=this.meshDataOf(mesh);
    let out:MeshData;try{out=subdivideLoop(data,iterations);}catch(e){throw e instanceof EditError?new StageError(e.message):e;}
@@ -2532,7 +2582,7 @@ export class Stage{
   if(this.editId!=null)throw new StageError('Leave edit mode before cleaning up meshes.');
   if(!Number.isFinite(weld)||weld<0||weld>1e6)throw new StageError('The weld distance must be zero or a positive number.');
   const objs=this.topLevel(this.needMany(ids,1));
-  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Cleanup works on meshes.`);
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Cleanup works on meshes.`);this.refuseIfLinked(o as THREE.Mesh);}
   const total={welded:0,facesDropped:0,vertsDropped:0,flipped:0};
   const list=(objs as THREE.Mesh[]).map(mesh=>{
    const data=this.meshDataOf(mesh);
@@ -2577,7 +2627,7 @@ export class Stage{
  separate(ids:number[]):number{
   if(this.editId!=null)throw new StageError('Leave edit mode before separating.');
   const objs=this.topLevel(this.needMany(ids,1));
-  for(const o of objs)if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Separate works on meshes.`);
+  for(const o of objs){if(!(o as THREE.Mesh).isMesh)throw new StageError(`${o.name} is not a mesh. Separate works on meshes.`);this.refuseIfLinked(o as THREE.Mesh);}
   type Part={g:THREE.BufferGeometry;seams:[number,number][];o?:THREE.Mesh;at:number};
   type Work={mesh:THREE.Mesh;parent:THREE.Object3D;before:{g:THREE.BufferGeometry;d:unknown;s:[number,number][]};parts:Part[]};
   const work:Work[]=[];
@@ -2616,7 +2666,7 @@ export class Stage{
   };
   set('after');
   this.push({label:{key:'studio3d.hist.separate',params:{count:work.length,name:work[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
-   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.parts[0].g.dispose();for(let i=1;i<w.parts.length;i++)disposeObject(w.parts[i].o!);}}}});
+   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.parts[0].g.dispose();for(let i=1;i<w.parts.length;i++)disposeObject(w.parts[i].o!,this.liveAssets());}}}});
   return work.reduce((n,w)=>n+w.parts.length,0);
  }
  /** Gives meshes real thickness: outer skin, flipped inner skin and stitched side walls on open borders. One undo step for the whole set. */
@@ -2771,7 +2821,7 @@ export class Stage{
   };
   set('after');
   this.push({label:{key:'studio3d.hist.bisect',params:{count:work.length,name:work[0].mesh.name}},undo:()=>{set('before');owned=false;},redo:()=>{set('after');owned=true;},
-   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.negG.dispose();disposeObject(w.pos);}}}});
+   release:()=>{for(const w of work){if(owned)w.before.g.dispose();else{w.negG.dispose();disposeObject(w.pos,this.liveAssets());}}}});
   return work.length*2;
  }
  /** Twists meshes around an axis: the total angle is spread across each mesh's extent along that axis (simple-deform twist around the bounding-box centre line). Sculpt masks scale the rotation. One undo step for the whole set. */
@@ -3026,7 +3076,7 @@ export class Stage{
   this.attach0(result,this.root,this.root.children.length);
   let owned=true;
   this.push({label:{key:'studio3d.hist.bridge',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
-   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o,this.liveAssets());else disposeObject(result,this.liveAssets());}});
   return 1;
  }
  /** Combines exactly two meshes with a 3D boolean (union, subtract or intersect) in world space. The originals are removed; one undo step restores both. */
@@ -3077,7 +3127,7 @@ export class Stage{
   this.attach0(result,this.root,this.root.children.length);
   let owned=true;
   this.push({label:{key:'studio3d.hist.boolean',params:{name:meshes[0].name,other:meshes[1].name}},undo:()=>{this.root.remove(result);for(const i of items)this.attach0(i.o,i.parent,i.at);owned=false;},redo:()=>{for(const i of [...items].reverse())i.parent.remove(i.o);this.attach0(result,this.root,this.root.children.length);owned=true;},
-   release:()=>{if(owned)for(const i of items)disposeObject(i.o);else disposeObject(result);}});
+   release:()=>{if(owned)for(const i of items)disposeObject(i.o,this.liveAssets());else disposeObject(result,this.liveAssets());}});
   return 1;
  }
  /** Rebuilds meshes as an even voxel grid (binary voxelization + surface nets, vertices projected onto the source). UVs, masks and seams are dropped. One undo step for the whole set. */
@@ -3152,7 +3202,7 @@ export class Stage{
   const o=this.need(id);const parent=o.parent;if(!parent)throw new StageError('The scene root cannot be deleted.');
   if((o as THREE.Bone).isBone)throw new StageError('Bones cannot be deleted: the skin would lose a joint.');
   const at=parent.children.indexOf(o);parent.remove(o);let owned=false;
-  this.push({label:{key:'studio3d.hist.delete',params:{name:o.name}},undo:()=>{this.attach0(o,parent,at);owned=true;},redo:()=>{parent.remove(o);owned=false;},release:()=>{if(!owned)disposeObject(o);}});
+  this.push({label:{key:'studio3d.hist.delete',params:{name:o.name}},undo:()=>{this.attach0(o,parent,at);owned=true;},redo:()=>{parent.remove(o);owned=false;},release:()=>{if(!owned)disposeObject(o,this.liveAssets());}});
  }
  duplicate(id:number):THREE.Object3D{
   const o=this.need(id);if(o===this.root)throw new StageError('The scene root cannot be duplicated.');
@@ -3286,6 +3336,7 @@ export class Stage{
  vcolPaintStart(id:number){
   const o=this.need(id);const mesh=o as THREE.Mesh;
   if(!mesh.isMesh||Array.isArray(mesh.material))throw new StageError(`${o.name} is not a paintable mesh.`);
+  this.refuseIfLinked(mesh);
   if(this.editId!=null)throw new StageError('Leave edit mode before painting vertex colors.');
   if(this.vcolStroke)throw new StageError('A paint stroke is already in progress.');
   const geo=mesh.geometry;
@@ -3362,10 +3413,11 @@ export class Stage{
  measure(animations=this.clipList.length):{stats:ModelStats;outline:OutlineEntry[];bounds:Bounds|null}{
   const stats=emptyStats();stats.animations=animations;const outline:OutlineEntry[]=[];const mats=new Set<THREE.Material>(),texs=new Set<THREE.Texture>();
   const instanced=new Map<THREE.BufferGeometry,Set<THREE.Material>>();
+  const geoUsers=new Map<THREE.BufferGeometry,number>();this.root.traverse(o=>{const mm=o as THREE.Mesh;if(mm.isMesh)geoUsers.set(mm.geometry,(geoUsers.get(mm.geometry)??0)+1);});
   const walk=(o:THREE.Object3D,depth:number)=>{
    const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?readPin(o.userData)!==null?'pin':'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
    if(kind==='bone')stats.bones++;
-   if(depth>0){stats.nodes++;if(kind!=='bone')outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind,hidden:!o.visible,locked:o.userData.somniaLocked===true});}
+   if(depth>0){stats.nodes++;if(kind!=='bone'){const users=mesh.isMesh?(geoUsers.get(mesh.geometry)??0):0;outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind,hidden:!o.visible,locked:o.userData.somniaLocked===true,...(o.userData.somniaLinked===true&&users>1?{linked:true,linkedUsers:users}:{})});}}
    if(kind==='camera')stats.cameras++;
    if(depth>0&&(o.scale.x===0||o.scale.y===0||o.scale.z===0))stats.zeroScale++;
    if(mesh.isMesh&&mesh.geometry){
