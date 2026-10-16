@@ -1072,5 +1072,12 @@
  "studio3d.hist.vertexColorsAdd_one": "Add vertex colors to {name}",
  "studio3d.hist.vertexColorsAdd_other": "Add vertex colors to {count} meshes",
  "studio3d.hist.vertexColorsRemove_one": "Remove vertex colors from {name}",
- "studio3d.hist.vertexColorsRemove_other": "Remove vertex colors from {count} meshes"
+ "studio3d.hist.vertexColorsRemove_other": "Remove vertex colors from {count} meshes",
+ "cmd.studio3d.vcol.brush": "Configure the vertex color paint brush of the 3D studio",
+ "cmd.studio3d.vcol.paint": "Paint one brush dab of vertex color onto the selected 3D mesh (adds the color attribute on first use)",
+ "studio3d.vcol.fill": "Fill vertex colors",
+ "studio3d.vcol.remove": "Remove vertex colors",
+ "studio3d.vcol.paint": "Paint vertex colors",
+ "studio3d.vcol.color": "Brush color",
+ "studio3d.hist.paintVcol": "Paint vertex colors"
 }

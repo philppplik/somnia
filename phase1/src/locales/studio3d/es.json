@@ -1072,5 +1072,12 @@
  "studio3d.hist.vertexColorsAdd_one": "Añadir colores de vértice a {name}",
  "studio3d.hist.vertexColorsAdd_other": "Añadir colores de vértice a {count} mallas",
  "studio3d.hist.vertexColorsRemove_one": "Quitar colores de vértice de {name}",
- "studio3d.hist.vertexColorsRemove_other": "Quitar colores de vértice de {count} mallas"
+ "studio3d.hist.vertexColorsRemove_other": "Quitar colores de vértice de {count} mallas",
+ "cmd.studio3d.vcol.brush": "Configurar el pincel de pintura de colores de vértice del estudio 3D",
+ "cmd.studio3d.vcol.paint": "Pintar un toque de pincel de color de vértice sobre la malla 3D seleccionada (crea el atributo de color la primera vez)",
+ "studio3d.vcol.fill": "Rellenar colores de vértice",
+ "studio3d.vcol.remove": "Quitar colores de vértice",
+ "studio3d.vcol.paint": "Pintar colores de vértice",
+ "studio3d.vcol.color": "Color del pincel",
+ "studio3d.hist.paintVcol": "Pintar colores de vértice"
 }

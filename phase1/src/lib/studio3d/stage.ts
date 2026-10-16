@@ -3116,6 +3116,56 @@ export class Stage{
   this.push({label,undo:()=>{apply(beforeI,beforeW);owned=false;},redo:()=>{apply(afterI,afterW);owned=true;},release:()=>{(owned?beforeI:afterI).dispose?.();(owned?beforeW:afterW).dispose?.();}});
   this.emit();
  }
+ /** Vertex-color painting: one stroke is one undo step. vcolPaintStart snapshots (or creates) the color attribute, vcolPaint dabs, vcolPaintEnd closes the stroke. */
+ private vcolStroke:{id:number;geo:THREE.BufferGeometry;before:THREE.BufferAttribute|null}|null=null;
+ /** Begins a vertex-color stroke on a mesh, adding a white color attribute first when the mesh has none. Throws while another stroke is open. */
+ vcolPaintStart(id:number){
+  const o=this.need(id);const mesh=o as THREE.Mesh;
+  if(!mesh.isMesh||Array.isArray(mesh.material))throw new StageError(`${o.name} is not a paintable mesh.`);
+  if(this.editId!=null)throw new StageError('Leave edit mode before painting vertex colors.');
+  if(this.vcolStroke)throw new StageError('A paint stroke is already in progress.');
+  const geo=mesh.geometry;
+  const before=(geo.getAttribute('color') as THREE.BufferAttribute|undefined)??null;
+  if(!before){const n=geo.getAttribute('position').count;geo.setAttribute('color',new THREE.Float32BufferAttribute(new Float32Array(n*3).fill(1),3));}
+  this.vcolStroke={id,geo,before};
+  this.emit(); // a fresh attribute flips the material flag
+ }
+ /** One brush dab on the open vertex-color stroke, the center in mesh-local coordinates: vertices inside the radius lerp toward the brush color, shaped by strength and falloff. Returns the touched vertex count. */
+ vcolPaint(id:number,center:readonly[number,number,number],brush:{color:[number,number,number];radius:number;strength:number;falloff:'smooth'|'linear'|'constant'}):number{
+  const st=this.vcolStroke;if(!st||st.id!==id)throw new StageError('Start a paint stroke first.');
+  for(const n of [center[0],center[1],center[2],brush.radius,brush.strength,...brush.color])if(!Number.isFinite(n))throw new StageError('The brush needs finite numbers.');
+  if(brush.radius<=0||brush.radius>1e6)throw new StageError('The brush radius must be a positive number.');
+  const mesh=this.need(id) as THREE.Mesh;
+  const pos=st.geo.getAttribute('position');if(!pos)throw new StageError(`${mesh.name} has no vertices to paint.`);
+  // Fresh attribute object per dab: listeners notice the swap and repaint.
+  const col=(st.geo.getAttribute('color') as THREE.BufferAttribute).clone() as THREE.BufferAttribute;
+  let n=0;
+  for(let v=0;v<pos.count;v++){
+   const dx=pos.getX(v)-center[0],dy=pos.getY(v)-center[1],dz=pos.getZ(v)-center[2];
+   const d=Math.sqrt(dx*dx+dy*dy+dz*dz);
+   if(d>brush.radius)continue;
+   const t=1-d/brush.radius;
+   const f=brush.falloff==='constant'?1:brush.falloff==='linear'?t:t*t*(3-2*t);
+   const w=Math.min(1,Math.max(0,brush.strength*f));
+   if(w<=0)continue;
+   col.setXYZ(v,col.getX(v)+(brush.color[0]-col.getX(v))*w,col.getY(v)+(brush.color[1]-col.getY(v))*w,col.getZ(v)+(brush.color[2]-col.getZ(v))*w);
+   n++;
+  }
+  if(n>0){st.geo.setAttribute('color',col);this.emit();}
+  return n;
+ }
+ /** Closes the open vertex-color stroke: all its dabs become one undo step. Safe to call with no stroke open. */
+ vcolPaintEnd(id:number,label:HistoryLabel={key:'studio3d.hist.paintVcol'}){
+  const st=this.vcolStroke;if(!st||st.id!==id){this.vcolStroke=null;return;}
+  this.vcolStroke=null;
+  const before=st.before;
+  const after=st.geo.getAttribute('color') as THREE.BufferAttribute;
+  if(before&&after===before)return; // not a single dab landed
+  let owned=true;
+  const put=(a:THREE.BufferAttribute|null)=>{if(a)st.geo.setAttribute('color',a);else st.geo.deleteAttribute('color');};
+  this.push({label,undo:()=>{put(before);owned=false;},redo:()=>{put(after);owned=true;},release:()=>{(owned?before:after)?.dispose?.();}});
+  this.emit();
+ }
  private uvInfo(m:THREE.Mesh):{hasUv:boolean;islands:number;seams:number}{
   const seams=this.seamsOf(m).length;
   if(!m.geometry.getAttribute('uv'))return{hasUv:false,islands:0,seams};

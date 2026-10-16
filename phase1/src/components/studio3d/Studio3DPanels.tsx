@@ -871,6 +871,18 @@ function MeshTools(){
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.boolean',{op:boolOp})}>{t('studio3d.mesh.boolean')}</Button></div>
   <div className="flex flex-wrap items-center gap-1"><NativeInput type="number" min={8} max={128} step={1} value={rmRes} aria-label={t('studio3d.mesh.remeshRes')} className="w-16" onChange={e=>setRmRes(Math.min(128,Math.max(8,Math.round(Number(e.currentTarget.value)||32))))}/>
    <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.remesh',{resolution:rmRes})}>{t('studio3d.mesh.remesh')}</Button></div>
+  <div className="flex flex-wrap items-center gap-1"><Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.vertexColors',{on:true,color:s.vcolBrush.color})}>{t('studio3d.vcol.fill')}</Button>
+   <Button variant="outline" disabled={!ready} onClick={()=>void executeCommand('studio3d.mesh.vertexColors',{on:false})}>{t('studio3d.vcol.remove')}</Button></div>
+  <label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={s.vcolBrush.on} onChange={e=>void executeCommand('studio3d.vcol.brush',{on:e.currentTarget.checked})}/>{t('studio3d.vcol.paint')}</label>
+  {s.vcolBrush.on&&<>
+   <label className="flex items-center gap-2 text-xs text-ink-2">{t('studio3d.vcol.color')}<NativeInput type="color" value={s.vcolBrush.color} aria-label={t('studio3d.vcol.color')} onChange={e=>void executeCommand('studio3d.vcol.brush',{color:e.currentTarget.value})}/></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.skinning.radius')} <span className="text-ink-3">{s.vcolBrush.radius.toFixed(2)}</span>
+    <NativeInput type="range" min={0.01} max={2} step={0.01} value={s.vcolBrush.radius} aria-label={t('studio3d.skinning.radius')} onChange={e=>void executeCommand('studio3d.vcol.brush',{radius:Number(e.currentTarget.value)})}/></label>
+   <label className="grid gap-1 text-xs text-ink-2">{t('studio3d.skinning.strength')} <span className="text-ink-3">{s.vcolBrush.strength.toFixed(2)}</span>
+    <NativeInput type="range" min={0.01} max={1} step={0.01} value={s.vcolBrush.strength} aria-label={t('studio3d.skinning.strength')} onChange={e=>void executeCommand('studio3d.vcol.brush',{strength:Number(e.currentTarget.value)})}/></label>
+   <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.vcolBrush.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.vcol.brush',{falloff:e.currentTarget.value})}>
+    {(['smooth','linear','constant'] as const).map(v=><option key={v} value={v}>{t('studio3d.skinning.falloff.'+v)}</option>)}</NativeSelect>
+  </>}
  </fieldset>;
 }
 

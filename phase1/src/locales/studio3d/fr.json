@@ -1072,5 +1072,12 @@
  "studio3d.hist.vertexColorsAdd_one": "Ajouter des couleurs de sommets à {name}",
  "studio3d.hist.vertexColorsAdd_other": "Ajouter des couleurs de sommets à {count} maillages",
  "studio3d.hist.vertexColorsRemove_one": "Supprimer les couleurs de sommets de {name}",
- "studio3d.hist.vertexColorsRemove_other": "Supprimer les couleurs de sommets de {count} maillages"
+ "studio3d.hist.vertexColorsRemove_other": "Supprimer les couleurs de sommets de {count} maillages",
+ "cmd.studio3d.vcol.brush": "Configurer la brosse de peinture de couleurs de sommets du studio 3D",
+ "cmd.studio3d.vcol.paint": "Peindre une touche de brosse de couleur de sommet sur le maillage 3D sélectionné (crée l'attribut de couleur à la première utilisation)",
+ "studio3d.vcol.fill": "Remplir les couleurs de sommets",
+ "studio3d.vcol.remove": "Supprimer les couleurs de sommets",
+ "studio3d.vcol.paint": "Peindre les couleurs de sommets",
+ "studio3d.vcol.color": "Couleur de la brosse",
+ "studio3d.hist.paintVcol": "Peindre les couleurs de sommets"
 }

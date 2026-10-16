@@ -95,3 +95,51 @@ test('vertex colors export as COLOR_0 and come back through the loader',async()=
  assert.ok(Math.abs(c.getX(0)-1)<1e-3&&Math.abs(c.getY(0))<1e-3,'the fill survives the roundtrip');
  assert.equal((re.material as THREE.MeshStandardMaterial).vertexColors,true,'the loader sets the flag');
 });
+test('a paint stroke tints only the dab radius and closes as one undo step',()=>{
+ const {st,mesh}=mk();
+ const nv=mesh.geometry.getAttribute('position').count;
+ st.vcolPaintStart(mesh.id);
+ assert.ok(colAttr(mesh),'the attribute appears at stroke start');
+ assert.equal((mesh.material as THREE.MeshStandardMaterial).vertexColors,true,'the flag follows immediately');
+ const n=st.vcolPaint(mesh.id,[0.5,0.5,0.5],{color:[1,0,0],radius:0.2,strength:1,falloff:'constant'});
+ assert.ok(n>0,'the corner dab touches vertices');
+ assert.ok(n<nv,'but not the whole box');
+ st.vcolPaint(mesh.id,[-0.5,-0.5,-0.5],{color:[0,0,1],radius:0.2,strength:1,falloff:'constant'});
+ st.vcolPaintEnd(mesh.id);
+ const c=colAttr(mesh)!;
+ let red=false,blue=false,white=false;
+ for(let v=0;v<c.count;v++){const r=c.getX(v),b=c.getZ(v);if(r>0.9&&b<0.1)red=true;else if(b>0.9&&r<0.1)blue=true;else if(r>0.9&&b>0.9)white=true;}
+ assert.ok(red&&blue&&white,'two dabs paint two corners, the rest stays white');
+ st.undo();
+ assert.ok(!colAttr(mesh),'one undo closes the whole stroke: the attribute created by it goes away again');
+ assert.equal((mesh.material as THREE.MeshStandardMaterial).vertexColors,false);
+ st.redo();
+ assert.ok(colAttr(mesh),'redo repaints the stroke');
+});
+test('painting on an existing attribute undoes back to the pre-stroke colors',()=>{
+ const {st,mesh}=mk();
+ st.setVertexColors(true,'#ff0000',[mesh.id]);
+ st.vcolPaintStart(mesh.id);
+ st.vcolPaint(mesh.id,[0.5,0.5,0.5],{color:[0,1,0],radius:0.2,strength:1,falloff:'constant'});
+ st.vcolPaintEnd(mesh.id);
+ assert.ok(Math.abs(colAttr(mesh)!.getY(0)-1)<1e-4,'the dabbed corner is green now');
+ st.undo();
+ assert.ok(Math.abs(colAttr(mesh)!.getX(0)-1)<1e-4&&Math.abs(colAttr(mesh)!.getY(0))<1e-4,'undo brings back the red fill');
+});
+test('falloff shapes the dab and errors stay readable',()=>{
+ const {st,mesh}=mk();
+ assert.throws(()=>st.vcolPaint(mesh.id,[0,0,0],{color:[1,0,0],radius:1,strength:1,falloff:'smooth'}),/Start a paint stroke first/);
+ st.vcolPaintStart(mesh.id);
+ st.vcolPaint(mesh.id,[0.5,0.5,0.5],{color:[0,0,0],radius:1.2,strength:1,falloff:'smooth'}); // the three neighbouring corners (d=1) land in the falloff ring
+ st.vcolPaintEnd(mesh.id);
+ const pos=mesh.geometry.getAttribute('position');const c=colAttr(mesh)!;
+ let sawMid=false;
+ for(let v=0;v<c.count;v++){
+  const d=Math.hypot(pos.getX(v)-0.5,pos.getY(v)-0.5,pos.getZ(v)-0.5);
+  const r=c.getX(v);
+  if(d<1e-6)assert.ok(r<0.01,'the dab centre is fully painted');
+  else if(r>0.05&&r<0.95)sawMid=true;
+ }
+ assert.ok(sawMid,'smooth falloff leaves a gradient ring');
+ st.vcolPaintEnd(mesh.id); // no open stroke: safe no-op
+});

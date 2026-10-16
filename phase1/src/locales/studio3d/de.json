@@ -1072,5 +1072,12 @@
  "studio3d.hist.vertexColorsAdd_one": "Vertexfarben zu {name} hinzufügen",
  "studio3d.hist.vertexColorsAdd_other": "Vertexfarben zu {count} Meshes hinzufügen",
  "studio3d.hist.vertexColorsRemove_one": "Vertexfarben von {name} entfernen",
- "studio3d.hist.vertexColorsRemove_other": "Vertexfarben von {count} Meshes entfernen"
+ "studio3d.hist.vertexColorsRemove_other": "Vertexfarben von {count} Meshes entfernen",
+ "cmd.studio3d.vcol.brush": "Vertexfarben-Pinsel des 3D-Studios einstellen",
+ "cmd.studio3d.vcol.paint": "Einen Pinsel-Tupfer Vertexfarbe auf das gewählte 3D-Mesh malen (legt das Farbattribut beim ersten Mal an)",
+ "studio3d.vcol.fill": "Vertexfarben füllen",
+ "studio3d.vcol.remove": "Vertexfarben entfernen",
+ "studio3d.vcol.paint": "Vertexfarben malen",
+ "studio3d.vcol.color": "Pinselfarbe",
+ "studio3d.hist.paintVcol": "Vertexfarben malen"
 }

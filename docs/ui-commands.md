@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1112 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1114 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1011,6 +1011,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.uv.seamsFromIslands` | Mark the borders of the current UV islands as seams | Edit | studio3d |  |
 | `studio3d.uv.transform` | Move, rotate and scale the UVs of the selected faces | Edit | studio3d |  |
 | `studio3d.uv.unwrap` | Unwrap UVs | Edit | studio3d |  |
+| `studio3d.vcol.brush` | Configure the vertex color paint brush of the 3D studio | Edit | studio3d |  |
+| `studio3d.vcol.paint` | Paint one brush dab of vertex color onto the selected 3D mesh (adds the color attribute on first use) | Edit | studio3d |  |
 | `studio3d.view.ao` | Switch the ambient occlusion preview on or off (viewport only) | View | studio3d |  |
 | `studio3d.view.apply` | Look at the scene from a saved named view | View | studio3d |  |
 | `studio3d.view.fov` | Set the viewport field of view or focal length | View | studio3d |  |
