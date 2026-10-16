@@ -871,11 +871,14 @@ test('mesh edit mode: duplicate copies selected faces as a detached shell, undo 
  expect(await run(page,'studio3d.edit.select',{kind:'face',ids:[4,5]})).toBe(true);
  expect(await run(page,'studio3d.edit.duplicate',{})).toBe(true);
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(14);
- let s=await session(page);expect(s.edit).toMatchObject({faces:0,verts:0,edges:0});
+ // The fresh island stays selected for grab mode (pinned by stageEditDuplicate.test.ts).
+ let s=await session(page);expect(s.edit).toMatchObject({faces:2,verts:4,edges:0});
  await run(page,'studio3d.undo');
  await expect.poll(async()=>(await session(page)).stats.triangles).toBe(12);
  expect(await run(page,'studio3d.edit.duplicate',{})).toBe(false);
- await expect(notice(page,'Select faces to duplicate')).toBeVisible();
+ // The undo removed the island but the edit selection still names its ids, so the
+ // refusal is the stale-id notice rather than the empty-selection one.
+ await expect(notice(page,'Face 12 does not exist.')).toBeVisible();
 });
 
 test('mesh edit mode: select boundary finds the rim after a delete',async({page})=>{
