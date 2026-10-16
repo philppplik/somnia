@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/examples/jsm/exporters/GLTFExporter.js';
 import {GLTFLoader} from 'three/examples/jsm/loaders/GLTFLoader.js';
-import {Stage} from './stage';
+import {Stage,collectNodeExtras,applyNodeExtras} from './stage';
 /** The exporter needs FileReader, which Node does not have. A tiny stand-in over Blob is enough here. */
 class NodeFileReader{result:string|ArrayBuffer|null=null;onloadend:(()=>void)|null=null;onerror:(()=>void)|null=null;
  readAsArrayBuffer(b:Blob){void b.arrayBuffer().then(r=>{this.result=r;this.onloadend?.();},()=>this.onerror?.());}
@@ -88,4 +88,24 @@ test('positions, rotations and scale survive a round trip unchanged (glTF is met
  assert.ok(Math.abs(cube.scale.x-2)<1e-4&&Math.abs(cube.scale.z-0.5)<1e-4,'scale is unchanged');
  const e=new THREE.Euler().setFromQuaternion(cube.quaternion,'XYZ');
  assert.ok(Math.abs(THREE.MathUtils.radToDeg(e.y)-30)<0.01,'rotation about Y is unchanged');
+});
+
+test('a som3d-style roundtrip keeps area and directional lights without helper litter in the outline',async()=>{
+ const stage=new Stage();
+ stage.addPrimitive('cube');stage.addPrimitive('sphere');
+ const area=stage.addLight('area');stage.setLight(area.id,{intensity:7,width:3,height:2});
+ const sun=stage.addLight('directional');stage.setLight(sun.id,{shadow:true});
+ const before=stage.measure().outline.map(o=>o.kind).sort();
+ assert.deepEqual(before,['light','light','mesh','mesh']);
+ const extras=collectNodeExtras(stage.root);
+ const e=new GLTFExporter();e.register(stage.exporterPlugin() as never);
+ const glb=await e.parseAsync([...stage.root.children],{binary:true,onlyVisible:false}) as ArrayBuffer;
+ const g=await importGlb(glb);
+ // The som3d open path: extras replace the empty light husks first, then the replaced tree is loaded.
+ applyNodeExtras(g.scene,extras);
+ const back=new Stage();await back.loadMany([...g.scene.children]);
+ const outline=back.measure().outline;
+ assert.deepEqual(outline.map(o=>o.kind).sort(),before,'no light-target or husk groups join the outline');
+ const areaBack=back.measure().outline.find(o=>o.kind==='light'&&o.name==='Area light');
+ assert.ok(areaBack,'the area light is restored from its extras, not lost with the husk');
 });

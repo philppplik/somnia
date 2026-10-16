@@ -3415,6 +3415,8 @@ export class Stage{
   const instanced=new Map<THREE.BufferGeometry,Set<THREE.Material>>();
   const geoUsers=new Map<THREE.BufferGeometry,number>();this.root.traverse(o=>{const mm=o as THREE.Mesh;if(mm.isMesh)geoUsers.set(mm.geometry,(geoUsers.get(mm.geometry)??0)+1);});
   const walk=(o:THREE.Object3D,depth:number)=>{
+   // A light's aim target is plumbing the glTF loader parents under the light, not scene content: keep it out of the outline and the counts.
+   const p=o.parent as THREE.Light|null;if(p?.isLight&&(p as THREE.DirectionalLight|THREE.SpotLight).target===o)return;
    const mesh=o as THREE.Mesh;const kind:OutlineEntry['kind']=(o as THREE.Bone).isBone?'bone':mesh.isMesh?readPin(o.userData)!==null?'pin':'mesh':(o as THREE.Light).isLight?'light':(o as THREE.Camera).isCamera?'camera':'group';
    if(kind==='bone')stats.bones++;
    if(depth>0){stats.nodes++;if(kind!=='bone'){const users=mesh.isMesh?(geoUsers.get(mesh.geometry)??0):0;outline.push({id:o.id,name:o.name||`${kind} ${o.id}`,depth:depth-1,kind,hidden:!o.visible,locked:o.userData.somniaLocked===true,...(o.userData.somniaLinked===true&&users>1?{linked:true,linkedUsers:users}:{})});}}

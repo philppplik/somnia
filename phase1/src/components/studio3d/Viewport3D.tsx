@@ -795,7 +795,8 @@ export default function Viewport3D(){
      const bytes=await sceneBytes(doc,files.filter(f=>f!==primary).map(f=>({name:f.name,bytes:async()=>new Uint8Array(await f.arrayBuffer())})));
      const {gltf}=await loadParsed(new File([bytes as BlobPart],'scene.glb'),[]);
      if(ticket!==opening||disposed)return;
-     const nodes=[...gltf.scene.children];const applied=applyNodeExtras(gltf.scene,doc.extras);
+     // Apply the extras first: area/ambient lights replace the empty nodes the exporter wrote, and only the replaced tree is worth loading.
+     const applied=applyNodeExtras(gltf.scene,doc.extras);const nodes=[...gltf.scene.children];
      selectionReset();patchStudio3D({loadPhase:'build'});
     await stage.loadMany(nodes,async()=>{await clipsFrom(gltf);});
      if(doc.envMap){customEnv={name:doc.envMap.name,bytes:fromBase64(doc.envMap.data).slice().buffer};envCache.delete('custom');}
