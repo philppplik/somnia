@@ -12,10 +12,12 @@ export type AdjustSection='light'|'color'|'effects'|'detail';
 /** One develop section (Light, Color, Effects, Detail) with per-section reset and exact-value fields. */
 export function AdjustSectionBody({section,auto}:{section:AdjustSection;auto?:'tone'|'wb'}){
  const {t}=useT();
+ // Hooks live in the panel body, never in the PanelBody render callback: the callback only runs once a
+ // session exists, so a hook there changes the hook count on the empty -> photo transition and crashes the studio.
+ const [wbPicker,setWbPicker]=usePanelState<boolean>('photos.wb.picker',false);
  const controls=PHOTO_CONTROLS.filter(c=>c.section===section);
  return <PanelBody testId={`photos-${section}-panel`}>{({name,session})=>{
   const changed=controls.some(c=>session.now[c.key]!==neutralPhotoSettings[c.key]);
-  const [wbPicker,setWbPicker]=usePanelState<boolean>('photos.wb.picker',false);
   const frame=session.frame;
   const runAuto=()=>{ // one atomic commit: the whole pick is one undo step
    if(!frame)return;const bytes=new Uint8Array(frame.bytes.slice(0));
