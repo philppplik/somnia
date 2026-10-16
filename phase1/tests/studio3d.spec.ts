@@ -642,6 +642,10 @@ test('3D studio reviews animation with onion skin, motion path and retarget',asy
  const glb=await skinnedGlbTwoRigs();
  await open3d(page);
  await openModel(page,{name:'two-rigs.glb',mimeType:'model/gltf-binary',buffer:glb});
+ // The builder gives both rigs the same bone names, but the glTF import dedupes the
+ // second rig to Hip_1/Knee_1/Ankle_1; retarget pairs bones by name, so rename them back.
+ await expect.poll(async()=>(await session(page)).bones.length).toBe(6);
+ for(const b of (await session(page)).bones.filter(b=>/_1$/.test(b.name))) await run(page,'studio3d.object.rename',{id:b.id,name:b.name.replace(/_1$/,'')});
  // A clip with source motion: rotate a bone of rig A and record everything.
  await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
  await page.getByLabel('Bone').selectOption({index:2});
