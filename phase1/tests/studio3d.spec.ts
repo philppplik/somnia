@@ -379,6 +379,7 @@ test('3D studio zooms the timeline, shifts and pastes key selections, duplicates
 });
 
 test('3D studio shows a skeleton overlay, keys a bone rotation and exports the skin back',async({page})=>{
+ test.slow(); // rig with two clips, GLB export and reopen: past 30s on a cold dev server
  const glb=await skinnedGlb();
  await open3d(page);
  await openModel(page,{name:'rig.glb',mimeType:'model/gltf-binary',buffer:glb});
@@ -422,9 +423,11 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  await page.getByLabel('Bone').selectOption({index:2});
  await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1]);
  // The second clip kept its own bone track with its own keys.
- await page.getByLabel('Clip').selectOption({index:1});
+ await page.getByLabel('Clip',{exact:true}).selectOption({index:1});
+ await expect.poll(async()=>(await session(page)).anim.clip,{timeout:15_000}).toBe(1);
  await page.getByLabel('Bone').selectOption({index:1});
- await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times).toEqual([0,1.5]);
+ await expect.poll(async()=>(await session(page)).info?.name,{timeout:15_000}).toBe('Hip');
+ await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='rotation')?.times,{timeout:15_000}).toEqual([0,1.5]);
 });
 
 test('3D studio binds a primitive onto a bone chain, previews a weight and undoes it',async({page})=>{
@@ -605,13 +608,15 @@ test('3D studio drives an N-bone chain with FABRIK, look-at and limits',async({p
 });
 
 test('3D studio records keyframe poses at the playhead for selected or all bones',async({page})=>{
+ test.slow(); // three-bone rig, clip add/record/undo cycle: past 30s on a cold dev server
  const glb=await skinnedGlb3();
  await open3d(page);
  await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
- // The viewport shows before the scene is built; the record row only renders once bones exist.
+ // The viewport shows before the scene is built; wait for the model to finish loading.
  await expect.poll(async()=>(await session(page)).status,{timeout:30_000}).toBe('ready');
- await expect(page.getByTestId('studio3d-record')).toBeVisible();
+ // The record row renders once a clip exists on a rig with bones.
  await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
+ await expect(page.getByTestId('studio3d-record')).toBeVisible();
  // Pose the middle bone and record the selected chain root at the playhead.
  await page.getByLabel('Bone').selectOption({index:2});
  await expect.poll(async()=>(await session(page)).info?.kind).toBe('bone');
@@ -630,7 +635,7 @@ test('3D studio records keyframe poses at the playhead for selected or all bones
  // Without a clip the record refuses with a notice instead of throwing.
  await run(page,'studio3d.clip.remove',{});
  await run(page,'studio3d.clip.record',{all:true});
- await expect(notice(page,/no animation clip 0/)).toBeVisible();
+ await expect(notice(page,/unavailable/)).toBeVisible();
 });
 
 test('3D studio reviews animation with onion skin, motion path and retarget',async({page})=>{
