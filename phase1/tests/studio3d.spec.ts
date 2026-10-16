@@ -2035,12 +2035,14 @@ test('3D studio mesh normals: a welded cube gets its hard edges back by split an
 
 test('3D studio mesh cleanup: a merged duplicate loses its doubled faces and undo restores them',async({page})=>{
  await blank(page);
- await insert(page,'cube',0);
- await insert(page,'cube',1);
+ const ca=await insert(page,'cube',0);
+ const cb=await insert(page,'cube',0);
  const tris=async()=>(await session(page)).stats.triangles;
- expect(await run(page,'studio3d.mesh.merge',{})).toBe(true);
+ // Only the last insert is selected: name both cubes explicitly. Coincident, so their faces duplicate.
+ expect(await run(page,'studio3d.mesh.merge',{ids:[ca,cb]})).toBe(true);
  await expect.poll(tris).toBe(24,'two coincident cubes after the merge');
- expect(await run(page,'studio3d.mesh.cleanup',{weld:0.0001})).toBe(true);
+ const merged=(await session(page)).outline[0].id;
+ expect(await run(page,'studio3d.mesh.cleanup',{weld:0.0001,ids:[merged]})).toBe(true);
  await expect.poll(tris).toBe(12,'doubles welded and duplicate faces dropped');
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  await expect.poll(tris).toBe(24);
@@ -2048,12 +2050,13 @@ test('3D studio mesh cleanup: a merged duplicate loses its doubled faces and und
 
 test('3D studio mesh separate: a merged pair splits back into two objects and undo rejoins it',async({page})=>{
  await blank(page);
- await insert(page,'cube',0);
- await insert(page,'cube',3);
+ const sa=await insert(page,'cube',0);
+ const sb=await insert(page,'cube',3);
  const objects=async()=>(await session(page)).outline.length;
- expect(await run(page,'studio3d.mesh.merge',{})).toBe(true);
+ expect(await run(page,'studio3d.mesh.merge',{ids:[sa,sb]})).toBe(true);
  await expect.poll(objects).toBe(1);
- expect(await run(page,'studio3d.mesh.separate',{})).toBe(true);
+ const pair=(await session(page)).outline[0].id;
+ expect(await run(page,'studio3d.mesh.separate',{ids:[pair]})).toBe(true);
  await expect.poll(objects).toBe(2);
  expect(await run(page,'studio3d.undo',{})).toBe(true);
  await expect.poll(objects).toBe(1);
