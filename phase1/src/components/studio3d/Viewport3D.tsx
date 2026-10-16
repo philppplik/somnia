@@ -1262,6 +1262,7 @@ export default function Viewport3D(){
    editMaskToSelection:(threshold)=>{stage.editMaskToSelection(threshold);patchEdit();invalidate();},
    sculptBrush:patch=>{patchStudio3D({sculpt:{...getStudio3DState().sculpt,...patch}});},
    setProportional:patch=>{patchStudio3D({proportional:{...getStudio3DState().proportional,...patch}});},
+   setEditMirror:axis=>{stage.setEditMirror(axis);patchStudio3D({editMirror:axis??'none'});},
    sculptBegin:id=>stage.sculptBegin(id),
    sculptDab:(id,center,delta,erase)=>{const b=getStudio3DState().sculpt;stage.sculptDabAt(id,center,{brush:b.brush,radius:b.radius,strength:b.strength,falloff:b.falloff,symmetry:b.symmetry,delta},!!erase);if(b.brush==='mask'){syncMaskOverlay();}invalidate();},
    sculptEnd:()=>{stage.sculptEnd();sync();invalidate();},

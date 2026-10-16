@@ -243,6 +243,7 @@ export interface Studio3DController{
  setPivotMode(mode:PivotMode):void;
  setCursor(p:Vec3):void;
  setProportional(patch:{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant';connected?:boolean}):void;
+ setEditMirror(axis:'x'|'y'|'z'|null):void;
  cursorToSelection():void;
  setMeasure(on:boolean):void;
  renderStill(opts?:RenderOptions):Promise<void>;
@@ -377,6 +378,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{twist?:number}>('studio3d.edit.bridgeFaces','Bridge the borders of two selected face groups of the edited 3D mesh with a sewn triangle strip','Edit',p=>need().editBridgeFaces(p?.twist??0),object({twist:{type:'integer',minimum:-64,maximum:64}},[]),()=>getStudio3DState().edit!=null),
   add<{edge?:[number,number];factor?:number}>('studio3d.edit.vertSlide','Slide the selected vertex of the edited 3D mesh along an incident edge by a factor of the edge vector','Edit',p=>need().editVertSlide(p!.edge!,p?.factor??0.5),object({edge:{type:'array',items:{type:'integer',minimum:0},minItems:2,maxItems:2},factor:{type:'number',minimum:-1,maximum:1}},['edge']),()=>getStudio3DState().edit!=null),
   add<{offset?:boolean}>('studio3d.edit.snapToCursor','Move the selected vertices of the edited 3D mesh onto the 3D cursor','Edit',p=>{const c=getStudio3DState().cursor;return need().editSnapToCursor([c.x,c.y,c.z],!!p?.offset);},object({offset:{type:'boolean'}},[]),()=>getStudio3DState().edit!=null),
+  add<{axis:'none'|'x'|'y'|'z'}>('studio3d.edit.mirror','Mirror edit-mode transforms across a local axis plane: move, rotate, scale and shear also move the mirrored counterpart rows','Edit',p=>need().setEditMirror(!p||p.axis==='none'?null:p.axis),object({axis:{enum:['none','x','y','z']}},['axis']),hasScene),
   add<{on?:boolean;radius?:number;falloff?:'smooth'|'linear'|'constant';connected?:boolean}>('studio3d.edit.proportional','Toggle proportional editing: nearby vertices follow move, rotate, scale and shear with a falloff','Edit',p=>need().setProportional(p&&Object.keys(p).length?p:{on:!getStudio3DState().proportional.on}),object({on:{type:'boolean'},radius:{type:'number',exclusiveMinimum:0,maximum:1000000},falloff:{enum:['smooth','linear','constant']},connected:{type:'boolean'}},[]),hasScene),
   add('studio3d.edit.selectNonManifold','Select the vertices of the edited 3D mesh touched by edges with more than two faces','Edit',()=>need().editSelectNonManifold(),undefined,()=>getStudio3DState().edit!=null),
   add('studio3d.edit.convexHull','Replace the edited 3D mesh with the convex hull of its selected vertices','Edit',()=>need().editConvexHull(),undefined,()=>getStudio3DState().edit!=null),

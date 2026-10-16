@@ -1,4 +1,5 @@
 # Unreleased: 3D Studio P0
+- 3D Studio: edit-mode mirroring - with a mirror axis set, move, rotate, scale and shear also move the mirrored counterpart rows across the local axis plane (Blender x-mirror), one undo step for both sides (`studio3d.edit.mirror`).
 - 3D Studio: edit-mode nudges snap the selection centre onto vertices or edge midpoints of any mesh (the edited mesh's own still geometry counts) when snapping is on in vertex or midpoint mode; the moving rows never snap onto themselves.
 - 3D Studio: duplicate keeps the selection on the fresh island, so following transforms move it apart from the original (Blender-style grab, held until the selection changes).
 - 3D Studio: Shift+arrow nudge moves the edit-mode selection by the snap step (proportional editing applies), not the whole object.

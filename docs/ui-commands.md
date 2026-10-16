@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1110 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1111 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -841,6 +841,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `studio3d.edit.loopCut` | Loop cut | Edit | studio3d |  |
 | `studio3d.edit.loopSlide` | Loop slide | Edit | studio3d |  |
 | `studio3d.edit.mergeByDistance` | Weld the selected vertices that lie within the given distance | Edit | studio3d |  |
+| `studio3d.edit.mirror` | Mirror edit-mode transforms across a local axis plane: move, rotate, scale and shear also move the mirrored counterpart rows | Edit | studio3d |  |
 | `studio3d.edit.mode` | Edit select mode | Edit | studio3d |  |
 | `studio3d.edit.move` | Move the selected vertices by an offset | Edit | studio3d |  |
 | `studio3d.edit.poke` | Split selected triangles into three at their centroid | Edit | studio3d |  |

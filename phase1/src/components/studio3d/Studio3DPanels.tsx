@@ -336,6 +336,8 @@ function EditSculptFields({id}:{id:number}){
      {pr.on&&<NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={pr.falloff} aria-label={t('studio3d.skinning.falloff')} onChange={e=>void executeCommand('studio3d.edit.proportional',{falloff:e.currentTarget.value as 'smooth'|'linear'|'constant'})}>
       {(['smooth','linear','constant'] as const).map(f=><option key={f} value={f}>{t('studio3d.skinning.falloff.'+f)}</option>)}</NativeSelect>}
      {pr.on&&<label className="flex items-center gap-2 text-xs text-ink-2"><NativeInput type="checkbox" checked={pr.connected} aria-label={t('studio3d.edit.proportionalConnected')} onChange={()=>void executeCommand('studio3d.edit.proportional',{connected:!pr.connected})}/>{t('studio3d.edit.proportionalConnected')}</label>}
+     <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={s.editMirror} aria-label={t('studio3d.edit.mirror')} onChange={e=>void executeCommand('studio3d.edit.mirror',{axis:e.currentTarget.value as 'none'|'x'|'y'|'z'})}>
+     {(['none','x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
     </div>
     <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.edit.selTools')}>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.selectAll',{op:'all'})}>{t('studio3d.edit.selAll')}</Button>

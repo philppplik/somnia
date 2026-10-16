@@ -1064,5 +1064,7 @@
  "studio3d.edit.proportionalRadius": "Raio de influência",
  "cmd.studio3d.edit.gridFill": "Preencher o loop de arestas fechado selecionado da malha 3D editada com uma grade interpolada",
  "studio3d.hist.gridFill": "Preenchimento em grade 3D",
- "studio3d.edit.proportionalConnected": "Somente conectados"
+ "studio3d.edit.proportionalConnected": "Somente conectados",
+ "studio3d.edit.mirror": "Espelhar transformações",
+ "cmd.studio3d.edit.mirror": "Espelhar as transformações do modo de edição sobre um plano de eixo local: mover, girar, escalar e cisalhar também movem as linhas espelhadas correspondentes"
 }

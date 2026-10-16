@@ -1064,5 +1064,7 @@
  "studio3d.edit.proportionalRadius": "Rayon d’influence",
  "cmd.studio3d.edit.gridFill": "Remplir la boucle d’arêtes fermée sélectionnée du maillage 3D édité avec une grille interpolée",
  "studio3d.hist.gridFill": "Remplissage en grille 3D",
- "studio3d.edit.proportionalConnected": "Connectés uniquement"
+ "studio3d.edit.proportionalConnected": "Connectés uniquement",
+ "studio3d.edit.mirror": "Symétriser les transformations",
+ "cmd.studio3d.edit.mirror": "Symétriser les transformations du mode édition sur un plan d'axe local : déplacer, tourner, mettre à l'échelle et cisailler déplacent aussi les rangées symétriques"
 }

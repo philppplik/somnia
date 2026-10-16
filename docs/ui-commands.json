@@ -10113,6 +10113,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.edit.mirror",
+      "title": "Mirror edit-mode transforms across a local axis plane: move, rotate, scale and shear also move the mirrored counterpart rows",
+      "category": "Edit",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.edit.mode",
       "title": "Edit select mode",
       "category": "Edit",

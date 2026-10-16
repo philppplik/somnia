@@ -1064,5 +1064,7 @@
  "studio3d.edit.proportionalRadius": "Influence radius",
  "cmd.studio3d.edit.gridFill": "Fill the selected closed edge loop of the edited 3D mesh with an interpolated grid",
  "studio3d.hist.gridFill": "3D grid fill",
- "studio3d.edit.proportionalConnected": "Connected only"
+ "studio3d.edit.proportionalConnected": "Connected only",
+ "studio3d.edit.mirror": "Mirror transforms",
+ "cmd.studio3d.edit.mirror": "Mirror edit-mode transforms across a local axis plane: move, rotate, scale and shear also move the mirrored counterpart rows"
 }

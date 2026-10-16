@@ -652,6 +652,29 @@ export class Stage{
  private editSel={verts:new Set<number>(),edges:new Map<string,[number,number]>(),faces:new Set<number>()};
  /** Rows of the freshest edit-duplicate island: transform ops move exactly these rows (position twins outside the island stay put, even when the island passes through the original's coordinates). Ends on reselection, a non-transform edit op, undo/redo or edit end. */
  private editGrab:Set<number>|null=null;
+ /** Edit-mode mirror axis (local space): transform ops also move the mirrored counterpart rows, Blender x-mirror style. Session-only; null = off. */
+ private editMirrorAxis:'x'|'y'|'z'|null=null;
+ /** Turns edit-mode mirroring on a local axis plane on or off. */
+ setEditMirror(axis:'x'|'y'|'z'|null){this.editMirrorAxis=axis;}
+ /** Rows whose local positions mirror the given rows across the edit mirror plane, excluding the given rows themselves. Empty when mirroring is off or the mesh has no counterpart there. */
+ private mirroredRows(d:MeshData,sel:number[]):number[]{
+  const axis=this.editMirrorAxis;if(!axis||!sel.length)return[];
+  const pos=d.positions;
+  const ai=axis==='x'?0:axis==='y'?1:2;
+  const pk=(x:number,y:number,z:number)=>`${Math.round(x*1e6)}_${Math.round(y*1e6)}_${Math.round(z*1e6)}`;
+  const want=new Set<string>();
+  for(const r of sel){const c=[pos[r*3],pos[r*3+1],pos[r*3+2]];c[ai]=-c[ai];want.add(pk(c[0],c[1],c[2]));}
+  const skip=new Set(sel);const out:number[]=[];const n=pos.length/3;
+  for(let i=0;i<n;i++)if(!skip.has(i)&&want.has(pk(pos[i*3],pos[i*3+1],pos[i*3+2])))out.push(i);
+  return out;
+ }
+ /** Flips the mirror-axis component of a delta or pivot. */
+ private mirrorDelta(v:[number,number,number]):[number,number,number]{
+  const axis=this.editMirrorAxis;if(!axis)return v;
+  const out:[number,number,number]=[v[0],v[1],v[2]];
+  if(axis==='x')out[0]=-out[0];else if(axis==='y')out[1]=-out[1];else out[2]=-out[2];
+  return out;
+ }
  private sculptShot:{id:number;positions:Float32Array;mask:Float32Array|null}|null=null;
  private editableMesh(id:number):THREE.Mesh{
   const o=this.need(id);const m=o as THREE.Mesh;
@@ -1105,11 +1128,24 @@ export class Stage{
   const out:[number,number,number]=[dl.x,dl.y,dl.z];
   this.editMove(out);return out;
  }
- /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. */
- editMove(offset:[number,number,number],prop?:PropFalloff){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editMove'},m=>grab?moveSelected(m,[...grab],offset,undefined,true):moveSelected(m,[...this.editSel.verts],offset,prop),true);}
- editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editRotate'},m=>grab?rotateSelected(m,[...grab],axis,degrees,undefined,pivot,true):rotateSelected(m,[...this.editSel.verts],axis,degrees,prop,pivot),true);}
- editScale(factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editScale'},m=>grab?scaleSelected(m,[...grab],factors,undefined,pivot,true):scaleSelected(m,[...this.editSel.verts],factors,prop,pivot),true);}
- editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editShear'},m=>grab?shearSelected(m,[...grab],along,by,factor,undefined,pivot,true):shearSelected(m,[...this.editSel.verts],along,by,factor,prop,pivot),true);}
+ /** Translates the selected edit-mode vertices by an offset, one undo step. The selection stays. With mirroring on, the mirrored counterpart rows move the opposite way along the mirror axis in the same undo step. */
+ editMove(offset:[number,number,number],prop?:PropFalloff){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editMove'},m=>{const sel=grab?[...grab]:[...this.editSel.verts];
+  let d=grab?moveSelected(m,sel,offset,undefined,true):moveSelected(m,sel,offset,prop);
+  const mir=this.mirroredRows(m,sel);if(mir.length)d=moveSelected(d,mir,this.mirrorDelta(offset),undefined,true);
+  return d;},true);}
+ editRotate(axis:'x'|'y'|'z',degrees:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editRotate'},m=>{const sel=grab?[...grab]:[...this.editSel.verts];
+  let d=grab?rotateSelected(m,sel,axis,degrees,undefined,pivot,true):rotateSelected(m,sel,axis,degrees,prop,pivot);
+  const mir=this.mirroredRows(m,sel);if(mir.length)d=rotateSelected(d,mir,axis,-degrees,undefined,pivot?this.mirrorDelta(pivot):undefined,true);
+  return d;},true);}
+ editScale(factors:[number,number,number],prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editScale'},m=>{const sel=grab?[...grab]:[...this.editSel.verts];
+  let d=grab?scaleSelected(m,sel,factors,undefined,pivot,true):scaleSelected(m,sel,factors,prop,pivot);
+  const mir=this.mirroredRows(m,sel);if(mir.length)d=scaleSelected(d,mir,factors,undefined,pivot?this.mirrorDelta(pivot):undefined,true);
+  return d;},true);}
+ editShear(along:'x'|'y'|'z',by:'x'|'y'|'z',factor:number,prop?:PropFalloff,pivot?:[number,number,number]){const grab=this.editGrab;this.editOp({key:'studio3d.hist.editShear'},m=>{const sel=grab?[...grab]:[...this.editSel.verts];
+  let d=grab?shearSelected(m,sel,along,by,factor,undefined,pivot,true):shearSelected(m,sel,along,by,factor,prop,pivot);
+  const ma=this.editMirrorAxis;const mir=this.mirroredRows(m,sel);
+  if(mir.length)d=shearSelected(d,mir,along,by,(along===ma)!==(by===ma)?-factor:factor,undefined,pivot?this.mirrorDelta(pivot):undefined,true);
+  return d;},true);}
  editFlipEdge(){this.editOp({key:'studio3d.hist.editFlipEdge'},m=>flipEdges(m,[...this.editSel.edges.values()]));}
  editMergeByDistance(distance:number){this.editOp({key:'studio3d.hist.editMergeByDistance'},m=>mergeByDistanceSelected(m,[...this.editSel.verts],distance));}
  editBisect(axis:'x'|'y'|'z',offset:number,fill:boolean){this.editOp({key:'studio3d.hist.editBisect'},m=>bisectEdit(m,axis,offset,fill));this.editSel={verts:new Set(),edges:new Map(),faces:new Set()};}
