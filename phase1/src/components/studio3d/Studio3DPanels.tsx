@@ -407,6 +407,7 @@ function EditSculptFields({id}:{id:number}){
       {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.shear',{along:shearAlong,by:shearBy,factor:shearAmt})}>{t('studio3d.edit.shear')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.flipEdge',{})}>{t('studio3d.edit.flipEdge')}</Button>
+     <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.vcolFill',{})}>{t('studio3d.edit.vcolFill')}</Button>
      <Button variant="outline" onClick={()=>void executeCommand('studio3d.edit.mergeByDistance',{distance:mergeDist})}>{t('studio3d.edit.mergeByDistance')}</Button>
      <NativeSelect className="rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={bisectAxis} aria-label={t('studio3d.edit.bisectAxis')} onChange={e=>setBisectAxis(e.currentTarget.value as 'x'|'y'|'z')}>
       {(['x','y','z'] as const).map(a=><option key={a} value={a}>{t('studio3d.sculpt.symmetry.'+a)}</option>)}</NativeSelect>
