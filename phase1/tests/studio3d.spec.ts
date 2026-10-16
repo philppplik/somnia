@@ -105,6 +105,8 @@ test('3D studio refuses a file that is not glTF with a readable error',async({pa
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
 const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commands.ts');return (await m.executeCommand(i as string,p)) as unknown;},[id,params] as const);
+/** Like run, but returns the command's result value instead of the boolean executeCommand gives (dispatcher path, same as the panels). */
+const runValue=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commandDispatcher.ts');return (await m.commandDispatcher.runCommand(i,p,{origin:'ui'})) as unknown;},[id,params] as const);
 /** Refused commands surface as a polite status-bar notice (role=status); only hard open failures render as an assertive viewport alert. */
 const notice=(page:P,text:RegExp|string)=>page.getByRole('status').filter({hasText:text});
 const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
@@ -134,7 +136,8 @@ test('3D studio keeps a scene through a .som3d roundtrip, saved with Ctrl+S',asy
  // Open the file again in a fresh page and compare.
  await open3d(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'scene.som3d',mimeType:'application/json',buffer:saved});
- await expect.poll(async()=>(await session(page)).status).toBe('ready');
+ // The open itself is sound but slow on a cold runner: seconds in the read phase, past the 5s poll default.
+ await expect.poll(async()=>(await session(page)).status,{timeout:30_000}).toBe('ready');
  const after=await session(page);
  expect(after.outline.map(o=>o.kind).sort()).toEqual(before.outline.map(o=>o.kind).sort());
  expect(after.outline.length).toBe(before.outline.length);
@@ -184,12 +187,14 @@ test('3D studio renders a turntable and downloads it as a ZIP of PNG frames',asy
 });
 
 test('3D studio offers an autosaved scene again after a reload and shows it in the recent list',async({page})=>{
+ test.slow(); // build, reload the page and reopen the autosave: past 30s on a cold dev server
  await blank(page);await insert(page,'torus',0);
  await expect(page.getByTestId('studio3d-recent-autosave').first()).toBeVisible({timeout:20_000});
  await open3d(page);
  // The autosave entry renders on the start screen and in the Save group at once; either opens the same slot.
  await page.getByTestId('studio3d-recent-autosave').first().click();
- await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
+ // The autosave open is slow on a cold runner (seconds in the read phase), past the 5s poll default.
+ await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh'),{timeout:30_000}).toBe(true);
 });
 
 test('3D studio refuses a glTF that points at a remote file and never requests it',async({page})=>{
@@ -292,10 +297,12 @@ test('3D studio records keys into a clip, scrubs them and keeps the clip through
  await open3d(page);
  await blank(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'hop.glb',mimeType:'model/gltf-binary',buffer:bytes});
- await expect(page.getByTestId('studio3d-animation')).toContainText('Hop',{timeout:20_000});
+ // The clip name is the value of the Clip name input; it never appears in the panel's text content.
+ await expect(page.getByRole('textbox',{name:'Clip name'})).toHaveValue('Hop',{timeout:20_000});
 });
 
 test('3D studio moves a key, sets its easing, auto-keys and keeps easing and clip length through GLB export and reopen',async({page})=>{
+ test.slow(); // edit keys, export a GLB, reload and reopen: past 30s on a cold dev server
  await blank(page);
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.clip.add',{name:'Slide',duration:5});
@@ -318,9 +325,16 @@ test('3D studio moves a key, sets its easing, auto-keys and keeps easing and cli
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
  const bytes=readFileSync(await download.path()!);
  expect(bytes.toString('latin1')).toContain('"somnia"');
+ // Reopen from a settled page: feeding the input with a dirty scene up would need the replace confirmation.
+ await open3d(page);
+ await blank(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'slide.glb',mimeType:'model/gltf-binary',buffer:bytes});
- await expect(page.getByTestId('studio3d-animation')).toContainText('Slide',{timeout:20_000});
+ // The clip name is the value of the Clip name input; it never appears in the panel's text content.
+ await expect(page.getByRole('textbox',{name:'Clip name'})).toHaveValue('Slide',{timeout:20_000});
  await expect.poll(async()=>(await session(page)).clips[0]?.duration).toBe(5);
+ // clipKeys reflects the selected object only: pick the cube before reading its keys.
+ const cube2=(await session(page)).outline.find(o=>o.kind==='mesh')!.id;
+ await run(page,'studio3d.select',{id:cube2});
  await expect.poll(async()=>(await session(page)).clipKeys.find(k=>k.path==='position')?.eases[0]).toBe('easeIn');
 });
 
@@ -392,7 +406,8 @@ test('3D studio shows a skeleton overlay, keys a bone rotation and exports the s
  const vp=page.getByTestId('studio3d-viewport');const vb=await vp.boundingBox();
  await vp.click({position:{x:vb!.width/2,y:vb!.height/2}});
  await expect.poll(async()=>(await session(page)).info?.name).toBe('Body');
- await vp.click({position:{x:5,y:5}});
+ // Stay clear of the rounded viewport corners: their clip eats pointer events near the edges.
+ await vp.click({position:{x:40,y:40}});
  await expect.poll(async()=>(await session(page)).selected).toBe(null);
  // The overlay toggles off and on.
  await page.getByRole('checkbox',{name:/Skeleton overlay/}).uncheck();
@@ -452,7 +467,7 @@ test('3D studio paints bone weights with the brush and undoes the stroke',async(
  await expect.poll(async()=>(await session(page)).weightPreview).not.toBe(null);
  const bone=(await session(page)).weightPreview as number;
  // One dab at the cube center touches vertices; a posed mesh is reset to bind pose first.
- const dabbed=await run(page,'studio3d.skin.paint',{x:0,y:0,z:0,bone,radius:2,strength:1,mode:'add'});
+ const dabbed=await runValue(page,'studio3d.skin.paint',{x:0,y:0,z:0,bone,radius:2,strength:1,mode:'add'});
  expect(dabbed).toBeGreaterThan(0);
  // Painting without a bone refuses with a notice instead of throwing.
  await run(page,'studio3d.skin.preview',{bone:null});
@@ -593,6 +608,8 @@ test('3D studio records keyframe poses at the playhead for selected or all bones
  const glb=await skinnedGlb3();
  await open3d(page);
  await openModel(page,{name:'rig3.glb',mimeType:'model/gltf-binary',buffer:glb});
+ // The viewport shows before the scene is built; the record row only renders once bones exist.
+ await expect.poll(async()=>(await session(page)).status,{timeout:30_000}).toBe('ready');
  await expect(page.getByTestId('studio3d-record')).toBeVisible();
  await run(page,'studio3d.clip.add',{name:'Wave',duration:2});
  // Pose the middle bone and record the selected chain root at the playhead.
