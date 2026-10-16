@@ -11,9 +11,9 @@ test('animation studio P0: blank composition, layer, keyframe, undo, recovery',a
  await page.getByLabel('Animate Opacity').check();
  await page.getByTestId('animation-timeline').getByLabel('Next frame').click();
  await page.getByLabel('Opacity',{exact:true}).fill('20');await page.getByLabel('Opacity',{exact:true}).press('Enter');
- await expect(page.getByTestId('animation-keyrow-opacity').getByRole('button')).toHaveCount(2);
+ await expect(page.getByTestId('animation-keyrow-opacity').locator('button[data-key-prop]')).toHaveCount(2);
  await page.getByTestId('animation-timeline').getByLabel('Undo').click();
- await expect(page.getByTestId('animation-keyrow-opacity').getByRole('button')).toHaveCount(1);
+ await expect(page.getByTestId('animation-keyrow-opacity').locator('button[data-key-prop]')).toHaveCount(1);
  await expect(page.getByRole('button',{name:'Render…'})).toBeVisible();
  await page.getByRole('button',{name:'Render…'}).click();
  await expect(page.getByTestId('animation-render-setup')).toBeVisible();
