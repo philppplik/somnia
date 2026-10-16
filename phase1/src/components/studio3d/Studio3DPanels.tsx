@@ -3,6 +3,7 @@ import {StudioRecentList} from '../studios/StudioRecentList';
 import {StudioProgress} from '../studios/StudioProgress';
 import {useEffect,useMemo,useRef,useState} from 'react';
 import {patchStudio3D} from '../../lib/studio3d/session';
+import {lightRigLabelKey} from '../../lib/studio3d/lightRigLabel';
 import type {ObjectInfo} from '../../lib/studio3d/stage';
 import {TEXGEN_DEFAULT_COLORS} from '../../lib/studio3d/texgen';
 import {executeCommand} from '../../lib/commands';
@@ -48,7 +49,7 @@ export function ScenePanel(_:PanelHostProps){
   <div className="flex flex-wrap gap-1" role="group" aria-label={t('studio3d.insert.group')} data-testid="studio3d-insert">
    {PRIMS.map(k=><Button key={k} variant="outline" draggable onDragStart={e=>{e.dataTransfer.setData(ASSET_MIME,assetDragData({kind:'primitive',primitive:k}));e.dataTransfer.effectAllowed='copy';}} onClick={()=>void executeCommand('studio3d.insert.primitive',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
    {LIGHTS.map(k=><Button key={k} variant="outline" onClick={()=>void executeCommand('studio3d.insert.light',{kind:k})}>{t('studio3d.insert.'+k)}</Button>)}
-   {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
+   {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t(lightRigLabelKey(preset))}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.pin',{})}>{t('studio3d.insert.pin')}</Button>
    <span className="flex flex-wrap items-center gap-1" data-testid="studio3d-insert-text">

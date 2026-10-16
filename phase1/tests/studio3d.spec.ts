@@ -186,7 +186,8 @@ test('3D studio offers an autosaved scene again after a reload and shows it in t
  await blank(page);await insert(page,'torus',0);
  await expect(page.getByTestId('studio3d-recent-autosave').first()).toBeVisible({timeout:20_000});
  await open3d(page);
- await page.getByTestId('studio3d-recent-autosave').click();
+ // The autosave entry renders on the start screen and in the Save group at once; either opens the same slot.
+ await page.getByTestId('studio3d-recent-autosave').first().click();
  await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
 });
 
@@ -440,7 +441,7 @@ test('3D studio paints bone weights with the brush and undoes the stroke',async(
  await page.getByRole('button',{name:'Smooth bind'}).click();
  await expect.poll(async()=>(await session(page)).info?.skinned).toBe(true);
  // Turning the brush on picks the first bone for the preview when none is set.
- await page.getByLabel('Paint').check();
+ await page.getByLabel('Paint',{exact:true}).check();
  await expect.poll(async()=>(await session(page)).weightPreview).not.toBe(null);
  const bone=(await session(page)).weightPreview as number;
  // One dab at the cube center touches vertices; a posed mesh is reset to bind pose first.
