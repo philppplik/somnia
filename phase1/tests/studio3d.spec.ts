@@ -108,7 +108,7 @@ const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{con
 /** Refused commands surface as a polite status-bar notice (role=status); only hard open failures render as an assertive viewport alert. */
 const notice=(page:P,text:RegExp|string)=>page.getByRole('status').filter({hasText:text});
 const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
-const open3d=async(page:P)=>{await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();};
+const open3d=async(page:P)=>{await page.goto('/',{waitUntil:'domcontentloaded',timeout:60_000});await page.getByRole('radio',{name:/3D/}).first().click();};
 /** Opens a model through the file input and waits for the viewport. The first open mounts the lazy three.js chunk: on a cold dev server that takes well over the default timeout, so the first wait gets a minute. */
 const openModel=async(page:P,file:{name:string;mimeType:string;buffer:Buffer})=>{
  await page.getByTestId('studio3d-file-input').setInputFiles(file);
@@ -120,6 +120,7 @@ const positionOf=async(page:P,id:number)=>{await run(page,'studio3d.select',{id}
 function zipEntries(buf:Buffer):number{for(let i=buf.length-22;i>=0;i--)if(buf.readUInt32LE(i)===0x06054b50)return buf.readUInt16LE(i+10);return -1;}
 
 test('3D studio keeps a scene through a .som3d roundtrip, saved with Ctrl+S',async({page})=>{
+ test.slow(); // build a scene, save, reload the page and reopen the file: past 30s on a cold dev server
  await blank(page);
  await insert(page,'cube',-1);await insert(page,'sphere',1);
  await run(page,'studio3d.insert.light',{kind:'area'});const area=(await session(page)).selected as number;await run(page,'studio3d.light.set',{id:area,intensity:7,width:3,height:2});
@@ -243,9 +244,11 @@ function animatedGltf():Buffer{
  return Buffer.from(JSON.stringify(gltf));
 }
 test('3D studio plays, pauses and scrubs a glTF animation and lists scene checks',async({page})=>{
- await open3d(page);
+ // Settle on a blank scene first: feeding the file input during the initial mount races the viewport's effect setup.
+ await blank(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'spin.gltf',mimeType:'model/gltf+json',buffer:animatedGltf()});
  await expect(page.getByTestId('studio3d-animation')).toBeVisible({timeout:20_000});
+ await expect.poll(async()=>(await session(page)).status,{timeout:20_000}).toBe('ready');
  await run(page,'studio3d.anim.seek',{time:1});
  await expect.poll(async()=>(await session(page)).anim?.time).toBe(1);
  await run(page,'studio3d.anim.loop',{loop:false});await run(page,'studio3d.anim.play',{});
@@ -269,6 +272,7 @@ test('3D studio keeps a texture and its mapping through GLB export and a saved s
 });
 
 test('3D studio records keys into a clip, scrubs them and keeps the clip through GLB export and reopen',async({page})=>{
+ test.slow(); // record keys, export a GLB, reload the page and reopen it: past 30s on a cold dev server
  await blank(page);
  const id=await insert(page,'cube',0);
  await run(page,'studio3d.clip.add',{name:'Hop',duration:2});
@@ -284,6 +288,9 @@ test('3D studio records keys into a clip, scrubs them and keeps the clip through
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
  const bytes=readFileSync(await download.path()!);
  expect(bytes.toString('latin1')).toContain('"animations"');
+ // Reopen from a settled page: feeding the input with a dirty scene up would need the replace confirmation.
+ await open3d(page);
+ await blank(page);
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'hop.glb',mimeType:'model/gltf-binary',buffer:bytes});
  await expect(page.getByTestId('studio3d-animation')).toContainText('Hop',{timeout:20_000});
 });
