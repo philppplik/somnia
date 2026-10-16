@@ -2784,7 +2784,7 @@
   "documents.a11y.scope": "Checks pictures, headings and blank paragraphs. It does not check colours or tables.",
   "documents.insert.blankPage": "Blank page",
   "documents.shortcuts.paraNav": "Previous / next paragraph",
-  "documents.shortcuts.indent": "Indent / outdent",
+  "documents.shortcuts.indentKeys": "Indent / outdent",
   "documents.shortcuts.hanging": "Hanging indent",
   "documents.quotes.smart": "Make quotation marks curly",
   "documents.quotes.de": "German quotation marks („ “)",

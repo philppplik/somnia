@@ -2784,7 +2784,7 @@
   "documents.a11y.scope": "Comprueba imágenes, títulos y párrafos en blanco. No comprueba colores ni tablas.",
   "documents.insert.blankPage": "Página en blanco",
   "documents.shortcuts.paraNav": "Párrafo anterior / siguiente",
-  "documents.shortcuts.indent": "Aumentar / reducir sangría",
+  "documents.shortcuts.indentKeys": "Aumentar / reducir sangría",
   "documents.shortcuts.hanging": "Sangría francesa",
   "documents.quotes.smart": "Convertir comillas en tipográficas",
   "documents.quotes.de": "Comillas alemanas („ “)",

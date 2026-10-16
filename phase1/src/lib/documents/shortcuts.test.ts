@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {extraShortcut,SHORTCUTS} from './shortcuts';
 const k=(key:string,o:{shift?:boolean;alt?:boolean;mod?:boolean}={})=>extraShortcut({key,mod:o.mod??true,shift:!!o.shift,alt:!!o.alt});
 test('Word-style shortcuts map to their actions',()=>{
- assert.equal(k('1'),'lineSingle');assert.equal(k('2'),'lineDouble');assert.equal(k('5'),'line15');
+ for(const d of ['1','2','3','4','5','6','7','8','9'])assert.equal(k(d),null,'Ctrl+'+d+' belongs to the studio switcher');
  assert.equal(k('Enter'),'pageBreak');assert.equal(k('d'),'charLook');assert.equal(k('D'),'charLook');
  assert.equal(k('L',{shift:true}),'bullets');assert.equal(k('c',{shift:true}),'painterCopy');assert.equal(k('V',{shift:true}),'painterPaste');
  assert.equal(k('A',{shift:true}),'allCaps');assert.equal(k('K',{shift:true}),'smallCaps');assert.equal(k('N',{shift:true}),'normalStyle');

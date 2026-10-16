@@ -2784,7 +2784,7 @@
   "documents.a11y.scope": "Prüft Bilder, Überschriften und leere Absätze. Farben und Tabellen werden nicht geprüft.",
   "documents.insert.blankPage": "Leere Seite",
   "documents.shortcuts.paraNav": "Voriger / nächster Absatz",
-  "documents.shortcuts.indent": "Einzug vergrößern / verkleinern",
+  "documents.shortcuts.indentKeys": "Einzug vergrößern / verkleinern",
   "documents.shortcuts.hanging": "Hängender Einzug",
   "documents.quotes.smart": "Anführungszeichen typografisch machen",
   "documents.quotes.de": "Deutsche Anführungszeichen („ “)",

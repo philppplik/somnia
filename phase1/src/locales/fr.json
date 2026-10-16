@@ -2784,7 +2784,7 @@
   "documents.a11y.scope": "Vérifie les images, les titres et les paragraphes vides. Ne vérifie ni les couleurs ni les tableaux.",
   "documents.insert.blankPage": "Page vierge",
   "documents.shortcuts.paraNav": "Paragraphe précédent / suivant",
-  "documents.shortcuts.indent": "Augmenter / diminuer le retrait",
+  "documents.shortcuts.indentKeys": "Augmenter / diminuer le retrait",
   "documents.shortcuts.hanging": "Retrait négatif",
   "documents.quotes.smart": "Rendre les guillemets typographiques",
   "documents.quotes.de": "Guillemets allemands („ “)",

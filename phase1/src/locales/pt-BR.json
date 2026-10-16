@@ -2784,7 +2784,7 @@
   "documents.a11y.scope": "Verifica imagens, títulos e parágrafos em branco. Não verifica cores nem tabelas.",
   "documents.insert.blankPage": "Página em branco",
   "documents.shortcuts.paraNav": "Parágrafo anterior / seguinte",
-  "documents.shortcuts.indent": "Aumentar / diminuir recuo",
+  "documents.shortcuts.indentKeys": "Aumentar / diminuir recuo",
   "documents.shortcuts.hanging": "Recuo deslocado",
   "documents.quotes.smart": "Tornar as aspas tipográficas",
   "documents.quotes.de": "Aspas alemãs („ “)",
