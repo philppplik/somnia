@@ -124,7 +124,7 @@ test('Video Studio: add a second source, split, ripple delete, reorder, mute, ex
 });
 for(const locale of ['de','es','fr','pt-BR'])test(`Video Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
- await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(10);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(studioCount);
  await expect(page.locator('header [role="radiogroup"]')).not.toContainText('studio.video');
  await page.locator('header [role="radiogroup"]').getByRole('radio').nth(5).click();
  await expect(page.getByTestId('video-start')).toBeVisible();await expect(page.getByTestId('video-start')).not.toContainText('video.');

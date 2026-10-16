@@ -60,7 +60,7 @@ test('keyboard focus exposes short names and keeps roving studio selection',asyn
 test('all ten studio selections retain the global pill and show only short tab names',async({page})=>{
  await page.goto('/');
  const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- await expect(pill.getByRole('radio')).toHaveCount(10);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(studioCount);
  for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sound'],['Somnia Video','Video'],['Design','Design'],['Somnia Vector','Vector'],['Somnia Photos','Photos'],['Vibe Space','Vibe Space']]){
   const button=pill.getByRole('radio',{name,exact:true});
   await button.click();

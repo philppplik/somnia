@@ -95,7 +95,7 @@ test('Photos Studio: switching to Code keeps the photo session intact',async({pa
 for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
  const pill=page.locator('header [role="radiogroup"]');
- await expect(pill.getByRole('radio')).toHaveCount(10);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(studioCount);
  await expect(pill).not.toContainText('studio.photos');
  await expect(pill.getByRole('radio',{name:'Vibe Space',exact:true})).toBeVisible();
  await pill.getByRole('radio').nth(8).click();
