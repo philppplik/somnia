@@ -16,6 +16,7 @@ import {extrudeFaces,extrudeFacesIndividual,insetFaces,bevelVertices,deleteEleme
 import {sculptDab,paintMask,SculptError,type SculptOpts} from './sculpt';
 import {KEY_PATHS,KEY_STRIDE,ClipError,MAX_CLIPS,MAX_KEYS_PER_TRACK,DEFAULT_CLIP_SECONDS,insertKey,removeKey as removeKeyData,findKey,isPlainTrack,trackName,parseTrackName,checkKeyTime,checkDuration,checkClipName,lastKeyTime,type KeyPath} from './clips';
 import {mergeTransform,DEFAULT_TRANSFORM,UvError,type TextureTransform} from './uv';
+import {textFont,missingGlyphs,textGeometry,TEXT3D_LIMITS} from './text3d';
 import {uvIslands,unwrapBox,unfoldAngles,planarProject,packExistingUv,seamsAround,islandBorders,remapSeams,type UvResult,type UvLayoutOpts} from './uvUnwrap';
 import {textureBytes} from './validate';
 import {smoothWeights,rigidWeights,paintWeights,SkinError,type BoneSegment,type SkinWeights,type BrushSettings} from './skinning';
@@ -288,6 +289,19 @@ export class Stage{
   if(kind!=='plane')mesh.position.y=kind==='cube'||kind==='cylinder'||kind==='cone'?0.5:kind==='sphere'?0.5:0.68;
   if(at&&Number.isFinite(at.x)&&Number.isFinite(at.z)){mesh.position.x=at.x;mesh.position.z=at.z;}
   this.attach(mesh,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:mesh.name}});return mesh;
+ }
+ /** Adds 3D text: extruded Momo Signature outlines, centred and sitting on the ground. One undo step. Returns the mesh plus the characters the font does not cover (they are skipped in the geometry). */
+ addText(opts:{text:string;size?:number;depth?:number;bevel?:boolean}):{mesh:THREE.Mesh;missing:string[]}{
+  const text=(opts.text??'').trim();
+  if(!text)throw new StageError('The text is empty.');
+  if(text.length>TEXT3D_LIMITS.chars.max)throw new StageError(`Text is limited to ${TEXT3D_LIMITS.chars.max} characters.`);
+  const size=Math.min(TEXT3D_LIMITS.size.max,Math.max(TEXT3D_LIMITS.size.min,opts.size??1));
+  const depth=Math.min(TEXT3D_LIMITS.depth.max,Math.max(TEXT3D_LIMITS.depth.min,opts.depth??0.25));
+  const missing=missingGlyphs(textFont(),text);
+  const mesh=new THREE.Mesh(textGeometry({text,size,depth,bevel:opts.bevel??true}),new THREE.MeshStandardMaterial({color:0xb8bcc8,metalness:0,roughness:0.6}));
+  mesh.name=this.uniqueName('Text');
+  this.attach(mesh,this.root,this.root.children.length,{key:'studio3d.hist.add',params:{name:mesh.name}});
+  return{mesh,missing};
  }
  /** Adds an annotation pin marker. The label lives in the node's userData and travels with the scene. One undo step. */
  addPin(at?:Vec3):THREE.Mesh{

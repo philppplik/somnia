@@ -37,6 +37,7 @@ export function ScenePanel(_:PanelHostProps){
  const {t}=useT();const s=useStudio3D();const [filter,setFilter]=useState('');const [renaming,setRenaming]=useState<number|null>(null);
  // Drop target while dragging outline rows: groups accept drops into the middle, every row reorders at its top/bottom edge.
  const [dropAt,setDropAt]=useState<{id:number;where:'before'|'after'|'into'}|null>(null);
+ const[text3d,setText3d]=useState('Text');const[textSize,setTextSize]=useState(1);const[textDepth,setTextDepth]=useState(0.25);
  const currentSet=s.marked.length?[...s.marked]:s.selected!=null?[s.selected]:[];
  const collapsed=s.collapsed;
  // A name filter searches the whole tree; without one, folded groups hide their children.
@@ -50,6 +51,12 @@ export function ScenePanel(_:PanelHostProps){
    {(['three-point','studio','sunset','outdoor'] as const).map(preset=><Button key={preset} variant="outline" onClick={()=>void executeCommand('studio3d.light.rig',{preset})}>{t('studio3d.light.rig.'+preset)}</Button>)}
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{})}>{t('studio3d.insert.camera')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.pin',{})}>{t('studio3d.insert.pin')}</Button>
+   <span className="flex flex-wrap items-center gap-1" data-testid="studio3d-insert-text">
+    <NativeInput className="w-24 rounded-sm border border-subtle bg-surface p-1 text-xs text-ink" value={text3d} maxLength={200} aria-label={t('studio3d.insert.text')} onChange={e=>setText3d(e.currentTarget.value)}/>
+    <NumField label={t('studio3d.insert.textSize')} value={textSize} min={0.05} max={100} step={0.1} onCommit={setTextSize}/>
+    <NumField label={t('studio3d.insert.textDepth')} value={textDepth} min={0} max={100} step={0.05} onCommit={setTextDepth}/>
+    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.text',{text:text3d,size:textSize,depth:textDepth})}>{t('studio3d.insert.textAdd')}</Button>
+   </span>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{fromView:true})}>{t('studio3d.insert.camera.view')}</Button>
    <Button variant="outline" onClick={()=>void executeCommand('studio3d.insert.camera',{kind:'orthographic'})}>{t('studio3d.insert.camera.ortho')}</Button>
   </div>

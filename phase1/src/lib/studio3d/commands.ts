@@ -23,6 +23,7 @@ export interface Studio3DController{
  openFiles(files:File[],force?:boolean):Promise<void>;
  newScene(force?:boolean):void;
  addPrimitive(kind:PrimitiveKind):number;
+ addText(p:{text:string;size?:number;depth?:number;bevel?:boolean}):number;
  addLight(kind:LightKind):number;
  addLightRig(preset?:LightRigPreset):number[];
  setTransform(id:number,patch:TransformPatch):void;
@@ -314,6 +315,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{on?:boolean}>('studio3d.view.safeFrames','Show or hide the camera safe-frame guides (action-safe and title-safe areas)','View',p=>need().viewSafeFrames(p?.on??!getStudio3DState().safeFrames),object({on:{type:'boolean'}},[]),()=>!!controller),
   add<{id:number|null}>('studio3d.select','Select a 3D object','Edit',p=>need().select(p.id),object({id:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}})),
   add<{kind:PrimitiveKind}>('studio3d.insert.primitive','Insert a 3D primitive','Insert',p=>need().addPrimitive(p.kind),object({kind:{enum:['cube','sphere','plane','cylinder','cone','torus']}}),()=>!!controller),
+  add<{text:string;size?:number;depth?:number;bevel?:boolean}>('studio3d.insert.text','Insert 3D text (extruded Momo Signature outlines)','Insert',p=>need().addText(p),object({text:{type:'string',minLength:1,maxLength:200},size:{type:'number',minimum:0.05,maximum:100},depth:{type:'number',minimum:0,maximum:100},bevel:{type:'boolean'}},['text']),()=>!!controller),
   add<{x?:number;y?:number;z?:number}>('studio3d.insert.pin','Insert an annotation pin at the 3D cursor or a given point','Insert',p=>{need().addPin([p?.x,p?.y,p?.z].every(v=>typeof v==='number')?{x:p!.x!,y:p!.y!,z:p!.z!}:undefined);},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},[]),()=>!!controller),
   add<{id:number;text?:string}>('studio3d.pin.set','Set the label text of an annotation pin','Edit',p=>need().setPinText(p.id,p.text??''),object({id:{type:'integer',minimum:0},text:{type:'string',maxLength:400}},['id']),hasScene),
   add<{kind:LightKind}>('studio3d.insert.light','Insert a 3D light','Insert',p=>need().addLight(p.kind),object({kind:{enum:['directional','point','spot','area','ambient']}}),()=>!!controller),

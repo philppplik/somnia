@@ -10854,6 +10854,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.insert.text",
+      "title": "Insert 3D text (extruded Momo Signature outlines)",
+      "category": "Insert",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.key.copy",
       "title": "Copy position, rotation or scale keys of the selected 3D object in the current clip",
       "category": "View",
