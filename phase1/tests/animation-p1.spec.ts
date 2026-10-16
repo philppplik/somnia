@@ -9,7 +9,7 @@ test('animation studio P1: select keys, copy and paste, work area, graph, export
  await page.getByLabel('Animate Position').check();
  await page.getByTestId('animation-timeline').getByLabel('Next frame').click();
  await page.getByLabel('Position X').fill('500');await page.getByLabel('Position X').press('Enter');
- const keys=page.getByTestId('animation-keyrow-position').getByRole('button');
+ const keys=page.getByTestId('animation-keyrow-position').locator('button[data-key-prop]');
  await expect(keys).toHaveCount(2);
  await keys.first().click();await keys.nth(1).click({modifiers:['Shift']});
  await expect(keys.first()).toHaveAttribute('aria-pressed','true');await expect(keys.nth(1)).toHaveAttribute('aria-pressed','true');

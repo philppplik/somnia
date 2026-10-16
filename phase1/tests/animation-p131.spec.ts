@@ -9,7 +9,7 @@ test('animation key tools menu: grouped items, enablement follows the key select
  await page.getByLabel('Animate Opacity').check();
  await page.getByTestId('animation-timeline').getByLabel('Next frame').click();
  await page.getByLabel('Opacity',{exact:true}).fill('20');await page.getByLabel('Opacity',{exact:true}).press('Enter');
- const keys=page.getByTestId('animation-keyrow-opacity').getByRole('button');
+ const keys=page.getByTestId('animation-keyrow-opacity').locator('button[data-key-prop]');
  await expect(keys).toHaveCount(2);
  await keys.nth(0).click();await keys.nth(1).click({modifiers:['Shift']});
  await page.getByTestId('animation-keys-tools').click();
