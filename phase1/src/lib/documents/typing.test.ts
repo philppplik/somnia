@@ -430,3 +430,11 @@ test('reviewed edit receipt: revisions, origin, applied, isolated listeners and 
  await open(['abc']);const rv=getDocumentsState().rev;
  try{await applyReviewedEdit({block:0,expectedRev:rv-1,expectedText:'abc',hunks:[]});assert.fail('x');}catch(e){assert.equal((e as EditReceiptError).mutated,false);}
 });
+
+test('document statistics survive a caret offset that is ahead of the block texts',async()=>{
+ await openCells();at(0,1);
+ const {patchDocuments}=await import('./store');
+ patchDocuments({caret:{block:0,anchor:99999,head:99999}});
+ const {documentStats}=await import('./session');
+ assert.doesNotThrow(()=>documentStats());assert.equal(documentStats().selectionWords,0);
+});

@@ -1017,7 +1017,9 @@ export const replaceAll=(text:string):Promise<number>=>{
 /** Words and characters of the whole document and, when text is selected, of the selection. */
 export function documentStats():{words:number;chars:number;charsNoSpaces:number;selectionWords:number}{
  const all=textStats(getDocumentsState().blocks.filter(b=>b.text!==undefined).map(b=>b.text!).join('\n'));
- return{...all,selectionWords:textStats(selectedText()).words};
+ // Called while rendering: for one frame the caret can be ahead of the block texts after a structural edit, and a stale offset must not crash the page.
+ let sel='';try{sel=selectedText();}catch{sel='';}
+ return{...all,selectionWords:textStats(sel).words};
 }
 
 /* ---- Spelling and grammar (English word list) ---- */
