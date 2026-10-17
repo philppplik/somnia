@@ -94,7 +94,7 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   const current=frameOf(await e.renderPhoto(effective(session)));
   if(!sessions.has(item.name))return;
   patch(item.name,{status:'ready',error:'',sourceWidth:loaded.width??0,sourceHeight:loaded.height??0,original,frame:current});
- }catch(e){resetEngine(e);sources.delete(item.name);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
+ }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 /** The engine is a singleton holding one loaded source: reload when this session's source is not the loaded one. */
 async function ensureEngineSource(name:string):Promise<void>{
@@ -187,6 +187,13 @@ export async function exportPhotoCopyAdvanced(name:string,options:PhotoAdvancedO
  return ok?'saved':'cancelled';
 }
 /** CA2 handoff path: renders the current settings to bytes without a save dialog. */
+/** Bytes for a cross-studio handback: the developed render when the session is live, the untouched original when the engine cannot develop this photo (e.g. an unsupported transparent PNG). The original bytes are kept on error exactly so this path stays possible. */
+export async function handBackPhotoBytes(name:string):Promise<Uint8Array>{
+ const s=sessions.get(name);
+ if(s&&s.status!=='error')return renderPhotoBytes(name);
+ const bytes=sources.get(name);if(!bytes)throw Error(t('photos.error.notReady'));
+ return new Uint8Array(bytes);
+}
 export async function renderPhotoBytes(name:string,format:'png'|'jpeg'='png'):Promise<Uint8Array>{
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
  await ensureEngineSource(name);
