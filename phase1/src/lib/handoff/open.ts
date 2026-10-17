@@ -1,5 +1,6 @@
 import {t} from '../i18n';
 import {getMedia,addMediaFile,setActiveMedia} from '../media';
+import {switchStudioForExplicitOpen} from '../studios/studioRouting';
 import {blankName} from '../studios/blankFiles';
 import {setHandoffOrigin} from './registry';
 import {tableToXlsx} from './slidesTable';
@@ -12,7 +13,10 @@ export async function openSlidesTableInSheets(p:{source:string;slideIndex:number
  const result=await addMediaFile(new Blob([new Uint8Array(tableToXlsx(p.cells,'Table 1'))],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),name);
  if('error' in result)return{ok:false,message:result.error};
  setHandoffOrigin(name,{studio:'slides',kind:'table',id:`${p.slideId}:${p.shapeId}`,label:t('handoff.tableLabel',{file:p.source,n:p.slideIndex+1}),file:p.source});
- setActiveMedia(name);return{ok:true};
+ setActiveMedia(name);
+ // Explicit Open: the user asked for the Sheets studio, so a manual Studio visit elsewhere must not veto the switch.
+ switchStudioForExplicitOpen('sheets','media:'+name);
+ return{ok:true};
 }
 export async function openSlidesPictureInPhotos(p:{source:string;slideIndex:number;slideId:number;shapeId:number;working:Uint8Array}):Promise<OpenResult>{
  try{
