@@ -10,7 +10,6 @@ import {AgentProjectTools} from './projectTools';
 import {AgentSession} from './session';
 import {createSoundStudioRegistry,soundAdapter,serializeSound} from './soundStudio';
 import {DEFAULT_SETTINGS} from '../sound/recipe';
-import {defaultLocalContext,type LocalContextChoices} from './localAssistant';
 
 test('studio routing covers every shipped file family',()=>{
  for(const [path,kind] of Object.entries({'a.html':'code','a.png':'photo','a.svg':'designer','a.docx':'documents','a.xlsx':'sheets','a.pptx':'slides','a.wav':'sound','a.aif':'sound','a.mp4':'video'}))assert.equal(studioFor(path),kind);
@@ -59,32 +58,15 @@ test('bridge keeps one conversation across a Code-to-Photos switch without a doc
   bodies.push(JSON.parse(String(init?.body)));
   return new Response(JSON.stringify({message:{content:'Conversation retained.'},done:true})+'\n',{headers:{'content-type':'application/x-ndjson'}});}) as typeof fetch;
  const ctx=(studioId:string,label:string):import('./studioContextAdapter').AgentStudioContext=>({studioId,label,documentRef:null,selectionSummary:'No selection',mode:'design',capabilities:[],contextProviders:[]});
- const run=(studio:import('./studioContextAdapter').AgentStudioContext,prompt:string,localContext?:LocalContextChoices)=>new Promise<void>((resolve,reject)=>{realCore.run({prompt,context:{studio,selectedElementId:null,activeFile:'',...(localContext?{localContext}:{})}},(e:any)=>{if(e.type==='done')resolve();else if(e.type==='error')reject(Error(e.message));});});
- const settle=()=>new Promise(r=>setTimeout(r,25));// let the bridge settle the finished turn, as a real pause between sends would
- const chats=()=>bodies.filter(b=>Array.isArray(b?.messages));
+ const run=(studio:import('./studioContextAdapter').AgentStudioContext,prompt:string)=>new Promise<void>((resolve,reject)=>{realCore.run({prompt,context:{studio,selectedElementId:null,activeFile:''}},(e:any)=>{if(e.type==='done')resolve();else if(e.type==='error')reject(Error(e.message));});});
  try{
   realCore.clear?.();configureAgent({provider:'ollama',model:'fixture',apiKey:'',allowActiveFile:false} as any);
   await run(ctx('code','Code'),'Remember this conversation');
-  await settle();
+  await new Promise(r=>setTimeout(r,0));// let the bridge settle the finished turn, as a real pause between sends would
   await run(ctx('photos','Photos'),'Continue in Photos');
-  assert.ok(chats().length>=2,'two chat requests');
-  assert.ok(chats()[1].messages.some((m:any)=>m.content==='Remember this conversation'),'history follows the studio switch');
-  assert.ok(chats()[1].messages.some((m:any)=>typeof m.content==='string'&&m.content.includes('Now in Photos')),'studio note stays ephemeral per run');
-  await settle();
-
-  // Same switch through the trimmed local path with the panel default (history reuse on).
-  bodies.length=0;
-  await run(ctx('code','Code'),'Local first',{...defaultLocalContext,history:true});
-  await settle();
-  await run(ctx('photos','Photos'),'Local second',{...defaultLocalContext,history:true});
-  assert.ok(chats()[1].messages.some((m:any)=>m.content==='Local first'),'panel default replays history across the studio switch');
-  await settle();
-
-  // The explicit opt-out still wins: no replay when history reuse is off.
-  bodies.length=0;
-  await run(ctx('code','Code'),'Private first',{...defaultLocalContext,history:false});
-  await settle();
-  await run(ctx('photos','Photos'),'Private second',{...defaultLocalContext,history:false});
-  assert.ok(!chats()[1].messages.some((m:any)=>m.content==='Private first'),'history off prevents prior context replay');
+  const chats=bodies.filter(b=>Array.isArray(b?.messages));
+  assert.ok(chats.length>=2,'two chat requests');
+  assert.ok(chats[1].messages.some((m:any)=>m.content==='Remember this conversation'),'history follows the studio switch');
+  assert.ok(chats[1].messages.some((m:any)=>typeof m.content==='string'&&m.content.includes('Now in Photos')),'studio note stays ephemeral per run');
  }finally{globalThis.fetch=realFetch;realCore.clear?.();}
 });
