@@ -8,7 +8,9 @@ test('P5b audio import, trim, volume keys and clock-synced playback',async({page
  await page.getByLabel('Länge (s)').or(page.getByLabel('Length (s)')).fill('1');await page.keyboard.press('Enter');
  await page.getByLabel('Animate volume').or(page.getByLabel('Lautstärke animieren')).check();await expect(page.getByTestId('animation-keyrow-volume')).toBeVisible();
  await page.getByTestId('animation-play').click();
- const drift=await page.evaluate(async()=>{const m=await import('/src/lib/animation/audioPreview.ts');const s=(await import('/src/lib/animation/session.ts')).animationSession();const ctx=m.browserAudioContext()!;const a=[ctx.currentTime,s.getState().view.playhead/240000];await new Promise(r=>setTimeout(r,800));const b=[ctx.currentTime,s.getState().view.playhead/240000];return (b[1]-a[1])-(b[0]-a[0]);});
+ // The playhead is set from the audio clock on each animation frame, so it stair-steps at the rAF cadence (throttled in headless CI).
+ // Measure the clock-to-playhead offset at frame boundaries instead of raw deltas: a clock-synced playhead keeps a constant offset, whatever the frame rate.
+ const drift=await page.evaluate(async()=>{const m=await import('/src/lib/animation/audioPreview.ts');const s=(await import('/src/lib/animation/session.ts')).animationSession();const ctx=m.browserAudioContext()!;const off=async()=>{await new Promise(r=>requestAnimationFrame(r));return s.getState().view.playhead/240000-ctx.currentTime;};const a=await off();await new Promise(r=>setTimeout(r,800));const b=await off();return b-a;});
  expect(Math.abs(drift)).toBeLessThan(0.1);
  await page.getByTestId('animation-play').click();
  await page.getByTestId('animation-import-audio').click();

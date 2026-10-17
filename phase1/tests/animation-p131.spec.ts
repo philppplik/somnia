@@ -11,14 +11,18 @@ test('animation key tools menu: grouped items, enablement follows the key select
  await page.getByLabel('Opacity',{exact:true}).fill('20');await page.getByLabel('Opacity',{exact:true}).press('Enter');
  const keys=page.getByTestId('animation-keyrow-opacity').locator('button[data-key-prop]');
  await expect(keys).toHaveCount(2);
- // Key diamonds on adjacent frames overlap at the default zoom: a pointer click always lands on the topmost key, so dispatch the click to the exact intended key instead.
- await keys.nth(0).dispatchEvent('click');await keys.nth(1).dispatchEvent('click',{shiftKey:true});
- await page.getByTestId('animation-keys-tools').click();
+ // Key diamonds on adjacent frames overlap at the default zoom and selection lives on pointerdown (drag start), so select the exact keys by keyboard: Enter selects, Shift+Enter extends.
+ await keys.nth(0).press('Enter');await keys.nth(1).press('Shift+Enter');
  const groups:[string,string[]][]=[['values',['flatten','average','match','ramp','thin']],['ease',['ease-copy','influence','tame']],['select',['peaks','invert-selection','property','nth']]];
  for(const [g,ids] of groups){
+  // An open submenu leaves the parent menu inert, so walk one group at a time: open the menu, open the group, check, then close both popups.
+  await page.getByTestId('animation-keys-tools').click();
   await page.getByTestId(`animation-keys-group-${g}`).click();
   for(const id of ids)await expect(page.getByTestId(`animation-keys-${id}`)).toBeVisible();
+  await page.keyboard.press('Escape');await page.keyboard.press('Escape');
+  await expect(page.getByTestId(`animation-keys-group-${g}`)).toBeHidden();
  }
+ await page.getByTestId('animation-keys-tools').click();
  await page.getByTestId('animation-keys-group-values').click();
  await expect(page.getByTestId('animation-keys-flatten')).toBeEnabled();
  await expect(page.getByTestId('animation-keys-ramp')).toBeDisabled();

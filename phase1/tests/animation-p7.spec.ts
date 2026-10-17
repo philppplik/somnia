@@ -1,8 +1,11 @@
 import {test,expect} from './fixtures';
 /** CI-only full app. Not run locally: builders have no WASM toolchain. Local real-component checks live in test/animation-preview.tsx and animation-p7.test.ts. */
 test('P7 animation export: GIF, APNG and real-time WebM from the render panel',async({page})=>{
+ // Three real encodes (the WebM pass records in real time) never fit the 30s default budget; the download waits below already allow a minute each.
+ test.setTimeout(180_000);
  await page.goto('/');await page.evaluate(async()=>{const {requestStudio}=await import('/src/store/appStore.ts');requestStudio('animation');});await page.getByTestId('animation-create-blank').click();
  // Open the render setup; the animated export buttons sit beside the PNG ones.
+ await page.getByRole('button',{name:'Render…'}).click();
  await page.getByTestId('animation-export-gif').waitFor();
  // Shorten the work area so the real-time WebM pass stays quick.
  await page.evaluate(async()=>{const {animationSession}=await import('/src/lib/animation/session.ts');const {findComp}=await import('/src/lib/animation/model.ts');const s=animationSession();const doc=s.getState().doc!;const comp=findComp(doc)!;s.dispatch({type:'workarea.set',in:0,out:Math.round(comp.workArea.out/5)});});
