@@ -4,7 +4,7 @@ import {parsePanelRange} from './panelModel';
 import {MAX_CELL_BYTES,type RangeCell} from './protocol';
 import {parseAddress,parseSpan} from './format';
 import {parseFormatOp} from './formatOps';
-import type {ValidationManageOp,CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,PasteOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp} from './protocol';
+import type {ValidationManageOp,CfManageOp,ChartOp,SparklineOp,ProtectOp,WhatIfOp,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,SavedViewOp,ObjectOp,ViewOp,PageSetupOp,PasteOp,ExportOp,PivotField,PivotOp,TableOp,NameOp,AnnotateOp,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FillDirection,FilterOp,SortOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetOp,ViewCell} from './protocol';
 import {parseEditLines,parseFreeze,parseLineCommand} from './lineOps';
 import {parseSheetOp} from './sheetOps';
 import {parseSortCommand} from './sortOps';
@@ -45,7 +45,7 @@ export interface SheetsPanelController {
  ready():boolean;
  navigate(sheet:number,address:string):void|Promise<void>;
  setCell(input:string):void|Promise<void>;
- readRange(input:string):Promise<RangeCell[]>;
+ readRange(input:string,styled?:boolean):Promise<RangeCell[]|ViewCell[]>;
  /** Applies one validated formatting operation to the current selection as one undo step. */
  formatCells(op:FormatOp):void|Promise<void>;
  /** Resizes/autofits/hides the rows or columns spanned by the selection (one undo step). */
@@ -141,8 +141,8 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
   params:{type:'object',properties:{input:{type:'string',maxLength:MAX_CELL_BYTES}},required:['input'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>{const {input}=p as {input:string};if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');return requireController().setCell(input);}},
  {id:'sheets.analyzeRange',title:'Analyze spreadsheet range',category:'Tools',level:'ui',allowInInput:true,
-  params:{type:'object',properties:{range:{type:'string',minLength:2,maxLength:24}},required:['range'],additionalProperties:false},
-  enabled:()=>!!current?.ready(),run:p=>{const {range}=p as {range:string};if(!parsePanelRange(range))throw Error('Invalid or oversized range.');return requireController().readRange(range);}},
+  params:{type:'object',properties:{range:{type:'string',minLength:2,maxLength:24},styled:{type:'boolean'}},required:['range'],additionalProperties:false},
+  enabled:()=>!!current?.ready(),run:p=>{const {range,styled}=p as {range:string;styled?:boolean};if(!parsePanelRange(range))throw Error('Invalid or oversized range.');return requireController().readRange(range,styled===true);}},
  {id:'sheets.format',title:'Format selected cells',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{kind:{type:'string',enum:['bold','italic','underline','strike','fontName','fontSize','fontColor','fillColor','numFmt','numFmtCustom','dateFmt','decimals','hAlign','vAlign','wrap','indent','borders']},align:{type:'string',enum:['left','center','right','top','middle','bottom']},style:{type:'string',enum:['thin','medium','thick','dashed','dotted','double','hair']},on:{type:'boolean'},preset:{type:'string',enum:['general','number','comma','percent','currency','date','time','scientific','text','none','all','outside','thickOutside','inside','insideHorizontal','insideVertical','top','bottom','left','right','thickBottom','doubleBottom','topBottom','topThickBottom','topDoubleBottom']},decimals:{type:'integer',minimum:0,maximum:10},grouping:{type:'boolean'},percent:{type:'boolean'},prefix:{type:'string',maxLength:12},suffix:{type:'string',maxLength:12},negative:{type:'string',enum:['minus','red','paren','redParen']},zero:{type:'string',enum:['show','dash']},pattern:{type:'string',enum:['ymd','dmyDot','mdy','dmy','long','weekday','short','monthYear','time24','time12','dateTime']},symbol:{type:'string',minLength:1,maxLength:3},delta:{type:'integer',minimum:-1,maximum:1},name:{type:'string',minLength:1,maxLength:64},size:{type:'number',minimum:1,maximum:409},color:{type:'string',minLength:4,maxLength:7}},required:['kind'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().formatCells(parseFormatOp(p))},

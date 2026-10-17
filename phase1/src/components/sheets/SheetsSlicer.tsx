@@ -18,7 +18,7 @@ const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 
 const OP_SYMBOLS:Record<string,string>={'=':'=','<>':'\u2260','>':'>','<':'<','>=':'\u2265','<=':'\u2264'};
 
 /** Short honest label for a mirrored filter op (readback line only). */
-function describeFilter(t:(k:string,p?:Record<string,string|number>)=>string,op:FilterOp):string{
+export function describeFilter(t:(k:string,p?:Record<string,string|number>)=>string,op:FilterOp):string{
  switch(op.kind){
   case 'values':return t('sheets.slicer.op.values',{n:op.values.length})+(op.blanks?' + '+t('sheets.vf.blanks'):'');
   case 'custom':return (OP_SYMBOLS[op.op]??t('sheets.filter.op.'+op.op))+' '+op.value;

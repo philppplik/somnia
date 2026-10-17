@@ -2,6 +2,7 @@ import {sheetsStudio} from '../../lib/studios/sheets';
 import {registerStudioPanels} from '../studios/registerStudioPanels';
 import {SheetsWorkbookPanel,SheetsAnalysisPanel,SheetsFormulasPanel,SheetsCellSection,SheetsFormulasSection,SheetsFormatSection,SheetsLayoutSection} from './SheetsPanels';
 import {SheetsSlicerSection} from './SheetsSlicer';
+import {SheetsTimelineSection} from './SheetsTimeline';
 /** The manifest owns all names; the UI layer supplies their executable hosts. */
 export const disposeSheetsShell=registerStudioPanels(sheetsStudio,{panels:{
  'sheets.workbook':SheetsWorkbookPanel,
@@ -12,6 +13,7 @@ export const disposeSheetsShell=registerStudioPanels(sheetsStudio,{panels:{
  'sheets.inspector.format':SheetsFormatSection,
  'sheets.inspector.layout':SheetsLayoutSection,
  'sheets.inspector.slicer':SheetsSlicerSection,
+ 'sheets.inspector.timeline':SheetsTimelineSection,
  'sheets.inspector.formulas':SheetsFormulasSection,
 }});
 
