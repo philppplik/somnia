@@ -152,12 +152,13 @@ test('3D studio moves a group of selected objects together with the gizmo',async
  const a=await insert(page,'cube',-1),b=await insert(page,'cube',1);
  await run(page,'studio3d.gizmo.mode',{mode:'translate'});
  await run(page,'studio3d.select',{id:a});
+ const box=(await page.getByTestId('studio3d-viewport').boundingBox())!;
+ const cx=box.x+box.width/2,cy=box.y+box.height/2;
+ // Measure first: positionOf selects each object, and selecting clears the mark set.
+ const gapBefore=(await positionOf(page,b)).x-(await positionOf(page,a)).x;
  // Mark both through the scene panel outline, then drag the gizmo handle at the centre of the viewport.
  await page.getByTestId('studio3d-scene-panel').getByRole('checkbox').nth(0).check();
  await page.getByTestId('studio3d-scene-panel').getByRole('checkbox').nth(1).check();
- const box=(await page.getByTestId('studio3d-viewport').boundingBox())!;
- const cx=box.x+box.width/2,cy=box.y+box.height/2;
- const gapBefore=(await positionOf(page,b)).x-(await positionOf(page,a)).x;
  await page.mouse.move(cx+40,cy);await page.mouse.down();await page.mouse.move(cx+120,cy,{steps:8});await page.mouse.up();
  const pa=await positionOf(page,a),pb=await positionOf(page,b);
  expect(Math.abs(pb.x-pa.x-gapBefore)).toBeLessThan(1e-3);
