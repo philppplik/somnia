@@ -26,6 +26,8 @@ export async function openSlidesPictureInPhotos(p:{source:string;slideIndex:numb
   const result=await addMediaFile(new Blob([new Uint8Array(data)],{type:`image/${ext==='jpg'?'jpeg':ext}`}),name);
   if('error' in result)return{ok:false,message:result.error};
   setHandoffOrigin(name,{studio:'slides',kind:'picture',id:`${p.slideId}:${p.shapeId}`,label:t('handoff.pictureLabel',{file:p.source,n:p.slideIndex+1}),file:p.source});
-  setActiveMedia(name);return{ok:true};
+  setActiveMedia(name);
+  // Explicit Open like the table path above: a manual Studio visit must not veto the Photos switch.
+  switchStudioForExplicitOpen('photos','media:'+name);return{ok:true};
  }catch(e){return{ok:false,message:e instanceof Error?e.message:String(e)};}
 }
