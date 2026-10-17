@@ -1,5 +1,6 @@
 import {useSyncExternalStore} from 'react';
-import type {FilterOp} from './protocol';
+import type {FilterOp,ProtectionInfo} from './protocol';
+import type {DistinctValues} from './filterOps';
 
 /** One range the filter op was applied to (the selection that created or refreshed it). */
 export interface SlicerFilterRange{r0:number;c0:number;r1:number;c1:number}
@@ -60,4 +61,19 @@ export function subscribeSlicer(listener:()=>void):()=>void{listeners.add(listen
 export function useSlicerFilter(file:string|undefined,sheet:number|undefined):SlicerFilterMirror|null{
  const snap=()=>file!==undefined&&sheet!==undefined?getSlicerFilter(file,sheet):null;
  return useSyncExternalStore(subscribeSlicer,snap,snap);
+}
+
+/** Whether the sheet's protection allows changing the AutoFilter ('autofilter' permission). */
+export const slicerFilterAllowed=(protection:ProtectionInfo|null|undefined):boolean=>!protection||protection.allow.includes('autofilter');
+
+/**
+ * Initial tick state for a freshly loaded value list when the mirror knows a fresh
+ * values filter on exactly this column: untick what the filter hides, keep the
+ * blanks flag. Returns null when the mirror has nothing honest to offer (unknown,
+ * stale, another column or a non-values op) - the list then starts all-ticked.
+ */
+export function pickedFromMirror(data:DistinctValues,mirror:SlicerFilterMirror,column:number):{off:Set<string>;blanksOn:boolean}|null{
+ if(mirror.stale||!mirror.op||mirror.op.kind!=='values'||mirror.op.column!==column)return null;
+ const keep=new Set(mirror.op.values);
+ return {off:new Set(data.values.filter(v=>!keep.has(v.text)).map(v=>v.text)),blanksOn:mirror.op.blanks};
 }

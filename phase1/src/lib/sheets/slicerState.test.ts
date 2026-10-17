@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {getSlicerFilter,MAX_SLICER_RECORDS,noteFilterApplied,noteFilterHistory,resetSlicerFilter,subscribeSlicer} from './slicerState';
+import {getSlicerFilter,MAX_SLICER_RECORDS,noteFilterApplied,noteFilterHistory,pickedFromMirror,resetSlicerFilter,slicerFilterAllowed,subscribeSlicer} from './slicerState';
 import type {FilterOp} from './protocol';
 
 const range={r0:0,c0:0,r1:9,c1:2};
@@ -62,4 +62,23 @@ test('records are bounded and evict the oldest',()=>{
  assert.equal(size,MAX_SLICER_RECORDS);
  assert.equal(getSlicerFilter('f0.xlsx',0),null,'oldest evicted');
  assert.ok(getSlicerFilter('f'+(MAX_SLICER_RECORDS+9)+'.xlsx',0),'newest kept');
+});
+
+test('slicerFilterAllowed honours the autofilter permission',()=>{
+ assert.equal(slicerFilterAllowed(null),true);
+ assert.equal(slicerFilterAllowed(undefined),true);
+ assert.equal(slicerFilterAllowed({password:false,allow:['autofilter']}),true);
+ assert.equal(slicerFilterAllowed({password:false,allow:['sort']}),false);
+ assert.equal(slicerFilterAllowed({password:true,allow:[]}),false);
+});
+
+test('pickedFromMirror only initializes from a fresh values filter on the same column',()=>{
+ const data={values:[{text:'a',count:3},{text:'b',count:2},{text:'c',count:1}],blanks:2,truncated:false};
+ const mirror={op:{kind:'values',column:1,values:['a','c'],blanks:true} as FilterOp,range,stale:false};
+ const init=pickedFromMirror(data,mirror,1);
+ assert.ok(init);assert.equal(init.blanksOn,true);assert.deepEqual([...init.off],['b'],'only the hidden value is unticked');
+ assert.equal(pickedFromMirror(data,{...mirror,stale:true},1),null,'stale mirror offers nothing');
+ assert.equal(pickedFromMirror(data,mirror,0),null,'another column');
+ assert.equal(pickedFromMirror(data,{op:{kind:'custom',column:1,op:'contains',value:'a'},range,stale:false},1),null,'non-values op');
+ assert.equal(pickedFromMirror(data,{op:null,range:null,stale:false},1),null,'cleared filter starts all-ticked');
 });

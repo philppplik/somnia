@@ -6,6 +6,7 @@ import {SheetsSlicerPanel,SheetsSlicerSection} from './SheetsSlicer';
 import {setSheetsSelection,type SheetsSelection} from '../../lib/sheets/sheetsStore';
 import {noteFilterApplied,noteFilterHistory,resetSlicerFilter} from '../../lib/sheets/slicerState';
 import type {StudioContext} from '../../lib/shell/types';
+import type {SheetLayout} from '../../lib/sheets/protocol';
 
 const context:StudioContext={studio:'sheets',document:{id:'test.xlsx',kind:'xlsx',dirty:false,readOnly:false},selection:{kind:'one',count:1},busy:false,services:{}};
 const selection:SheetsSelection={file:'test.xlsx',sheet:0,sheetName:'Sales',address:'A2',kind:'Number',text:'7',formula:null,dirty:false,canUndo:true,canRedo:false,range:{r0:0,c0:0,r1:9,c1:1},workbook:{sheets:[{index:0,name:'Sales',visibility:'Visible'}],warnings:[]}};
@@ -51,4 +52,27 @@ test('slicer section host renders the panel',()=>{
  const markup=renderToStaticMarkup(<SheetsSlicerSection sectionId="slicer" context={context}/>);
  assert.match(markup,/data-testid="sheets-slicer-column"/);
  setSheetsSelection(null);
+});
+
+test('slicer disables apply and clear on a protected sheet without the autofilter permission',()=>{
+ const layout:SheetLayout={sheet:0,defaultColWidth:100,defaultRowHeight:20,cols:[],rows:[],showGridlines:true,protection:{password:false,allow:[]},freeze:null,merges:[]};
+ setSheetsSelection({...selection,layout});resetSlicerFilter('test.xlsx');
+ const markup=html();
+ assert.match(markup,/data-testid="sheets-slicer-protected">This sheet is protected and filtering is not allowed./);
+ assert.match(markup,/disabled=""[^>]*data-testid="sheets-slicer-clear"/);
+});
+
+test('slicer stays usable when protection allows autofilter, and clear disables on a known empty filter',()=>{
+ const layout:SheetLayout={sheet:0,defaultColWidth:100,defaultRowHeight:20,cols:[],rows:[],showGridlines:true,protection:{password:false,allow:['sort','autofilter']},freeze:null,merges:[]};
+ setSheetsSelection({...selection,layout});resetSlicerFilter('test.xlsx');
+ let markup=html();
+ assert.doesNotMatch(markup,/sheets-slicer-protected/);
+ assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-slicer-clear"/,'unknown filter state: clear stays available');
+ noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'clearAll'});
+ markup=html();
+ assert.match(markup,/disabled=""[^>]*data-testid="sheets-slicer-clear"/,'known no-filter: clear is a no-op');
+ noteFilterHistory('test.xlsx');
+ markup=html();
+ assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-slicer-clear"/,'stale: clear resolves the unknown');
+ setSheetsSelection(selection);
 });

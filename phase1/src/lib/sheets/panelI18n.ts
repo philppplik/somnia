@@ -454,6 +454,8 @@ const rows:Record<string,readonly string[]>={
  'sheets.slicer.stale':['Last known: column {column} - {what} (undo/redo may have changed it).','Zuletzt bekannt: Spalte {column} - {what} (Undo/Redo kann ihn geändert haben).','Último conocido: columna {column} - {what} (deshacer/rehacer pudo cambiarlo).','Dernier état connu : colonne {column} - {what} (annuler/rétablir a pu le changer).','Último conhecido: coluna {column} - {what} (desfazer/refazer pode tê-lo alterado).'],
  'sheets.slicer.op.values':['{n} values','{n} Werte','{n} valores','{n} valeurs','{n} valores'],
  'sheets.slicer.op.none':['no filter','kein Filter','sin filtro','aucun filtre','sem filtro'],
+ 'sheets.slicer.protected':['This sheet is protected and filtering is not allowed.','Dieses Blatt ist geschützt und Filtern ist nicht erlaubt.','Esta hoja está protegida y no se permite filtrar.','Cette feuille est protégée et le filtrage est interdit.','Esta planilha está protegida e a filtragem não é permitida.'],
+ 'sheets.slicer.truncatedWarn':['The list is incomplete: applying also hides rows whose values are not shown.','Die Liste ist unvollständig: Anwenden blendet auch Zeilen mit nicht gezeigten Werten aus.','La lista está incompleta: aplicar también oculta filas con valores no mostrados.','La liste est incomplète : appliquer masque aussi les lignes dont les valeurs ne sont pas affichées.','A lista está incompleta: aplicar também oculta linhas com valores não mostrados.'],
 
  'sheets.nl.toSheet':['List these notes on a new sheet','Diese Notizen auf einem neuen Blatt auflisten','Listar estas notas en una hoja nueva','Lister ces notes sur une nouvelle feuille','Listar estas notas em uma nova planilha'],
  'sheets.nl.sheetName':['Notes','Notizen','Notas','Notes','Notas'],

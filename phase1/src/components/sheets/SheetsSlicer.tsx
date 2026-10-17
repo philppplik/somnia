@@ -7,7 +7,7 @@ import {colName} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {MAX_FILTER_SCAN_ROWS,distinctValues,type DistinctValues} from '../../lib/sheets/filterOps';
 import type {FilterOp,RangeCell} from '../../lib/sheets/protocol';
-import {useSlicerFilter} from '../../lib/sheets/slicerState';
+import {getSlicerFilter,pickedFromMirror,slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
 import {Checkbox} from '../ui/checkbox';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
@@ -46,6 +46,7 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
  const [blanksOn,setBlanksOn]=useState(true);
  const mirror=useSlicerFilter(s?.file,s?.sheet);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
+ const allowed=slicerFilterAllowed(s.layout?.protection);
  const r=s.range;
  if(!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,col=Math.min(column,cols-1),block=sortBlockProblem(rows,cols,true),key=s.file+' '+s.sheet+':'+rangeAddress(r)+':'+col,data=loaded?.key===key?loaded.data:null;
@@ -54,7 +55,10 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
   if(block||rows-1>MAX_FILTER_SCAN_ROWS){action.setNotice(t('sheets.vf.big',{n:MAX_FILTER_SCAN_ROWS}));return;}
   const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:r.c0+c,c1:r.c0+c})});
   if(!cells)return;
-  setLoaded({key:s.file+' '+s.sheet+':'+rangeAddress(r)+':'+c,data:distinctValues(cells as RangeCell[],rows-1)});setOff(new Set());setBlanksOn(true);
+  const d=distinctValues(cells as RangeCell[],rows-1);
+  setLoaded({key:s.file+' '+s.sheet+':'+rangeAddress(r)+':'+c,data:d});
+  const m=getSlicerFilter(s.file,s.sheet),init=m?pickedFromMirror(d,m,r.c0+c):null;
+  if(init){setOff(init.off);setBlanksOn(init.blanksOn);}else{setOff(new Set());setBlanksOn(true);}
  };
  const picked=data?data.values.filter(v=>!off.has(v.text)).map(v=>v.text):[];
  const apply=()=>{if(data)void action.run('sheets.filter',{kind:'values',column:abs,values:picked,blanks:blanksOn&&data.blanks>0});};
@@ -67,13 +71,14 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
   <p className="text-ink-3" data-testid="sheets-slicer-status">{status}</p>
   <label className="flex flex-col gap-1">{t('sheets.filter.column')}<NativeSelect className={field} value={col} disabled={action.busy} onChange={e=>{const c=Number(e.currentTarget.value);setColumn(c);void load(c);}} data-testid="sheets-slicer-column">{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!block} onClick={()=>void load(col)} data-testid="sheets-slicer-load">{t(data?'sheets.slicer.refresh':'sheets.slicer.load')}</Button>
+  {!allowed&&<p className="text-ink-3" data-testid="sheets-slicer-protected">{t('sheets.slicer.protected')}</p>}
   {data&&<div className="flex flex-col gap-1" data-testid="sheets-slicer-list">
    {data.values.map(v=><Checkbox key={v.text} label={v.text+' ('+v.count+')'} checked={!off.has(v.text)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(v.text);else n.add(v.text);return n;});}}/>)}
    {data.blanks>0&&<Checkbox label={t('sheets.vf.blanks')+' ('+data.blanks+')'} checked={blanksOn} disabled={action.busy} onChange={e=>setBlanksOn(e.currentTarget.checked)}/>}
-   {data.truncated&&<p className="text-ink-3">{t('sheets.vf.truncated',{n:data.values.length})}</p>}
-   <Button variant="outline" size="compact" disabled={action.busy||(picked.length===0&&!(blanksOn&&data.blanks>0))} onClick={apply} data-testid="sheets-slicer-apply">{t('sheets.vf.apply')}</Button>
+   {data.truncated&&<><p className="text-ink-3">{t('sheets.vf.truncated',{n:data.values.length})}</p><p className="text-ink-3" data-testid="sheets-slicer-truncated-warn">{t('sheets.slicer.truncatedWarn')}</p></>}
+   <Button variant="outline" size="compact" disabled={action.busy||!allowed||(picked.length===0&&!(blanksOn&&data.blanks>0))} onClick={apply} data-testid="sheets-slicer-apply">{t('sheets.vf.apply')}</Button>
   </div>}
-  <Button variant="outline" size="compact" disabled={action.busy} onClick={clear} data-testid="sheets-slicer-clear">{t('sheets.slicer.clear')}</Button>
+  <Button variant="outline" size="compact" disabled={action.busy||!allowed||(mirror!==null&&!mirror.stale&&mirror.op===null)} onClick={clear} data-testid="sheets-slicer-clear">{t('sheets.slicer.clear')}</Button>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.vf.scope',{range:rangeAddress(r)})}</p>
   {action.notice?<p role="alert">{action.notice}</p>:null}
  </Region>;
