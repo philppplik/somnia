@@ -31,7 +31,7 @@ test('Sound reaches the real panel review, applies only after acceptance, and gu
  await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const settings=page.getByRole('dialog');await settings.getByLabel('Model',{exact:true}).fill('fixture-local');await settings.getByRole('button',{name:'Save AI settings',exact:true}).click();await settings.getByText('Configuration saved.',{exact:true}).waitFor();await settings.getByRole('tab',{name:'Privacy & data',exact:true}).click();await settings.getByRole('checkbox',{name:'Allow inspecting the active document and selection. Edits still need preview acceptance.',exact:true}).check();await settings.getByRole('button',{name:'Close settings',exact:true}).click();await panel.getByLabel('Message to Somnia Agent').fill('Suggest fades');await panel.getByRole('button',{name:'Send',exact:true}).click();
  await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toBeVisible();
  // @ts-ignore Dev-server module used only by the browser fixture.
- await expect(panel.getByLabel('Settings changes')).toContainText('Fade in 0 ms → 200 ms');
+ await expect(panel.getByLabel('Settings changes')).toContainText(/Fade in\s*0 ms → 200 ms/);
  // @ts-ignore Dev-server module used only by the browser fixture.
  const read=()=>page.evaluate(async()=>{const s=await import('/src/lib/sound/session.ts');return s.getSoundSession('fixture.mp3')!.settings.fadeInMs;});expect(await read()).toBe(0);
  await page.screenshot({path:'tests/artifacts/wave7-sound-review.png'});
