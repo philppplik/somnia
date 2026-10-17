@@ -1,6 +1,6 @@
 import {useEffect} from 'react';
 import {addMediaFile,getMedia,setActiveMedia,useMedia} from '../../src/lib/media';
-import {setPhotoEngineFactory} from '../../src/lib/photos/studioSession';
+import {openPhoto,setPhotoEngineFactory} from '../../src/lib/photos/studioSession';
 import type {PhotoEngineLike} from '../../src/lib/photos/studioSession';
 import {PhotosWorkspace} from '../../src/components/photos/PhotosWorkspace';
 
@@ -32,7 +32,9 @@ export function PhotosFilmstripProof(){
  useEffect(()=>{
   void(async()=>{
    setPhotoEngineFactory(fakeEngine);
-   for(let i=0;i<3;i++){const n=`strip-${i+1}.png`;if(!getMedia().items.some(it=>it.name===n))await addMediaFile(await pngOf(i),n);}
+   for(let i=0;i<3;i++){const n=`strip-${i+1}.png`;if(!getMedia().items.some(it=>it.name===n))await addMediaFile(await pngOf(i),n,undefined,{activate:false});}
+   // activate:false on every add: the workspace renders only once strip-1 is pinned, never mid-load with a transient active photo.
+   for(const it of getMedia().items)if(it.kind==='image')await openPhoto({name:it.name,url:it.url,mime:it.mime}); // several proofs edit non-active photos; warm every session explicitly
    setActiveMedia('strip-1.png');
   })();
  },[]);
