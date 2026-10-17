@@ -13,9 +13,9 @@ test('Animation P2 creates text and shapes, imports a bounded SVG, exposes speed
  await page.getByTestId('animation-graph-mode-speed').click();await expect(page.getByTestId('animation-graph-curve')).toBeVisible();
  await page.getByTestId('animation-graph-mode-value').click();
  await page.getByTestId('animation-graph-channel-1').click();
- await page.getByLabel('Path timing',{exact:true}).selectOption('arcLength');
+ await page.getByRole('combobox',{name:'Path timing',exact:true}).selectOption('arcLength');
  await page.getByRole('button',{name:'Blur +',exact:true}).click();
- await page.getByLabel('Amount',{exact:true}).fill('6');await page.getByLabel('Amount',{exact:true}).press('Enter');
+ await page.getByRole('textbox',{name:'Amount',exact:true}).fill('6');await page.getByRole('textbox',{name:'Amount',exact:true}).press('Enter');
  await page.getByTestId('animation-compositions-panel').getByLabel('Import image / SVG').setInputFiles({name:'original.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg width="100" height="100"><ellipse cx="50" cy="50" rx="40" ry="40" fill="#7c5cff"/></svg>')});
  await expect(page.getByTestId('animation-properties').getByLabel('Name',{exact:true})).toHaveValue('original.svg');
  await page.getByTestId('animation-compositions-panel').getByLabel('Import image / SVG').setInputFiles({name:'bad.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg><script>bad()</script></svg>')});

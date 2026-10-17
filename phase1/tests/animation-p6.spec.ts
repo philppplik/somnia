@@ -12,10 +12,11 @@ test('P6 text fonts, per-key easing and null parenting with keep-world',async({p
  // Graph editor: ease presets apply to selected keys.
  await page.getByTestId('animation-graph-toggle').click();await page.getByTestId('animation-graph-key').first().click();
  await page.getByTestId('animation-graph-ease-easeOut').click();
+ await page.getByTestId('animation-graph-toggle').click();
  // Null object parenting with keep-world.
  await page.getByTestId('animation-add-null').click();
  await page.getByTestId('animation-add-shape').click();
- await page.getByLabel('Keep world transform').or(page.getByLabel('Welttransformation behalten')).check();
- await page.getByLabel('Parent layer').or(page.getByLabel('Übergeordnete Ebene')).selectOption({label:/Null/});
+ await page.getByRole('region',{name:'Properties',exact:true}).getByLabel('Keep world transform',{exact:true}).check();
+ await page.getByRole('region',{name:'Properties',exact:true}).getByRole('combobox',{name:'Parent layer',exact:true}).selectOption({label:'Null 1 (Null)'});
  await expect(page.getByRole('listitem').filter({hasText:'↳'}).first()).toBeVisible();
 });
