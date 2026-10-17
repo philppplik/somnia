@@ -19,6 +19,8 @@ export const useSyncScroll=()=>useSyncExternalStore(subscribe,()=>sync);
 export function revealInSource(start:number,end:number){
  const go=(tries:number)=>{const v=source;if(!v){if(tries>0)requestAnimationFrame(()=>go(tries-1));return;}
   const doc=v.state.doc;const a=doc.line(Math.min(doc.lines,Math.max(1,start+1))),b=doc.line(Math.min(doc.lines,Math.max(1,end)));
-  v.dispatch({selection:EditorSelection.range(a.from,Math.max(a.from,b.to)),effects:EditorView.scrollIntoView(a.from,{y:'start',yMargin:24})});v.focus();};
+  v.dispatch({selection:EditorSelection.range(a.from,Math.max(a.from,b.to)),effects:EditorView.scrollIntoView(a.from,{y:'start',yMargin:24})});
+  // Focus on the next tick: when reveal runs from a menu item, the closing menu returns focus to its trigger right after the handler.
+  setTimeout(()=>v.focus(),0);};
  if(getState().viewMode==='design')patchState({viewMode:'split'});
  go(30);}
