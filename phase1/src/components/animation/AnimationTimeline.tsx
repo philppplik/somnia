@@ -348,7 +348,7 @@ const marquee=(e:PointerEvent<SVGSVGElement>)=>{
   <div className="relative min-h-0 flex-1 overflow-auto" role="list" ref={lanesRef}>
    {comp.layers.map((l,li)=>(shyOff&&l.shy&&l.id!==selected)||(l.id!==selected&&!layerMatches(l,filter))?null:<div key={l.id} role="listitem" data-layer-row={l.id} data-drop={drop?.over===l.id?(drop.after?'after':'before'):undefined} className={`border-b border-subtle ${drop?.over===l.id?(drop.after?'border-b-2 border-b-accent':'border-t-2 border-t-accent'):''}`}>
     <div className={`grid grid-cols-[280px_1fr] items-center ${l.id===selected||layerSet.includes(l.id)?'bg-hover':''}`} data-picked={layerSet.includes(l.id)||undefined}>
-     <div className="flex items-center gap-1 px-2 py-1">
+     <div className="flex flex-wrap items-center gap-1 px-2 py-1">
       <button type="button" aria-label={t('animation.layer.visible')} aria-pressed={l.visible} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,visible:!l.visible})}>{l.visible?<Eye className="size-3"/>:<EyeOff className="size-3"/>}</button>
       <button type="button" aria-label={t('animation.layer.locked')} aria-pressed={l.locked} className="text-ink-2" onClick={()=>run('animation.layer.update',{layer:l.id,locked:!l.locked})}>{l.locked?<Lock className="size-3"/>:<Unlock className="size-3"/>}</button>
       <Button size="tiny" variant="ghost" aria-label={t('animation.layer.track',{name:l.name,height:t(`animation.track.${trackHeightOf(l.id)}`)})} title={t(`animation.track.${trackHeightOf(l.id)}`)} onClick={()=>run('animation.timeline.tracks',{layer:l.id,mode:'cycle'})} data-testid={`animation-track-${l.id}`}>{trackHeightOf(l.id)==='compact'?<ChevronRight className="size-3"/>:<ChevronDown className="size-3"/>}</Button>
