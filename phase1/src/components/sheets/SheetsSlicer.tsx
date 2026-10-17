@@ -8,6 +8,7 @@ import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {MAX_FILTER_SCAN_ROWS,distinctValues,type DistinctValues} from '../../lib/sheets/filterOps';
 import type {FilterOp,RangeCell} from '../../lib/sheets/protocol';
 import {getSlicerFilter,pickedFromMirror,slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
+import {sameRange,tableFilterRange,tablesHere} from '../../lib/sheets/tableBinding';
 import {Checkbox} from '../ui/checkbox';
 import {Button} from '../ui/button';
 import {NativeSelect} from '../ui/native-controls';
@@ -51,6 +52,7 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
  if(!r)return null;
  const rows=r.r1-r.r0+1,cols=r.c1-r.c0+1,col=Math.min(column,cols-1),block=sortBlockProblem(rows,cols,true),key=s.file+' '+s.sheet+':'+rangeAddress(r)+':'+col,data=loaded?.key===key?loaded.data:null;
  const abs=r.c0+col,options=Array.from({length:Math.min(cols,MAX_SLICER_COLUMNS)},(_,i)=>i);
+ const hits=tablesHere(s.tables?.tables,r),bound=hits.find(h=>sameRange(tableFilterRange(h),r));
  const load=async(c:number)=>{
   if(block||rows-1>MAX_FILTER_SCAN_ROWS){action.setNotice(t('sheets.vf.big',{n:MAX_FILTER_SCAN_ROWS}));return;}
   const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:r.c0+c,c1:r.c0+c})});
@@ -71,6 +73,8 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
   <p className="text-ink-3" data-testid="sheets-slicer-status">{status}</p>
   <label className="flex flex-col gap-1">{t('sheets.filter.column')}<NativeSelect className={field} value={col} disabled={action.busy} onChange={e=>{const c=Number(e.currentTarget.value);setColumn(c);void load(c);}} data-testid="sheets-slicer-column">{options.map(i=><option key={i} value={i}>{colName(r.c0+i)}</option>)}</NativeSelect></label>
   <Button variant="outline" size="compact" disabled={action.busy||!!block} onClick={()=>void load(col)} data-testid="sheets-slicer-load">{t(data?'sheets.slicer.refresh':'sheets.slicer.load')}</Button>
+  {bound?<p className="text-ink-3" data-testid="sheets-slicer-bound">{t('sheets.timeline.bound',{name:bound.table.name})}</p>
+   :hits.length>0&&<div className="flex flex-wrap gap-1" role="group" aria-label={t('sheets.timeline.tables')} data-testid="sheets-slicer-tables">{hits.map(h=><Button key={h.table.name} variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.navigate',{sheet:s.sheet,address:rangeAddress(tableFilterRange(h))})} data-testid={'sheets-slicer-bind-'+h.table.name}>{t('sheets.timeline.bind',{name:h.table.name})}</Button>)}</div>}
   {!allowed&&<p className="text-ink-3" data-testid="sheets-slicer-protected">{t('sheets.slicer.protected')}</p>}
   {data&&<div className="flex flex-col gap-1" data-testid="sheets-slicer-list">
    {data.values.map(v=><Checkbox key={v.text} label={v.text+' ('+v.count+')'} checked={!off.has(v.text)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(v.text);else n.add(v.text);return n;});}}/>)}

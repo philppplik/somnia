@@ -76,3 +76,21 @@ test('slicer stays usable when protection allows autofilter, and clear disables 
  assert.doesNotMatch(markup,/disabled=""[^>]*data-testid="sheets-slicer-clear"/,'stale: clear resolves the unknown');
  setSheetsSelection(selection);
 });
+
+test('slicer offers bind buttons for header tables and reports an exact binding',()=>{
+ const tables={tables:[
+  {name:'Sales2026',range:'A1:C20',header:true,totals:false,banded:true,bandedCols:false,firstCol:false,lastCol:false,style:'TableStyleMedium2'},
+  {name:'NoHead',range:'A1:C5',header:false,totals:false,banded:false,bandedCols:false,firstCol:false,lastCol:false,style:''},
+ ],styles:[]};
+ setSheetsSelection({...selection,tables});resetSlicerFilter('test.xlsx');
+ let markup=html();
+ assert.match(markup,/data-testid="sheets-slicer-tables"/);
+ assert.match(markup,/data-testid="sheets-slicer-bind-Sales2026"[^>]*>Bind Sales2026/);
+ assert.doesNotMatch(markup,/bind-NoHead/,'headerless tables are excluded');
+ const withTotals={tables:[{name:'Sales2026',range:'A1:B11',header:true,totals:true,banded:false,bandedCols:false,firstCol:false,lastCol:false,style:''}],styles:[]};
+ setSheetsSelection({...selection,range:{r0:0,c0:0,r1:9,c1:1},tables:withTotals});
+ markup=html();
+ assert.match(markup,/data-testid="sheets-slicer-bound">Bound to table Sales2026./,'totals row excluded from the filter range');
+ assert.doesNotMatch(markup,/sheets-slicer-tables/,'no bind buttons once bound');
+ setSheetsSelection(selection);
+});

@@ -3,11 +3,11 @@ import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {rangeAddress} from '../../lib/sheets/panelModel';
-import {parseSpan} from '../../lib/sheets/format';
 import {colName} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {MAX_FILTER_SCAN_ROWS} from '../../lib/sheets/filterOps';
-import type {TableInfo,ViewCell} from '../../lib/sheets/protocol';
+import type {ViewCell} from '../../lib/sheets/protocol';
+import {sameRange,tableFilterRange,tablesHere} from '../../lib/sheets/tableBinding';
 import {slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
 import {bucketDates,currentPeriod,isDateFmt,pickedPeriodValues,periodsFitValues,type TimelineGranularity} from '../../lib/sheets/timelineOps';
 import {localSerial} from '../../lib/sheets/clock';
@@ -20,21 +20,6 @@ import {describeFilter} from './SheetsSlicer';
 const MAX_TIMELINE_COLUMNS=100;
 const GRANULARITIES:readonly TimelineGranularity[]=['year','quarter','month','day'];
 const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 py-1.5 text-ink';
-
-interface TableHit{table:TableInfo;from:{row:number;col:number};to:{row:number;col:number}}
-/** Tables of the active sheet overlapping the selection; headerless tables are excluded (the filter model needs a header row first). */
-function tablesHere(tables:readonly TableInfo[]|undefined,r:{r0:number;c0:number;r1:number;c1:number}):TableHit[]{
- const out:TableHit[]=[];
- for(const table of tables??[]){
-  if(!table.header)continue;
-  const sp=parseSpan(table.range);if(!sp||!sp.to)continue;
-  if(sp.from.row<=r.r1&&sp.to.row>=r.r0&&sp.from.col<=r.c1&&sp.to.col>=r.c0)out.push({table,from:sp.from,to:sp.to});
- }
- return out;
-}
-/** The range a table binding selects: full table minus the totals row (a totals row is not filter data). */
-const tableFilterRange=(h:TableHit)=>({r0:h.from.row,c0:h.from.col,r1:h.table.totals?h.to.row-1:h.to.row,c1:h.to.col});
-const sameRange=(a:{r0:number;c0:number;r1:number;c1:number},b:{r0:number;c0:number;r1:number;c1:number})=>a.r0===b.r0&&a.c0===b.c0&&a.r1===b.r1&&a.c1===b.c1;
 
 /**
  * Filter timeline: an inspector section bound to one date column of the current
