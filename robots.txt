@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://somnia.philipp-paulik.de/sitemap.xml
