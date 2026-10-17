@@ -34,7 +34,7 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  await page.getByTestId('export-center-search').fill('');
  await page.getByTestId('export-center-cmd-project.export').press('Enter');
  await expect(page.getByTestId('export-center')).toHaveCount(0);
- await expect(page.getByLabel('Export project', {exact:false})).toBeVisible();
+ await expect(page.getByRole('dialog',{name:'Advanced Export'})).toBeVisible();
  // ...and its advanced link returns to the center
  await page.getByTestId('export-advanced-open').click();
  await expect(page.getByTestId('export-center')).toBeVisible();
