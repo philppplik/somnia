@@ -140,7 +140,7 @@ export function exportApng(d:Deps={}){
    set({done:i+1,total:plan.length});
   }
   if(state.settings.loopSeam)frames=withoutLoopSeam(frames,(a,b)=>a.length===b.length&&a.every((v,i)=>v===b[i]));
-  return {blob:new Blob([encodeApng(frames,{delayNum:comp.fps.den,delayDen:comp.fps.num,loop:state.settings.loop!==false}) as unknown as BlobPart],{type:'image/apng'}),fileName:`${exportSlug(doc.name)}.apng`};
+  return {blob:new Blob([encodeApng(frames,{delayNum:comp.fps.den,delayDen:comp.fps.num,loop:state.settings.loop!==false}) as unknown as BlobPart],{type:'image/png'}),fileName:`${exportSlug(doc.name)}.png`};
  },d.save??downloadBlob);
 }
 /** WebM video of the work area, recorded in real time with the audio layers mixed in when the browser supports it. */

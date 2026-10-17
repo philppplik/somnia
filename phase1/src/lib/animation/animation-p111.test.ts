@@ -2046,3 +2046,16 @@ test('P295 look: fill, stroke and fresh-id effects copy onto targets, text keeps
  assert.throws(()=>run({layers:['lk1','lk2']}),/already/);
  s.undo();assert.equal(JSON.stringify(s.document),before);
 });
+
+test('P296 export downloads: APNG saves as .png with image/png (an APNG is a PNG), GIF as .gif',async()=>{
+ const {exportApng,exportGif,resetExport,resetExportSettings}=await import('./exportJob');
+ const {encodePngRgba}=await import('./spriteSheet');
+ const s=open();setAnimationSession(s);s.dispatch({type:'workarea.set',in:0,out:f(2)});resetExport();resetExportSettings();
+ const saved:[string,Blob][]=[];const save=(b:Blob,n:string)=>{saved.push([n,b]);};
+ await exportApng({rasterize:async()=>encodePngRgba(1,1,new Uint8ClampedArray([255,0,0,255])),save});
+ assert.ok(saved[0][0].endsWith('.png'),'APNG download name');assert.equal(saved[0][1].type,'image/png');
+ saved.length=0;resetExport();
+ await exportGif({pixels:async(_svg:string,w:number,h:number)=>new Uint8ClampedArray(w*h*4),save});
+ assert.ok(saved[0][0].endsWith('.gif'),'GIF download name');
+ resetExport();resetExportSettings();
+});
