@@ -39,11 +39,14 @@ export function SlidesPictureHandoff({source,slideIndex,slideId,shapeId,working,
 import {useSlidesSession} from '../../lib/slides/session';
 import {useValidShape} from './SlidesShapeOverlay';
 import {commandDispatcher} from '../../lib/commandDispatcher';
+import {encodeBase64} from '../../lib/slides/imageSniff';
+/** Commands carry JSON: the pending handback bytes travel to slides.replaceImage as base64, exactly like the toolbar file pick. */
+export const handoffReplaceImageParams=(source:string,slideId:number,shapeId:number,data:Uint8Array)=>({source,slideId,shapeId,data:encodeBase64(data)});
 export function SlidesPictureHandoffHost(){
  const s=useSlidesSession(),valid=useValidShape();
  const slideId=s.slideIds[s.index];
  const shape=valid&&valid.more.length===0&&valid.shape.kind==='picture'?valid.shape:null;
  if(!shape||slideId===undefined||!s.source)return null;
  return <SlidesPictureHandoff source={s.name} slideIndex={s.index} slideId={slideId} shapeId={shape.id} working={s.working} busy={s.busy}
-  replaceImage={data=>commandDispatcher.tryRunCommand('slides.replaceImage',{source:s.source,slideId,shapeId:shape.id,data},{origin:'ui'}).then(r=>r.ok?{ok:true}:{ok:false,message:r.error.message})}/>;
+  replaceImage={data=>commandDispatcher.tryRunCommand('slides.replaceImage',handoffReplaceImageParams(s.source,slideId,shape.id,data),{origin:'ui'}).then(r=>r.ok?{ok:true}:{ok:false,message:r.error.message})}/>;
 }
