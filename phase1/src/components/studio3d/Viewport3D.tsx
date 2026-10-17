@@ -1369,7 +1369,7 @@ export default function Viewport3D(){
    editInset:a=>{stage.editInset(a);afterEditOp();},
    editBevel:w=>{stage.editBevel(w);afterEditOp();},
    editLoopCut:()=>{stage.editLoopCut();afterEditOp();},
-   editBevelEdge:w=>{stage.editBevelEdge(w);afterEditOp();},
+   editBevelEdge:(w,segments)=>{stage.editBevelEdge(w,segments);afterEditOp();},
    editLoopSlide:f=>{stage.editLoopSlide(f);afterEditOp();},
    mirrorMod:(id,axis,merge,on,bisect)=>{stage.mirrorMod(id,axis,merge,on,!!bisect);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    sculptMaskClear:id=>{stage.sculptMaskClear(id);invalidate();},
