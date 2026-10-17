@@ -5,8 +5,10 @@ test('app starts empty and offers open folder, open file and a blank page',async
  for(const n of ['Open folder','Open file','New blank page'])await expect(empty.getByRole('button',{name:n})).toBeVisible();
  await page.getByRole('button',{name:'Project',exact:true}).click();
  for(const n of [/Open folder/,/Open file/,/Save project/,/Close project/])await expect(page.getByRole('menuitem',{name:n})).toBeVisible();
- // Export now lives in a submenu; with no project open it is shown but disabled.
- await expect(page.getByRole('menuitem',{name:'Export',exact:true})).toBeDisabled();
+ // Export lives in a submenu; with no project open the project export is disabled, the advanced export center stays available.
+ const exportMenu=page.getByRole('menuitem',{name:'Export',exact:true});await expect(exportMenu).toBeEnabled();await exportMenu.hover();
+ await expect(page.getByRole('menuitem',{name:'Export project...',exact:true})).toBeDisabled();await expect(page.getByRole('menuitem',{name:'Advanced export...',exact:true})).toBeEnabled();
+ await page.keyboard.press('Escape');
  await expect(page.getByRole('menuitem',{name:/Reset to starter/})).toHaveCount(0);await expect(page.getByRole('menuitem',{name:/Compare/})).toHaveCount(0);
  await page.keyboard.press('Escape');
  await empty.getByRole('button',{name:'New blank page'}).click();await expect(empty).toBeHidden();await expect(page.getByRole('tab',{name:/index.html/}).or(page.getByText('index.html').first())).toBeVisible();});
@@ -15,7 +17,7 @@ test('open file loads a text file into a new project and export dialog lists for
  await chooser.setFiles({name:'hello.html',mimeType:'text/html',buffer:Buffer.from('<h1>Hello file</h1>')});
  await expect(page.getByTestId('empty-state')).toBeHidden();
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Export project');await page.getByRole('option',{name:/Export project/}).click();
- const d=page.getByRole('dialog',{name:'Export project'});await expect(d).toBeVisible();for(const n of ['ZIP archive','Folder','Single HTML file','Markdown'])await expect(d.getByRole('radio',{name:n})).toBeVisible();
+ const d=page.getByRole('dialog',{name:'Advanced Export'});await expect(d).toBeVisible();for(const n of ['ZIP archive','Folder','Single HTML file','Markdown'])await expect(d.getByRole('radio',{name:n})).toBeVisible();
  await d.getByRole('button',{name:'Cancel'}).click();await expect(d).toBeHidden();
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('Close project');await page.getByRole('option',{name:/Close project/}).click();
  await expect(page.getByRole('alertdialog',{name:'Close this project?'})).toBeVisible();await page.getByRole('button',{name:'Discard and close'}).click();await expect(page.getByTestId('empty-state')).toBeVisible();});
