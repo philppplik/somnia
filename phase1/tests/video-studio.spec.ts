@@ -38,10 +38,10 @@ test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',
  await expect.poll(async()=>page.evaluate(()=>document.querySelector('video')!.currentTime),{timeout:8000}).toBeGreaterThan(0.15);
  await page.getByTestId('video-play').click();
  // trim via I/O keys at the playhead edits the clip under it
- await page.evaluate(()=>{document.querySelector('video')!.currentTime=0.5;});
- await page.getByTestId('video-workspace').press('i');
- await page.evaluate(()=>{document.querySelector('video')!.currentTime=1.5;});
- await page.getByTestId('video-workspace').press('o');
+ // Seek and mark atomically: a paused render re-syncs the element to the session playhead, so the keydown must land before any render.
+ const mark=(key:string,at:number)=>page.evaluate(({key,at})=>{const el=document.querySelector('video')!;el.currentTime=at;document.querySelector('[data-testid="video-workspace"]')!.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));},{key,at});
+ await mark('i',0.5);
+ await mark('o',1.5);
  await page.getByTestId('video-clip').first().click();
  await expect(page.getByTestId('video-clip-in-input')).toHaveValue('0.5');
  await expect(page.getByTestId('video-clip-out-input')).toHaveValue('1.5');
