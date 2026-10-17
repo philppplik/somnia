@@ -11,6 +11,7 @@ for(const destination of ['text','alt'] as const)test(`local vision ${destinatio
   patchState({activeStudio:'code',selectedElementId:destination==='alt'?getState().nodes.find(n=>n.tag==='img')!.id:null});
  },destination);
  await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();await page.getByRole('complementary',{name:'Somnia Agent'}).getByRole('button',{name:'Agent configuration',exact:true}).click();const panel=page.getByRole('dialog');
+ await panel.getByRole('tab',{name:'Local',exact:true}).click();
  await panel.getByText('Describe a local image (opt-in)',{exact:true}).click();
  const fixture=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const ctx=canvas.getContext('2d')!;ctx.fillStyle='white';ctx.fillRect(0,0,64,64);ctx.fillStyle='red';ctx.fillRect(16,16,32,32);return canvas.toDataURL('image/png').split(',')[1];});
  await panel.getByLabel('Image to disclose').setInputFiles({name:'synthetic.png',mimeType:'image/png',buffer:Buffer.from(fixture,'base64')});

@@ -7,13 +7,13 @@ test('empty studio sidebar follows studio and provides chat-only guidance withou
  await page.goto('/');await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();await page.getByRole('button',{name:'Open Somnia Agent'}).click();
  const panel=page.getByRole('complementary',{name:'Somnia Agent'});
  await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Video');
- await panel.getByRole('button',{name:'Suggest pacing improvements',exact:true}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Suggest pacing improvements');
+ await panel.getByRole('button',{name:'Suggest a small improvement',exact:true}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Suggest a small improvement');
  await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const settings=page.getByRole('dialog');await settings.getByLabel('Model',{exact:true}).fill('fixture-local');await settings.getByRole('button',{name:'Save AI settings',exact:true}).click();await settings.getByText('Configuration saved.',{exact:true}).waitFor();await settings.getByRole('button',{name:'Close settings',exact:true}).click();
  await page.screenshot({path:'tests/artifacts/wave7-video-sidebar.png'});
  await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByText('Start with a short rough cut, then refine the pacing.',{exact:false})).toBeVisible();
  expect((payload?.tools as unknown[]|undefined)??[]).toHaveLength(0);expect(JSON.stringify(payload)).not.toContain('Untrusted active document context');
  await expect(panel.locator('.ag-review')).toHaveCount(0);
- await panel.getByRole('button',{name:'New chat'}).click();await page.getByRole('radio',{name:'Somnia Sound',exact:true}).click();await expect(panel.getByRole('button',{name:'Explain the current sound settings'})).toBeVisible();await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Sounds');
+ await panel.getByRole('button',{name:'New chat'}).click();await page.getByRole('radio',{name:'Somnia Sound',exact:true}).click();await expect(panel.getByRole('button',{name:'Explain audio settings',exact:true})).toBeVisible();await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Sounds');
  await page.screenshot({path:'tests/artifacts/wave7-sound-sidebar.png'});
 });
 

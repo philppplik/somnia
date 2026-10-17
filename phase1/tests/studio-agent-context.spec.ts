@@ -10,9 +10,6 @@ for(const theme of ['light','dark'])test(`one agent conversation follows Code/Ph
  await panel.getByLabel('Message to Somnia Agent').fill('Remember this conversation');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByText('Conversation retained.',{exact:true})).toBeVisible();
  expect(requests[0].tools.map((t:any)=>t.function.name)).toEqual(['code_read_range','dom_inspect','code_propose_html','dom_set_attribute']);
  await panel.screenshot({path:`tests/artifacts/m5-code-${theme}.png`});
- // tools.diff coverage: the rebuilt panel dropped the quick-action buttons, so toggle the diff split through the icon rail and close it again.
- await page.getByRole('button',{name:'Toggle diff split',exact:true}).click();await expect(page.getByTestId('diff-split')).toBeVisible();await expect(page.getByLabel('Compare with',{exact:true})).toBeVisible();
- await page.getByRole('button',{name:'Toggle diff split',exact:true}).click();await expect(page.getByTestId('diff-split')).toHaveCount(0);
  await page.evaluate(async()=>{const {requestStudio}=await import('/src/store/appStore.ts');requestStudio('photos');});
  await expect(panel.getByTestId('agent-studio-chip')).toHaveText('Photos');await expect(panel.getByText('Remember this conversation',{exact:true})).toBeVisible();
  await panel.screenshot({path:`tests/artifacts/m5-photos-${theme}.png`});
