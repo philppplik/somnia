@@ -39,3 +39,15 @@ test('picture handoff routes to Photos with source open despite a manual studio 
  assert.equal(getState().studioByTab['media:picture - picture.png'],'photos');
  clearMedia();patchState({studioChoice:'automatic',activeStudio:'code',studioByTab:{}});
 });
+test('CA1: a path-like source never leaves media.active dangling (blob URL regression)',async()=>{
+ clearMedia();patchState({activeStudio:'slides',studioChoice:'manual',studioByTab:{}});
+ // The slides session exposes the deck blob URL as `source`; even such a source must end with the stored item active.
+ const r=await openSlidesTableInSheets({source:'blob:http://localhost/3d841ea1-2025-4aba-8859-12d367bc9abf',slideIndex:0,slideId:1,shapeId:2,cells:[['a']]});
+ assert.ok(r.ok);
+ const m=getMedia();const stored=m.items.find(i=>i.kind==='xlsx');
+ assert.ok(stored);assert.equal(m.active,stored.name,'active media is the stored item, never the raw requested name');
+ assert.equal(handoffOrigin(stored.name)?.id,'1:2');
+ assert.equal(getState().studioByTab[`media:${stored.name}`],'sheets');
+ assert.equal(getState().activeStudio,'sheets');
+ clearHandoffOrigin(stored.name);clearMedia();patchState({activeStudio:'code',studioChoice:'automatic',studioByTab:{}});
+});

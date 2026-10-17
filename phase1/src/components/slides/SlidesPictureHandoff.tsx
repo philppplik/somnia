@@ -44,6 +44,6 @@ export function SlidesPictureHandoffHost(){
  const slideId=s.slideIds[s.index];
  const shape=valid&&valid.more.length===0&&valid.shape.kind==='picture'?valid.shape:null;
  if(!shape||slideId===undefined||!s.source)return null;
- return <SlidesPictureHandoff source={s.source} slideIndex={s.index} slideId={slideId} shapeId={shape.id} working={s.working} busy={s.busy}
+ return <SlidesPictureHandoff source={s.name} slideIndex={s.index} slideId={slideId} shapeId={shape.id} working={s.working} busy={s.busy}
   replaceImage={data=>commandDispatcher.tryRunCommand('slides.replaceImage',{source:s.source,slideId,shapeId:shape.id,data},{origin:'ui'}).then(r=>r.ok?{ok:true}:{ok:false,message:r.error.message})}/>;
 }

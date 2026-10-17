@@ -47,7 +47,7 @@ export function SlidesTableEditor(){
   /** Pointer presses act on mousedown (after committing the cell) because the re-render of a commit can swallow the click; keyboard activation (detail 0) uses click. */
   const act=(edit:Record<string,unknown>)=>({onMouseDown:(e:React.MouseEvent)=>{e.preventDefault();commit(row,col);void run(edit);},onClick:(e:React.MouseEvent)=>{if(e.detail===0)void run(edit);}});
   return <div className="flex flex-col gap-2 px-4 py-2" data-slot="slides-table-editor">
-    <SlidesTableHandoff source={s.source} slideIndex={s.index} slideId={slideId} shapeId={view.shape.id} cells={inf.cells} ready={ready} isBusy={()=>working.current||s.busy} commit={()=>commit(row,col)}
+    <SlidesTableHandoff source={s.name} slideIndex={s.index} slideId={slideId} shapeId={view.shape.id} cells={inf.cells} ready={ready} isBusy={()=>working.current||s.busy} commit={()=>commit(row,col)}
       editCell={(r,c,text)=>commandDispatcher.tryRunCommand('slides.editTable',{source:s.source,slideId,shapeId:view.shape.id,edit:{kind:'cell',row:r,col:c,text}},{origin:'ui'}).then(x=>x.ok?{ok:true}:{ok:false,message:x.error.message})} onError={setError}/>
     <div className="flex flex-wrap items-center gap-2">
       <Button size="compact" variant="outline" disabled={!ready||inf.rows>=MAX_TABLE_ROWS||inf.merged.length>0} {...act({kind:'insertRow',at:row+1})}>{t('slides.table.insertRow')}</Button>
