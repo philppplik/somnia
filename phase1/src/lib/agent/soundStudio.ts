@@ -89,11 +89,18 @@ export function createSoundStudioRegistry(host:SoundToolHost):AgentToolRegistry{
  const dispatcher=new CommandDispatcher();
  const registry=new AgentToolRegistry();
  const tools=[{name:'sound_inspect',description:inspectDescription},{name:'sound_propose_settings',description:proposeDescription}];
+ // Advertised parameters stay simple enough for the conservative local tool lint
+ // (no anyOf, shallow nesting) so local models keep the propose tool. Execution
+ // still validates the full settings schema through the command dispatcher.
+ const advertised:Record<string,CommandSchema>={
+  sound_inspect:object({}),
+  sound_propose_settings:object({settings:{type:'object',description:'Partial settings, same shape as sound_inspect settings.'}},['settings']),
+ };
  createSoundCommandSpecs(host).forEach((command,index)=>{
   dispatcher.register(command);
   registry.register({
    level:command.level as 'read'|'propose',
-   definition:{...tools[index],parameters:command.params!},
+   definition:{...tools[index],parameters:advertised[tools[index].name]},
    run:async(args,_context,signal)=>{
     // Keep the existing unknown-top-level-key error while dispatcher validation also
     // protects direct command clients and validates all nested settings.

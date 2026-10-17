@@ -7,6 +7,7 @@ import {addMediaFile,clearMedia,getMedia} from '../media';
 import {createSoundStudioRegistry,parseSound,serializeSound,soundAdapter,type SoundToolHost} from './soundStudio';
 import {applySound,soundFiles,undoSound} from './soundWorkspace';
 import {studioFor,DocumentRegistry} from './documentCore';
+import {selectLocalTools} from './localToolLint';
 const plugins:SoundPlugin[]=[{id:'plate_reverb',name:'Plate Reverb',instrument:false,offline:true,params:[{id:'mix',name:'Mix',min:0,max:100,default:30,unit:'Percent',taper:'Linear',choices:[]}]}];
 const ac=()=>new AbortController().signal;
 const ctx={files:()=>({}),propose:async()=>{}};
@@ -39,6 +40,15 @@ test('registry: inspect returns metadata only; propose stages a validated full s
  await assert.rejects(r.run('sound_propose_settings',{settings:{pitch:1},extra:1},ctx,ac()),/Unexpected/);
  await assert.rejects(r.run('sound_inspect',{},ctx,AbortSignal.abort()));
  assert.equal(staged.length,1);
+});
+test('registry: advertised schemas stay offerable to local models while execution validates strictly',async()=>{
+ const docs=new DocumentRegistry([soundAdapter]);docs.sync({'a.mp3':serializeSound(DEFAULT_SETTINGS)},1);
+ const host:SoundToolHost={snapshot:()=>docs.snapshot('a.mp3'),info:()=>({name:'a.mp3',duration_s:3.5,sample_rate:44100,channels:2,rendered:null}),plugins:()=>plugins,propose:()=>{}};
+ const r=createSoundStudioRegistry(host);
+ assert.deepEqual(selectLocalTools(r.definitions()).map(d=>d.name),['sound_inspect','sound_propose_settings']);
+ await assert.rejects(r.run('sound_propose_settings',{settings:{pitch:99}},ctx,ac()),/pitch/);
+ await assert.rejects(r.run('sound_propose_settings',{settings:{region:{mode:'cut'}}},ctx,ac()));
+ await assert.rejects(r.run('sound_propose_settings',{settings:{effect:{id:'nope',keepTail:true,params:{}}}},ctx,ac()),/Unknown effect/);
 });
 test('workspace: apply goes through the session; undo only when nothing changed since',async()=>{
  const fake={async init(){return plugins;},async process(_b:ArrayBuffer,_e:string,recipe:unknown){const wav=new ArrayBuffer(44);return{wav,peaks:new Float32Array(4),report:{format:'Wav',input:{frames:100,sample_rate:44100,channels:2,duration_s:3.5,peak_db:-3,rms_db:-12},output:{frames:100,sample_rate:44100,channels:2,duration_s:3.5,peak_db:-3,rms_db:-12},trimmed_range:null,steps:[JSON.stringify(recipe)],wav_bytes:44},ms:1};},dispose(){}};
