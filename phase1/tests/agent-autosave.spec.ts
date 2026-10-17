@@ -12,7 +12,7 @@ test('applied agent content stays out of native stage until explicit Save',async
    return null;
   }};w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
  });
- let calls=0;await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
+ let calls=0;await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'},capabilities:['completion','tools']}}));
  await page.route('http://127.0.0.1:11434/api/chat',r=>r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({message:++calls===1?{content:'Proposal',tool_calls:[{function:{name:'code_propose_html',arguments:{from:0,to:58,text:'<!doctype html><html><body><h1>AI reviewed</h1></body></html>'}}}]}:{content:'Review it.'},done:true})+'\n'}));
  page.on('dialog',d=>d.accept());await page.goto('/');await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();await page.keyboard.press('Control+o');await expect(page.getByText('Native hold fixture',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Open Somnia Agent'}).click();const panel=page.getByRole('complementary',{name:'Somnia Agent'});await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const S=page.getByRole('dialog');await S.getByLabel('Model',{exact:true}).fill('fixture');await S.getByRole('button',{name:'Save AI settings',exact:true}).click();await S.getByText('Configuration saved.',{exact:true}).waitFor();await S.getByRole('button',{name:'Close settings',exact:true}).click();
