@@ -11,5 +11,6 @@ export const sheetsInspectorDef:InspectorDef={titleKey:'sheets.panel.cell',empty
  {id:'cell',title:'Cell',titleKey:'sheets.panel.cell',component:'sheets.inspector.cell',when:"services.workbook && selection.kind != 'none'",order:10,commands:['sheets.setCell']},
  {id:'format',title:'Format',titleKey:'sheets.panel.formatting',component:'sheets.inspector.format',when:'services.workbook',order:15,commands:['sheets.format']},
  {id:'layout',title:'Rows and columns',titleKey:'sheets.panel.layout',component:'sheets.inspector.layout',when:'services.workbook',order:17,defaultCollapsed:true,commands:['sheets.resize','sheets.freeze']},
+ {id:'slicer',title:'Filter slicer',titleKey:'sheets.panel.slicer',component:'sheets.inspector.slicer',when:'services.workbook',order:18,defaultCollapsed:true,commands:['sheets.filter','sheets.analyzeRange']},
  {id:'formulas',title:'Formula builder',titleKey:'sheets.panel.formulas',component:'sheets.inspector.formulas',when:'services.workbook',order:20,defaultCollapsed:true,commands:['sheets.setCell']},
 ]};

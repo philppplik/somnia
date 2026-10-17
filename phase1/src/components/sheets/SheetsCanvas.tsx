@@ -55,6 +55,7 @@ import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps'
 import {inRect,parseTsv,pasteFromEngineCopy,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
 import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty,subscribeSheetsDirty} from '../../lib/sheets/session';
+import {noteFilterApplied,noteFilterHistory,resetSlicerFilter} from '../../lib/sheets/slicerState';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
 import {setSheetsExportState} from '../../lib/sheets/exportState';
@@ -94,7 +95,7 @@ function Workbook({item}:{item:MediaItem}){
  const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){releaseSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
  // Open: the engine gets a copy; the original bytes stay here for recovery.
  // Open: the session registry owns the engine, so it survives studio/tab switches; the view only attaches. The original bytes stay in the session for recovery.
- useEffect(()=>{let live=true;const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;const offDirty=subscribeSheetsDirty(()=>setDirtyState(sheetsIsDirty(item.name)));const offRead=sess.engine.subscribeSelectionRead(()=>{setEngineReadEpoch(x=>x+1);if(!sess.engine.hasPendingMutation){setRev(x=>x+1);setDirtyState(sheetsIsDirty(item.name));}});
+ useEffect(()=>{let live=true;const prev=getSheetsSession(item.name);if(!(prev&&prev.url===item.url&&!prev.engine.isDisposed))resetSlicerFilter(item.name);const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;const offDirty=subscribeSheetsDirty(()=>setDirtyState(sheetsIsDirty(item.name)));const offRead=sess.engine.subscribeSelectionRead(()=>{setEngineReadEpoch(x=>x+1);if(!sess.engine.hasPendingMutation){setRev(x=>x+1);setDirtyState(sheetsIsDirty(item.name));}});
   sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(sess.book??opened);setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
   return()=>{live=false;offRead();offDirty();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
@@ -489,7 +490,7 @@ function Workbook({item}:{item:MediaItem}){
   try{await engine.current!.fill(sheet,range.r0,range.c0,rows,cols,dir);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applyFilter=async(op:FilterOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
-  try{await engine.current!.filter(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+  try{await engine.current!.filter(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);noteFilterApplied(item.name,sheet,range,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
  const applySort=async(op:SortOp)=>{
   if(draftRef.current!==null)await commit(draftRef.current);
   const cols=range.c1-range.c0+1,rows=range.r1-range.r0+1,across=op.orientation==='columns';if(op.keys.some(x=>x.column>=(across?rows:cols)))throw Error('Sort column is outside the selection.');
@@ -504,7 +505,7 @@ function Workbook({item}:{item:MediaItem}){
  const history=async(kind:'undo'|'redo')=>{try{
   if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}
   else{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();}
-  setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+  noteFilterHistory(item.name);setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
  const cellBackground=(l:CfLayer|null,overlay:boolean):React.CSSProperties=>{const o='linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))';if(!l)return overlay?{backgroundImage:o}:{};return overlay?{backgroundImage:o+', '+l.image,backgroundSize:'auto, '+l.size,backgroundPosition:'0 0, '+l.position,backgroundRepeat:'repeat, no-repeat'}:{backgroundImage:l.image,backgroundSize:l.size,backgroundPosition:l.position,backgroundRepeat:'no-repeat'};};
  const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
  useEffect(()=>{if(!drag)return;const key=drag.key;
