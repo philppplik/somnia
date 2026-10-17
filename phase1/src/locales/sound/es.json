@@ -90,6 +90,7 @@
   "sound.review.param": "Efecto: {name}",
   "sound.review.preview": "Escuchar la propuesta",
   "sound.review.none": "Sin cambios.",
+  "sound.review.changes": "Cambios de ajustes",
   "sound.review.invalid": "Estos ajustes no son válidos.",
   "sound.shell.files": "Archivos",
   "sound.shell.clips": "Clips de audio",
