@@ -43,7 +43,7 @@ test('German search plurals and replacement confirmation retain file names',asyn
  await expect(page.getByTestId('search-summary')).toContainText('1 Treffer in 1 Datei');
  await page.getByLabel('Ersetzen durch',{exact:true}).fill('Test');
  await page.getByRole('button',{name:'Alle ersetzen',exact:true}).click();
- await expect(page.getByRole('group',{name:'Ersetzen bestätigen'})).toContainText('Treffer');
+ await expect(page.getByRole('region',{name:'Ersetzen bestätigen'})).toContainText('Treffer');
  await page.getByRole('button',{name:'Abbrechen',exact:true}).click();
  await locale(page,'en');
  await expect(page.getByTestId('search-summary')).toContainText('1 match in 1 file');
