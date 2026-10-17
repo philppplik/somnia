@@ -111,3 +111,6 @@ export function bucketDates(serials:readonly number[],granularity:TimelineGranul
 export const periodsFitValues=(buckets:readonly TimelineBucket[]):boolean=>new Set(buckets.flatMap(b=>b.values)).size<=MAX_FILTER_PICKS;
 /** The combined kind:'values' payload of the picked periods (distinct, insertion order). */
 export const pickedPeriodValues=(buckets:readonly TimelineBucket[]):string[]=>[...new Set(buckets.flatMap(b=>b.values))];
+
+/** The bucket holding a serial (usually "now"), or null when no shown period contains it. */
+export const currentPeriod=(buckets:readonly TimelineBucket[],serial:number):TimelineBucket|null=>buckets.find(b=>serial>=b.from&&serial<b.to)??null;

@@ -54,3 +54,25 @@ test('timeline section host renders the panel',()=>{
  assert.match(markup,/data-testid="sheets-timeline-column"/);
  setSheetsSelection(null);
 });
+
+test('timeline offers bind buttons for header tables intersecting the selection',()=>{
+ const tables={tables:[
+  {name:'Sales2026',range:'A1:C20',header:true,totals:false,banded:true,bandedCols:false,firstCol:false,lastCol:false,style:'TableStyleMedium2'},
+  {name:'NoHead',range:'E1:F9',header:false,totals:false,banded:false,bandedCols:false,firstCol:false,lastCol:false,style:''},
+ ],styles:[]};
+ setSheetsSelection({...selection,range:{r0:4,c0:0,r1:8,c1:1},tables});resetSlicerFilter('test.xlsx');
+ const markup=html();
+ assert.match(markup,/data-testid="sheets-timeline-tables"/);
+ assert.match(markup,/data-testid="sheets-timeline-bind-Sales2026"[^>]*>Bind Sales2026/);
+ assert.doesNotMatch(markup,/bind-NoHead/,'headerless tables are excluded: the filter model needs a header row first');
+ setSheetsSelection(selection);
+});
+
+test('timeline reports the bound table when the selection is its filter range (totals row excluded)',()=>{
+ const tables={tables:[{name:'Sales2026',range:'A1:C21',header:true,totals:true,banded:true,bandedCols:false,firstCol:false,lastCol:false,style:'TableStyleMedium2'}],styles:[]};
+ setSheetsSelection({...selection,range:{r0:0,c0:0,r1:19,c1:2},tables});resetSlicerFilter('test.xlsx');
+ const markup=html();
+ assert.match(markup,/data-testid="sheets-timeline-bound">Bound to table Sales2026./,'totals row (row 21) excluded from the filter range');
+ assert.doesNotMatch(markup,/sheets-timeline-tables/,'no bind buttons once bound');
+ setSheetsSelection(selection);
+});

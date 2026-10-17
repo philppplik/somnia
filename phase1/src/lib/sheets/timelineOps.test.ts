@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {bucketDates,isDateFmt,MAX_TIMELINE_PERIODS,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
+import {bucketDates,currentPeriod,isDateFmt,MAX_TIMELINE_PERIODS,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
 import {localSerial} from './clock';
 
 const serial=(y:number,m:number,d:number)=>25569+Date.UTC(y,m-1,d)/86_400_000;
@@ -60,4 +60,14 @@ test('period fit gate and combined payload honour the 200-pick bound',()=>{
  const wide=bucketDates(Array.from({length:201},(_,i)=>serial(2026,1,1)+i),'day',0,'en');
  assert.equal(periodsFitValues(wide.buckets),false,'201 distinct day values exceed the pick bound');
  assert.equal(periodsFitValues(wide.buckets.slice(0,50)),true,'fewer picked periods fit');
+});
+
+test('currentPeriod finds the bucket holding a serial, bounds half-open',()=>{
+ const r=bucketDates([serial(2026,1,15),serial(2026,3,1)],'month',0,'en');
+ const hit=currentPeriod(r.buckets,serial(2026,1,20));
+ assert.equal(hit?.label,'January 2026');
+ assert.equal(currentPeriod(r.buckets,serial(2026,2,1)),null,'February has no rows');
+ assert.equal(currentPeriod(r.buckets,serial(2026,3,1))?.label,'March 2026','from is inclusive');
+ assert.equal(currentPeriod(r.buckets,serial(2026,4,1)),null,'to is exclusive');
+ assert.equal(currentPeriod([],serial(2026,1,1)),null);
 });
