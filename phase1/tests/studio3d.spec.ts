@@ -1821,9 +1821,9 @@ test('3D studio opens a dropped model with its sidecars and shows an import summ
  await blank(page);
  // Dropping a batch without a model file keeps the scene and shows a readable error naming every openable format.
  await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(()=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(8)],'notes.txt'));return dt;})});
- await expect(notice(page,'Choose a .som3d')).toBeVisible();
- // A real model drop imports and reports the summary. The scene was left intact by the failed drop above.
- await blank(page);
+ // A failed open is a hard failure, so the shell renders it as an alert, not a polite status notice.
+ await expect(page.getByRole('alert')).toContainText('Choose a .som3d',{timeout:15000});
+ // A real model drop imports and reports the summary. The failed drop above left the blank scene intact (the error alert is only an overlay), so no reload is needed.
  const glb=triangleGlb();
  await page.getByTestId('studio3d-viewport').dispatchEvent('drop',{dataTransfer:await page.evaluateHandle(b=>{const dt=new DataTransfer();dt.items.add(new File([new Uint8Array(b)],'dropped.glb'));return dt;},[...glb])});
  await expect.poll(async()=>(await session(page)).name).toBe('dropped.glb');
