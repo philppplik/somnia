@@ -5,8 +5,9 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {rangeAddress} from '../../lib/sheets/panelModel';
 import {colName} from '../../lib/sheets/format';
 import {sortBlockProblem} from '../../lib/sheets/sortOps';
-import {MAX_FILTER_SCAN_ROWS,distinctValues,type DistinctValues} from '../../lib/sheets/filterOps';
-import type {FilterOp,RangeCell} from '../../lib/sheets/protocol';
+import {MAX_FILTER_SCAN_ROWS,distinctValues,groupDisplayLabels,plainRows,type DistinctValues,type FilterValueRow} from '../../lib/sheets/filterOps';
+import {isDateFmt} from '../../lib/sheets/timelineOps';
+import type {FilterOp,ViewCell} from '../../lib/sheets/protocol';
 import {getSlicerFilter,pickedFromMirror,slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
 import {sameRange,tableFilterRange,tablesHere} from '../../lib/sheets/tableBinding';
 import {Checkbox} from '../ui/checkbox';
@@ -42,7 +43,7 @@ export function describeFilter(t:(k:string,p?:Record<string,string|number>)=>str
 export function SheetsSlicerPanel({context}:PanelHostProps){
  const {t}=useT(),s=usePanelWorkbook(context),action=useAction();
  const [column,setColumn]=useState(0);
- const [loaded,setLoaded]=useState<{key:string;data:DistinctValues}|null>(null);
+ const [loaded,setLoaded]=useState<{key:string;data:DistinctValues;textByValue:ReadonlyMap<string,string>}|null>(null);
  const [off,setOff]=useState<ReadonlySet<string>>(new Set());
  const [blanksOn,setBlanksOn]=useState(true);
  const mirror=useSlicerFilter(s?.file,s?.sheet);
@@ -55,14 +56,19 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
  const hits=tablesHere(s.tables?.tables,r),bound=hits.find(h=>sameRange(tableFilterRange(h),r));
  const load=async(c:number)=>{
   if(block||rows-1>MAX_FILTER_SCAN_ROWS){action.setNotice(t('sheets.vf.big',{n:MAX_FILTER_SCAN_ROWS}));return;}
-  const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:r.c0+c,c1:r.c0+c})});
+  const cells=await action.run('sheets.analyzeRange',{range:rangeAddress({r0:r.r0+1,r1:r.r1,c0:r.c0+c,c1:r.c0+c}),styled:true});
   if(!cells)return;
-  const d=distinctValues(cells as RangeCell[],rows-1);
-  setLoaded({key:s.file+' '+s.sheet+':'+rangeAddress(r)+':'+c,data:d});
+  const styled=cells as ViewCell[];
+  const textByValue=new Map<string,string>();
+  for(const cell of styled)if(cell.value.t==='Number'&&Number.isFinite(cell.value.v)&&isDateFmt(cell.style?.fmt??''))textByValue.set(String(cell.value.v),cell.text);
+  const d=distinctValues(styled,rows-1);
+  const valueRows=groupDisplayLabels(d,textByValue)??plainRows(d);
+  setLoaded({key:s.file+' '+s.sheet+':'+rangeAddress(r)+':'+c,data:d,textByValue});
   const m=getSlicerFilter(s.file,s.sheet),init=m?pickedFromMirror(d,m,r.c0+c):null;
-  if(init){setOff(init.off);setBlanksOn(init.blanksOn);}else{setOff(new Set());setBlanksOn(true);}
+  if(init){setOff(new Set(valueRows.filter(x=>x.values.some(v=>init.off.has(v))).map(x=>x.key)));setBlanksOn(init.blanksOn);}else{setOff(new Set());setBlanksOn(true);}
  };
- const picked=data?data.values.filter(v=>!off.has(v.text)).map(v=>v.text):[];
+ const valueRows:FilterValueRow[]=data?groupDisplayLabels(data,loaded!.textByValue)??plainRows(data):[];
+ const picked=valueRows.filter(x=>!off.has(x.key)).flatMap(x=>x.values);
  const apply=()=>{if(data)void action.run('sheets.filter',{kind:'values',column:abs,values:picked,blanks:blanksOn&&data.blanks>0});};
  const clear=()=>void action.run('sheets.filter',{kind:'clear',column:abs});
  const status=mirror===null?t('sheets.slicer.unknown')
@@ -77,7 +83,7 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
    :hits.length>0&&<div className="flex flex-wrap gap-1" role="group" aria-label={t('sheets.timeline.tables')} data-testid="sheets-slicer-tables">{hits.map(h=><Button key={h.table.name} variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.navigate',{sheet:s.sheet,address:rangeAddress(tableFilterRange(h))})} data-testid={'sheets-slicer-bind-'+h.table.name}>{t('sheets.timeline.bind',{name:h.table.name})}</Button>)}</div>}
   {!allowed&&<p className="text-ink-3" data-testid="sheets-slicer-protected">{t('sheets.slicer.protected')}</p>}
   {data&&<div className="flex flex-col gap-1" data-testid="sheets-slicer-list">
-   {data.values.map(v=><Checkbox key={v.text} label={v.text+' ('+v.count+')'} checked={!off.has(v.text)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(v.text);else n.add(v.text);return n;});}}/>)}
+   {valueRows.map(v=><Checkbox key={v.key} label={v.label+' ('+v.count+')'} checked={!off.has(v.key)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(v.key);else n.add(v.key);return n;});}}/>)}
    {data.blanks>0&&<Checkbox label={t('sheets.vf.blanks')+' ('+data.blanks+')'} checked={blanksOn} disabled={action.busy} onChange={e=>setBlanksOn(e.currentTarget.checked)}/>}
    {data.truncated&&<><p className="text-ink-3">{t('sheets.vf.truncated',{n:data.values.length})}</p><p className="text-ink-3" data-testid="sheets-slicer-truncated-warn">{t('sheets.slicer.truncatedWarn')}</p></>}
    <Button variant="outline" size="compact" disabled={action.busy||!allowed||(picked.length===0&&!(blanksOn&&data.blanks>0))} onClick={apply} data-testid="sheets-slicer-apply">{t('sheets.vf.apply')}</Button>

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {distinctValues,filterValueProblem,parseFilterCommand} from './filterOps';
+import {distinctValues,filterValueProblem,groupDisplayLabels,parseFilterCommand,plainRows} from './filterOps';
 test('filter command accepts only a closed, bounded shape',()=>{
  assert.deepEqual(parseFilterCommand({kind:'custom',column:2,op:'contains',value:'ab'}),{kind:'custom',column:2,op:'contains',value:'ab'});
  assert.deepEqual(parseFilterCommand({kind:'clear',column:0}),{kind:'clear',column:0});
@@ -20,4 +20,24 @@ test('value, rank and average filters are validated; distinct values are bounded
  assert.deepEqual(distinctValues(cells,6),{values:[{text:'x',count:2},{text:'2',count:1},{text:'TRUE',count:1}],blanks:1,truncated:false});
  const many=Array.from({length:250},(_,i)=>({address:'A'+(i+2),value:{t:'Number',v:i},formula:null})) as any;
  const d=distinctValues(many,250);assert.equal(d.values.length,200);assert.equal(d.truncated,true);
+});
+
+test('groupDisplayLabels merges identities sharing a display text and sums counts',()=>{
+ const data={values:[{text:'45700.5',count:2},{text:'45700.8',count:3},{text:'45710',count:1}],blanks:0,truncated:false};
+ const textByValue=new Map([['45700.5','15.01.2025'],['45700.8','15.01.2025'],['45710','25.01.2025']]);
+ const rows=groupDisplayLabels(data,textByValue);
+ assert.ok(rows);assert.equal(rows.length,2);
+ assert.deepEqual(rows[0],{key:'15.01.2025',label:'15.01.2025',count:5,values:['45700.5','45700.8']},'times of one day merge, counts sum, commonest first');
+ assert.deepEqual(rows[1].values,['45710']);
+});
+
+test('groupDisplayLabels refuses a mixed column instead of guessing labels',()=>{
+ const data={values:[{text:'45700',count:2},{text:'hello',count:1}],blanks:0,truncated:false};
+ assert.equal(groupDisplayLabels(data,new Map([['45700','15.01.2025']])),null,'a text value has no display label');
+ assert.equal(groupDisplayLabels(data,new Map()),null);
+});
+
+test('plainRows pass identity through as label and single-value payload',()=>{
+ const data={values:[{text:'abc',count:4},{text:'7',count:2}],blanks:1,truncated:false};
+ assert.deepEqual(plainRows(data),[{key:'abc',label:'abc',count:4,values:['abc']},{key:'7',label:'7',count:2,values:['7']}]);
 });

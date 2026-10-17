@@ -44,3 +44,25 @@ export function parseFilterCommand(input:unknown):FilterOp{
   case 'clearAll':case 'off':only('kind');return {kind:o.kind};
   default:throw Error('Unsupported filter operation.');}
 }
+
+/** One rendered row of a value list: label to show, row count, and the filter-identity values it stands for. */
+export interface FilterValueRow{key:string;label:string;count:number;values:string[]}
+/**
+ * Display-text labels for a date-formatted column. `textByValue` maps the plain
+ * filter identity (String(serial)) to the cell's formatted display text; rows group
+ * every identity sharing one display text (a day-granular format merges times of a
+ * day), counts add up, and applying a ticked row keeps all its identities - exactly
+ * how the list reads. Returns null when any listed identity has no display text
+ * (mixed or non-date column): the caller then renders the plain list, no guessing.
+ */
+export function groupDisplayLabels(data:DistinctValues,textByValue:ReadonlyMap<string,string>):FilterValueRow[]|null{
+ const map=new Map<string,FilterValueRow>();
+ for(const v of data.values){
+  const label=textByValue.get(v.text);if(label===undefined)return null;
+  let row=map.get(label);if(!row){row={key:label,label,count:0,values:[]};map.set(label,row);}
+  row.count+=v.count;row.values.push(v.text);
+ }
+ return [...map.values()].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
+}
+/** The plain rows of a non-date column: identity and label are the same text. */
+export const plainRows=(data:DistinctValues):FilterValueRow[]=>data.values.map(v=>({key:v.text,label:v.text,count:v.count,values:[v.text]}));
