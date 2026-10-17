@@ -315,7 +315,8 @@ export const realCore:AgentCore={
   const ledgerRun=String(runId);nativeRunLedger.begin(ledgerRun,requestProvider,requestModel);
   if((trimmed||config.localRuntime?.offlineOnly)&&requestProvider!=='ollama'){queueMicrotask(()=>deliver({type:'error',message:t('local.assistant.cloudBlocked')}));return {cancel(){stopped=true;}};}
   const runPrompts=trimmed&&!trimmed.customPrompts?[]:config.customPrompts;
-  const contextKey=JSON.stringify({executionMode:request.context.executionMode,choices:trimmed,document:request.context.activeMedia??request.context.activeFile,studio:request.context.studio?.studioId});
+  // The studio is deliberately NOT part of the carry-over key: one conversation follows the user across studios, while the per-run studio note and tool set stay ephemeral. Provider, model, document, mode and context choices still reset the history.
+  const contextKey=JSON.stringify({executionMode:request.context.executionMode,choices:trimmed,document:request.context.activeMedia??request.context.activeFile});
   const generation=getProjectGeneration();
   if(epoch!==generation){session?.cancel();session=null;sessionSerial++;rangePreviewIds.clear();rangeTransactions.revokePending();rangeTransactions.clear();slidesMultiTransactions.clear();textTransactions.clear();textProposalIds.clear();sheetsTransactions.clear();sheetsProposalIds.clear();sheetsProposalPaths.clear();sheetsProposalEngines.clear();proposals.clear();clearSessionGrants();appliedAgentProvenance.clear();documents.clear();transactions.clear();nativeIds.clear();mcpProposalMap.clear();syncMcpProposals();epoch=generation;}
   photoPreviews.clear();policy.revoke();syncDocuments();activeController=controller;
@@ -326,7 +327,7 @@ export const realCore:AgentCore={
    controller.signal.throwIfAborted();if(runId!==runGeneration)throw Error('Run was replaced.');
    if(!request.context.activeMedia&&!request.context.activeFile){
     // Empty workspaces can ask for guidance, but have no document tools or context.
-    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+requestProvider+':'+requestModel+':'+(request.context.studio?.studioId??'general');const scopedKey=scopeKey+contextKey;const previous=(!trimmed||trimmed.history)&&sessionProvider===scopedKey?session?.snapshot():undefined;sessionProvider=scopedKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
+    const scopeKey=canRoute?'general-route:'+JSON.stringify(route):'no-document:'+requestProvider+':'+requestModel;const scopedKey=scopeKey+contextKey;const previous=(!trimmed||trimmed.history)&&sessionProvider===scopedKey?session?.snapshot():undefined;sessionProvider=scopedKey;const sessionEpoch=epoch,sessionToken=++sessionSerial;
     session=new AgentSession({provider:request.context.studio?withAgentStudioContext(withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),{...request.context.studio,documentRef:null,selectionSummary:'No selection',capabilities:[]}):withCustomPrompts(canRoute?routedProvider(route!,(id,model)=>createProvider(id,model),identity=>deliver({type:'provenance',...identity})):createProvider(requestProvider,requestModel),runPrompts),model:requestModel,onEvent:event=>{
      if(sessionEpoch!==epoch||sessionToken!==sessionSerial||controller.signal.aborted)return;
      if(event.type==='text')deliver({type:'text-delta',text:event.text});

@@ -50,3 +50,23 @@ test('Sound adapter staging reaches the shared session review store, never appli
  const tools=new AgentProjectTools({projectId:'p',files:()=>({'clip.mp3':before}),allowed:p=>p==='clip.mp3'},undefined,undefined,{registry,nativeOnly:true,nativePath:p=>p==='clip.mp3'});let rounds=0;const session=new AgentSession({tools,model:'fixture',provider:{id:'fixture',locality:'local',async *stream(){if(++rounds===1){yield {type:'tool-call',index:0,id:'c',name:'sound_propose_settings',arguments:'{"settings":{"pitch":2}}'};yield {type:'finish',reason:'tool_calls'};}else {yield {type:'text',text:'Review the settings.'};yield {type:'finish',reason:'stop'};}}}});
  await session.prompt('Suggest a pitch change');assert.equal(tools.proposals().length,1);assert.equal(JSON.parse(tools.proposals()[0].after).pitch,2);assert.equal(r.snapshot('clip.mp3').text,before);assert.equal(session.status,'review');
 });
+test('bridge keeps one conversation across a Code-to-Photos switch without a document',async()=>{
+ const {configureAgent,realCore}=await import('./panelBridge');
+ const bodies:any[]=[];const realFetch=globalThis.fetch;
+ globalThis.fetch=(async(input:any,init:any)=>{const url=String(input);
+  if(url.includes('/api/show'))return new Response(JSON.stringify({model_info:{architecture:'fixture'},capabilities:['completion','tools']}));
+  bodies.push(JSON.parse(String(init?.body)));
+  return new Response(JSON.stringify({message:{content:'Conversation retained.'},done:true})+'\n',{headers:{'content-type':'application/x-ndjson'}});}) as typeof fetch;
+ const ctx=(studioId:string,label:string):import('./studioContextAdapter').AgentStudioContext=>({studioId,label,documentRef:null,selectionSummary:'No selection',mode:'design',capabilities:[],contextProviders:[]});
+ const run=(studio:import('./studioContextAdapter').AgentStudioContext,prompt:string)=>new Promise<void>((resolve,reject)=>{realCore.run({prompt,context:{studio,selectedElementId:null,activeFile:''}},(e:any)=>{if(e.type==='done')resolve();else if(e.type==='error')reject(Error(e.message));});});
+ try{
+  realCore.clear?.();configureAgent({provider:'ollama',model:'fixture',apiKey:'',allowActiveFile:false} as any);
+  await run(ctx('code','Code'),'Remember this conversation');
+  await new Promise(r=>setTimeout(r,0));// let the bridge settle the finished turn, as a real pause between sends would
+  await run(ctx('photos','Photos'),'Continue in Photos');
+  const chats=bodies.filter(b=>Array.isArray(b?.messages));
+  assert.ok(chats.length>=2,'two chat requests');
+  assert.ok(chats[1].messages.some((m:any)=>m.content==='Remember this conversation'),'history follows the studio switch');
+  assert.ok(chats[1].messages.some((m:any)=>typeof m.content==='string'&&m.content.includes('Now in Photos')),'studio note stays ephemeral per run');
+ }finally{globalThis.fetch=realFetch;realCore.clear?.();}
+});
