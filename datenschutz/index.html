@@ -22,7 +22,7 @@
 <meta property="og:image" content="https://somnia.philipp-paulik.de/assets/og/launch-card.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="675">
-<meta property="og:image:alt" content="Somnia 12, free beta. One app for the whole creative job.">
+<meta property="og:image:alt" content="Somnia, free and open source beta. One app for the whole creative job.">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Datenschutzerklärung - Somnia">
 <meta name="twitter:description" content="Was Somnia mit deinen Daten macht.">
@@ -50,45 +50,60 @@
 <a class="btn btn-sm btn-star" href="https://github.com/philppplik/somnia" rel="noopener">Star on GitHub</a>
 </div>
 </header>
-<main id="main"><div class="wrap prose-page"><div class="prose"><p class="crumbs"><a href="../">Somnia</a> / Datenschutzerklärung</p><h1>Datenschutzerklärung.</h1><p class="lead">Was Somnia mit deinen Daten macht, in klaren Worten. Kurz: Sie bleiben auf deinem Rechner.</p>
-<p class="note"><strong>Kurz gesagt.</strong> Somnia arbeitet mit Dateien auf deinem eigenen Rechner. Es gibt kein Konto, keine Analyse und kein Tracking, und der Entwickler erhält weder deine Dateien noch Daten darüber, wie du die App nutzt. Die einzige Netzwerkanfrage der App ist eine optionale Prüfung auf neue Versionen bei GitHub.</p>
-<p>Stand: 5. Oktober 2026.</p>
+<main id="main"><div class="wrap prose-page"><div class="prose"><p class="crumbs"><a href="../">Somnia</a> / Datenschutzerklärung</p><h1>Datenschutzerklärung.</h1><p class="lead">Was Somnia mit deinen Daten macht, in einfachen Worten. Kurz: Sie bleiben auf deinem Computer.</p>
+<p><strong>Kurzfassung.</strong> Somnia arbeitet mit Dateien auf deinem eigenen Computer. Es gibt kein Konto, keine Analyse und kein Tracking, und der Entwickler erhält weder deine Dateien noch Daten darüber, wie du die App nutzt. Die App stellt nur Netzwerkanfragen, die du selbst veranlasst: die Update-Prüfung, einen KI-Anbieter, den du einschaltest, und Kollaborations-Hosts, die du einrichtest.</p>
+<p>Stand: 17. Oktober 2026. Somnia ist in der Beta. Diese Seite beschreibt die App so, wie sie heute gebaut ist, und wird angepasst, wenn sich die App ändert.</p>
 
 <h2>Verantwortlicher</h2>
 <p>Somnia wird von Philipp Paulik entwickelt (der "Entwickler"). Kontakt für Datenschutzfragen: <a href="mailto:philipp.l.paulik@gmail.com">philipp.l.paulik@gmail.com</a>.</p>
 
-<h2>Was die Somnia-Desktop-App mit deinen Daten macht</h2>
-<h3>Deine Projektdateien bleiben auf deinem Gerät</h3>
-<p>Somnia öffnet einen Ordner oder eine Datei, die du auswählst, und speichert Änderungen an derselben Stelle auf deiner Festplatte. HTML, CSS, JavaScript und Bilder werden nirgendwohin hochgeladen. Der Entwickler betreibt keinen Server, der sie empfangen würde.</p>
-<h3>Lokal von der App gespeicherte Daten</h3>
+<h2>Deine Dateien bleiben auf deinem Gerät</h2>
+<p>Somnia öffnet einen Ordner oder eine Datei, die du auswählst, und speichert Änderungen an derselben Stelle auf deiner Festplatte. Deine Dateien werden nicht an den Entwickler hochgeladen. Der Entwickler betreibt keinen Server, der sie empfängt.</p>
+
+<h2>Lokal gespeicherte Daten</h2>
+<p><strong>Wiederherstellungs-Schnappschüsse.</strong> Beim Bearbeiten hält die App ungespeicherte Änderungen in einem lokalen Wiederherstellungsordner im App-Datenordner deines Benutzerprofils, damit Arbeit nach einem Absturz wiederhergestellt werden kann. Nach dem Speichern wird der Schnappschuss entfernt.</p>
+<p><strong>Einstellungen und gespeicherte Elemente.</strong> Layout, Design, Tastenkürzel, deine Komponentenbibliothek und deine Erweiterungsauswahl liegen im lokalen Speicher der App auf deinem Gerät. Wenn du das KI-Panel nutzt, werden auch der gewählte Anbieter, der Modellname, deine eigenen Prompts und der Nachweis deiner Cloud-Einwilligung (Version und Zeitpunkt) auf deinem Gerät gespeichert.</p>
+<p><strong>API-Schlüssel.</strong> Wenn du einen API-Schlüssel für einen KI-Anbieter hinzufügst, speichert ihn die Desktop-App im Anmeldedatenspeicher deines Betriebssystems, nicht in einer Klartext-Einstellungsdatei.</p>
+<p>Nichts davon wird an den Entwickler gesendet. Zum Entfernen lösche deine Projektordner und deinstalliere die App. Die Deinstallation entfernt die Programmdateien. Den lokalen App-Datenordner kannst du von Hand löschen, wenn du auch Schnappschüsse und Einstellungen entfernen möchtest.</p>
+
+<h2>Keine Konten, keine Analyse, kein Tracking</h2>
+<p>Somnia hat keine Anmeldung, keine Telemetrie, keine Absturzberichte, keine Werbung und keine Analyse durch Dritte. Der Entwickler erhebt über die App keine personenbezogenen Daten über dich.</p>
+
+<h2>Update-Prüfung</h2>
+<p>Beim Start kann die App bei GitHub nachfragen, ob eine neuere Version existiert, indem sie die öffentliche Release-Liste von github.com/philppplik/somnia über api.github.com abruft. Die Anfrage enthält kein Konto, keine Projektdaten und keine Kennung der App. Wie bei jeder Webanfrage erhält GitHub deine IP-Adresse und übliche technische Anfragedaten und verarbeitet sie nach der <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub-Datenschutzerklärung</a>. Du kannst diese Prüfung in den Einstellungen ausschalten. Wenn du ein Update installierst, lädt die App es auf dieselbe Weise von GitHub herunter.</p>
+<p>Wenn du Somnia aus dem Microsoft Store installierst, übernimmt der Microsoft Store die App-Updates und seine eigene Datenerhebung nach der <a href="https://privacy.microsoft.com/de-de/privacystatement" rel="noopener">Microsoft-Datenschutzerklärung</a>. Der Entwickler erhält diese Daten nicht.</p>
+
+<h2>Somnia Agent und KI-Dienste (optional, Beta)</h2>
+<p>Das KI-Panel ist optional und noch in der Beta. Es nutzt künstliche Intelligenz, um Eingaben zu beantworten und Änderungen vorzuschlagen. KI kann Fehler machen. Prüfe erzeugte Inhalte und kontrolliere Änderungen, bevor du sie übernimmst oder veröffentlichst. KI-Antworten und vorgeschlagene Änderungen sind in der App gekennzeichnet.</p>
+<p>Du bringst deinen eigenen Anbieter mit. Das Panel kann sich mit OpenRouter, OpenAI, Claude (Anthropic) und Ollama verbinden. An keinen von ihnen wird etwas gesendet, bevor du einen einrichtest.</p>
+<p><strong>Cloud-Anbieter.</strong> Vor der ersten Cloud-Anfrage bittet Somnia dich um ausdrückliche Erlaubnis, deine Eingabe, den relevanten Gesprächskontext und ausgewählte Projektinhalte an den von dir gewählten Anbieter zu senden. Das gilt für OpenRouter, OpenAI und Claude sowie für jeden Ollama-Server, der nicht auf deinem eigenen Rechner läuft. OpenRouter kann deine Inhalte an eigene Modellanbieter weiterleiten. Die Verarbeitung kann außerhalb der EU stattfinden. Speicherdauer, Training, Löschung und Übermittlung unterscheiden sich je nach Dienst, Kontotyp und Einstellungen und liegen beim Anbieter, nicht bei Somnia. Ein ChatGPT- oder Claude-Abonnement bedeutet nicht, dass die Verarbeitung lokal bleibt. Lies die Datenschutzhinweise deines Anbieters:</p>
 <ul>
-<li><strong>Wiederherstellungs-Snapshots.</strong> Beim Bearbeiten legt die App ungespeicherte Änderungen in einem lokalen Wiederherstellungsordner (<code>recovery-v1</code>) im App-Datenordner deines Windows-Benutzerprofils ab, damit Arbeit nach einem Absturz wiederhergestellt werden kann. Ein Snapshot wird nach dem Speichern der Datei entfernt.</li>
-<li><strong>Einstellungen und gespeicherte Elemente.</strong> Layout, Theme, Tastenkürzel, deine Komponenten-Bibliothek und deine Erweiterungsauswahl liegen im lokalen Speicher der App auf deinem Gerät.</li>
+<li><a href="https://openai.com/policies/eu-privacy-policy/" rel="noopener">OpenAI</a></li>
+<li><a href="https://privacy.claude.com/en/" rel="noopener">Anthropic Privacy Center</a></li>
+<li><a href="https://openrouter.ai/privacy" rel="noopener">OpenRouter</a> und dessen <a href="https://openrouter.ai/docs/guides/privacy/data-collection" rel="noopener">Hinweise zur Datenerhebung</a></li>
 </ul>
-<p>Nichts davon wird an den Entwickler oder an andere gesendet. Zum Entfernen lösche deine Projektordner und deinstalliere die App. Die Deinstallation entfernt die Programmdateien; den lokalen App-Datenordner kannst du von Hand löschen, wenn du auch Wiederherstellungs-Snapshots und Einstellungen entfernen möchtest.</p>
+<p>Prüfe den Kontext vor dem Senden. Füge keine Passwörter, API-Schlüssel oder personenbezogenen Daten ein, die du nicht weitergeben darfst. Deine Einwilligung erlaubt dir nicht, Daten anderer Personen offenzulegen.</p>
+<p><strong>Einwilligung widerrufen.</strong> Du kannst die Cloud-Einwilligung in den Einstellungen unter KI-Datenschutz widerrufen. Der Widerruf blockiert neue Cloud-Anfragen und bricht laufende in Somnia ab. Er löscht keine Inhalte, die ein Anbieter bereits erhalten hat, und garantiert nicht, dass der Anbieter die Verarbeitung beendet. Wende dich dafür an den Anbieter. Du kannst den Editor ohne Cloud-KI weiter nutzen. Das Löschen eines gespeicherten Schlüssels in der App entfernt nur die Kopie von Somnia. Der Schlüssel wird dadurch beim Anbieter nicht widerrufen.</p>
+<p><strong>Lokale Verarbeitung.</strong> Du kannst Ollama auf deinem eigenen Gerät mit einem lokalen Modell nutzen. Somnia behandelt einen lokalen Ollama-Server nur dann als lokal, wenn er auf deinem Rechner läuft und lokale Modellgewichte meldet. Ein lokaler Server kann eigene Protokolleinstellungen haben.</p>
 
-<h3>Keine Konten, keine Analyse, kein Tracking</h3>
-<p>Somnia hat keine Anmeldung, keine Telemetrie, keine Absturzberichte, keine Werbung und keine Analyse durch Dritte. Die App erhebt keine personenbezogenen Daten über dich.</p>
+<h2>Zusammenarbeit</h2>
+<p>Die Echtzeit-Zusammenarbeit ist optional und beginnt nur, wenn du eine Sitzung startest oder ihr beitrittst. Sitzungen laufen über einen Host deiner Wahl: einen Host auf deinem eigenen Computer oder im lokalen Netzwerk oder ein Relay, das du selbst betreibst. Der Entwickler betreibt für dich keinen Kollaborationsserver. Die Inhalte werden von den Apps Ende-zu-Ende verschlüsselt, und das Relay leitet verschlüsselte Daten weiter, ohne sie zu speichern. Der gewählte Host und die Personen, die du einlädst, sehen, was du in der Sitzung teilst. Deine IP-Adresse ist für den Host und die Teilnehmer sichtbar, wie bei jeder Netzwerkverbindung.</p>
 
-<h3>Die einzige Netzwerkanfrage: Update-Prüfung</h3>
-<p>Beim Start kann die App bei GitHub nachfragen, ob eine neuere Version existiert. Dafür ruft sie die öffentliche Release-Liste von <code>github.com/philppplik/somnia</code> über <code>api.github.com</code> ab. Die Anfrage enthält kein Konto, keine Projektdaten und keine Kennung aus der App. Wie bei jeder Webanfrage erhält GitHub deine IP-Adresse und übliche technische Anfragedaten und verarbeitet sie nach der <a href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub-Datenschutzerklärung</a>. Du kannst diese Prüfung in den Einstellungen ausschalten. Wenn du ein Update installierst, lädt die App es auf dieselbe Weise von GitHub herunter.</p>
-<p>Installierst du Somnia aus dem Microsoft Store, übernimmt der Microsoft Store die App-Updates und seine eigene Datenerhebung nach der <a href="https://privacy.microsoft.com/de-de/privacystatement" rel="noopener">Microsoft-Datenschutzerklärung</a>. Der Entwickler erhält diese Daten nicht.</p>
-
-<h3>Vorschau und Erweiterungen</h3>
-<p>Die Live-Vorschau läuft in einem isolierten Frame ohne Netzwerkzugriff. Skripte deines Projekts laufen darin erst, nachdem du das für ein Projekt erlaubt hast. Erweiterungen laufen lokal und können nach dem heutigen Stand der App nicht auf das Netzwerk zugreifen.</p>
+<h2>Vorschau und Erweiterungen</h2>
+<p>Die Live-Vorschau läuft in einem isolierten Frame ohne Netzwerkzugriff. Skripte aus deinem Projekt laufen darin nur, wenn du das für ein Projekt erlaubst. Erweiterungen laufen lokal in einem eingeschränkten Worker mit einem deklarierten Satz an Berechtigungen, und der Netzwerkzugriff wird ihnen nach bestem Bemühen entzogen. Das ist eine Schutzmaßnahme, keine Garantie.</p>
 
 <h2>Diese Website</h2>
-<p>Diese Seite (somnia.philipp-paulik.de) ist eine statische Seite auf GitHub Pages. Sie nutzt keine Cookies, keine Analyse und keine Skripte von Dritten. GitHub als Hoster kann technische Daten wie deine IP-Adresse in Server-Logs verarbeiten. Der Browser-Prototyp auf der Startseite läuft komplett in deinem Browser; Dateien, die du darin öffnest, werden nicht hochgeladen.</p>
+<p>Diese Seite (somnia.philipp-paulik.de) ist eine statische Seite auf GitHub Pages. Sie verwendet keine Cookies, keine Analyse und keine Skripte von Dritten. Der Download-Bereich ruft in deinem Browser die öffentliche Release-Liste von api.github.com ab, dabei erhält GitHub deine IP-Adresse wie oben beschrieben. GitHub kann als Hoster außerdem technische Daten wie deine IP-Adresse in Server-Logs verarbeiten.</p>
 
 <h2>Deine Rechte</h2>
-<p>Da der Entwickler über die App keine personenbezogenen Daten erhebt, gibt es auf seiner Seite normalerweise nichts zu beauskunften, zu berichtigen oder zu löschen. Wenn du in der EU bist und glaubst, dass der Entwickler Daten über dich hat, schreib an die Adresse oben. Du hast außerdem das Recht, dich bei deiner Datenschutz-Aufsichtsbehörde zu beschweren.</p>
+<p>Da der Entwickler über die App keine personenbezogenen Daten erhebt, gibt es bei ihm normalerweise nichts zur Auskunft, Berichtigung oder Löschung. Wenn du in der EU oder im Vereinigten Königreich bist und glaubst, dass der Entwickler Daten über dich hält, schreib an die Adresse oben, du erhältst eine Antwort. Du hast außerdem das Recht, dich bei deiner zuständigen Datenschutzaufsichtsbehörde zu beschweren. Für Daten, die ein KI-Anbieter, GitHub oder Microsoft verarbeitet, wende dich an das jeweilige Unternehmen.</p>
 
 <h2>Kinder</h2>
-<p>Somnia ist ein allgemeines Werkzeug für Webdesign und richtet sich nicht an Kinder. Es erhebt keine Daten von irgendjemandem.</p>
+<p>Somnia ist ein allgemeines kreatives Werkzeug und richtet sich nicht an Kinder. Der Entwickler erhebt darüber keine Daten von irgendjemandem.</p>
 
 <h2>Änderungen</h2>
-<p>Wenn die App Daten künftig anders behandelt, zum Beispiel durch eine optionale Online-Funktion, wird diese Seite vor dem Release aktualisiert und die Änderung hier aufgeführt. Die aktuelle Fassung findest du immer unter <a href="https://somnia.philipp-paulik.de/datenschutz/">somnia.philipp-paulik.de/datenschutz/</a>.</p>
-<p><a href="../privacy/">English version</a></p>
+<p>Wenn die App Daten künftig anders behandelt, wird diese Seite vor dem Release angepasst und die Änderung hier vermerkt. Die aktuelle Fassung findest du immer unter somnia.philipp-paulik.de/datenschutz/. Eine englische Fassung gibt es unter <a href="../privacy/">/privacy/</a>.</p>
+
 </div></div></main><footer class="site-footer">
 <div class="wrap">
 <div class="foot">
@@ -112,6 +127,7 @@
 <li><a href="https://github.com/philppplik/somnia/blob/main/LICENSE" rel="noopener">MIT license</a></li>
 <li><a href="../privacy/">Privacy policy</a></li>
 <li><a href="../datenschutz/">Datenschutzerkl&auml;rung</a></li>
+<li><a href="../impressum/">Impressum</a></li>
 <li><a href="https://github.com/philppplik/somnia/blob/main/SECURITY.md" rel="noopener">Security policy</a></li>
 </ul>
 </div>
