@@ -4201,5 +4201,20 @@
   "settings.transfer.err.rollbackFailed": "Applying failed and the earlier setup could not be fully restored. Check Settings > Modified.",
   "settings.sync.paused": "Sync is paused while a setup import is open or until you resume it.",
   "settings.transfer.syncPaused": "Sync folder is paused so the imported setup is not copied unseen. Resume sync when you are happy with the result, then use Sync now.",
-  "settings.transfer.syncResume": "Resume sync"
+  "settings.transfer.syncResume": "Resume sync",
+  "shell.rail.panelsLeft": "Panneaux de la barre latérale",
+  "shell.rail.panelsRight": "Panneaux de l'inspecteur",
+  "shell.rail.toggleSidebar": "Afficher ou masquer la barre latérale",
+  "shell.rail.toggleInspector": "Afficher ou masquer l'inspecteur",
+  "shell.rail.extensionPanel": "Panneau {title} (extension)",
+  "rest.fileTabs.closeFile": "Fermer {file}",
+  "rest.fileTabs.unsavedImage": "Modifications d'image non enregistrées",
+  "ext.dialog.aria": "Extensions",
+  "panels.layers.tab.layers": "Calques",
+  "panels.layers.tab.files": "Fichiers",
+  "panels.layers.tab.search": "Recherche",
+  "panels.layers.tab.components": "Composants",
+  "panels.layers.tab.css": "CSS",
+  "panels.layers.tab.versions": "Versions",
+  "imageeditor.rasterTools": "Outils raster"
 }

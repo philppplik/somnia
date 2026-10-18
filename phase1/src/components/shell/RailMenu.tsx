@@ -8,7 +8,7 @@ export function RailMenu({x,y,label,items,onClose}:{x:number;y:number;label:stri
  useMenuFocusReturn(true,root);
  useEffect(()=>{
   root.current?.querySelector<HTMLButtonElement>('button:not(:disabled)')?.focus();
-  const key=(e:KeyboardEvent)=>{if(e.key==='Escape')onClose();};
+  const key=(e:KeyboardEvent)=>{if(e.key==='Escape'||e.key==='Tab'){onClose();if(e.key==='Escape')e.stopPropagation();}};
   const down=(e:PointerEvent)=>{if(!root.current?.contains(e.target as Node))onClose();};
   window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);
   return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};
