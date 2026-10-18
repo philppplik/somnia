@@ -60,6 +60,7 @@ fn main() {
             "local_voice_status",
             "local_voice_download",
             "local_voice_transcribe",
+            "local_voice_transcribe_file",
             "local_voice_poll",
             "local_voice_cancel",
             "local_voice_storage_status",

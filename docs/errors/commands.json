@@ -1291,6 +1291,15 @@
       "args": []
     },
     {
+      "name": "lifecycle_memory_sample",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "list_crash_reports",
       "domain": "diagnostics",
       "status": "native",
@@ -1545,6 +1554,21 @@
     },
     {
       "name": "local_voice_transcribe",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm",
+        "language"
+      ],
+      "args": [
+        "pcm",
+        "language"
+      ]
+    },
+    {
+      "name": "local_voice_transcribe_file",
       "domain": "fs",
       "status": "native",
       "wrapped": false,

@@ -315,6 +315,8 @@ async fn local_voice_download(window:WebviewWindow,app:tauri::AppHandle,acknowle
 #[tauri::command]
 async fn local_voice_transcribe(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe(data,resource,pcm,language)).await.map_err(|_|"Voice job failed")?}
 #[tauri::command]
+async fn local_voice_transcribe_file(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe_file(data,pcm,language)).await.map_err(|_|"Voice file job failed")?}
+#[tauri::command]
 async fn local_voice_poll(window:WebviewWindow,id:String)->std::result::Result<crate::local_voice::VoiceState,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::poll(&id)}
 #[tauri::command]
 async fn local_voice_cancel(window:WebviewWindow,id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::cancel(&id)}
@@ -2956,6 +2958,7 @@ pub fn run() {
             local_voice_helper_remove,
             local_voice_download,
             local_voice_transcribe,
+            local_voice_transcribe_file,
             local_voice_poll,
             local_voice_cancel,
             local_models_disk_choose,

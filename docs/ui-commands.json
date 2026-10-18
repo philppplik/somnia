@@ -12944,6 +12944,20 @@
       "hasEnabled": true
     },
     {
+      "id": "transcript.open",
+      "title": "Transcript Hub",
+      "category": "Tools",
+      "source": "core",
+      "keywords": [
+        "audio",
+        "file",
+        "local",
+        "transcription",
+        "whisper"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "vector.addNodeNear",
       "title": "Add vector node near point",
       "category": "Insert",

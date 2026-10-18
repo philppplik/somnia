@@ -15,6 +15,8 @@ Change history: [Changelog](../CHANGELOG.md). Releases: <https://github.com/phil
 
 ## Technical reference
 
+- [Transcript Hub](features/transcript-hub.md): optional local file transcription, limits, privacy and validation.
+
 
 - [AGENTS.md](../AGENTS.md): map for AI contributors: layout, commands, rules, release caveats. UI command layer reference: `phase1/src/lib/commandSpec.ts` (spec type) and `phase1/src/lib/commandDispatcher.ts` (dispatch), see the section "Two kinds of command" there.
 

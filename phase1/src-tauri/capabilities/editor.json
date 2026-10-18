@@ -74,6 +74,7 @@
     "allow-local-voice-status",
     "allow-local-voice-download",
     "allow-local-voice-transcribe",
+    "allow-local-voice-transcribe-file",
     "allow-local-voice-poll",
     "allow-local-voice-cancel",
     "allow-local-voice-storage-status",
