@@ -46,7 +46,8 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
  const [loaded,setLoaded]=useState<{key:string;data:DistinctValues;textByValue:ReadonlyMap<string,string>}|null>(null);
  const [off,setOff]=useState<ReadonlySet<string>>(new Set());
  const [blanksOn,setBlanksOn]=useState(true);
- const mirror=useSlicerFilter(s?.file,s?.sheet);
+ const absCol=s&&s.range?s.range.c0+Math.min(column,s.range.c1-s.range.c0):undefined;
+ const mirror=useSlicerFilter(s?.file,s?.sheet,absCol);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
  const allowed=slicerFilterAllowed(s.layout?.protection);
  const r=s.range;
@@ -64,7 +65,7 @@ export function SheetsSlicerPanel({context}:PanelHostProps){
   const d=distinctValues(styled,rows-1);
   const valueRows=groupDisplayLabels(d,textByValue)??plainRows(d);
   setLoaded({key:s.file+' '+s.sheet+':'+rangeAddress(r)+':'+c,data:d,textByValue});
-  const m=getSlicerFilter(s.file,s.sheet),init=m?pickedFromMirror(d,m,r.c0+c):null;
+  const m=getSlicerFilter(s.file,s.sheet,r.c0+c),init=m?pickedFromMirror(d,m,r.c0+c):null;
   if(init){setOff(new Set(valueRows.filter(x=>x.values.some(v=>init.off.has(v))).map(x=>x.key)));setBlanksOn(init.blanksOn);}else{setOff(new Set());setBlanksOn(true);}
  };
  const valueRows:FilterValueRow[]=data?groupDisplayLabels(data,loaded!.textByValue)??plainRows(data):[];

@@ -30,12 +30,13 @@ test('slicer binds a column of the selection and starts with an honest unknown s
 
 test('slicer readback shows the applied filter and demotes to last-known after history',()=>{
  setSheetsSelection(selection);resetSlicerFilter('test.xlsx');
- noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'values',column:1,values:['x','y','z'],blanks:true});
+ noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'values',column:0,values:['x','y','z'],blanks:true});
+ noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'values',column:1,values:['x'],blanks:false});
  let markup=html();
- assert.match(markup,/Active: column B - 3 values \+ \(Blanks\)/);
+ assert.match(markup,/Active: column A - 3 values \+ \(Blanks\)/,'the readback follows the picked column');
  noteFilterHistory('test.xlsx');
  markup=html();
- assert.match(markup,/Last known: column B - 3 values \+ \(Blanks\) \(undo\/redo may have changed it\)/);
+ assert.match(markup,/Last known: column A - 3 values \+ \(Blanks\) \(undo\/redo may have changed it\)/);
  resetSlicerFilter('test.xlsx');
  assert.match(html(),/Filter state unknown/,'a fresh engine open forgets the old state');
 });

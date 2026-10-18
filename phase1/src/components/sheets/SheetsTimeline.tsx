@@ -38,7 +38,8 @@ export function SheetsTimelinePanel({context}:PanelHostProps){
  const [scan,setScan]=useState<{key:string;serials:number[];blanks:number;dates:number}|null>(null);
  const [off,setOff]=useState<ReadonlySet<number>>(new Set());
  const [blanksOn,setBlanksOn]=useState(true);
- const mirror=useSlicerFilter(s?.file,s?.sheet);
+ const absCol=s&&s.range?s.range.c0+Math.min(column,s.range.c1-s.range.c0):undefined;
+ const mirror=useSlicerFilter(s?.file,s?.sheet,absCol);
  if(!s)return <Region><p>{t('sheets.panel.none')}</p></Region>;
  const allowed=slicerFilterAllowed(s.layout?.protection);
  const r=s.range;

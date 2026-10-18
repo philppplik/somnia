@@ -13,8 +13,11 @@ export interface SlicerFilterMirror{
  stale:boolean;
 }
 
+/** Per-sheet mirror state: one record per filtered column, plus the sheet-wide cleared flag. */
+interface SheetFilterMirror{cols:Map<number,SlicerFilterMirror>;clearedAll:boolean;clearedStale:boolean}
+
 /**
- * TS-side mirror of the column filter applied through the Sheets canvas. The engine
+ * TS-side mirror of the column filters applied through the Sheets canvas. The engine
  * has no filter readback op, so this mirror is the only honest readback: every panel,
  * command and input path routes through SheetsCanvas.applyFilter, which records the
  * op here after the engine accepts it. Undo/redo cannot be attributed to a specific
@@ -22,7 +25,7 @@ export interface SlicerFilterMirror{
  * instead of letting the slicer show a possibly wrong state. A missing record means
  * "unknown", never "no filter": a file can carry an AutoFilter from Excel.
  */
-const records=new Map<string,SlicerFilterMirror>();
+const records=new Map<string,SheetFilterMirror>();
 const listeners=new Set<()=>void>();
 /** Bound: at most this many (file, sheet) records; the oldest is evicted. */
 export const MAX_SLICER_RECORDS=64;
@@ -32,21 +35,26 @@ const emit=()=>{for(const l of listeners)l();};
 /** Records a filter op after the engine accepted it (one undo step in the canvas). */
 export function noteFilterApplied(file:string,sheet:number,range:SlicerFilterRange,op:FilterOp){
  const k=key(file,sheet);
- if(op.kind==='clearAll'||op.kind==='off')records.set(k,{op:null,range:null,stale:false});
+ let m=records.get(k);
+ if(!m){m={cols:new Map(),clearedAll:false,clearedStale:false};records.set(k,m);}
+ if(op.kind==='clearAll'||op.kind==='off'){m.cols.clear();m.clearedAll=true;m.clearedStale=false;}
  else if(op.kind==='clear'){
-  const cur=records.get(k);
-  // Single-column criteria: clearing a column that holds no known criterion changes nothing we know.
-  if(!(cur?.op&&'column' in cur.op&&cur.op.column===op.column))return;
-  records.set(k,{op:null,range:cur.range,stale:false});
+  // Clearing a column that holds no known criterion changes nothing we know.
+  const cur=m.cols.get(op.column);
+  if(cur)m.cols.set(op.column,{op:null,range:cur.range,stale:false});
  }
- else records.set(k,{op,range,stale:false});
+ else m.cols.set(op.column,{op,range,stale:false});
  while(records.size>MAX_SLICER_RECORDS){const oldest=records.keys().next().value;if(oldest===undefined)break;records.delete(oldest);}
  emit();
 }
 /** Undo/redo changes the filter without a filter op: every record of the file becomes last-known-only. */
 export function noteFilterHistory(file:string){
  let touched=false;
- for(const [k,v] of records)if(k.startsWith(file+' ')){records.set(k,{...v,stale:true});touched=true;}
+ for(const [k,m] of records)if(k.startsWith(file+' ')){
+  for(const [c,r] of m.cols)m.cols.set(c,{...r,stale:true});
+  if(m.clearedAll)m.clearedStale=true;
+  touched=true;
+ }
  if(touched)emit();
 }
 /** Drops all records of a file; the canvas calls this when a fresh engine opens the file. */
@@ -55,11 +63,23 @@ export function resetSlicerFilter(file:string){
  for(const k of [...records.keys()])if(k.startsWith(file+' ')){records.delete(k);touched=true;}
  if(touched)emit();
 }
-export const getSlicerFilter=(file:string,sheet:number):SlicerFilterMirror|null=>records.get(key(file,sheet))??null;
+/**
+ * Current known filter of one sheet column; null means unknown, not "no filter".
+ * The engine keeps one criterion per column (a new op replaces only its column), so a
+ * column with no record can still carry an AutoFilter from Excel or another panel.
+ * clearAll/off clear every column: a column without its own record then reads as cleared.
+ */
+export function getSlicerFilter(file:string,sheet:number,column:number):SlicerFilterMirror|null{
+ const m=records.get(key(file,sheet));
+ if(!m)return null;
+ const r=m.cols.get(column);
+ if(r)return r;
+ return m.clearedAll?{op:null,range:null,stale:m.clearedStale}:null;
+}
 export function subscribeSlicer(listener:()=>void):()=>void{listeners.add(listener);return()=>{listeners.delete(listener);};}
-/** Current known filter of one sheet; null means unknown, not "no filter". */
-export function useSlicerFilter(file:string|undefined,sheet:number|undefined):SlicerFilterMirror|null{
- const snap=()=>file!==undefined&&sheet!==undefined?getSlicerFilter(file,sheet):null;
+/** Current known filter of one sheet column; null means unknown, not "no filter". */
+export function useSlicerFilter(file:string|undefined,sheet:number|undefined,column:number|undefined):SlicerFilterMirror|null{
+ const snap=()=>file!==undefined&&sheet!==undefined&&column!==undefined?getSlicerFilter(file,sheet,column):null;
  return useSyncExternalStore(subscribeSlicer,snap,snap);
 }
 
