@@ -76,4 +76,11 @@ export class UndoStack{
  pushSnap(snap:SnapStep){this.undoS.push({inverse:{block:snap.caretBefore.block,hunks:[]},snap});this.redoS=[];this.mergeAt=-Infinity;}
  pushRedoEntry(x:UndoEntry){this.redoS.push(x);}pushUndoEntry(x:UndoEntry){this.undoS.push(x);}
  clear(){this.undoS=[];this.redoS=[];}
+ /** Serializable history. Entries that need an engine snapshot id (structural steps) cannot survive a restart: everything at or below such an entry is dropped. */
+ exportJournal():UndoJournal{
+  const keep=(a:UndoEntry[])=>{let i=a.length-1;while(i>=0&&!a[i].snap)i--;return{entries:a.slice(i+1).map(e=>e.inverse),dropped:i+1};};
+  const u=keep(this.undoS),r=keep(this.redoS);return{undo:u.entries,redo:r.entries,truncated:u.dropped>0||r.dropped>0};
+ }
+ importJournal(j:UndoJournal){this.undoS=j.undo.map(inverse=>({inverse}));this.redoS=j.redo.map(inverse=>({inverse}));this.mergeAt=-Infinity;}
 }
+export interface UndoJournal{undo:TextEdit[];redo:TextEdit[];truncated:boolean}
