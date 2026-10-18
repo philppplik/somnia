@@ -29,6 +29,7 @@ import { DEFAULT_CANVAS_PREFS, type CanvasPrefs } from "../lib/canvasPrefs";
 import { DEFAULT_WORKFLOW_PREFS } from "../lib/workflowPrefs";
 import { sanitizeUnitPref } from "../lib/units";
 import { ModifiedSettings } from "./ModifiedSettings";
+import { SetupTransferPanel } from "./SetupTransferPanel";
 import { SyncFolderPanel } from "./SyncFolderPanel";
 import { SettingsSearchResults } from "./SettingsSearchResults";
 import { unifiedSearch } from "../lib/settingsUnifiedSearch";
@@ -384,6 +385,7 @@ export function Settings() {
       <h2>{sectionTitle(section)}</h2>
       {section === "Frameworks" && <FrameworkSettings/>}
       {section === "Modified" && <ModifiedSettings state={state} onReset={resetSettings} onImport={(patch) => change(patch as Partial<AppState>)} onOpenSection={(name) => { setQuery(""); setSection(name); }} />}
+      {section === "Modified" && <SetupTransferPanel state={state} onApply={(patch) => change(patch as Partial<AppState>)} />}
       {section === "Modified" && <SyncFolderPanel state={state} onApply={(patch) => change(patch as Partial<AppState>)} />}
       {section === "Collaboration" && <CollabPreferences/>}
       {section === "AI" && <AgentSettings searchQuery={query} legacyPrivacy={["AI Privacy","AI privacy"].includes(state.settingsSection)}/>}
