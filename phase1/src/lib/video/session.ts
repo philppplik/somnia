@@ -5,7 +5,7 @@ import {DEFAULT_EXPORT_OPTIONS,DEFAULT_FORMAT,exportName,sanitizeExportOptions,t
 import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newVideoOverlay,newTitleOverlay,overlaysAt as _overlaysAt,sanitizeOverlayClips,sanitizeRect,type OverlayClip,type OverlayRect} from './overlayTrack';
 import {cuesToTitleOverlays,parseSubtitles} from './subtitles';
 import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,type ClipTransition,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCropKey,setCropKeys,clearCropKeys,setGainKey,setGainKeys,clearGainKeys,setCrossfade,setReversed,setTransition,transitionOf,isReversed,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
-import {emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
+import {VIDEO_HISTORY_LIMIT,emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
 import {clipsSignature,parseVideoProject,projectFileName,serializeVideoProject} from './projectFile';
 import {upsertKey,type Key} from './keyframes';
@@ -16,6 +16,8 @@ import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
 import {closeMediaForced,getMedia,setActiveMedia,subscribeMedia,type MediaKind} from '../media';
 import {registerWorkProvider} from '../workDocs';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {createRecipeAdapter,fingerprintOf,RecipeStash} from '../lifecycle/recipeKit';
 import type {VideoCapabilities,VideoProbe,VideoProgress,VideoReport} from './protocol';
 export type VideoStatus='loading'|'ready'|'error'|'exporting';
 export interface VideoResult{blob:Blob;url:string;report:VideoReport}
@@ -40,7 +42,8 @@ let stopMediaSync:(()=>void)|undefined;
 let factory:()=>VideoEngineLike=()=>new VideoEngine();
 let engine:VideoEngineLike|undefined,capsPromise:Promise<VideoCapabilities>|undefined;
 const emit=()=>listeners.forEach(l=>l());
-const put=(s:VideoSession)=>{sessions.set(s.name,s);emit();};
+let editRevision=0;
+const put=(s:VideoSession)=>{editRevision++;sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<VideoSession>,cause?:unknown)=>{if(p.error)reportError('video.engine',cause??p.error,{context:{studio:'video',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the mediabunny/WebCodecs worker. Drops all sessions. */
 export function setVideoEngineFactory(f:()=>VideoEngineLike){for(const n of [...sessions.keys()])closeVideo(n);engine?.dispose();engine=undefined;capsPromise=undefined;factory=f;}
@@ -70,16 +73,20 @@ export async function openVideo(item:{name:string;url:string}):Promise<void>{
 }
 async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeVideo(n);});
+ fingerprints.set(item.name,fingerprintOf(item.url));
+ const restored=lifecycleStash.take(item.name,fingerprints.get(item.name)!);
+ const restore=()=>{if(restored&&sessions.has(item.name))patch(item.name,recipePatch(restored));};
  put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],overlayClips:[],selectedOverlayClipId:null,selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,exportRange:null,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
-   if(!text.trim()){patch(item.name,{status:'ready',ext:''});return;}
+   if(!text.trim()){patch(item.name,{status:'ready',ext:''});restore();return;}
    const parsed=parseVideoProject(text);
    const clips=sanitizeClips(parsed.clips,sourceDurations(parsed.clips));
    const audioClips=sanitizeAudioClips(parsed.audioClips,{});
    const overlayClips=parsed.overlayClips;
    patch(item.name,{status:'ready',ext:'',clips,audioClips,overlayClips,format:parsed.format,exportOptions:parsed.exportOptions,savedSig:clipsSignature(clips,audioClips,overlayClips)});
+   restore();
   }catch(e){patch(item.name,{status:'error',error:message(e)},e);}
   return;
  }
@@ -95,6 +102,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
   if(!probe.video)throw new Error('no video track');
   const first=[fullClip(item.name,probe.duration)];
   patch(item.name,{status:'ready',error:'',probe,ext:sniffed.ext,capabilities:await caps.catch(()=>null),clips:first,savedSig:clipsSignature(first,[])});
+  restore();
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
 /** Field-level clip equality: a clamped no-op edit must not flood the undo stack. */
@@ -423,7 +431,7 @@ export async function exportVideoFile(name:string):Promise<'downloaded'|'cancell
 }
 export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')engine?.cancelExport();}
 export function closeVideo(name:string){
- sources.delete(name);
+ sources.delete(name);fingerprints.delete(name);
  getFilmstrip()?.unregister(name);
  const s=sessions.get(name);if(!s)return;revoke(s.result);sessions.delete(name);emit();
 }
@@ -462,3 +470,43 @@ const playheadSubs=new Set<()=>void>();
 export const setVideoPlayhead=(seconds:number)=>{if(seconds===playheadPos)return;playheadPos=seconds;playheadSubs.forEach(f=>f());};
 export const getVideoPlayhead=()=>playheadPos;
 export const useVideoPlayhead=()=>useSyncExternalStore(cb=>{playheadSubs.add(cb);return()=>{playheadSubs.delete(cb);};},getVideoPlayhead);
+
+/* Lifecycle (docs/studio-lifecycle.md): recipe-only checkpoints. Source bytes, filmstrips and export results are never captured; the timeline recipe is re-applied when the same source re-opens. */
+const fingerprints=new Map<string,string>();
+const lifecycleStash=new RecipeStash<VideoRecipe>();
+export interface VideoRecipe{clips:TimelineClip[];audioClips:AudioClip[];overlayClips:OverlayClip[];selectedClipId:string|null;selectedAudioClipId:string|null;selectedOverlayClipId:string|null;history:{past:VideoSnapshot[];future:VideoSnapshot[]};savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;exportRange:{start:number;end:number}|null}
+const edited=(s:VideoSession)=>s.status!=='loading'&&(videoIsDirty(s)||s.history.past.length>0||s.history.future.length>0||s.exportRange!==null||s.format!==DEFAULT_FORMAT||JSON.stringify(s.exportOptions)!==JSON.stringify(DEFAULT_EXPORT_OPTIONS));
+const recipeOf=(s:VideoSession):VideoRecipe=>structuredClone({clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,selectedClipId:s.selectedClipId,selectedAudioClipId:s.selectedAudioClipId,selectedOverlayClipId:s.selectedOverlayClipId,history:{past:s.history.past,future:s.history.future},savedSig:s.savedSig,format:s.format,exportOptions:s.exportOptions,exportRange:s.exportRange});
+const recipePatch=(r:VideoRecipe):Partial<VideoSession>=>{
+ const clips=sanitizeClips(r.clips,sourceDurations(r.clips));
+ const audioClips=sanitizeAudioClips(r.audioClips,audioDurationsOf(r.audioClips));
+ const overlayClips=sanitizeOverlayClips(r.overlayClips);
+ return{clips,audioClips,overlayClips,
+  selectedClipId:clips.some(c=>c.id===r.selectedClipId)?r.selectedClipId:null,
+  selectedAudioClipId:audioClips.some(c=>c.id===r.selectedAudioClipId)?r.selectedAudioClipId:null,
+  selectedOverlayClipId:overlayClips.some(c=>c.id===r.selectedOverlayClipId)?r.selectedOverlayClipId:null,
+  history:{past:r.history.past,future:r.history.future,gestureKey:null,gestureAt:0},
+  savedSig:r.savedSig,format:r.format,exportOptions:r.exportOptions,exportRange:r.exportRange};
+};
+export function sanitizeVideoRecipe(v:unknown):VideoRecipe|null{
+ const r=v as Partial<VideoRecipe>|null;
+ if(!r||typeof r!=='object'||!Array.isArray(r.clips)||!Array.isArray(r.audioClips)||!Array.isArray(r.overlayClips)||typeof r.savedSig!=='string'||typeof r.format!=='string')return null;
+ const h=r.history;if(!h||!Array.isArray(h.past)||!Array.isArray(h.future))return null;
+ const range=r.exportRange&&Number.isFinite(r.exportRange.start)&&Number.isFinite(r.exportRange.end)?{start:r.exportRange.start,end:r.exportRange.end}:null;
+ return{clips:r.clips,audioClips:r.audioClips,overlayClips:r.overlayClips,selectedClipId:r.selectedClipId??null,selectedAudioClipId:r.selectedAudioClipId??null,selectedOverlayClipId:r.selectedOverlayClipId??null,history:{past:h.past.slice(-VIDEO_HISTORY_LIMIT),future:h.future.slice(0,VIDEO_HISTORY_LIMIT)},savedSig:r.savedSig,format:r.format as VideoFormat,exportOptions:sanitizeExportOptions(r.exportOptions),exportRange:range};
+}
+export function createVideoLifecycleAdapter(){
+ return createRecipeAdapter<VideoRecipe>({
+  studioId:'video',schemaVersion:1,stash:lifecycleStash,
+  capture:()=>[...sessions.values()].filter(s=>edited(s)&&fingerprints.has(s.name)).map(s=>({name:s.name,fingerprint:fingerprints.get(s.name)!,recipe:recipeOf(s)})),
+  release:()=>{for(const n of [...sessions.keys()])closeVideo(n);engine?.dispose();engine=undefined;capsPromise=undefined;filmstrip?.dispose();filmstrip=undefined;},
+  sanitize:sanitizeVideoRecipe,
+  pinReasons:()=>{const r=new Set<string>();for(const s of sessions.values()){if(s.status==='exporting')r.add('video-export');if(s.status==='loading')r.add('video-probing');}if(opening.size)r.add('video-probing');return[...r];},
+  resourceIds:()=>['studio:video','video.engine','video.export',...[...sessions.keys()].map(n=>`video:session:${n}`)],
+  estimateBytes:()=>{let n=0;for(const b of sources.values())n+=b.byteLength;return n;},
+  revision:()=>editRevision,
+ });
+}
+/** Test seam: pending recipes of suspended documents. */
+export const pendingVideoRecipes=()=>lifecycleStash.size;
+registerLifecycleAdapter('video',createVideoLifecycleAdapter);

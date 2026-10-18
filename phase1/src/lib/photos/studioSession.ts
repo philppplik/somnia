@@ -6,6 +6,8 @@ import {defaultImageHost,editedName} from '../imageEditorHost';
 import {renderAdvancedPhotoExport} from './advancedExport';
 import type {PhotoAdvancedOptions} from './photosExportSchema';
 import {t} from '../i18n';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {createRecipeAdapter,fingerprintOf,RecipeStash} from '../lifecycle/recipeKit';
 import {isNeutralPhoto,neutralPhotoSettings,photoSignature,sanitizePhotoSettings,PHOTO_INPUT,type PhotoCrop,type PhotoSettings} from './studioSettings';
 import {applySpots,spotSignature,type HealSpot} from './healSpots';
 import {applyLocalAdjust,dabSignature,applyGradFilters,gradSignature,applyRadialFilters,radSignature} from './localAdjust';
@@ -60,7 +62,8 @@ async function healSource(bytes:ArrayBuffer,s:Pick<PhotoSettings,'spots'|'dabs'|
  return blob.arrayBuffer();
 }
 const emit=()=>listeners.forEach(l=>l());
-const put=(s:PhotoSession)=>{sessions.set(s.name,s);emit();};
+let editRevision=0;
+const put=(s:PhotoSession)=>{editRevision++;sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<PhotoSession>,cause?:unknown)=>{if(p.error)reportError('photos.engine',cause??p.error,{context:{studio:'photos',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 export const getPhotoSession=(name:string|null|undefined)=>name?sessions.get(name)??null:null;
 export const allPhotoSessions=()=>[...sessions.values()];
@@ -80,6 +83,9 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closePhoto(n);});
  const blank:PhotoSession={name:item.name,status:'loading',error:'',now:{...neutralPhotoSettings},past:[],future:[],saved:photoSignature(neutralPhotoSettings),sourceWidth:0,sourceHeight:0,frame:null,original:null,cropping:false,cropDraft:null};
+ fingerprints.set(item.name,fingerprintOf(item.url));
+ const restored=lifecycleStash.take(item.name,fingerprints.get(item.name)!);
+ if(restored)Object.assign(blank,restored);
  put(blank);
  if((PHOTO_INPUT.mimes as readonly string[]).includes(item.mime)===false){patch(item.name,{status:'error',error:t('photos.error.unsupported',{mime:item.mime})});return;}
  try{
@@ -223,5 +229,33 @@ if(typeof window!=='undefined'){
   return!s||!dirtyPhoto(s)||window.confirm(t('photos.discard',{name}));
  });
  registerMediaCloseCleanup(name=>closePhoto(name));
- window.addEventListener('beforeunload',e=>{if(allPhotoSessions().some(dirtyPhoto)){e.preventDefault();e.returnValue='';}});
+ window.addEventListener('beforeunload',e=>{if(allPhotoSessions().some(dirtyPhoto)||lifecycleStash.size>0){e.preventDefault();e.returnValue='';}});
 }
+
+/* Lifecycle (docs/studio-lifecycle.md): recipe-only checkpoints. Source bytes and frames are never captured; the recipe is re-applied when the same source re-opens. */
+const fingerprints=new Map<string,string>();
+const lifecycleStash=new RecipeStash<PhotoRecipe>();
+export interface PhotoRecipe{now:PhotoSettings;past:PhotoSettings[];future:PhotoSettings[];saved:string}
+const edited=(s:PhotoSession)=>dirtyPhoto(s)||s.past.length>0||s.future.length>0;
+const settingsOf=(v:unknown):PhotoSettings|null=>{try{return v&&typeof v==='object'?sanitizePhotoSettings(v as PhotoSettings):null;}catch{return null;}};
+export function sanitizePhotoRecipe(v:unknown):PhotoRecipe|null{
+ const r=v as Partial<PhotoRecipe>|null;if(!r||typeof r.saved!=='string')return null;
+ const now=settingsOf(r.now);if(!now)return null;
+ const list=(a:unknown)=>(Array.isArray(a)?a.map(settingsOf).filter((x):x is PhotoSettings=>x!==null).slice(0,HISTORY_LIMIT):[]);
+ return{now,past:list(r.past),future:list(r.future),saved:r.saved};
+}
+export function createPhotosLifecycleAdapter(){
+ return createRecipeAdapter<PhotoRecipe>({
+  studioId:'photos',schemaVersion:1,stash:lifecycleStash,
+  capture:()=>[...sessions.values()].filter(s=>edited(s)&&fingerprints.has(s.name)).map(s=>({name:s.name,fingerprint:fingerprints.get(s.name)!,recipe:{now:{...s.now},past:s.past.map(x=>({...x})),future:s.future.map(x=>({...x})),saved:s.saved}})),
+  release:()=>{for(const n of [...sessions.keys()])closePhoto(n);engine?.dispose();engine=undefined;loadedKey=null;},
+  sanitize:sanitizePhotoRecipe,
+  pinReasons:()=>{const r=new Set<string>();for(const s of sessions.values()){if(s.status==='loading'||s.status==='processing')r.add('photo-rendering');if(s.cropping)r.add('crop-in-progress');}if(gestures.size)r.add('edit-gesture');return[...r];},
+  resourceIds:()=>['studio:photos','photos.engine',...[...sessions.keys()].map(n=>`photos:session:${n}`)],
+  estimateBytes:()=>{let n=0;for(const b of sources.values())n+=b.byteLength;for(const s of sessions.values())n+=(s.frame?.bytes.byteLength??0)+(s.original?.bytes.byteLength??0);return n;},
+  revision:()=>editRevision,
+ });
+}
+/** Test seam: pending recipes of suspended documents. */
+export const pendingPhotoRecipes=()=>lifecycleStash.size;
+registerLifecycleAdapter('photos',createPhotosLifecycleAdapter);

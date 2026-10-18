@@ -10,9 +10,30 @@ scheduler, budgets, telemetry, settings and the Slides pilot adapter.
 
 The coordinator, budgets, checkpoint store (with IndexedDB spill), memory probe, telemetry and the Settings > Advanced > Performance section are live. Native memory sampling uses the `lifecycle_memory_sample` command (`src-tauri/src/lifecycle_commands.rs`, main window only, read-only).
 
-Adapters registered on this line: **Documents** and **Sheets**, through the session-safety recovery store (`lib/sessionSafety/lifecycleAdapter.ts`). `lib/sessionSafety/lifecycleWiring.ts` connects them: `main.tsx` starts the lifecycle manager first, then calls `connectSessionSafetyToLifecycle()`, which installs the real host with `setLifecycleHost()` and registers both adapters. The Performance section's "clear" button also clears the recovery copies of unsaved Documents and Sheets edits (after a confirmation that names the document count) and the studio checkpoints.
+Adapters registered on this line: **Documents** and **Sheets** (session-safety recovery store, `lib/sessionSafety/lifecycleAdapter.ts`, connected by `lib/sessionSafety/lifecycleWiring.ts`) and **Slides, Photos, Sound, Video, Vector and Design** (see "Resident studio adapters" below). Every adapter registers its factory with `registerLifecycleAdapter` when its session module loads, and the studio manifest resolves it lazily through `lifecycle: () => getRegisteredLifecycleAdapter('<id>')`. `main.tsx` starts the lifecycle manager first, then calls `connectSessionSafetyToLifecycle()`. The Performance section's "clear" button also clears the recovery copies of unsaved Documents and Sheets edits (after a confirmation that names the document count) and the studio checkpoints.
 
-Not on this line yet: the Slides, Photos, Sound, Video, Vector and Design checkpoint adapters, and the job-lease bridge with the job scheduler (`lib/jobs`). Those studios stay fully resident, which is the documented behavior for a studio without an adapter. The sections below describe the full design and mention them where relevant.
+Not on this line yet: the job-lease bridge with the job scheduler (`lib/jobs`). Adapters already list their lease resource ids (`studio:<id>`, `photos.engine`, `video.engine`, `video.export`, `sound.playback:<name>`, `<studio>:session:<name>`), so the bridge only has to register a lease provider.
+
+## Resident studio adapters
+
+Shared helpers live in `lib/lifecycle/recipeKit.ts`: `sealSnapshot` / `verifySnapshot` (checksum over studio id, schema version, revision and a canonical payload serialization that includes typed arrays), `fingerprintOf` (a checksum of the media URL, so no blob URL is stored in a checkpoint), `RecipeStash`, and `createRecipeAdapter` for the media studios. Every `resume` verifies the checksum, studio id and schema version first and refuses a corrupted checkpoint (the manager then keeps it for retry).
+
+| Studio | Module | Checkpoint | Suspend releases | Pins | Unsaved |
+| --- | --- | --- | --- | --- | --- |
+| Slides | `lib/slides/session.ts` | edited package bytes plus undo/redo for dirty decks, viewed slide for clean ones | WASM worker, rendered slide, thumbnails, present cache | presenting, busy, live co-editing session | dirty decks, also while suspended |
+| Photos | `lib/photos/studioSession.ts` | develop settings, undo/redo, saved signature (recipe only) | sessions, frames, source bytes, engine | render in flight, crop in progress, edit gesture | any edited recipe |
+| Sound | `lib/sound/session.ts` | effect settings and pending selection (recipe only) | sessions, rendered WAVs, source bytes, engine | decode or render in flight, scheduled render | any non-neutral recipe |
+| Video | `lib/video/session.ts` | timeline, audio and overlay tracks, selection, undo/redo, format, export options, export range (recipe only) | sessions, source bytes, filmstrip worker, engine | export running, probing | edited or dirty project |
+| Vector | `lib/vectorstudio/session.ts` | document, selection, tool, view, last 50 undo and redo steps | the in-memory session | none (pointer transactions live in the canvas) | dirty document, also while suspended |
+| Design | `lib/design/session.ts` | document, selection, tool, last 50 undo and redo steps | the in-memory session | none | dirty document, also while suspended |
+
+Behavior worth knowing:
+
+- Media studios (Photos, Sound, Video) apply a restored recipe when the same file re-opens: the stash is keyed by document name plus source fingerprint, so a different file re-using the name never inherits an edit. Untouched sessions are not checkpointed; re-opening them is lossless.
+- Slides, Vector and Design hold the only copy of unsaved work, so the checkpoint carries it (bounded history for Vector and Design). While such a document lives only in a checkpoint it still counts as unsaved: the unload warning, the Slides dirty indicators and `hasUnsavedChanges()` keep reporting it, and eviction is refused. Any state change in the studio clears that flag.
+- Slides decks that take part in a live co-editing session pin the studio, because the shared model owns their state. A suspended Slides deck is re-registered synchronously on resume and its engine re-opened from the checkpointed bytes; a deck whose file was closed or replaced meanwhile is dropped.
+- Not captured: Sound's AI-settings undo entries (they reference rendered versions), Vector and Design history beyond 50 steps, and anything that is not structured-clone safe.
+- Tests: `lib/lifecycle/recipeKit.test.ts` and one `lifecycleAdapter.test.ts` per studio.
 
 ## States
 
@@ -79,8 +100,7 @@ or worker handles. Studios without hooks stay fully resident.
 ## Pilot: Slides
 
 The Slides studio (`lib/studios/slides.ts`) registers the first adapter,
-built in `lib/slides/session.ts` with pure snapshot helpers in
-`lib/slides/lifecycleSnapshot.ts`:
+built in `lib/slides/session.ts`:
 
 - Authoritative recovery: current edited package bytes plus undo/redo
   history, per open deck.

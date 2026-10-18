@@ -5,6 +5,8 @@ import {DEFAULT_SETTINGS,exportName,isNeutral,normalizeSelection,sanitizeSetting
 import type {SoundRegionMode} from './protocol';
 import {fileExtension,sniffAudio} from './format';
 import {getMedia,subscribeMedia} from '../media';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {createRecipeAdapter,fingerprintOf,RecipeStash} from '../lifecycle/recipeKit';
 import type {SoundPlugin,SoundProgress,SoundReport} from './protocol';
 /** One rendered result: a WAV blob (also what the player plays), its waveform columns and the engine report. */
 export interface SoundVersion{blob:Blob;url:string;peaks:Float32Array;report:SoundReport;ms:number}
@@ -23,7 +25,8 @@ const emit=()=>listeners.forEach(l=>{try{l();}catch{/* View errors cannot change
 const settingRevisions=new Map<string,number>();
 const nativeHistory=new Map<string,{origin:string;before:SoundSettings;after:SoundSettings;revision:number;beforeRevision:number;original:SoundVersion}[]>();
 export const soundSettingsRevision=(name:string)=>settingRevisions.get(name)??0;
-const put=(s:SoundSession)=>{const old=sessions.get(s.name);if(old&&old.settings!==s.settings)settingRevisions.set(s.name,soundSettingsRevision(s.name)+1);sessions.set(s.name,s);emit();};
+let editRevision=0;
+const put=(s:SoundSession)=>{editRevision++;const old=sessions.get(s.name);if(old&&old.settings!==s.settings)settingRevisions.set(s.name,soundSettingsRevision(s.name)+1);sessions.set(s.name,s);emit();};
 const patch=(name:string,p:Partial<SoundSession>,cause?:unknown)=>{if(p.error)reportError('sound.engine',cause??p.error,{context:{studio:'sound',file:name}});const s=sessions.get(name);if(s)put({...s,...p});};
 /** Tests replace the engine; production uses the WASM worker. Drops all sessions. */
 export function setSoundEngineFactory(f:()=>SoundEngineLike){for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;factory=f;}
@@ -42,7 +45,9 @@ export function useSoundSession(name:string|null|undefined){return useSyncExtern
 export async function openSound(item:{name:string;url:string}):Promise<void>{
  if(sessions.has(item.name))return;
  stopMediaSync??=subscribeMedia(()=>{const live=new Set(getMedia().items.map(i=>i.name));for(const n of [...sessions.keys()])if(!live.has(n))closeSound(n);});
- put({name:item.name,status:'loading',error:'',settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:null,progress:null});
+ fingerprints.set(item.name,fingerprintOf(item.url));
+ const restored=lifecycleStash.take(item.name,fingerprints.get(item.name)!);
+ put({name:item.name,status:'loading',error:'',settings:restored?restored.settings:DEFAULT_SETTINGS,plugins:[],original:null,processed:null,listen:'processed',selection:restored?.selection??null,progress:null});
  try{
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   const ext=sniffAudio(new Uint8Array(bytes,0,Math.min(bytes.byteLength,16)))?.ext??fileExtension(item.name);
@@ -105,7 +110,7 @@ export function forgetSoundSettingsHistory(name:string){nativeHistory.delete(nam
 export const resetSoundSettings=(name:string)=>updateSoundSettings(name,()=>DEFAULT_SETTINGS);
 export const setSoundListen=(name:string,listen:'original'|'processed')=>patch(name,{listen});
 export function closeSound(name:string){
- clearTimeout(timers.get(name));timers.delete(name);runs.delete(name);sources.delete(name);
+ clearTimeout(timers.get(name));timers.delete(name);runs.delete(name);sources.delete(name);fingerprints.delete(name);
  const s=sessions.get(name);if(!s)return;nativeHistory.delete(name);settingRevisions.delete(name);revoke(s.processed,s.original);revoke(s.original);sessions.delete(name);emit();
 }
 /** The rendered WAV for download, or null while nothing has been decoded. Playback and export use the same bytes. */
@@ -146,3 +151,32 @@ export async function saveSound(name:string):Promise<SaveOutcome>{
  await invoke('audio_save_write',new Uint8Array(await out.blob.arrayBuffer()),{headers:{'x-somnia-token':grant.token}});
  return 'saved';
 }
+
+/* Lifecycle (docs/studio-lifecycle.md): recipe-only checkpoints. Audio bytes, rendered WAVs and peaks are never captured; the recipe is re-applied when the same source re-opens. */
+const fingerprints=new Map<string,string>();
+const lifecycleStash=new RecipeStash<SoundRecipe>();
+export interface SoundRecipe{settings:SoundSettings;selection:{start:number;end:number}|null}
+const edited=(s:SoundSession)=>!isNeutral(s.settings)||s.selection!==null;
+export function sanitizeSoundRecipe(v:unknown):SoundRecipe|null{
+ const r=v as Partial<SoundRecipe>|null;if(!r||typeof r!=='object'||!r.settings||typeof r.settings!=='object')return null;
+ try{
+  const settings=sanitizeSettings(r.settings);
+  const sel=r.selection&&Number.isFinite(r.selection.start)&&Number.isFinite(r.selection.end)&&r.selection.end>r.selection.start?{start:Math.max(0,r.selection.start),end:r.selection.end}:null;
+  return{settings,selection:sel};
+ }catch{return null;}
+}
+export function createSoundLifecycleAdapter(){
+ return createRecipeAdapter<SoundRecipe>({
+  studioId:'sound',schemaVersion:1,stash:lifecycleStash,
+  capture:()=>[...sessions.values()].filter(s=>edited(s)&&fingerprints.has(s.name)).map(s=>({name:s.name,fingerprint:fingerprints.get(s.name)!,recipe:{settings:structuredClone(s.settings),selection:s.selection?{...s.selection}:null}})),
+  release:()=>{for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;},
+  sanitize:sanitizeSoundRecipe,
+  pinReasons:()=>{const r=new Set<string>();for(const s of sessions.values()){if(s.status==='loading'||s.status==='processing')r.add('audio-rendering');}for(const n of sessions.keys())if(timers.has(n))r.add('render-scheduled');return[...r];},
+  resourceIds:()=>['studio:sound',...[...sessions.keys()].flatMap(n=>[`sound:session:${n}`,`sound.playback:${n}`])],
+  estimateBytes:()=>{let n=0;for(const b of sources.values())n+=b.bytes.byteLength;for(const s of sessions.values())n+=(s.original?.blob.size??0)+(s.processed&&s.processed!==s.original?s.processed.blob.size:0);return n;},
+  revision:()=>editRevision,
+ });
+}
+/** Test seam: pending recipes of suspended documents. */
+export const pendingSoundRecipes=()=>lifecycleStash.size;
+registerLifecycleAdapter('sound',createSoundLifecycleAdapter);

@@ -6,6 +6,9 @@ import {boxOf,fitPath,translatePath,type Box} from './geometry';
 import {checkGrid,DEFAULT_GRID,type GridOptions} from './grid';
 import {newId,checkShapeOptions,DEFAULT_SHAPE_OPTIONS,type ShapeOptions} from './shapes';
 import {t} from '../i18n';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {estimateValueBytes,sealSnapshot,verifySnapshot} from '../lifecycle/recipeKit';
+import type {StudioLifecycleAdapter} from '../lifecycle/types';
 import {selectedPaths} from '../../components/vectorstudio/tools/operations';
 export type VectorTool='select'|'node'|'pen'|'rect'|'ellipse'|'line'|'polygon'|'star'|'text';
 export interface VectorSession{
@@ -177,7 +180,7 @@ function confirmReplacement():boolean{
  return !state.open||!state.dirty||typeof window==='undefined'||window.confirm(t('vector.discardEdits',{name:state.name}));
 }
 if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{
- if(!state.open||!state.dirty)return;event.preventDefault();event.returnValue='';
+ if(!suspendedDirty&&(!state.open||!state.dirty))return;event.preventDefault();event.returnValue='';
 });
 
 /** Text objects. Each call is one undo step; invalid input throws before history is touched. */
@@ -223,3 +226,47 @@ export function updateImage(id:string,patch:Partial<Pick<VectorImage,'x'|'y'|'wi
 export function deleteImage(id:string){
  if(!(state.doc.images??[]).some(i=>i.id===id))throw new Error('Unknown image: '+id);
  const rest=(state.doc.images??[]).filter(i=>i.id!==id),{images:_i,...doc}=state.doc;commit(rest.length?{...doc,images:rest}:doc);}
+
+/* Lifecycle (docs/studio-lifecycle.md): the session is the only copy of the open document, so the checkpoint holds the document, selection, view and a bounded undo history. Suspend resets the in-memory session; resume restores it synchronously. */
+const VECTOR_SNAPSHOT_SCHEMA=1;
+const VECTOR_CHECKPOINT_HISTORY=50;
+let editRevision=0;
+listeners.add(()=>{editRevision++;suspendedDirty=false;});
+/** True while a dirty document lives only in a lifecycle checkpoint; keeps the unload warning honest. */
+let suspendedDirty=false;
+export interface VectorCheckpoint{session:Omit<VectorSession,'canUndo'|'canRedo'>;past:VectorDocument[];future:VectorDocument[]}
+export function vectorCheckpointPayload():VectorCheckpoint{
+ const {canUndo:_u,canRedo:_r,...session}=state;
+ return structuredClone({session,past:past.slice(-VECTOR_CHECKPOINT_HISTORY),future:future.slice(-VECTOR_CHECKPOINT_HISTORY)});
+}
+export function restoreVectorCheckpoint(p:VectorCheckpoint):void{
+ const doc=normalizeDoc(p.session.doc);
+ const f=fresh();
+ past=p.past.slice(-HISTORY_LIMIT);future=p.future.slice(-HISTORY_LIMIT);
+ state={...f,...p.session,doc,shapeOpts:{...f.shapeOpts,...p.session.shapeOpts},grid:{...f.grid,...p.session.grid},canUndo:past.length>0,canRedo:future.length>0};
+ suspendedDirty=false;listeners.forEach(l=>l());
+}
+export function createVectorLifecycleAdapter():StudioLifecycleAdapter{
+ let cached:{rev:number;bytes:number}|null=null;
+ const unsaved=()=>suspendedDirty||(state.open&&state.dirty);
+ const release=()=>{const dirty=state.open&&state.dirty;resetVectorSession();suspendedDirty=dirty;};
+ return{
+  estimateBytes:()=>{if(!state.open)return 0;if(!cached||cached.rev!==editRevision)cached={rev:editRevision,bytes:estimateValueBytes(state.doc)*(1+past.length+future.length)};return cached.bytes;},
+  resourceIds:()=>['studio:vector'],
+  pinReasons:()=>[],
+  hasUnsavedChanges:unsaved,
+  async snapshot(){
+   const payload=vectorCheckpointPayload();
+   return sealSnapshot({studioId:'vector',schemaVersion:VECTOR_SNAPSHOT_SCHEMA,revision:editRevision,payload,bytesEstimate:256+estimateValueBytes(payload)});
+  },
+  async suspend(){release();},
+  async resume(snapshot){
+   verifySnapshot(snapshot,'vector',VECTOR_SNAPSHOT_SCHEMA);
+   const p=snapshot.payload as VectorCheckpoint;
+   if(!p.session||!p.session.doc||!Array.isArray(p.past)||!Array.isArray(p.future))throw new Error('vector checkpoint is malformed');
+   restoreVectorCheckpoint(p);
+  },
+  async dispose(){if(unsaved())throw new Error('Refusing to evict an unsaved vector document');release();},
+ };
+}
+registerLifecycleAdapter('vector',createVectorLifecycleAdapter);

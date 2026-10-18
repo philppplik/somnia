@@ -1,3 +1,4 @@
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
 import type {StudioShellDef} from '../shell/types';
 import {PHOTOS_LEFT_RAIL,PHOTOS_RIGHT_RAIL} from '../photos/shellRail';
@@ -24,6 +25,6 @@ export const photosStudio:StudioDef={
   inspector:'photos.inspector',tools:[]
  },
  commands:[],shortcuts:{'studio.photos':'Mod+7'},menus:{view:[]},canvas:'photos.canvas',shellV2:photosShell,
- agent:{tools:['photo_inspect','photo_propose_settings'],contextProviders:['photoDevelopMetadata','photoDevelopSettings'],quickActions:[]},deriveContext:context=>context
+ agent:{tools:['photo_inspect','photo_propose_settings'],contextProviders:['photoDevelopMetadata','photoDevelopSettings'],quickActions:[]},deriveContext:context=>context,lifecycle:()=>getRegisteredLifecycleAdapter('photos')
 };
 registerStudio(photosStudio);

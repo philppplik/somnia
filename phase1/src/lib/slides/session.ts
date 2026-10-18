@@ -19,6 +19,9 @@ import {SlidesCollabBinding} from '../collab/office/slidesBinding';
 import {slidesClientPort} from '../collab/office/slidesPort';
 import {announceSlide} from '../collab/office/slidesPresence';
 import {writeDeckCoreProperties,type DeckCoreMeta} from './deckCoreProps';
+import {registerLifecycleAdapter} from '../lifecycle/adapters';
+import {estimateValueBytes,fingerprintOf,sealSnapshot,verifySnapshot} from '../lifecycle/recipeKit';
+import type {StudioLifecycleAdapter} from '../lifecycle/types';
 export interface SlidesSession {presenting:boolean;wasmBytes:number;diagnostics:SlidesDiagnostics|null;name:string;source:string;summary:DeckSummary|null;index:number;image:string;texts:string[];thumbnails:Record<number,string>;busy:boolean;error:string;original:Uint8Array|null;working:Uint8Array|null;runs:TextRun[];slideIds:number[];layouts:LayoutInfo[];model:DeckModel|null;dirty:boolean;undo:Uint8Array[];redo:Uint8Array[]}
 interface Entry {generation:number;revision:number;state:SlidesSession;client:SlidesClient;sequence:number;disposed:boolean;presentCache:Map<string,Promise<string>>;exiting?:boolean;last?:{token:string;before:Uint8Array;after:Uint8Array};collab:SlidesCollabBinding|null}
 const bounded=(history:Uint8Array[])=>{let total=0;return history.slice(-10).reverse().filter(b=>(total+=b.byteLength)<=64*1024*1024).reverse();};
@@ -31,12 +34,12 @@ const current=()=>{const m=getMedia();return sessions.get(m.active??'')?.state??
 export function useSlidesSession(){const media=getMedia();const name=media.items.find(m=>m.name===media.active&&m.kind==='pptx')?.name;useEffect(()=>{if(name)void ensureSlides(name);},[name]);useSyncExternalStore(f=>{listeners.add(f);return()=>listeners.delete(f);},()=>version,()=>version);return current();}
 function clearPresentCache(e:Entry){for(const image of e.presentCache.values())void image.then(URL.revokeObjectURL,()=>{});e.presentCache.clear();}
 function dispose(e:Entry){clearPresentCache(e);e.disposed=true;if(e.collab){const c=getCollab();if(c)announceSlide(c.awareness,null,0);e.collab.destroy();e.collab=null;}e.client.dispose();if(e.state.image)URL.revokeObjectURL(e.state.image);Object.values(e.state.thumbnails).forEach(URL.revokeObjectURL);}
-subscribeMedia(()=>{const media=getMedia();for(const [name,e]of sessions){if(media.items.find(m=>m.name===name)?.url!==e.state.source){dispose(e);sessions.delete(name);}}emit();});
+subscribeMedia(()=>{const media=getMedia();for(const n of [...suspendedDirty])if(!media.items.some(m=>m.name===n))suspendedDirty.delete(n);for(const n of [...pendingIndex.keys()])if(!media.items.some(m=>m.name===n))pendingIndex.delete(n);for(const [name,e]of sessions){if(media.items.find(m=>m.name===name)?.url!==e.state.source){dispose(e);sessions.delete(name);}}emit();});
 /** Entry identity is the source URL, not basename. Max three resident workers, current tab retained. */
 export async function ensureSlides(name:string){const m=findMedia(name);if(!m||m.kind!=='pptx')return;if(sessions.get(name)?.state.source===m.url)return;
  if(sessions.size>=3){const victim=[...sessions].find(([n,e])=>n!==getMedia().active&&!e.state.dirty);if(victim){dispose(victim[1]);sessions.delete(victim[0]);}else return;}
  const e:Entry={generation:++generation,revision:0,state:{...empty,name,source:m.url,busy:true,thumbnails:{}},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map(),collab:null};sessions.set(name,e);emit();
- try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics});await attachCollab(e);if(e.disposed)return;await renderSlide(e,e.state.index);}
+ try{const bytes=new Uint8Array(await(await fetch(m.url)).arrayBuffer());if(e.disposed)return;const summary=await e.client.open(bytes);if(e.disposed)return;let runs:TextRun[]=[];let slideIds:number[]=[];let model:DeckModel|null=null;let layouts:LayoutInfo[]=[];try{runs=await e.client.runs(bytes);model=await modelOf(e,bytes,summary.slides);slideIds=idsOf(model);layouts=await layoutsOf(e,bytes);}catch{/* Noncanonical text remains preview-only. */}if(e.disposed)return;const diagnostics=await e.client.diagnostics(bytes);patch(e,{summary,original:bytes,working:bytes,runs,slideIds,layouts,model,diagnostics,index:Math.max(0,Math.min(pendingIndex.get(name)??0,summary.slides-1))});pendingIndex.delete(name);await attachCollab(e);if(e.disposed)return;await renderSlide(e,e.state.index);}
  catch(error){patch(e,{busy:false,error:String(error)},error);e.client.dispose();}
 }
 /** Collab (CO3): a clean open deck joins the session's shared model; a dirty one cannot rebase and stays local-only with a note. */
@@ -71,9 +74,13 @@ export async function showSlide(index:number){const e=sessions.get(getMedia().ac
 export async function loadThumbnails(){const e=sessions.get(getMedia().active??'');const summary=e?.state.summary;if(!e||!summary||e.state.busy)return;patch(e,{busy:true});try{for(let index=0;index<summary.slides;index++){if(e.disposed)break;if(e.state.thumbnails[index])continue;const png=await e.client.render(index,Math.min(180/summary.widthPt,110/summary.heightPt));if(e.disposed)break;patch(e,{thumbnails:{...e.state.thumbnails,[index]:blobUrl(png)}});}patch(e,{busy:false});}catch(error){patch(e,{error:String(error),busy:false},error);}}
 export function activateSlides(name:string){setActiveMedia(name);void ensureSlides(name);}
 
-export const dirtySlideNames=()=>[...sessions].filter(([,e])=>e.state.dirty).map(([n])=>n);
-export const slidesIsDirty=(name:string)=>sessions.get(name)?.state.dirty??false;
-if(typeof window!=='undefined')installBeforeUnload(()=>[...sessions.values()].some(e=>e.state.dirty));
+/** Decks with edits whose engine was released by a lifecycle suspend: the checkpoint holds the bytes, but they still count as unsaved. */
+const suspendedDirty=new Set<string>();
+/** Slide each clean deck was on when it was suspended; applied when it re-opens. */
+const pendingIndex=new Map<string,number>();
+export const dirtySlideNames=()=>[...new Set([...[...sessions].filter(([,e])=>e.state.dirty).map(([n])=>n),...suspendedDirty])];
+export const slidesIsDirty=(name:string)=>sessions.get(name)?.state.dirty??suspendedDirty.has(name);
+if(typeof window!=='undefined')installBeforeUnload(()=>suspendedDirty.size>0||[...sessions.values()].some(e=>e.state.dirty));
 registerMediaCloseGuard(name=>!slidesIsDirty(name)||window.confirm(`Discard unsaved presentation edits to ${name}?`));
 /** Stable slide ids in deck order; empty when the deck is not canonical (reordering stays off). */
 async function modelOf(e:Entry,bytes:Uint8Array,slides:number){try{const m=await e.client.model(bytes);return m.slides.length===slides?m:null;}catch{return null;}}
@@ -252,3 +259,57 @@ export function undoDeckReceipt(name:string,receipt:DeckReceipt):Promise<DeckRec
   commitUndo:(st,_token)=>{const l=e.last!;e.last=undefined;return {revision:commitStaged(e,st,l.before,{undo:e.state.undo.slice(0,-1),redo:bounded([...e.state.redo,l.after])})};}};
  return undoReceipt(port,receipt);
 }
+
+/* Lifecycle (docs/studio-lifecycle.md): checkpoint = edited package bytes plus undo/redo history for dirty decks, the viewed slide for clean ones. Suspend releases the WASM worker, rendered slide, thumbnails and present cache. */
+const SLIDES_SNAPSHOT_SCHEMA=1;
+export interface SlidesCheckpointEntry{name:string;fingerprint:string;index:number;dirty:boolean;original?:Uint8Array;working?:Uint8Array;undo?:Uint8Array[];redo?:Uint8Array[]}
+export interface SlidesCheckpointPayload{decks:SlidesCheckpointEntry[]}
+const resident=()=>[...sessions.values()].filter(e=>!e.disposed);
+export function slidesCheckpointPayload():SlidesCheckpointPayload{
+ return{decks:resident().map(e=>{
+  const base={name:e.state.name,fingerprint:fingerprintOf(e.state.source),index:e.state.index};
+  return e.state.dirty&&e.state.working&&e.state.original?{...base,dirty:true,original:e.state.original,working:e.state.working,undo:[...e.state.undo],redo:[...e.state.redo]}:{...base,dirty:false};
+ })};
+}
+async function reopenRestored(e:Entry,index:number){
+ try{const working=e.state.working!;await setWorking(e,working,index);if(e.disposed)return;const diagnostics=await e.client.diagnostics(working);patch(e,{diagnostics,busy:false});}
+ catch(error){patch(e,{busy:false,error:String(error)},error);}
+}
+export function restoreSlidesCheckpoint(payload:SlidesCheckpointPayload):Promise<void>{
+ const pending:Promise<void>[]=[];
+ // Synchronous: every entry is registered before the first await, so the mount path never rebuilds a dirty deck from stale source bytes.
+ for(const d of payload.decks){
+  const m=findMedia(d.name);
+  if(!m||m.kind!=='pptx'||fingerprintOf(m.url)!==d.fingerprint){suspendedDirty.delete(d.name);continue;}
+  suspendedDirty.delete(d.name);
+  if(!d.dirty||!d.working||!d.original){pendingIndex.set(d.name,d.index);continue;}
+  if(sessions.get(d.name)?.state.source===m.url)continue;
+  const e:Entry={generation:++generation,revision:0,state:{...empty,name:d.name,source:m.url,busy:true,thumbnails:{},original:d.original,working:d.working,dirty:true,undo:[...(d.undo??[])],redo:[...(d.redo??[])],index:d.index},client:new SlidesClient(),sequence:0,disposed:false,presentCache:new Map(),collab:null};
+  sessions.set(d.name,e);pending.push(reopenRestored(e,d.index));
+ }
+ emit();
+ return Promise.all(pending).then(()=>undefined);
+}
+export function createSlidesLifecycleAdapter():StudioLifecycleAdapter{
+ const release=()=>{for(const e of resident()){if(e.state.dirty)suspendedDirty.add(e.state.name);pendingIndex.set(e.state.name,e.state.index);dispose(e);sessions.delete(e.state.name);}emit();};
+ return{
+  estimateBytes:()=>{const seen=new Set<Uint8Array>();let n=0;for(const e of resident()){n+=e.state.wasmBytes;for(const b of [e.state.original,e.state.working,...e.state.undo,...e.state.redo])if(b&&!seen.has(b)){seen.add(b);n+=b.byteLength;}}return n;},
+  resourceIds:()=>['studio:slides',...resident().map(e=>`slides:session:${e.state.name}`)],
+  pinReasons:()=>{const r=new Set<string>();for(const e of resident()){if(e.state.presenting)r.add('presenting');if(e.state.busy||e.exiting)r.add('slides-busy');if(e.collab)r.add('collab-session');}return[...r];},
+  hasUnsavedChanges:()=>suspendedDirty.size>0||resident().some(e=>e.state.dirty),
+  async snapshot(){
+   if(resident().some(e=>e.state.busy||e.state.presenting))return null;
+   const payload=slidesCheckpointPayload();
+   return sealSnapshot({studioId:'slides',schemaVersion:SLIDES_SNAPSHOT_SCHEMA,revision:version,payload,bytesEstimate:256+estimateValueBytes(payload)});
+  },
+  async suspend(){release();},
+  async resume(snapshot){
+   verifySnapshot(snapshot,'slides',SLIDES_SNAPSHOT_SCHEMA);
+   const payload=snapshot.payload as SlidesCheckpointPayload;
+   if(!Array.isArray(payload.decks))throw new Error('slides checkpoint has no decks');
+   await restoreSlidesCheckpoint(payload);
+  },
+  async dispose(){if(suspendedDirty.size>0||resident().some(e=>e.state.dirty))throw new Error('Refusing to evict unsaved slide edits');release();},
+ };
+}
+registerLifecycleAdapter('slides',createSlidesLifecycleAdapter);

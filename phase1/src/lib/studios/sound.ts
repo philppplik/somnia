@@ -1,3 +1,4 @@
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
 import type {StudioShellDef,StudioLayout} from '../shell/types';
 /** Pure data. React hosts are registered by components/sound/registerShell.ts. */
@@ -37,6 +38,6 @@ export const soundStudio:StudioDef={
  formats:['mp3','wav','flac','ogg','oga','aif','aiff'].map(ext=>({ext,priority:10})),
  shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'sound.export.open',labelKey:'sound.hero.export',icon:'AudioWaveform'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'sound.inspector',tools:[]},
  commands:[],shortcuts:{'studio.sound':'Mod+5'},menus:{view:[]},canvas:'sound.canvas',shellV2:soundShell,
- agent:{tools:['sound_inspect','sound_propose_settings'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context,
+ agent:{tools:['sound_inspect','sound_propose_settings'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context,lifecycle:()=>getRegisteredLifecycleAdapter('sound'),
 };
 registerStudio(soundStudio);
