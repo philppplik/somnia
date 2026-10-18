@@ -2,9 +2,9 @@ name: Phase 1 validation
 on:
   push:
     branches: [phase1-foundation]
-    paths: [phase1/**, .github/workflows/phase1-core-bootstrap.yml]
+    paths: [phase1/**, docs/release-tools/**, .github/workflows/phase1-core-bootstrap.yml]
   pull_request:
-    paths: [phase1/**, .github/workflows/phase1-core-bootstrap.yml]
+    paths: [phase1/**, docs/release-tools/**, .github/workflows/phase1-core-bootstrap.yml]
   workflow_dispatch:
     inputs:
       update_snapshots:
@@ -26,7 +26,30 @@ on:
 permissions:
   contents: read
 jobs:
+  release-plan:
+    # Standard hosted runners are free only while this repository is public.
+    if: ${{ github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-24.04
+    outputs:
+      arm: ${{ steps.plan.outputs.arm }}
+      cli-matrix: ${{ steps.plan.outputs.cli-matrix }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Select release-only ARM builds (beta.4 onwards)
+        id: plan
+        env:
+          FULL: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, 'alpha')) || inputs.full-matrix }}
+        run: |
+          if [ "$FULL" = "true" ]; then
+            node phase1/scripts/release-platforms.mjs --full >> "$GITHUB_OUTPUT"
+          else
+            node phase1/scripts/release-platforms.mjs >> "$GITHUB_OUTPUT"
+          fi
   frontend:
+    if: ${{ github.event.repository.visibility == 'public' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 150
     defaults:
@@ -64,6 +87,8 @@ jobs:
         run: npm run check:no-control
       - name: Test performance-budget validation
         run: node --test scripts/performance/report.test.mjs
+      - name: Release policy and asset assembly tests
+        run: node --test --experimental-strip-types test/cli-release/*.test.ts
       - name: Editor-core budgets (full parser)
         run: npm run bench
       - name: Editor-core budgets (incremental parser)
@@ -130,7 +155,7 @@ jobs:
           if-no-files-found: ignore
           path: phase1/test-results/render
   e2e:
-    if: ${{ inputs.e2e_filter == '' }}
+    if: ${{ github.event.repository.visibility == 'public' && inputs.e2e_filter == '' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     strategy:
@@ -167,7 +192,7 @@ jobs:
           if-no-files-found: ignore
           path: phase1/test-results
   snapshots:
-    if: ${{ inputs.update_snapshots }}
+    if: ${{ github.event.repository.visibility == 'public' && inputs.update_snapshots }}
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -202,6 +227,7 @@ jobs:
             git push origin "HEAD:${{ github.ref_name }}"
           fi
   native:
+    if: ${{ github.event.repository.visibility == 'public' }}
     runs-on: ubuntu-24.04
     defaults:
       run:
@@ -260,6 +286,7 @@ jobs:
             phase1/src-tauri/target/release/bundle/appimage/*.AppImage.sig
             phase1/validation/native/
   windows:
+    if: ${{ github.event.repository.visibility == 'public' }}
     runs-on: windows-latest
     defaults:
       run:
@@ -324,10 +351,135 @@ jobs:
             phase1/src-tauri/target/release/bundle/nsis/*.exe
             phase1/src-tauri/target/release/bundle/nsis/*.exe.sig
             phase1/src-tauri/target/release/bundle/msi/*.msi
+  windows-arm:
+    needs: release-plan
+    if: ${{ needs.release-plan.outputs.arm == 'true' }}
+    runs-on: windows-11-arm
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          architecture: arm64
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-pc-windows-msvc
+      - name: Reject emulated build toolchains
+        shell: bash
+        run: |
+          node -e "if(process.arch !== 'arm64') throw Error('Node is not native ARM64')"
+          rustc -vV | grep -q 'host: aarch64-pc-windows-msvc'
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: CLI tests (named-pipe transport, locked)
+        run: cargo test --locked --manifest-path cli/Cargo.toml
+      - name: Vibespace pure crate suites (locked)
+        run: |
+          cargo test --locked --manifest-path vibespace-core/Cargo.toml
+          cargo test --locked --manifest-path vibespace-storage/Cargo.toml
+          cargo test --locked --manifest-path vibespace-checkpoints/Cargo.toml
+          cargo test --locked --manifest-path vibespace-engine/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml --features cap-layer
+          cargo test --locked --manifest-path vibespace-acp/Cargo.toml
+      - name: Vibespace desktop command module tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features desktop vibespace_commands
+      - name: Sync app version (and enable signed updater artifacts when the signing key secret exists)
+        run: node scripts/sync-version.mjs ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' && '--updater' || '' }}
+      - name: Build native ARM64 Windows installers
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --ci --config src-tauri/tauri.windows-alpha.conf.json --target aarch64-pc-windows-msvc --bundles nsis,msi
+      - name: Verify the app is native ARM64 (NSIS bootstrapper is x86)
+        run: node scripts/verify-native-arch.mjs windows src-tauri/target/aarch64-pc-windows-msvc/release/somnia.exe
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-windows-arm64-alpha-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            phase1/src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe
+            phase1/src-tauri/target/aarch64-pc-windows-msvc/release/bundle/nsis/*.exe.sig
+            phase1/src-tauri/target/aarch64-pc-windows-msvc/release/bundle/msi/*.msi
+  linux-arm:
+    needs: release-plan
+    if: ${{ needs.release-plan.outputs.arm == 'true' }}
+    runs-on: ubuntu-24.04-arm
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          architecture: arm64
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-unknown-linux-gnu
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb xdotool imagemagick
+      - name: Reject emulated build toolchains
+        shell: bash
+        run: |
+          node -e "if(process.arch !== 'arm64') throw Error('Node is not native ARM64')"
+          rustc -vV | grep -q 'host: aarch64-unknown-linux-gnu'
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
+      - run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked
+      - name: Vibespace pure crate suites (locked)
+        run: |
+          cargo test --locked --manifest-path vibespace-core/Cargo.toml
+          cargo test --locked --manifest-path vibespace-storage/Cargo.toml
+          cargo test --locked --manifest-path vibespace-checkpoints/Cargo.toml
+          cargo test --locked --manifest-path vibespace-engine/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml
+          cargo test --locked --manifest-path vibespace-policy/Cargo.toml --features cap-layer
+          cargo test --locked --manifest-path vibespace-acp/Cargo.toml
+      - name: Vibespace desktop command module tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml --features desktop vibespace_commands
+      - name: MCP desktop tests (gateway and studio wiring, desktop feature)
+        run: cargo test --locked --manifest-path src-tauri/Cargo.toml --features desktop mcp_
+      - run: cargo check --manifest-path src-tauri/Cargo.toml --locked
+      - name: Sync app version (deb-only build, no signed updater artifacts)
+        run: node scripts/sync-version.mjs
+      - name: Build native ARM64 Linux deb (AppImage not advertised)
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npm run tauri build -- --ci --config src-tauri/tauri.alpha.conf.json --target aarch64-unknown-linux-gnu --bundles deb
+      - name: Verify the app is native ARM64
+        run: node scripts/verify-native-arch.mjs linux src-tauri/target/aarch64-unknown-linux-gnu/release/somnia
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-linux-arm64-alpha-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: phase1/src-tauri/target/aarch64-unknown-linux-gnu/release/bundle/deb/*.deb
   macos:
     # Philipp's matrix policy (2026-10-11): dev/alpha runs Windows + Linux only;
     # beta and stable tags run the full 3-platform matrix. Force via full-matrix input.
-    if: ${{ (github.ref_type == 'tag' && !contains(github.ref_name, 'alpha')) || inputs.full-matrix }}
+    if: ${{ github.event.repository.visibility == 'public' && ((github.ref_type == 'tag' && !contains(github.ref_name, 'alpha')) || inputs.full-matrix) }}
     runs-on: macos-latest
     defaults:
       run:
@@ -375,12 +527,12 @@ jobs:
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz
             phase1/src-tauri/target/release/bundle/macos/*.app.tar.gz.sig
             phase1/src-tauri/target/release/bundle/macos-*.txt
-  # Headless `somnia` CLI (phase1/cli). Linux and Windows x86_64 only, also on alpha runs. No macOS build.
+  # Native CLI: x64 on every run; ARM64 only on eligible full release runs.
   cli:
+    needs: release-plan
     strategy:
       fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-latest]
+      matrix: ${{ fromJSON(needs.release-plan.outputs.cli-matrix) }}
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -390,10 +542,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: '24'
+          architecture: ${{ matrix.arch }}
       - uses: dtolnay/rust-toolchain@stable
       - run: npm ci
-      - name: Packaging script tests
-        run: node --test --experimental-strip-types test/cli-release/package-cli.test.ts
+      - name: Packaging and release-policy tests
+        run: node --test --experimental-strip-types test/cli-release/*.test.ts
       - name: Build the agent engine sidecar and test it
         run: |
           npm run build:cli-engine
@@ -402,6 +555,15 @@ jobs:
         run: cargo test --manifest-path cli/Cargo.toml --locked
       - name: Build and archive the CLI
         run: node scripts/package-cli.mjs build --out cli-dist
+      - name: Verify ARM64 CLI machine header
+        if: ${{ matrix.arch == 'arm64' }}
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            node scripts/verify-native-arch.mjs windows cli/target/release/somnia.exe
+          else
+            node scripts/verify-native-arch.mjs linux cli/target/release/somnia
+          fi
       - name: Smoke test the packaged binary
         shell: bash
         run: |
@@ -413,7 +575,7 @@ jobs:
           grep -q "^somnia $(node -p "require('../package.json').somniaRelease")" version.txt
       - uses: actions/upload-artifact@v7
         with:
-          name: somnia-cli-${{ runner.os }}-${{ github.sha }}
+          name: somnia-cli-${{ runner.os }}-${{ matrix.arch }}-${{ github.sha }}
           retention-days: 14
           if-no-files-found: error
           path: |
@@ -421,6 +583,7 @@ jobs:
             phase1/cli-dist/somnia-cli-*.zip
             phase1/cli-dist/*.sha256
   cli-checksums:
+    if: ${{ github.event.repository.visibility == 'public' }}
     needs: cli
     runs-on: ubuntu-24.04
     steps:
