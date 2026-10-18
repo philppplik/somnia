@@ -7,17 +7,17 @@ try{
  await app.page.getByRole('button',{name:'Tabbed panel docking',exact:true}).click();
  await app.page.getByRole('tab',{name:'Layers',exact:true}).waitFor();
  await app.page.getByRole('button',{name:'Move panel right',exact:true}).click();
- assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Design','Layers']);
+ assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Inspector','Layers']);
  await app.ctl.screenshot('docking-moved');
  await app.page.reload();await app.page.getByRole('tab',{name:'Layers',exact:true}).waitFor();
- assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Design','Layers']);
+ assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Inspector','Layers']);
  await app.page.getByRole('button',{name:'Reset panel docking',exact:true}).click();
  assert.deepEqual(await app.page.locator('.workspace-dock').nth(0).getByRole('tab').allTextContents(),['Layers']);
  // Real HTML5 drag/drop tab transfer.
- await app.page.getByRole('tab',{name:'Layers',exact:true}).dragTo(app.page.getByRole('tab',{name:'Design',exact:true}));
- assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Layers','Design']);
+ await app.page.getByRole('tab',{name:'Layers',exact:true}).dragTo(app.page.getByRole('tab',{name:'Inspector',exact:true}));
+ assert.deepEqual(await app.page.locator('.workspace-dock').nth(1).getByRole('tab').allTextContents(),['Layers','Inspector']);
  await app.page.getByRole('tab',{name:'Layers',exact:true}).focus();await app.page.keyboard.press('ArrowRight');
- assert.equal(await app.page.getByRole('tab',{name:'Design',exact:true}).getAttribute('aria-selected'),'true');
+ assert.equal(await app.page.getByRole('tab',{name:'Inspector',exact:true}).getAttribute('aria-selected'),'true');
  const copy=await app.browser.newPage({viewport:{width:1100,height:800}}),errors=[];copy.on('pageerror',e=>errors.push(e.message));
  await copy.addInitScript(()=>sessionStorage.setItem('somnia.copy.test',JSON.stringify({version:1,studio:'code',name:'Copy test',files:{'index.html':'<h1>Independent copy</h1>','notes.md':'# Independent Code copy\n\nThis window edits its own snapshot.'},activeFile:'notes.md',locale:'en'})));
  await copy.goto(server.url+'/studio-copy.html',{waitUntil:'domcontentloaded'});await copy.locator('.cm-content').waitFor();
