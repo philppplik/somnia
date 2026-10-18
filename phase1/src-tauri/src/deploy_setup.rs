@@ -15,7 +15,7 @@ pub fn params(service: &DeployService, id: &str) -> Result<BootstrapParams, Stri
     Ok(BootstrapParams { site: t.id, public_key: service.key_public(id).map_err(|e| e.to_string())?, node: t.kind == TargetKind::Node })
 }
 
-pub async fn run(service: &DeployService, id: &str, login_user: String, login_password: Zeroizing<String>, sudo_password: Zeroizing<String>, privilege: &str) -> Result<BootstrapView, String> {
+pub async fn run(service: &DeployService, id: &str, login_user: String, login_password: Zeroizing<String>, sudo_password: Zeroizing<String>, privilege: &str, progress: &dyn Fn(&str)) -> Result<BootstrapView, String> {
     let t = service.targets.get(id).map_err(|_| "deploy:target-not-found")?;
     // Refuse unknown hosts before even probing or sending a credential. Never auto-trust.
     let pin = service.pins.pinned(&t.host, t.port).ok_or("deploy:host-key-unknown")?;
@@ -30,6 +30,7 @@ pub async fn run(service: &DeployService, id: &str, login_user: String, login_pa
     let target = SshTarget::new(&t.host, t.port, login_user);
     let mut opts = ConnectOptions::default();
     opts.exec_timeout = Duration::from_secs(600);
+    progress("connecting");
     let observed = ssh::probe_host_key(&target, &opts).await.map_err(|_| "deploy:connect-failed")?;
     if observed.fingerprint != pin { return Err("deploy:host-key-changed".into()); }
     // Connection-local verification object, not a second persistent pin store. D7 owns persistence.
@@ -37,7 +38,7 @@ pub async fn run(service: &DeployService, id: &str, login_user: String, login_pa
     verified.trust_new(&t.host, t.port, &observed).map_err(|_| "deploy:host-key-rejected")?;
     let secrets = match &mode { Privilege::SudoPassword(pw) => vec![pw.to_string()], _ => vec![] };
     let mut transport = RusshTransport::connect(&target, verified, Credential::Password(&login_password), opts, secrets).await.map_err(|_| "deploy:auth-failed")?;
-    let result = bootstrap::run(&mut transport, &p, mode, &|_| {}).await;
+    let result = bootstrap::run(&mut transport, &p, mode, progress).await;
     transport.close().await;
     let report = result.map_err(|_| "deploy:bootstrap-failed")?;
     let (outcome, port) = match report.outcome { BootstrapOutcome::Done => ("done", None), BootstrapOutcome::SudoDenied => ("sudo-denied", None), BootstrapOutcome::UnsupportedServer(_) => ("unsupported-server", None), BootstrapOutcome::PortInUse(port) => ("port-in-use", Some(port)), BootstrapOutcome::Failed(_) => ("failed", None) };

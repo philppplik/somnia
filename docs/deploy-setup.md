@@ -4,7 +4,7 @@ The Publish form saves metadata only. A new target then enters the setup wizard:
 
 1. Create an ed25519 key in the OS credential store.
 2. Probe the host key and show the existing human trust dialog. No login password is sent until a pin exists.
-3. Display the full D2 bootstrap script. Copy it into the provider console, or review it and run from Somnia with a temporary SSH login and sudo password. The login is separate from the final unprivileged `somnia` deploy user. After a successful run the saved deploy user becomes `somnia`.
+3. Display the full D2 bootstrap script. Copy it into the provider console, or review it and run from Somnia with a temporary SSH login and sudo password. The login is separate from the final unprivileged `somnia` deploy user. Somnia first checks the same staged script with `--dry-run` using the selected root/sudo mode. This elevated check performs reads only and must pass before apply; unknown socket ownership or an unrelated web server stops setup. After a successful run the saved deploy user becomes `somnia`.
 4. Show A/AAAA guidance and DNS results. A mismatch, missing www, stale AAAA or failed resolver stays visibly unverified. Publishing anyway still opens the normal file-list confirmation dialog.
 
 Automatic setup supports password SSH authentication on the privileged login. Hosts that disable password authentication use the displayed script in their provider console. Somnia never falls back to trusting a changed host key.

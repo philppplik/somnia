@@ -6,7 +6,8 @@
 //!
 //! Rules: the script is rendered from validated fields only (no free text reaches the shell);
 //! a sudo password is sent on stdin, never in argv, never stored and always redacted from output;
-//! the script is staged in a private temp file that is deleted afterwards.
+//! the script is staged in a private temp file that is deleted afterwards; the same staged
+//! bytes must pass a read-only elevated dry-run before any setup mutation.
 use super::{manifest::valid_id, ssh::SshExec, DeployError, Result};
 use zeroize::Zeroizing;
 
@@ -72,6 +73,7 @@ pub fn render_script(p: &BootstrapParams) -> Result<String> {
 set -eu
 say() {{ printf 'SOMNIA_STEP %s\n' "$1"; }}
 fail() {{ printf 'SOMNIA_ERROR %s\n' "$1"; exit "${{2:-1}}"; }}
+case "${{1:-}}" in ''|--dry-run) ;; *) fail invalid_mode 14 ;; esac
 printf 'SOMNIA_BOOTSTRAP_STARTED\n'
 [ "$(id -u)" = 0 ] || fail not_root 10
 . /etc/os-release 2>/dev/null || fail unsupported_os 11
@@ -79,17 +81,37 @@ case "${{ID:-}} ${{ID_LIKE:-}}" in *debian*|*ubuntu*) ;; *) fail unsupported_os 
 command -v systemctl >/dev/null 2>&1 || fail no_systemd 12
 case "$(uname -m)" in x86_64|aarch64) ;; *) fail unsupported_arch 13 ;; esac
 
+# Fail closed: without socket ownership information a setup must not assume ports are free.
 say ports
-if command -v ss >/dev/null 2>&1; then
-  for port in 80 443; do
-    owner=$(ss -H -ltnp "sport = :$port" 2>/dev/null | head -n 1 || true)
-    if [ -n "$owner" ]; then
-      case "$owner" in *'"caddy"'*) ;; *) fail "port_in_use_$port" 20 ;; esac
-    fi
-  done
+command -v ss >/dev/null 2>&1 || fail no_socket_probe 15
+managed_pid=$(systemctl show -p MainPID --value somnia-caddy.service 2>/dev/null || true)
+case "$managed_pid" in ''|*[!0-9]*|0|1) managed_pid=none ;; esac
+for port in 80 443; do
+  owners=$(ss -H -ltnp "sport = :$port" 2>/dev/null) || fail socket_probe_failed 16
+  if [ -n "$owners" ]; then
+    # Never take over another Caddy, nginx or Apache. Every listener must belong to our service.
+    while IFS= read -r owner; do
+      case "$owner" in
+        *'"caddy"'*"pid=$managed_pid,"*)
+          pids=$(printf '%s' "$owner" | grep -o 'pid=[0-9]*' | sort -u)
+          [ "$pids" = "pid=$managed_pid" ] || fail "port_in_use_$port" 20
+          ;;
+        *) fail "port_in_use_$port" 20 ;;
+      esac
+    done <<OWNERS
+$owners
+OWNERS
+  fi
+done
+# A dry-run performs only reads, including when invoked with sudo. No package manager,
+# user/key/file change, daemon reload or service stop can happen before this return.
+if [ "${{1:-}}" = --dry-run ]; then
+  printf 'SOMNIA_DRY_RUN_READY\n'
+  exit 0
 fi
 
 say caddy
+installed_caddy=0
 if ! command -v caddy >/dev/null 2>&1; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq || fail apt_update 30
@@ -101,8 +123,13 @@ if ! command -v caddy >/dev/null 2>&1; then
   rm -rf "$tmp"
   apt-get update -qq || fail apt_update 30
   apt-get install -y -qq caddy || fail caddy_install 33
+  installed_caddy=1
 fi
-systemctl disable --now caddy >/dev/null 2>&1 || true
+# The package may auto-start its stock service. Only stop that newly installed default;
+# an existing unrelated service is never disabled by Somnia.
+if [ "$installed_caddy" = 1 ]; then
+  systemctl disable --now caddy >/dev/null 2>&1 || fail caddy_stop 34
+fi
 
 say user
 id somnia >/dev/null 2>&1 || useradd --system --create-home --home-dir /var/lib/somnia --shell /bin/bash --user-group somnia || fail useradd 40
@@ -223,7 +250,7 @@ pub fn parse_output(stdout: &str, status: Option<u32>) -> BootstrapReport {
         BootstrapOutcome::SudoDenied
     } else {
         match error.as_deref() {
-            Some("unsupported_os" | "no_systemd" | "unsupported_arch") => {
+            Some("unsupported_os" | "no_systemd" | "unsupported_arch" | "no_socket_probe") => {
                 BootstrapOutcome::UnsupportedServer(error.clone().unwrap())
             }
             Some("port_in_use_80") => BootstrapOutcome::PortInUse(80),
@@ -263,7 +290,6 @@ pub async fn run<E: SshExec>(
     if !valid_path {
         return Err(DeployError::Transport);
     }
-    progress("run");
     let (command, stdin): (String, Option<Zeroizing<Vec<u8>>>) = match &privilege {
         Privilege::Root => (format!("/bin/sh {path}"), None),
         Privilege::SudoPasswordless => (format!("sudo -n -- /bin/sh {path}"), None),
@@ -272,13 +298,37 @@ pub async fn run<E: SshExec>(
             Some(Zeroizing::new(format!("{}\n", pw.as_str()).into_bytes())),
         ),
     };
-    let ran = exec
-        .exec(&command, stdin.as_deref().map(|v| v.as_slice()))
+    // Check the reviewed, staged bytes using exactly the same privilege as the apply.
+    // Each sudo invocation gets its own stdin; a timestamp cache is not assumed.
+    progress("preflight");
+    let checked = exec
+        .exec(
+            &format!("{command} --dry-run"),
+            stdin.as_deref().map(|v| v.as_slice()),
+        )
         .await;
-    // Cleanup must happen even when the run failed; a leftover file holds only the public script.
+    let ready = checked.as_ref().is_ok_and(|out| {
+        out.success()
+            && out
+                .markers
+                .iter()
+                .any(|line| line == "SOMNIA_DRY_RUN_READY")
+    });
+    let ran = if ready {
+        progress("run");
+        exec.exec(&command, stdin.as_deref().map(|v| v.as_slice()))
+            .await
+    } else {
+        checked
+    };
+    // Cleanup must happen on preflight refusal, apply failure and transport failure alike.
     let _ = exec.exec(&format!("rm -f {path}"), None).await;
     let output = ran?;
-    let report = parse_output(&output.markers.join("\n"), output.status);
+    let mut report = parse_output(&output.markers.join("\n"), output.status);
+    if !ready && report.outcome == BootstrapOutcome::Done {
+        // DONE is not a substitute for a successful dry-run marker.
+        report.outcome = BootstrapOutcome::Failed("preflight".into());
+    }
     for step in &report.steps {
         progress(step);
     }
@@ -454,6 +504,9 @@ mod tests {
                 (0, "/tmp/somnia-bootstrap.AbC12345".into(), String::new())
             } else if cmd.starts_with("sudo -S -p '' -- /bin/sh /tmp/somnia-bootstrap.AbC12345") {
                 assert_eq!(stdin, format!("{sudo_canary}\n").as_bytes());
+                if cmd.ends_with(" --dry-run") {
+                    return (0, "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_DRY_RUN_READY\n".into(), String::new());
+                }
                 // A careless script echoing the password must still be scrubbed.
                 (0, format!("SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_STEP caddy\necho {sudo_canary}\nSOMNIA_HOSTKEY_ED25519 {fp_in}\nSOMNIA_DONE\n"), String::new())
             } else {
@@ -543,5 +596,191 @@ mod tests {
             .unwrap()
             .iter()
             .all(|c| !c.contains("sudo")));
+    }
+    #[tokio::test]
+    async fn preflight_refusal_or_missing_marker_never_applies() {
+        for (status, response, expected) in [
+            (
+                20,
+                "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_ERROR port_in_use_80\n",
+                BootstrapOutcome::PortInUse(80),
+            ),
+            (
+                0,
+                "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_DONE\n",
+                BootstrapOutcome::Failed("preflight".into()),
+            ),
+            (
+                1,
+                "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_DRY_RUN_READY\n",
+                BootstrapOutcome::Failed("unknown".into()),
+            ),
+        ] {
+            let server = TestServer::start().await;
+            server.set_password("login-pass");
+            server.set_exec(move |cmd, _| {
+                if cmd.starts_with("umask 077") {
+                    (0, "/tmp/somnia-bootstrap.AbC12345".into(), String::new())
+                } else if cmd.ends_with(" --dry-run") {
+                    (status, response.into(), String::new())
+                } else {
+                    (0, String::new(), String::new())
+                }
+            });
+            let mut t = admin(&server, "login-pass").await;
+            let report = run(&mut t, &params(false), Privilege::SudoPasswordless, &|_| {})
+                .await
+                .unwrap();
+            assert_eq!(report.outcome, expected);
+            let commands = server.state.commands.lock().unwrap();
+            assert_eq!(
+                commands.len(),
+                3,
+                "stage, preflight, cleanup only: {commands:?}"
+            );
+            assert!(commands[1].ends_with(" --dry-run"));
+            assert!(commands[2].starts_with("rm -f "));
+        }
+    }
+
+    #[tokio::test]
+    async fn root_and_passwordless_sudo_apply_only_after_dry_run() {
+        for privilege in [Privilege::Root, Privilege::SudoPasswordless] {
+            let server = TestServer::start().await;
+            server.set_password("login-pass");
+            server.set_exec(|cmd, stdin| {
+                if cmd.starts_with("umask 077") {
+                    (0, "/tmp/somnia-bootstrap.AbC12345".into(), String::new())
+                } else if cmd.ends_with(" --dry-run") {
+                    assert!(stdin.is_empty());
+                    (
+                        0,
+                        "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_DRY_RUN_READY\n".into(),
+                        String::new(),
+                    )
+                } else if cmd.starts_with("rm -f ") {
+                    (0, String::new(), String::new())
+                } else {
+                    (
+                        0,
+                        "SOMNIA_BOOTSTRAP_STARTED\nSOMNIA_DONE\n".into(),
+                        String::new(),
+                    )
+                }
+            });
+            let mut t = admin(&server, "login-pass").await;
+            assert_eq!(
+                run(&mut t, &params(true), privilege, &|_| {})
+                    .await
+                    .unwrap()
+                    .outcome,
+                BootstrapOutcome::Done
+            );
+            let commands = server.state.commands.lock().unwrap();
+            assert_eq!(commands.len(), 4);
+            assert_eq!(commands[1], format!("{} --dry-run", commands[2]));
+        }
+    }
+
+    // Execute ONLY the read-only prefix, with all machine probes substituted by temp scripts.
+    // Never execute the mutation suffix, even if the dry-run implementation regresses.
+    #[cfg(unix)]
+    #[test]
+    fn dry_run_prefix_refuses_unrelated_caddy_and_unknown_ownership() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("bin");
+        std::fs::create_dir(&bin).unwrap();
+        for (name, body) in [
+            ("id", "echo 0"),
+            ("uname", "echo x86_64"),
+            ("systemctl", "printf '%s\\n' \"${MANAGED_PID:-0}\""),
+            ("ss", "printf '%s\\n' \"${LISTENER:-}\""),
+        ] {
+            let path = bin.join(name);
+            std::fs::write(&path, format!("#!/bin/sh\n{body}\n")).unwrap();
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o700)).unwrap();
+        }
+        let script = render_script(&params(false)).unwrap();
+        let prefix = script.split("\nsay caddy\n").next().unwrap();
+        let path = dir.path().join("check.sh");
+        // Fail instead of falling through into any installation commands.
+        std::fs::write(&path, format!("{prefix}\nexit 99\n")).unwrap();
+        let run = |pid: &str, listener: &str| {
+            std::process::Command::new("/bin/sh")
+                .arg(&path)
+                .arg("--dry-run")
+                .env("PATH", format!("{}:/usr/bin:/bin", bin.display()))
+                .env("MANAGED_PID", pid)
+                .env("LISTENER", listener)
+                .output()
+                .unwrap()
+        };
+        assert!(run("0", "").status.success());
+        let owned = r#"LISTEN 0 4096 *:80 *:* users:(("caddy",pid=4321,fd=7))"#;
+        assert!(run("4321", owned).status.success());
+        for pid in ["0", "1", "9999", "garbage"] {
+            let out = run(pid, owned);
+            assert_eq!(out.status.code(), Some(20));
+            assert!(String::from_utf8(out.stdout)
+                .unwrap()
+                .contains("SOMNIA_ERROR port_in_use_80"));
+        }
+        let shared =
+            r#"LISTEN 0 4096 *:80 *:* users:(("caddy",pid=4321,fd=7),("nginx",pid=2222,fd=8))"#;
+        assert_eq!(run("4321", shared).status.code(), Some(20));
+        assert_eq!(
+            run("4321", "LISTEN 0 4096 *:80 *:*").status.code(),
+            Some(20)
+        );
+        assert_eq!(
+            run("4321", &format!("{owned}\nLISTEN 0 4096 *:80 *:*"))
+                .status
+                .code(),
+            Some(20)
+        );
+    }
+    #[tokio::test]
+    async fn transport_failure_during_preflight_still_attempts_cleanup() {
+        struct BrokenCheck {
+            commands: Vec<String>,
+        }
+        impl SshExec for BrokenCheck {
+            async fn exec(
+                &mut self,
+                command: &str,
+                _: Option<&[u8]>,
+            ) -> Result<crate::deploy::ssh::ExecOutput> {
+                self.commands.push(command.into());
+                if command.ends_with(" --dry-run") {
+                    return Err(DeployError::Transport);
+                }
+                Ok(crate::deploy::ssh::ExecOutput {
+                    status: Some(0),
+                    stdout: if command.starts_with("umask 077") {
+                        "/tmp/somnia-bootstrap.AbC12345".into()
+                    } else {
+                        String::new()
+                    },
+                    stderr: String::new(),
+                    markers: vec![],
+                    truncated: false,
+                })
+            }
+        }
+        let mut check = BrokenCheck { commands: vec![] };
+        let steps = Mutex::new(vec![]);
+        assert_eq!(
+            run(&mut check, &params(false), Privilege::Root, &|step| steps
+                .lock()
+                .unwrap()
+                .push(step.to_owned()))
+            .await
+            .unwrap_err(),
+            DeployError::Transport
+        );
+        assert_eq!(check.commands.len(), 3);
+        assert!(check.commands[2].starts_with("rm -f "));
+        assert_eq!(*steps.lock().unwrap(), ["upload", "preflight"]);
     }
 }
