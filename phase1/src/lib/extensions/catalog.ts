@@ -5,7 +5,7 @@ import {API_VERSION,type ExtensionManifest,type Permission} from './types';
 
 export const CATALOG_URL='https://raw.githubusercontent.com/philppplik/somnia/main/docs/extensions/catalog/index.json';
 const MAX_INDEX=300_000,MAX_ZIP=2_000_000;
-export interface CatalogEntry {id:string;name:string;version:string;author:string;description:string;repo:string;download:string;sha256:string;apiVersion:number;permissions:Permission[];category?:string}
+export interface CatalogEntry {id:string;name:string;version:string;author:string;description:string;repo:string;download:string;sha256:string;apiVersion:number;permissions:Permission[];category?:string;/** True only when a maintainer reviewed this entry. Missing means false. A matching SHA-256 never sets it. */reviewed?:boolean;reviewedBy?:string}
 export interface ReviewedPackage {entry:CatalogEntry;manifest:ExtensionManifest}
 const record=(v:unknown):v is Record<string,unknown>=>!!v&&typeof v==='object'&&!Array.isArray(v);
 /** Only public GitHub raw content, with no credentials, query, port or fragments. */
@@ -19,11 +19,13 @@ export function validateCatalog(value:unknown):CatalogEntry[]{
   if(!record(item))throw new Error(`Invalid index entry ${i+1}.`);
   for(const [key,max] of [['id',100],['name',80],['version',20],['author',80],['description',400],['repo',300],['download',500]] as const){if(typeof item[key]!=='string'||!(item[key] as string).trim()||(item[key] as string).length>max)throw new Error(`Invalid ${key} in index entry ${i+1}.`);}
   if(item.category!==undefined&&(typeof item.category!=='string'||item.category.length>30))throw new Error(`Invalid category in index entry ${i+1}.`);
+  if(item.reviewed!==undefined&&typeof item.reviewed!=='boolean')throw new Error(`Invalid reviewed flag in index entry ${i+1}.`);
+  if(item.reviewedBy!==undefined&&(typeof item.reviewedBy!=='string'||!item.reviewedBy.trim()||item.reviewedBy.length>80||item.reviewed!==true))throw new Error(`Invalid reviewedBy in index entry ${i+1}.`);
   const m=validateManifest({id:item.id,name:item.name,version:item.version,apiVersion:item.apiVersion,permissions:item.permissions});
   if(!m.ok)throw new Error(`Index entry ${i+1}: ${m.errors.join(' ')}`);
   if(ids.has(m.manifest.id))throw new Error('Duplicate extension id in index.');ids.add(m.manifest.id);
   if(!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+\/?$/.test(item.repo as string)||!rawGithubURL(item.download as string)||typeof item.sha256!=='string'||!/^[a-f0-9]{64}$/.test(item.sha256))throw new Error(`Invalid GitHub URL or SHA-256 in index entry ${i+1}.`);
-  return {...item,permissions:m.manifest.permissions} as unknown as CatalogEntry;
+  return {...item,reviewed:item.reviewed===true,permissions:m.manifest.permissions} as unknown as CatalogEntry;
  });
 }
 async function fetchBytes(url:string,max:number,signal?:AbortSignal):Promise<Uint8Array>{
@@ -48,6 +50,8 @@ export function classifyFetchError(e:unknown):StoreUnavailableReason{
  if(/not valid JSON|Invalid|schema/i.test(m))return 'invalid';
  return 'network';
 }
+/** Verified mark in Browse: only for entries the index explicitly marks as maintainer-reviewed. Says who reviewed, never that the code is safe. */
+export const isReviewed=(e:Pick<CatalogEntry,'reviewed'>)=>e.reviewed===true;
 export async function fetchCatalog(signal?:AbortSignal):Promise<CatalogEntry[]>{
  const bytes=await fetchBytes(CATALOG_URL,MAX_INDEX,signal);let json:unknown;try{json=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(bytes));}catch{throw new Error('Extension index is not valid JSON.');}return validateCatalog(json);
 }

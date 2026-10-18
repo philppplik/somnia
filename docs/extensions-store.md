@@ -85,8 +85,8 @@ Missing, corrupt, oversized (over 4 MB) or unreadable consent data counts as res
 ## Known limits
 
 - The index is unsigned and hosted on a mutable branch. A compromised repository or reviewer account can change an entry and its hash together.
-- The store consent candidate is labelled `signed-match` (`asCandidate`, `popupHostDefault.ts`). It means "SHA-256 equals the index entry". It is not a signature check.
-- The Store shows `badge: null` for every extension and `verified: true` in `browse()` for every index entry. There is no verified-publisher check in this build.
+- The store consent candidate is labelled `hash-match` (`asCandidate`, `popupHostDefault.ts`). It means "SHA-256 equals the index entry". It is not a signature check, and it never sets the verified mark.
+- The verified mark in Browse comes from the index entry itself: `reviewed: true` (optional `reviewedBy`, up to 80 characters, only valid with `reviewed: true`). Missing or `false` means no mark. A matching hash, a GitHub repository or an author name never earns it. The mark says a maintainer reviewed the entry, not that the code is safe. Because the index is unsigned, anyone who can change the index can set the flag (see the first limit above); a signed index is planned separately.
 - `submitReport()` always rejects. The report dialog falls back to the public issue form (`publicIssueUrl`). There is no private security-report route yet.
 - Catalog packages with worker code are refused (`Catalog worker code is not supported yet`). Only declarative extensions and sandboxed panels install from the Store.
 - Native (Tier B) extensions cannot be installed from the Store (`E_NATIVE_STORE_FORBIDDEN`).

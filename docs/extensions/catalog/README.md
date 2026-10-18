@@ -17,6 +17,8 @@ The root is `{ "schemaVersion": 1, "extensions": [...] }`, up to 200 entries. Ev
 | download | Direct HTTPS raw.githubusercontent.com ZIP URL, no redirects, credentials, query or fragment |
 | sha256 | 64 lowercase hexadecimal characters, hash of the exact ZIP bytes |
 | category | Optional. One of Themes, Editing, Productivity, Tools, Other (any case). Missing or unknown shows as Other. Up to 30 characters |
+| reviewed | Optional boolean, default false. `true` only after a maintainer completed the review below. Shows the blue verified mark in Browse. Must be a real boolean |
+| reviewedBy | Optional, up to 80 characters, only with `reviewed: true`. Names who reviewed (the 12 first-party entries use `Somnia maintainers`) |
 | permissions | The same permission set as the manifest, only known SDK permissions |
 
 GitHub release download URLs redirect to other hosts. They are deliberately not allowed in this first implementation. Commit a versioned ZIP to the extension repository and use its raw GitHub URL. Prefer a commit SHA or immutable version tag. Mutable URLs still fail closed when the ZIP changes because its bytes must match the pinned hash.
@@ -29,7 +31,7 @@ GitHub release download URLs redirect to other hosts. They are deliberately not 
 4. Compute SHA-256 from the final ZIP, compare manifest identity and permissions, add the entry and package in a PR. Never accept an author's supplied hash without checking the bytes.
 5. Run `npm run test:core` in `phase1`. The first-party index/hash fixture is tested. For new entries, add the same direct package/hash test before merge.
 
-A hash proves bytes match the index, not author identity or safety. Index review is the trust root. No paid extensions, telemetry, dependency resolution, automatic updates or automatic activation are included.
+A hash proves bytes match the index, not author identity or safety, and a hash match never earns the verified mark. Set `reviewed: true` only after steps 1 to 5. Index review is the trust root. No paid extensions, telemetry, dependency resolution, automatic updates or automatic activation are included.
 
 ## Rebuild the first-party ZIP
 
