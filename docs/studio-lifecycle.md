@@ -12,7 +12,7 @@ The coordinator, budgets, checkpoint store (with IndexedDB spill), memory probe,
 
 Adapters registered on this line: **Documents** and **Sheets** (session-safety recovery store, `lib/sessionSafety/lifecycleAdapter.ts`, connected by `lib/sessionSafety/lifecycleWiring.ts`) and **Slides, Photos, Sound, Video, Vector and Design** (see "Resident studio adapters" below). Every adapter registers its factory with `registerLifecycleAdapter` when its session module loads, and the studio manifest resolves it lazily through `lifecycle: () => getRegisteredLifecycleAdapter('<id>')`. `main.tsx` starts the lifecycle manager first, then calls `connectSessionSafetyToLifecycle()`. The Performance section's "clear" button also clears the recovery copies of unsaved Documents and Sheets edits (after a confirmation that names the document count) and the studio checkpoints.
 
-Not on this line yet: the job-lease bridge with the job scheduler (`lib/jobs`). Adapters already list their lease resource ids (`studio:<id>`, `photos.engine`, `video.engine`, `video.export`, `sound.playback:<name>`, `<studio>:session:<name>`), so the bridge only has to register a lease provider.
+The job scheduler and lease bridge (`lib/jobs`) are now installed by the lifecycle driver, including pressure and live profile budgets. Adapters list their lease resource ids (`studio:<id>`, `photos.engine`, `video.engine`, `video.export`, `sound.playback:<name>`, `<studio>:session:<name>`); studio export/playback/AI callers are not migrated to leases yet, so that work still runs outside admission control.
 
 ## Resident studio adapters
 
@@ -71,7 +71,7 @@ Suspension blockers, checked before every checkpoint:
   and are re-checked after 30 seconds.
 - Active job leases. Lease providers register with
   `manager.registerJobLeaseProvider(hasLease)`. The job scheduler
-  (`src/lib/jobs/scheduler.ts`, branch `perf/lazy-hosts-jobs`) wires
+  (`src/lib/jobs/scheduler.ts`) wires
   `hasLease(resourceId)` and `needsResource(resourceId)` (queued work counts)
   here. Resource id conventions: `studio:<id>` plus studio-owned ids such as
   `slides:session:<name>`; the scheduler's own ids (`video.engine`,
@@ -223,7 +223,7 @@ is not wired and would need a separate opt-in.
 to the store's `activeStudio`, resolves adapters from manifests and reports
 problems through the app log. Pressure-level changes are published through
 the wiring's `onPressure(level)` callback, matching the job scheduler's
-`setPressure('normal' | 'pressure' | 'critical')` contract.
+`setPressure('normal' | 'pressure' | 'critical')` contract. The driver also applies pressure directly to the scheduler, installs its lease provider before activation, and updates the jobs byte bucket and background concurrency from the selected profile. No `main.tsx` callback is required. See [job-scheduler](job-scheduler.md) for ownership, admission and current migration limits.
 `getStudioLifecycle()` exposes the installed manager for the lease-provider
 registration.
 

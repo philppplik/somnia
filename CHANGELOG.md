@@ -1,8 +1,12 @@
+# Unreleased: Job scheduler and pressure bridge
+- Added application-owned job leases with priority lanes, bounded queues and byte reservations. Lifecycle pressure and live resource profiles control admission; running work keeps its reservation until completion or cooperative cancellation. Queued and running dependencies protect engines from suspension and eviction. Studio export/playback/AI callers are not migrated in this change.
+
 # Unreleased: Session safety wiring
 - Documents and Sheets write verified recovery checkpoints while you edit and restore them (edits, undo history where it is exact, selected sheet and cell) when the file is opened again after a crash or a lost engine; a changed file is never overwritten and keeps its recovery copy. Closing the window with unsaved edits now asks first and says whether a recovery copy exists. Nothing is written to your file.
 
 # Unreleased: Transcript Hub
 - Open Transcript Hub from the command palette to transcribe a browser-decodable audio file locally with the optional whisper.cpp helper and existing ggml-base model. Separate file limits (10 minutes, 20 MB, 30-minute runtime, 120,000 transcript characters) leave voice-prompt limits unchanged. Review/edit text, export TXT, cancel or clear. No cloud fallback; unavailable builds refuse transcription.
+
 
 # Unreleased: Studio lifecycle
 - Studios move through active/warm/suspended/evicted states: a studio left in the background checkpoints its session and releases workers and caches after 30 seconds, and the memory probe (native RSS and system memory on desktop) can tighten that under pressure. Documents and Sheets use the session-safety recovery store as their checkpoint. New Settings > Advanced > Performance section: turn lifecycle off, pick a resource profile, and clear saved checkpoints and recovery copies (with a confirmation that names how many documents with unsaved edits are affected).

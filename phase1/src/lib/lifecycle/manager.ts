@@ -97,7 +97,7 @@ export class StudioLifecycleManager {
     this.checkpoints = options.checkpoints ?? new CheckpointStore(64 * 1024 * 1024);
   }
 
-  /** Register a job-lease lookup (perf/lazy-hosts-jobs wires scheduler.hasLease here). */
+  /** Register a job-resource lookup (running and queued dependencies both count). */
   registerJobLeaseProvider(provider: (resourceId: string) => boolean): () => void {
     this.leaseProviders.add(provider);
     return () => this.leaseProviders.delete(provider);
@@ -313,6 +313,19 @@ export class StudioLifecycleManager {
       r.pinReasons = ['checkpoint-budget'];
       return false;
     }
+    // Snapshot capture and durable spill can await. A job may have acquired
+    // the engine in that gap, so recheck ownership immediately before release.
+    if (r.generation !== generation || r.state !== 'warm') return false;
+    const lateBlockers = this.blockers(r);
+    if (lateBlockers.length) {
+      r.pinReasons = lateBlockers;
+      this.cancelPinRecheck(r);
+      r.pinRecheckTimer = this.clock.setTimeout(() => {
+        r.pinRecheckTimer = undefined;
+        if (r.state === 'warm') void this.suspend(r.id, 'pin-recheck');
+      }, PIN_RECHECK_MS);
+      return false;
+    }
     try {
       await adapter.suspend();
     } catch (error) {
@@ -373,6 +386,10 @@ export class StudioLifecycleManager {
     const r = this.records.get(studioId);
     if (!r || r.state !== 'suspended') return false;
     const adapter = this.adapterOf(r);
+    if (this.blockers(r).length) {
+      this.telemetry.event({ type: 'evict-refused', studioId, reason: 'resource-pinned' });
+      return false;
+    }
     if (adapter?.hasUnsavedChanges?.()) {
       this.telemetry.event({ type: 'evict-refused', studioId, reason: 'unsaved-changes' });
       return false;

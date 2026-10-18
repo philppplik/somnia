@@ -6,12 +6,14 @@ import { StudioLifecycleManager, type PressureLevel } from './manager';
 import { readLifecycleSettings } from './settings';
 import { getLifecycleTelemetry } from './telemetry';
 import type { StudioLifecycleAdapter } from './types';
+import { jobScheduler, type JobScheduler } from '../jobs/scheduler';
+import { applyJobBudget, wireJobLeases } from '../jobs/lifecycleBridge';
 
 /**
  * Wiring seam between the lifecycle core and the app shell. Kept free of
  * store imports (layer rules): main.tsx injects the store accessors and the
- * manifest adapter resolver. The job scheduler (perf/lazy-hosts-jobs branch)
- * registers its hasLease lookup through getStudioLifecycle().
+ * manifest adapter resolver. Job lease protection, pressure and profile budgets
+ * are installed here before the first studio activation.
  */
 export interface LifecycleWiring {
   /** Store subscription; fires after every state patch. */
@@ -21,10 +23,12 @@ export interface LifecycleWiring {
   resolveAdapter(studioId: string): StudioLifecycleAdapter | undefined;
   onProblem?(message: string): void;
   /**
-   * Pressure-level changes, for the job scheduler's setPressure(level)
-   * (perf/lazy-hosts-jobs). Levels match its contract exactly.
+   * Optional observer of pressure-level changes. The installed scheduler
+   * always receives pressure directly, even when this callback is omitted.
    */
   onPressure?(level: PressureLevel): void;
+  /** Application scheduler; injectable for isolated tests. */
+  scheduler?: JobScheduler;
   /** Pressure re-evaluation cadence; defaults to 5 seconds. */
   pressureIntervalMs?: number;
   /**
@@ -51,54 +55,74 @@ export function installStudioLifecycle(wiring: LifecycleWiring): () => void {
     spill: IdbCheckpointSpill.available() ? new IdbCheckpointSpill() : undefined,
     onSpillError: () => wiring.onProblem?.('Recovery checkpoints could not be written to local storage; affected studios stay in memory.'),
   });
+  const profile = () => {
+    const settings = readLifecycleSettings();
+    const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+    return resolveProfile(settings.profile, {
+      deviceMemory: (nav as { deviceMemory?: number } | undefined)?.deviceMemory,
+      hardwareConcurrency: nav?.hardwareConcurrency,
+    });
+  };
+  const scheduler = wiring.scheduler ?? jobScheduler;
+  let lastPressure: PressureLevel = 'normal';
+  let disposed = false;
+  let evaluating = false;
   const manager = new StudioLifecycleManager({
     resolveAdapter: wiring.resolveAdapter,
     checkpoints,
     isEnabled: () => readLifecycleSettings().enabled,
-    profile: () => {
-      const settings = readLifecycleSettings();
-      const nav = typeof navigator !== 'undefined' ? navigator : undefined;
-      const hints = {
-        deviceMemory: (nav as { deviceMemory?: number } | undefined)?.deviceMemory,
-        hardwareConcurrency: nav?.hardwareConcurrency,
-      };
-      const profile = resolveProfile(settings.profile, hints);
-      return profile ?? NORMAL_PROFILE;
-    },
+    profile,
     telemetry: getLifecycleTelemetry(),
     onProblem: wiring.onProblem,
   });
   current = manager;
+  const unlease = wireJobLeases(manager, scheduler);
+  applyJobBudget(profile(), lastPressure, scheduler);
 
   let last = wiring.getActiveStudio();
   void manager.activate(last);
   const unsubscribe = wiring.subscribe(() => {
+    applyJobBudget(profile(), lastPressure, scheduler);
     const id = wiring.getActiveStudio();
     if (id !== last) {
       last = id;
       void manager.activate(id);
     }
   });
-  let lastPressure: PressureLevel = 'normal';
   const probe = wiring.probe ?? createMemoryProbe();
   const evaluate = async (): Promise<void> => {
-    let externalRatio: number | null = null;
-    const sample = await probe.sample().catch(() => null);
-    if (sample && sample.totalBytes > 0) externalRatio = sample.usedBytes / sample.totalBytes;
-    const level = manager.evaluatePressure(externalRatio);
-    if (level !== lastPressure) {
-      lastPressure = level;
-      currentPressure = level;
-      wiring.onPressure?.(level);
-    }
+    if (disposed || evaluating) return;
+    evaluating = true;
+    try {
+      const sample = await probe.sample().catch(() => null);
+      if (disposed) return; // An old probe must not alter a new installation.
+      const budget = profile();
+      const trackedRatio = (manager.trackedBytes() + scheduler.reservedBytes()) / budget.envelopeBytes;
+      const externalRatio = sample && Number.isFinite(sample.totalBytes) && sample.totalBytes > 0
+        && Number.isFinite(sample.usedBytes) && sample.usedBytes >= 0
+        ? sample.usedBytes / sample.totalBytes : 0;
+      const level = manager.evaluatePressure(Math.max(trackedRatio, externalRatio));
+      applyJobBudget(budget, level, scheduler);
+      if (level !== lastPressure) {
+        lastPressure = level;
+        currentPressure = level;
+        wiring.onPressure?.(level);
+      }
+    } finally { evaluating = false; }
   };
   void evaluate();
   const pressureTimer = setInterval(() => void evaluate(), wiring.pressureIntervalMs ?? 5_000);
 
   return () => {
+    if (disposed) return;
+    disposed = true;
     unsubscribe();
+    unlease();
     clearInterval(pressureTimer);
     void manager.disable();
-    if (current === manager) current = null;
+    if (current === manager) {
+      current = null;
+      applyJobBudget(NORMAL_PROFILE, 'normal', scheduler);
+    }
   };
 }
