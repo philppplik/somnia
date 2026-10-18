@@ -39,6 +39,11 @@ let current: StudioLifecycleManager | null = null;
 /** The installed manager, or null before install / after dispose. */
 export const getStudioLifecycle = (): StudioLifecycleManager | null => current;
 
+let currentPressure: PressureLevel = 'normal';
+
+/** Latest evaluated memory pressure ('normal' until the first probe runs). Read-only for consumers like extension idle-suspend. */
+export const currentLifecyclePressure = (): PressureLevel => currentPressure;
+
 export function installStudioLifecycle(wiring: LifecycleWiring): () => void {
   // Suspended checkpoints share the concept's 64 MiB bucket; overflow spills
   // to IndexedDB (local, private, 7-day retention) instead of being refused.
@@ -83,6 +88,7 @@ export function installStudioLifecycle(wiring: LifecycleWiring): () => void {
     const level = manager.evaluatePressure(externalRatio);
     if (level !== lastPressure) {
       lastPressure = level;
+      currentPressure = level;
       wiring.onPressure?.(level);
     }
   };
