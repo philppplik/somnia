@@ -1406,6 +1406,33 @@ mod tests {
     }
 
     #[test]
+    fn getpivotdata_reads_values_by_field_items() {
+        let mut s = sales();
+        s.execute("insert.pivotTable", json!({"rows": ["Region"], "columns": ["Product"], "values": ["Sales"]})).unwrap();
+        let get = |s: &mut Session, cell: &str, formula: &str| -> String {
+            s.execute("cell.set", json!({"cell": cell, "input": formula})).unwrap();
+            text(s, cell)
+        };
+        // Hand-checked sums of the 12 sample records: East 100+120+60+60+75, Apples 100+50+90+60+120, East Pears 120+75.
+        assert_eq!(get(&mut s, "K1", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region","East")"#), "415");
+        assert_eq!(get(&mut s, "K2", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region","west")"#), "285");
+        assert_eq!(get(&mut s, "K3", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region","East","Product","Pears")"#), "195");
+        assert_eq!(get(&mut s, "K4", r#"=GETPIVOTDATA("Sum of Sales",A3,"Product","Apples")"#), "420");
+        assert_eq!(get(&mut s, "K5", r#"=GETPIVOTDATA("Sum of Sales",A3)"#), "835");
+        assert_eq!(get(&mut s, "K6", r#"=GETPIVOTDATA("Sales",A3,"Product","Plums")"#), "145");
+        for (cell, f) in [
+            ("K7", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region","Nowhere")"#),
+            ("K8", r#"=GETPIVOTDATA("Sum of Sales",A3,"Units","5")"#),
+            ("K9", r#"=GETPIVOTDATA("Nope",A3,"Region","East")"#),
+            ("K10", r#"=GETPIVOTDATA("Sum of Sales",K20,"Region","East")"#),
+            ("K11", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region","East","Region","West")"#),
+        ] {
+            assert_eq!(get(&mut s, cell, f), "#REF!", "{f}");
+        }
+        assert_eq!(get(&mut s, "K12", r#"=GETPIVOTDATA("Sum of Sales",A3,"Region")"#), "#VALUE!");
+    }
+
+    #[test]
     fn date_grouping_by_quarter_and_month() {
         let mut s = sales();
         s.execute("insert.pivotTable", json!({"rows": ["Date"], "values": ["Sales"]})).unwrap();
