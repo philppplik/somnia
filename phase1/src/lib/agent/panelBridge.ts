@@ -25,7 +25,7 @@ import {t} from '../i18n';
 import {LocalModelsRuntime} from './localModels';
 import {requiresExactInstalledTaskModel,taskModelChoice} from './taskRouting';
 import {localContextFor} from './settings';
-import {routedProvider,timedProvider} from './providerRouting';
+import {ROUTE_PROVIDERS,routedProvider,timedProvider,type RouteProvider} from './providerRouting';
 import {AgentError,LocalTaskPreflightError,ProviderError,toAgentError,describeAgentError} from './errors';
 import {visionApplication,type VisionDestination} from './localVisionApplication';
 import {withAgentStudioContext,resolveAgentToolSet} from './studioContextAdapter';
@@ -96,7 +96,7 @@ function openAIByMethod(options:ConstructorParameters<typeof OpenAIProvider>[0])
  }} as AgentProvider;
 }
 export function createProvider(id:AuthProvider,model=config.model):AgentProvider {
- const limit=config.localRuntime?.routing?.limits[id];const provider=timedProvider(createRawProvider(id,model,config.localRuntime?.routing?(limit?.retries??0):undefined),limit?.timeoutMs);let actual=model;return {id:provider.id,locality:provider.locality,supportsImages:provider.supportsImages,identity:()=>({provider:id,model:actual}),stream(request){actual=request.model;return provider.stream(request);}};
+ const limit=(ROUTE_PROVIDERS as readonly string[]).includes(id)?config.localRuntime?.routing?.limits[id as RouteProvider]:undefined;const provider=timedProvider(createRawProvider(id,model,config.localRuntime?.routing?(limit?.retries??0):undefined),limit?.timeoutMs);let actual=model;return {id:provider.id,locality:provider.locality,supportsImages:provider.supportsImages,identity:()=>({provider:id,model:actual}),stream(request){actual=request.model;return provider.stream(request);}};
 }
 function createRawProvider(id:AuthProvider,model:string,retries?:number):AgentProvider {
  if(id==='ollama')return verifiedLocalProvider(new OllamaProvider({onContextBudget:(report,signal)=>{if(!signal.aborted)publishLocalContextBudget(report);},numCtx:localContextFor(config.localRuntime,model),keepAliveSeconds:config.localRuntime?.keepAliveSeconds,maxRetries:retries??0}),localContextFor(config.localRuntime,model));
