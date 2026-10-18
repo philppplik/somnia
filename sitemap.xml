@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns:image="http://www.google.com/schemas/image/1.1" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 <url><loc>https://somnia.philipp-paulik.de/</loc></url>
 <url><loc>https://somnia.philipp-paulik.de/privacy/</loc></url>
 <url><loc>https://somnia.philipp-paulik.de/datenschutz/</loc></url>
 <url><loc>https://somnia.philipp-paulik.de/impressum/</loc></url>
-</urlset>
+<url><loc>https://somnia.philipp-paulik.de/entwickler/philipp-paulik/</loc><lastmod>2026-10-18</lastmod><image:image><image:loc>https://somnia.philipp-paulik.de/assets/philipp-paulik-portrait-bibliothek-gruene-lampen.jpg</image:loc><image:title>Philipp Paulik, Developer · Somnia</image:title><image:caption>Philipp Paulik, portrait: smiling man with short brown hair, stubble and a tweed jacket over a black sweater, in front of bookshelves with green reading lamps</image:caption></image:image></url></urlset>
