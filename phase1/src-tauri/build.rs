@@ -229,6 +229,8 @@ fn main() {
             "git_fetch",
             "extension_activity_query",
             "extension_activity_export",
+            "check_channel_update",
+            "install_channel_update",
             "runtime_status",
             "runtime_install",
             "runtime_remove",

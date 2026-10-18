@@ -186,6 +186,19 @@
       ]
     },
     {
+      "name": "check_channel_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "channel"
+      ],
+      "args": [
+        "channel"
+      ]
+    },
+    {
       "name": "choose_file",
       "domain": "fs",
       "status": "native",
@@ -1252,6 +1265,21 @@
       "params": [],
       "args": [],
       "raw": true
+    },
+    {
+      "name": "install_channel_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "channel",
+        "expected_version"
+      ],
+      "args": [
+        "channel",
+        "expectedVersion"
+      ]
     },
     {
       "name": "is_store_package",

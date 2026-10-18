@@ -245,6 +245,8 @@
         "allow-git-fetch",
     "allow-extension-activity-query",
     "allow-extension-activity-export",
+    "allow-check-channel-update",
+    "allow-install-channel-update",
     "allow-runtime-status",
     "allow-runtime-install",
     "allow-runtime-remove",

@@ -1,5 +1,7 @@
 #[cfg(feature = "desktop")]
 mod desktop;
+#[cfg(any(feature = "desktop", test))]
+mod update_channel;
 pub(crate) mod no_window;
 #[cfg(any(feature = "desktop", test))]
 mod drop_grant;
