@@ -535,3 +535,38 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 ### Animation P69 (2026-10-14, integrated)
 - Done: stroke alignment for closed shapes (centre, inside, outside). Inside clips a double-width stroke to the shape, outside masks the shape out of it, so the visible band keeps the set width. Select in the stroke section. Viewer and every export share the behaviour; open paths stay centred. Absent field means centred and byte-identical output.
 - Open: "Expand stroke" outlines ignore the alignment (centre only), gradient strokes use the same bounding box, no alignment keys.
+### CLI silent install (2026-10-19, integrated)
+- Done: install.sh, install.ps1 and install.bat download the matching CLI asset from a GitHub release, verify the SHA-256 against the published checksums and install it, with silent flags for unattended setup. A smoke workflow runs the installers in CI; the Ubuntu 22.04 x64 CLI asset ships in every release, the macOS arm64 CLI asset only on full-release runs.
+- Open: installers and CLI assets are unsigned until a signing key exists.
+
+### AI providers (2026-10-19, integrated)
+- Done: Grok (xAI), Meta and DeepSeek join the Vibespace provider list with model-picker refresh; Claude now runs through the shared ProviderModel adapter. The local-only/Ollama guards from the HTTP model apply 1:1 to ProviderModel: cloud requests and streaming stay blocked unless the user allows them.
+- Open: provider behaviour is gated by CI (no local Rust toolchain in the integration sandbox).
+
+### CLI providers sidecar (2026-10-19, integrated)
+- Done: engine resolution accepts CLI sidecars via COMPAT_KEY_ENV, gated by explicit user consent; 26 tests green.
+- Open: none known.
+
+### Deploy UI (2026-10-19, integrated)
+- Done: Publish panels and inspector sections in the Code studio shell plus four UI commands (1132 total). Verified with light and dark fixture screenshots.
+- Open: none known.
+
+### Workspace docking and copy windows (2026-10-19, integrated)
+- Done: panels dock as tabs on either rail (buttons, HTML5 drag/drop, keyboard), the layout persists across reload and reset restores the studio default. A Code copy window edits an independent snapshot with its own preview, export and dirty-close guard. Covered by a standalone browser regression (tests/workspace/run.mjs): moves, drag/drop, keyboard tabs, reload persistence, reset, copy editing/preview, dirty close and source independence all pass.
+- Open: none known.
+
+### Code command terminal (2026-10-19, integrated)
+- Done: non-interactive shell command runner in the Code studio for desktop folders: explicit run dialog with an effects warning, 5 min / 1 MiB output / 16 KiB per line / 4 KiB command limits, stop button, strings in 5 locales. Browser and in-memory projects get an honest unavailable note.
+- Open: no PTY or interactive input here; that is the separate bottom-terminal feature.
+
+### Custom Windows installer (2026-10-19, integrated)
+- Done: standalone installer under phase1/installer (Rust core and shell crates, 5 locales) that recovers a custom setup on release candidates and hardens first-start, consent and file-safety paths. A manual installer-check workflow runs the core tests and a Windows shell compile.
+- Open: unsigned until a signing key exists; shell compile and tests run in CI only (no local Rust toolchain).
+
+### Android AAB (2026-10-19, integrated)
+- Done: mobile shell feature, Tauri android config and capability, a mobile frontend mode (the native command surface is shimmed to the browser paths) and a manual AAB build workflow with a signing wire that surfaces build errors as CI annotations.
+- Open: no store submission; signing needs the maintainer's keystore secrets; no on-device verification yet.
+
+### Bottom terminal (2026-10-19, pending maintainer decision)
+- Done: feat/bottom-terminal rebased onto beta5 and pushed: PTY-backed interactive terminal sessions in the bottom panel (desktop), next to Problems, with resize and replay.
+- Open: merge waits on the maintainer's decision about three new dependencies (@xterm/xterm, @xterm/addon-fit, portable-pty).
