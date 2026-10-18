@@ -1420,6 +1420,8 @@ export default function Viewport3D(){
    uvPlanar:(id,axis)=>{stage.uvPlanar(id,axis);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
    uvPack:(id,opts)=>{stage.uvPack(id,opts);const sel=getStudio3DState().selected;if(sel!=null)patchStudio3D({selectedInfo:stage.info(sel)});sync();invalidate();},
   });
+  // The command controller is live only from here on. Publishing readiness lets tests (and any late caller) wait for the viewport instead of racing the lazy chunk and the WebGL setup.
+  patchStudio3D({viewportReady:true});
   // Pick by click (no drag) and keyboard orbit/zoom.
   let down:{x:number;y:number}|null=null;const ray=new THREE.Raycaster();
   // Picking skips hidden and locked objects (locked parents lock their whole subtree).
@@ -1646,7 +1648,7 @@ export default function Viewport3D(){
   const offMarks=subscribeStudio3D(()=>{const k=getStudio3DState().marked.join(',');if(k!==markKey){markKey=k;syncGizmo();drawSelection();invalidate();}});
   sync();frameAll();void applyEnv();
   return()=>{
-   disposed=true;opening++;stopAnim();cancelFly();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
+   disposed=true;opening++;stopAnim();cancelFly();if(previewRaf)cancelAnimationFrame(previewRaf);offDrop();mixer?.stopAllAction();stage.autoKeySource=null;off();patchStudio3D({viewportReady:false});offAuto();if(autoTimer)clearTimeout(autoTimer);cancelAnimationFrame(frame);ro.disconnect();controls.dispose();
    el.removeEventListener('dragover',onAssetDragOver);el.removeEventListener('drop',onAssetDrop);cv.removeEventListener('pointerdown',onDownCapture,true);cv.removeEventListener('pointerdown',onDown);window.removeEventListener('pointermove',onMove);window.removeEventListener('pointercancel',endMarquee);endMarquee();cv.removeEventListener('pointerup',onUp);cv.removeEventListener('keydown',onKey);
    // The open flow (withController in Studio3DCanvas) owns the loading status, error path included: an unmount mid-open (StrictMode re-mount in dev, studio switch) must not downgrade it, otherwise the in-flight open loses its controller and fails with "viewport could not start" while nothing is actually wrong.
    if(getStudio3DState().status==='loading')patchStudio3D({confirmReplace:null});
@@ -1657,7 +1659,7 @@ export default function Viewport3D(){
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
  const s=useStudio3D();
- return <div className="relative flex min-h-0 flex-1 flex-col" data-testid="studio3d-viewport">
+ return <div className="relative flex min-h-0 flex-1 flex-col" data-testid="studio3d-viewport" data-viewport-ready={s.viewportReady?'true':'false'}>
   <div ref={host} className="relative min-h-0 flex-1 overflow-hidden rounded-[25px]"/>
   {s.status==='loading'&&<StudioStatus className="pointer-events-none absolute left-4 top-3 m-0 rounded-md bg-surface px-2 py-1 text-xs" data-testid="studio3d-loading">{t('studio3d.status.loading',{name:s.name})}{s.loadPhase?` · ${t('studio3d.load.phase.'+s.loadPhase)}`:''}</StudioStatus>}
   {s.status==='error'&&<StudioStatus tone="error" live="assertive" className="absolute left-4 top-3 m-0 max-w-[80%] rounded-md bg-surface px-2 py-1 text-xs">{t('studio3d.status.error')}: {s.error}</StudioStatus>}

@@ -109,14 +109,24 @@ const run=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{con
 const runValue=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=>{const m=await import('/src/lib/commandDispatcher.ts');return (await m.commandDispatcher.runCommand(i,p,{origin:'ui'})) as unknown;},[id,params] as const);
 /** Refused commands surface as a polite status-bar notice (role=status); only hard open failures render as an assertive viewport alert. */
 const notice=(page:P,text:RegExp|string)=>page.getByRole('status').filter({hasText:text});
-const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
+const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,blank:s.blank,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
 const open3d=async(page:P)=>{await page.goto('/',{waitUntil:'domcontentloaded',timeout:60_000});await page.getByRole('radio',{name:/3D/}).first().click();};
-/** Opens a model through the file input and waits for the viewport. The first open mounts the lazy three.js chunk: on a cold dev server that takes well over the default timeout, so the first wait gets a minute. */
+/** The viewport div renders before its WebGL setup and command controller are live; only this attribute says commands can run. */
+const viewportReady=async(page:P)=>{
+ await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});
+ await expect(page.getByTestId('studio3d-viewport')).toHaveAttribute('data-viewport-ready','true',{timeout:60_000});
+};
+/** Opens a model through the file input and waits for the viewport and the finished open. The first open mounts the lazy three.js chunk: on a cold dev server that takes well over the default timeout, so the first wait gets a minute. The name flips only when the open completes, so a previous scene can never satisfy the wait early. */
 const openModel=async(page:P,file:{name:string;mimeType:string;buffer:Buffer})=>{
  await page.getByTestId('studio3d-file-input').setInputFiles(file);
- await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});
+ await viewportReady(page);
+ await expect.poll(async()=>{const s=await session(page);return s.status==='ready'&&s.name===file.name;},{timeout:60_000}).toBe(true);
 };
-const blank=async(page:P)=>{await open3d(page);await page.getByTestId('3d-create-blank').click();await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});};
+const blank=async(page:P)=>{
+ await open3d(page);await page.getByTestId('3d-create-blank').click();
+ await viewportReady(page);
+ await expect.poll(async()=>{const s=await session(page);return s.status==='ready'&&s.blank;},{timeout:60_000}).toBe(true);
+};
 const insert=async(page:P,kind:string,x:number)=>{await run(page,'studio3d.insert.primitive',{kind});const s=await session(page);const id=s.selected as number;await run(page,'studio3d.object.transform',{id,position:{x,y:0,z:0}});return id;};
 const positionOf=async(page:P,id:number)=>{await run(page,'studio3d.select',{id});return (await session(page)).info!.position;};
 function zipEntries(buf:Buffer):number{for(let i=buf.length-22;i>=0;i--)if(buf.readUInt32LE(i)===0x06054b50)return buf.readUInt16LE(i+10);return -1;}
@@ -266,15 +276,20 @@ test('3D studio keeps a texture and its mapping through GLB export and a saved s
  const id=await insert(page,'cube',0);
  const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==','base64');
  await page.getByTestId('studio3d-texture-input').setInputFiles({name:'t.png',mimeType:'image/png',buffer:png});
+ // The texture decodes asynchronously and the transform command refuses a slot without an image, so wait for the load before mapping it.
+ await expect.poll(async()=>(await session(page)).info?.material?.textures?.color,{timeout:20_000}).toBe('t.png');
  await run(page,'studio3d.texture.transform',{id,slot:'color',offsetX:0.5,scaleX:2,rotation:90});
+ await expect.poll(async()=>(await session(page)).info?.material?.transforms?.color?.scaleX).toBe(2);
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByTestId('studio3d-export').getByRole('button',{name:'GLB'}).click()]);
  const bytes=readFileSync(await download.path()!);
  expect(bytes.subarray(0,4).toString()).toBe('glTF');
  expect(bytes.toString('latin1')).toContain('KHR_texture_transform');
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'back.glb',mimeType:'model/gltf-binary',buffer:bytes});
- await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh')).toBe(true);
+ // Wait for the reimport itself: the name flips only on a finished open, while the old scene's mesh would satisfy an outline check early.
+ await expect.poll(async()=>{const s=await session(page);return s.status==='ready'&&s.name==='back.glb';},{timeout:30_000}).toBe(true);
+ await expect.poll(async()=>(await session(page)).outline.some(o=>o.kind==='mesh'),{timeout:20_000}).toBe(true);
  const mesh=(await session(page)).outline.find(o=>o.kind==='mesh')!;await run(page,'studio3d.select',{id:mesh.id});
- await expect.poll(async()=>(await session(page)).info?.material?.transforms?.color?.scaleX).toBe(2);
+ await expect.poll(async()=>(await session(page)).info?.material?.transforms?.color?.scaleX,{timeout:20_000}).toBe(2);
 });
 
 test('3D studio records keys into a clip, scrubs them and keeps the clip through GLB export and reopen',async({page})=>{
