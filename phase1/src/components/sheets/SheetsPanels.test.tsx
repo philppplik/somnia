@@ -66,3 +66,13 @@ test('rows and columns panel shows current sizes and freeze state from the layou
  setSheetsSelection({...selection,layout:null});assert.match(html(SheetsLayoutPanel),/disabled=""[^>]*data-testid="sheets-layout-autofit-cols"/,'no layout yet: controls disabled');
  setSheetsSelection(null);
 });
+test('layout panel keeps quick filters and leaves value-list filtering to the slicer section',()=>{
+ const layout={sheet:0,defaultColWidth:85,defaultRowHeight:20,cols:[],rows:[],showGridlines:true,freeze:null,merges:[]};
+ setSheetsSelection({...selection,layout});const markup=html(SheetsLayoutPanel);
+ assert.match(markup,/aria-label="Quick filters"/,'the quick filter group stays in the layout panel');
+ assert.match(markup,/data-testid="sheets-vf-quick"/);assert.match(markup,/data-testid="sheets-vf-quick-apply"/);assert.match(markup,/data-testid="sheets-vf-column"/);
+ assert.doesNotMatch(markup,/sheets-vf-load|sheets-vf-list|sheets-vf-apply"/,'no value-list controls: the slicer inspector section owns picking values');
+ assert.doesNotMatch(markup,/Filter by values/,'no duplicate value-filter group title');
+ assert.match(markup,/data-testid="sheets-filter-condition"/,'condition filtering stays in the layout panel');
+ setSheetsSelection(null);
+});
