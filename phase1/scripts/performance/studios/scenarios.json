@@ -1,0 +1,9 @@
+[
+ {"id":"documents","label":"Somnia Documents","readySelector":"[data-testid=documents-start]"},
+ {"id":"sheets","label":"Somnia Sheets","readySelector":"[data-testid=sheets-empty]"},
+ {"id":"slides","label":"Slides","readySelector":"[data-testid=slides-start]"},
+ {"id":"photos","label":"Somnia Photos","readySelector":"[data-testid=photos-start]"},
+ {"id":"sound","label":"Somnia Sound","readySelector":"[data-testid=sound-start]"},
+ {"id":"video","label":"Somnia Video","readySelector":"[data-testid=video-start]"},
+ {"id":"design","label":"Design","readySelector":"[data-testid=design-start]"}
+]
