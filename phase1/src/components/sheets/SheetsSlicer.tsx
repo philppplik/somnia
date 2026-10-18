@@ -24,6 +24,7 @@ export function describeFilter(t:(k:string,p?:Record<string,string|number>)=>str
  switch(op.kind){
   case 'values':return t('sheets.slicer.op.values',{n:op.values.length})+(op.blanks?' + '+t('sheets.vf.blanks'):'');
   case 'custom':return (OP_SYMBOLS[op.op]??t('sheets.filter.op.'+op.op))+' '+op.value;
+  case 'range':return t('sheets.slicer.op.range',{from:op.from,to:op.to});
   case 'top':return t('sheets.vf.q.'+(op.bottom?(op.percent?'bottomPercent':'bottom'):(op.percent?'topPercent':'top')))+' '+op.count;
   case 'color':return t(op.by==='fill'?'sheets.vf.q.fillColor':'sheets.vf.q.fontColor');
   case 'aboveAverage':return t(op.above?'sheets.vf.q.above':'sheets.vf.q.below');

@@ -1,4 +1,5 @@
 import {MAX_FILTER_PICKS} from './filterOps';
+import type {FilterOp} from './protocol';
 
 /** Period granularity of the filter timeline. Calendar quarters only; fiscal years are out of scope. */
 export type TimelineGranularity='year'|'quarter'|'month'|'day';
@@ -111,6 +112,19 @@ export function bucketDates(serials:readonly number[],granularity:TimelineGranul
 export const periodsFitValues=(buckets:readonly TimelineBucket[]):boolean=>new Set(buckets.flatMap(b=>b.values)).size<=MAX_FILTER_PICKS;
 /** The combined kind:'values' payload of the picked periods (distinct, insertion order). */
 export const pickedPeriodValues=(buckets:readonly TimelineBucket[]):string[]=>[...new Set(buckets.flatMap(b=>b.values))];
+
+/**
+ * The filter op for the picked periods: one period without blanks becomes an exact
+ * half-open range op (no value list, so a period denser than MAX_FILTER_PICKS days
+ * still applies); anything else becomes the values op when it fits, else null.
+ */
+export function periodFilterOp(column:number,picked:readonly TimelineBucket[],blanks:boolean):FilterOp|null{
+ if(picked.length===1&&!blanks)return {kind:'range',column,from:picked[0].from,to:picked[0].to};
+ const values=pickedPeriodValues(picked);
+ if(values.length>MAX_FILTER_PICKS||(values.length===0&&!blanks))return null;
+ return {kind:'values',column,values,blanks};
+}
+
 
 /** The bucket holding a serial (usually "now"), or null when no shown period contains it. */
 export const currentPeriod=(buckets:readonly TimelineBucket[],serial:number):TimelineBucket|null=>buckets.find(b=>serial>=b.from&&serial<b.to)??null;

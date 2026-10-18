@@ -31,6 +31,10 @@ export function parseFilterCommand(input:unknown):FilterOp{
    if(typeof o.blanks!=='boolean')throw Error('Blanks must be true or false.');
    if(o.values.length===0&&!o.blanks)throw Error('Pick at least one value.');
    return {kind:'values',column:c,values:[...new Set(o.values as string[])],blanks:o.blanks};}
+  case 'range':{only('kind','column','from','to');const c=column();
+   if(typeof o.from!=='number'||!Number.isFinite(o.from)||typeof o.to!=='number'||!Number.isFinite(o.to))throw Error('Range bounds must be finite numbers.');
+   if(!(o.from<o.to))throw Error('The range start must be below the range end.');
+   return {kind:'range',column:c,from:o.from,to:o.to};}
   case 'top':{only('kind','column','count','bottom','percent');const c=column();
    if(typeof o.count!=='number'||!Number.isInteger(o.count)||o.count<1||o.count>1000)throw Error('The count must be 1 to 1000.');
    if(typeof o.bottom!=='boolean'||typeof o.percent!=='boolean')throw Error('Bottom and percent must be true or false.');

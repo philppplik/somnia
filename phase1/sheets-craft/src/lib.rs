@@ -4697,7 +4697,8 @@ impl HeadlessWorkbook {
     }
 
     /// Filters rows by one column as ONE history entry. `op_json` is `{"kind":"custom","column":abs,"op":..,"value":..}`
-    /// (op one of FILTER_OPS), `{"kind":"values","column":abs,"values":[..200],"blanks":bool}`, `{"kind":"top","column":abs,"count":1..1000,"bottom":bool,"percent":bool}`, `{"kind":"aboveAverage","column":abs,"above":bool}`, `{"kind":"color","column":abs,"row":abs,"by":"fill"|"font"}` (the colour of that data cell), `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
+    /// (op one of FILTER_OPS), `{"kind":"values","column":abs,"values":[..200],"blanks":bool}`,
+    /// `{"kind":"range","column":abs,"from":num,"to":num}` (numeric half-open [from,to), e.g. date serials), `{"kind":"top","column":abs,"count":1..1000,"bottom":bool,"percent":bool}`, `{"kind":"aboveAverage","column":abs,"above":bool}`, `{"kind":"color","column":abs,"row":abs,"by":"fill"|"font"}` (the colour of that data cell), `{"kind":"clear","column":abs}`, `{"kind":"clearAll"}` or `{"kind":"off"}`; `column` is the
     /// absolute 0-based sheet column. The block only creates the filter (its first row is the header); an existing
     /// filter keeps its own range. Protected sheets, filters inside tables, empty or oversized values are refused.
     /// Hidden rows come from the engine, so they follow the file and undo.
@@ -4763,6 +4764,17 @@ impl HeadlessWorkbook {
                     return Err("Pick at least one value.".into());
                 }
                 self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"values": values, "blanks": blanks}))
+            }
+            "range" => {
+                let c = abs_col(&op)?;
+                let from = op.get("from").and_then(|v| v.as_f64()).filter(|v| v.is_finite()).ok_or("from must be a finite number")?;
+                let to = op.get("to").and_then(|v| v.as_f64()).filter(|v| v.is_finite()).ok_or("to must be a finite number")?;
+                if !(from < to) {
+                    return Err("The range start must be below the range end.".into());
+                }
+                // Integers stay integer strings so the criterion compares exactly like the cell serials.
+                let fmt = |v: f64| if v.fract() == 0.0 { format!("{v:.0}") } else { format!("{v}") };
+                self.filter_by_criterion(existing, (row, col, rows, cols), c, json!({"custom": {"op": ">=", "value": fmt(from), "op2": "<", "value2": fmt(to), "and": true}}))
             }
             "top" => {
                 let c = abs_col(&op)?;
@@ -5858,6 +5870,8 @@ mod tests {
         book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"top","column":1,"count":2,"bottom":false,"percent":false}"#).unwrap();
         assert!(hidden(&book) >= 3, "the filter on the first column stays and the top two of the rest remain");
         book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"aboveAverage","column":1,"above":true}"#).unwrap();
+        book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"range","column":1,"from":2,"to":4}"#).unwrap();
+        assert_eq!(hidden(&book), 4, "only the row with name c and n = 3 passes both the column-0 values and the half-open range");
         book.filter_range(0, 1000, 0, 6, 2, r#"{"kind":"clearAll"}"#).unwrap();
         assert_eq!(hidden(&book), 0);
         for bad in [
@@ -5869,6 +5883,11 @@ mod tests {
             r#"{"kind":"top","column":1,"count":5}"#,
             r#"{"kind":"aboveAverage","column":1}"#,
             r#"{"kind":"values","column":99999999,"values":["a"],"blanks":false}"#,
+            r#"{"kind":"range","column":1,"from":4,"to":4}"#,
+            r#"{"kind":"range","column":1,"from":4,"to":2}"#,
+            r#"{"kind":"range","column":1,"from":2}"#,
+            r#"{"kind":"range","column":1,"from":"x","to":4}"#,
+            r#"{"kind":"range","column":1,"from":1e999,"to":1e999}"#,
         ] {
             assert!(book.filter_range(0, 1000, 0, 6, 2, bad).is_err(), "{bad}");
         }

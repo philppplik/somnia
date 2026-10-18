@@ -37,6 +37,8 @@ test('timeline readback mirrors the slicer mirror: applied, stale, cleared',()=>
  assert.match(html(),/Last known: column A - 2 values \(undo\/redo may have changed it\)/);
  noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'clear',column:0});
  assert.match(html(),/No filter \(cleared in this session\)/);
+ noteFilterApplied('test.xlsx',0,{r0:0,c0:0,r1:9,c1:1},{kind:'range',column:0,from:45700,to:45731});
+ assert.match(html(),/Active: column A - 45700 to 45731/,'a range filter reads back as its bounds');
 });
 
 test('timeline disables apply and clear on a protected sheet without the autofilter permission',()=>{

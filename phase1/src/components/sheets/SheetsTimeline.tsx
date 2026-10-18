@@ -9,7 +9,7 @@ import {MAX_FILTER_SCAN_ROWS} from '../../lib/sheets/filterOps';
 import type {ViewCell} from '../../lib/sheets/protocol';
 import {sameRange,tableFilterRange,tablesHere} from '../../lib/sheets/tableBinding';
 import {slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
-import {bucketDates,currentPeriod,isDateFmt,pickedPeriodValues,periodsFitValues,type TimelineGranularity} from '../../lib/sheets/timelineOps';
+import {bucketDates,currentPeriod,isDateFmt,periodFilterOp,pickedPeriodValues,periodsFitValues,type TimelineGranularity} from '../../lib/sheets/timelineOps';
 import {localSerial} from '../../lib/sheets/clock';
 import {Checkbox} from '../ui/checkbox';
 import {Button} from '../ui/button';
@@ -25,7 +25,9 @@ const field='w-full min-w-0 rounded-lg border border-subtle bg-transparent px-2 
  * Filter timeline: an inspector section bound to one date column of the current
  * selection. Loading reads the column once (bounded styled read); picking a
  * granularity only re-buckets locally. Applying ticks periods as one undo step
- * through the existing filter kind:'values' op (Path A of the timeline concept:
+ * through the filter kind:'range' op for one picked period without blanks and the
+ * kind:'values' op otherwise (Path B where it fits, Path A as the fallback of the
+ * timeline concept:
  * display-text identity, 200-pick bound gated honestly), clear runs kind:'clear'.
  * The readback line reuses the slicer's session mirror; protection follows the
  * 'autofilter' permission. The timeline is a view on the AutoFilter and is not
@@ -69,7 +71,11 @@ export function SheetsTimelinePanel({context}:PanelHostProps){
  };
  const picked=result?result.buckets.filter(b=>!off.has(b.key)):[];
  const values=pickedPeriodValues(picked),fits=periodsFitValues(picked);
- const apply=()=>{if(result&&fits)void action.run('sheets.filter',{kind:'values',column:abs,values,blanks:blanksOn&&result.blanks>0});};
+ // One picked period without blanks filters by its exact half-open serial range - no
+ // value list, so it also works when the period holds more than MAX_FILTER_PICKS days.
+ const single=picked.length===1&&!(blanksOn&&result&&result.blanks>0);
+ const op=result?periodFilterOp(abs,picked,blanksOn&&result.blanks>0):null;
+ const apply=()=>{if(op)void action.run('sheets.filter',op);};
  const clear=()=>void action.run('sheets.filter',{kind:'clear',column:abs});
  const status=mirror===null?t('sheets.slicer.unknown')
   :mirror.stale?t('sheets.slicer.stale',{column:mirror.op&&'column' in mirror.op?colName(mirror.op.column):'–',what:mirror.op?describeFilter(t,mirror.op):t('sheets.slicer.op.none')})
@@ -89,8 +95,8 @@ export function SheetsTimelinePanel({context}:PanelHostProps){
    {result.blanks>0&&<Checkbox label={t('sheets.vf.blanks')+' ('+result.blanks+')'} checked={blanksOn} disabled={action.busy} onChange={e=>setBlanksOn(e.currentTarget.checked)}/>}
    {result.truncated&&<p className="text-ink-3">{t('sheets.timeline.truncated',{n:result.buckets.length})}</p>}
    <Button variant="outline" size="compact" disabled={action.busy} onClick={pickCurrent} data-testid="sheets-timeline-current">{t('sheets.timeline.current.'+granularity)}</Button>
-   {!fits&&<p className="text-ink-3" data-testid="sheets-timeline-toomany">{t('sheets.timeline.toomany')}</p>}
-   <Button variant="outline" size="compact" disabled={action.busy||!allowed||!fits||(values.length===0&&!(blanksOn&&result.blanks>0))} onClick={apply} data-testid="sheets-timeline-apply">{t('sheets.vf.apply')}</Button>
+   {!single&&!fits&&<p className="text-ink-3" data-testid="sheets-timeline-toomany">{t('sheets.timeline.toomany')}</p>}
+   <Button variant="outline" size="compact" disabled={action.busy||!allowed||!op} onClick={apply} data-testid="sheets-timeline-apply">{t('sheets.vf.apply')}</Button>
   </div>}
   <Button variant="outline" size="compact" disabled={action.busy||!allowed||(mirror!==null&&!mirror.stale&&mirror.op===null)} onClick={clear} data-testid="sheets-timeline-clear">{t('sheets.slicer.clear')}</Button>
   <p className="text-ink-3">{t(block?'sheets.sort.need':'sheets.timeline.scope',{range:rangeAddress(r)})}</p>

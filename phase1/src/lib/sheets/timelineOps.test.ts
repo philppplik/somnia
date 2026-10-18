@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {bucketDates,currentPeriod,isDateFmt,MAX_TIMELINE_PERIODS,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
+import {bucketDates,currentPeriod,isDateFmt,MAX_TIMELINE_PERIODS,periodFilterOp,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
 import {localSerial} from './clock';
 
 const serial=(y:number,m:number,d:number)=>25569+Date.UTC(y,m-1,d)/86_400_000;
@@ -60,6 +60,21 @@ test('period fit gate and combined payload honour the 200-pick bound',()=>{
  const wide=bucketDates(Array.from({length:201},(_,i)=>serial(2026,1,1)+i),'day',0,'en');
  assert.equal(periodsFitValues(wide.buckets),false,'201 distinct day values exceed the pick bound');
  assert.equal(periodsFitValues(wide.buckets.slice(0,50)),true,'fewer picked periods fit');
+});
+
+test('periodFilterOp routes one picked period to the exact range and the rest to values',()=>{
+ const r=bucketDates([serial(2026,1,1),serial(2026,1,2)],'month',0,'en');
+ const jan=r.buckets[0];
+ assert.deepEqual(periodFilterOp(3,[jan],false),{kind:'range',column:3,from:jan.from,to:jan.to},'one period, no blanks: half-open range, no value list');
+ assert.deepEqual(periodFilterOp(3,[jan],true),{kind:'values',column:3,values:pickedPeriodValues([jan]),blanks:true},'blanks picked: values carries the blanks flag');
+ const wide=bucketDates(Array.from({length:201},(_,i)=>serial(2026,1,1)+i),'month',0,'en');
+ assert.deepEqual(periodFilterOp(3,[wide.buckets[0]],false),{kind:'range',column:3,from:wide.buckets[0].from,to:wide.buckets[0].to},'one dense month still applies as a range');
+ const two=bucketDates([serial(2026,1,1),serial(2026,3,1)],'month',0,'en');
+ assert.deepEqual(periodFilterOp(3,two.buckets,false),{kind:'values',column:3,values:pickedPeriodValues(two.buckets),blanks:false},'several periods stay a values filter');
+ assert.equal(periodFilterOp(3,[],false),null,'nothing picked, no blanks: no op');
+ assert.deepEqual(periodFilterOp(3,[],true),{kind:'values',column:3,values:[],blanks:true},'blanks only still apply');
+ const days=bucketDates(Array.from({length:201},(_,i)=>serial(2026,1,1)+i),'day',0,'en');
+ assert.equal(periodFilterOp(3,days.buckets,false),null,'more than 200 distinct values cannot apply');
 });
 
 test('currentPeriod finds the bucket holding a serial, bounds half-open',()=>{
