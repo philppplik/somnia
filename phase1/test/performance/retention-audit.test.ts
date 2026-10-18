@@ -31,13 +31,17 @@ test('baseline hazard witness: reattaching an original Documents engine clears d
 });
 test('baseline source ownership: Documents remount reads original URL and disposes engine',()=>{
  const canvas=readFileSync(new URL('../../src/components/documents/DocumentsCanvas.tsx',import.meta.url),'utf8');
- assert.match(canvas,/fetch\(item\.url\)/);assert.match(canvas,/attachEngine\(e\)/);
- assert.match(canvas,/return\(\)=>\{live=false;e\.dispose\(\)/);
+ const session=readFileSync(new URL('../../src/lib/documents/session.ts',import.meta.url),'utf8');
+ // beta5 moved the original-URL read and engine lifecycle into the documents session layer.
+ assert.match(canvas,/switchDocument\(\{key:item\.name,url:item\.url/);
+ assert.match(session,/export function switchDocument\(target:\{key:string;url:string/);
+ assert.match(session,/e\.engine\?\.dispose\?\.\(\)/);
 });
 test('baseline hazard witness: Sheets view cleanup removes the global dirty guard',()=>{
- const canvas=readFileSync(new URL('../../src/components/sheets/SheetsCanvas.tsx',import.meta.url),'utf8');
- assert.match(canvas,/return\(\)=>setSheetsDirty\(item\.name,false\)/);
- assert.match(canvas,/return\(\)=>\{live=false;eng\.dispose\(\)/);
+ const session=readFileSync(new URL('../../src/lib/sheets/session.ts',import.meta.url),'utf8');
+ // beta5 moved cleanup into the sheets session layer: ending a session disposes the engine and clears the guard.
+ assert.match(session,/export function endSheetsSession/);
+ assert.match(session,/engine\.dispose\(\);setSheetsDirty\(name,false\)/);
  setSheetsDirty('audit.xlsx',true);assert.equal(sheetsIsDirty('audit.xlsx'),true);
  // Exact dirty cleanup operation from the source, not a React remount test.
  setSheetsDirty('audit.xlsx',false);assert.equal(sheetsIsDirty('audit.xlsx'),false);
