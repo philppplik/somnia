@@ -235,7 +235,7 @@
   "redesign.daily": "Diariamente",
   "redesign.weekly": "Semanalmente",
   "redesign.channel": "Canal de atualização",
-  "redesign.channelHint": "Estável inclui as versões estáveis publicadas. Beta também inclui pré-lançamentos, exceto builds alpha/nightly. Alpha inclui todos os pré-lançamentos. A instalação de um pré-lançamento abre a página de download; a instalação assinada dentro do app permanece no canal estável.",
+  "redesign.channelHint": "Estável inclui as versões estáveis publicadas. Beta também inclui pré-lançamentos, exceto builds alpha/nightly. Alpha inclui todos os pré-lançamentos. A instalação assinada dentro do app segue o canal selecionado.",
   "redesign.releaseNotes": "Abrir as notas da versão",
   "redesign.disableAllExt": "Desativar todas as extensões",
   "redesign.fastParse": "Análise rápida experimental",

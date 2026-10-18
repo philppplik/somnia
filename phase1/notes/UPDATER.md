@@ -39,7 +39,7 @@ CI reads TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD (repos
 Asset names must match the URLs `make-latest-json.py` writes: `Somnia-<tag>-x64-setup.exe`, `Somnia-<tag>-amd64.AppImage`, `Somnia-<tag>-macos-<aarch64|x86_64>.app.tar.gz`. The release script (outside this repo) must upload the macOS `.app.tar.gz` under that name. Set `SOMNIA_MACOS_ARCH=x86_64` for Intel builds.
 
 ## Channels
-Status: client side ported to the beta.5 line (`update_channel.rs`, `updateChannel.ts`, `selfUpdate.ts`). Not yet run against a real release. The release side is NOT on this line yet: `make-latest-json.py` has no `--channels-dir`, so the `updater-channels` manifests are not produced until that part is ported.
+Status: client and release side ported to the beta.5 line (`update_channel.rs`, `updateChannel.ts`, `selfUpdate.ts`, `make-latest-json.py --channels-dir`). Not yet run against a real release; the first beta.6 cut produces the `updater-channels` manifests.
 
 | Channel | Manifest URL | Receives |
 |---|---|---|

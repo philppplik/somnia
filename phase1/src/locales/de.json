@@ -235,7 +235,7 @@
   "redesign.daily": "Täglich",
   "redesign.weekly": "Wöchentlich",
   "redesign.channel": "Update-Kanal",
-  "redesign.channelHint": "Stable enthält stabile Releases. Beta umfasst auch Vorabversionen außer Alpha/Nightly. Alpha enthält alle Vorabversionen. Vorabversionen öffnen die Downloadseite; die signierte In-App-Installation bleibt auf dem Stable-Endpunkt.",
+  "redesign.channelHint": "Stable enthält stabile Releases. Beta umfasst auch Vorabversionen außer Alpha/Nightly. Alpha enthält alle Vorabversionen. Die signierte In-App-Installation folgt dem gewählten Kanal.",
   "redesign.releaseNotes": "Versionshinweise öffnen",
   "redesign.disableAllExt": "Alle Erweiterungen deaktivieren",
   "redesign.fastParse": "Experimentelles schnelles Parsing",

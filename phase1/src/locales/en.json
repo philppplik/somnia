@@ -235,7 +235,7 @@
   "redesign.daily": "Daily",
   "redesign.weekly": "Weekly",
   "redesign.channel": "Update channel",
-  "redesign.channelHint": "Stable includes published stable releases. Beta also includes pre-releases except alpha/nightly builds. Alpha includes all pre-releases. Pre-release installation opens the download page; signed in-app installation stays on the stable endpoint.",
+  "redesign.channelHint": "Stable includes published stable releases. Beta also includes pre-releases except alpha/nightly builds. Alpha includes all pre-releases. Signed in-app installation follows the selected channel.",
   "redesign.releaseNotes": "Open release notes",
   "redesign.disableAllExt": "Disable all extensions",
   "redesign.fastParse": "Experimental fast parsing",

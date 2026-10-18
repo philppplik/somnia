@@ -235,7 +235,7 @@
   "redesign.daily": "Cada día",
   "redesign.weekly": "Cada semana",
   "redesign.channel": "Canal de actualizaciones",
-  "redesign.channelHint": "Estable incluye las versiones estables publicadas. Beta incluye además las preversiones, excepto las compilaciones alpha/nightly. Alpha incluye todas las preversiones. La instalación de una preversión abre la página de descarga; la instalación firmada dentro de la app se mantiene en el canal estable.",
+  "redesign.channelHint": "Estable incluye las versiones estables publicadas. Beta incluye además las preversiones, excepto las compilaciones alpha/nightly. Alpha incluye todas las preversiones. La instalación firmada dentro de la app sigue el canal seleccionado.",
   "redesign.releaseNotes": "Abrir las notas de la versión",
   "redesign.disableAllExt": "Desactivar todas las extensiones",
   "redesign.fastParse": "Análisis rápido experimental",
