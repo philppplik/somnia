@@ -60,6 +60,6 @@ function HeroSplitButton({resolved}:{resolved:Extract<ReturnType<typeof resolveH
    </div>)}
   </Menu.Popup></Menu.Positioner></Menu.Portal></Menu.Root>}
   {!resolved.enabled&&resolved.disabledReason&&<span id={`hero-reason-${resolved.id}`} className="sr-only">{t(resolved.disabledReason)}</span>}
-  <span className="sr-only" role="status" aria-live="polite">{running?t('deploy.button.running'):''}</span>
+  <span className="sr-only" aria-live="polite">{running?t('deploy.button.running'):''}</span>
  </div></Tooltip.Provider>;
 }
