@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {bucketDates,currentPeriod,isDateFmt,MAX_TIMELINE_PERIODS,periodFilterOp,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
+import {bucketDates,currentPeriod,isDateFmt,MAX_TIMELINE_PERIODS,periodFilterOp,periodTicksFromMirror,periodsFitValues,pickedPeriodValues,serialToYMD} from './timelineOps';
 import {localSerial} from './clock';
 
 const serial=(y:number,m:number,d:number)=>25569+Date.UTC(y,m-1,d)/86_400_000;
@@ -75,6 +75,20 @@ test('periodFilterOp routes one picked period to the exact range and the rest to
  assert.deepEqual(periodFilterOp(3,[],true),{kind:'values',column:3,values:[],blanks:true},'blanks only still apply');
  const days=bucketDates(Array.from({length:201},(_,i)=>serial(2026,1,1)+i),'day',0,'en');
  assert.equal(periodFilterOp(3,days.buckets,false),null,'more than 200 distinct values cannot apply');
+});
+
+test('periodTicksFromMirror seeds ticks from a fresh values or range filter only',()=>{
+ const r=bucketDates([serial(2026,1,1),serial(2026,3,1)],'month',0,'en');
+ const jan=r.buckets[0],mar=r.buckets[1];
+ const values=periodTicksFromMirror(r.buckets,{op:{kind:'values',column:0,values:[String(serial(2026,1,1))],blanks:true},range:null,stale:false});
+ assert.deepEqual(values?.off,new Set([mar.key]),'only the unlisted period is unticked');
+ assert.equal(values?.blanksOn,true,'the blanks flag follows the op');
+ const range=periodTicksFromMirror(r.buckets,{op:{kind:'range',column:0,from:mar.from,to:mar.to},range:null,stale:false});
+ assert.deepEqual(range?.off,new Set([jan.key]),'the range keeps only the overlapping period');
+ assert.equal(range?.blanksOn,false,'a range never keeps blanks');
+ assert.equal(periodTicksFromMirror(r.buckets,{op:{kind:'range',column:0,from:mar.from,to:mar.to},range:null,stale:true}),null,'stale offers nothing');
+ assert.equal(periodTicksFromMirror(r.buckets,{op:{kind:'custom',column:0,op:'contains',value:'x'},range:null,stale:false}),null,'a custom op cannot map to periods');
+ assert.equal(periodTicksFromMirror(r.buckets,{op:null,range:null,stale:false}),null,'a cleared filter starts all-ticked');
 });
 
 test('currentPeriod finds the bucket holding a serial, bounds half-open',()=>{

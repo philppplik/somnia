@@ -8,8 +8,8 @@ import {sortBlockProblem} from '../../lib/sheets/sortOps';
 import {MAX_FILTER_SCAN_ROWS} from '../../lib/sheets/filterOps';
 import type {ViewCell} from '../../lib/sheets/protocol';
 import {sameRange,tableFilterRange,tablesHere} from '../../lib/sheets/tableBinding';
-import {slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
-import {bucketDates,currentPeriod,isDateFmt,periodFilterOp,pickedPeriodValues,periodsFitValues,type TimelineGranularity} from '../../lib/sheets/timelineOps';
+import {getSlicerFilter,slicerFilterAllowed,useSlicerFilter} from '../../lib/sheets/slicerState';
+import {bucketDates,currentPeriod,isDateFmt,periodFilterOp,periodTicksFromMirror,pickedPeriodValues,periodsFitValues,type TimelineBucket,type TimelineGranularity} from '../../lib/sheets/timelineOps';
 import {localSerial} from '../../lib/sheets/clock';
 import {Checkbox} from '../ui/checkbox';
 import {Button} from '../ui/button';
@@ -67,8 +67,15 @@ export function SheetsTimelinePanel({context}:PanelHostProps){
    if(v.t==='Empty'||(v.t==='Text'&&v.v==='')){blanks++;continue;}
    if(v.t==='Number'&&Number.isFinite(v.v)&&isDateFmt(cell.style?.fmt??''))serials.push(v.v);
   }
-  setScan({key,serials,blanks,dates:serials.length});setOff(new Set());setBlanksOn(true);
+  setScan({key,serials,blanks,dates:serials.length});
+  seed(bucketDates(serials,granularity,blanks,locale).buckets);
  };
+ // Ticks follow the mirror when it knows a fresh filter on the bound column (the
+ // slicer does the same for its value list); otherwise the list starts all-ticked.
+ function seed(buckets:TimelineBucket[]){
+  const m=getSlicerFilter(s!.file,s!.sheet,abs),init=m?periodTicksFromMirror(buckets,m):null;
+  if(init){setOff(init.off);setBlanksOn(init.blanksOn);}else{setOff(new Set());setBlanksOn(true);}
+ }
  const picked=result?result.buckets.filter(b=>!off.has(b.key)):[];
  const values=pickedPeriodValues(picked),fits=periodsFitValues(picked);
  // One picked period without blanks filters by its exact half-open serial range - no
@@ -88,7 +95,7 @@ export function SheetsTimelinePanel({context}:PanelHostProps){
   {bound?<p className="text-ink-3" data-testid="sheets-timeline-bound">{t('sheets.timeline.bound',{name:bound.table.name})}</p>
    :hits.length>0&&<div className="flex flex-wrap gap-1" role="group" aria-label={t('sheets.timeline.tables')} data-testid="sheets-timeline-tables">{hits.map(h=><Button key={h.table.name} variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.navigate',{sheet:s.sheet,address:rangeAddress(tableFilterRange(h))})} data-testid={'sheets-timeline-bind-'+h.table.name}>{t('sheets.timeline.bind',{name:h.table.name})}</Button>)}</div>}
   {live&&live.dates===0&&<p className="text-ink-3" data-testid="sheets-timeline-nodates">{t('sheets.timeline.nodates')}</p>}
-  {result&&<label className="flex flex-col gap-1">{t('sheets.timeline.granularity')}<NativeSelect className={field} value={granularity} disabled={action.busy} onChange={e=>{setGranularity(e.currentTarget.value as TimelineGranularity);setOff(new Set());}} data-testid="sheets-timeline-granularity">{GRANULARITIES.map(g=><option key={g} value={g}>{t('sheets.timeline.g.'+g)}</option>)}</NativeSelect></label>}
+  {result&&<label className="flex flex-col gap-1">{t('sheets.timeline.granularity')}<NativeSelect className={field} value={granularity} disabled={action.busy} onChange={e=>{const g=e.currentTarget.value as TimelineGranularity;setGranularity(g);if(live)seed(bucketDates(live.serials,g,live.blanks,locale).buckets);else setOff(new Set());}} data-testid="sheets-timeline-granularity">{GRANULARITIES.map(g=><option key={g} value={g}>{t('sheets.timeline.g.'+g)}</option>)}</NativeSelect></label>}
   {!allowed&&<p className="text-ink-3" data-testid="sheets-timeline-protected">{t('sheets.slicer.protected')}</p>}
   {result&&<div className="flex flex-col gap-1" data-testid="sheets-timeline-list">
    {result.buckets.map(b=><Checkbox key={b.key} label={b.label+' ('+b.count+')'} checked={!off.has(b.key)} disabled={action.busy} onChange={e=>{const on=e.currentTarget.checked;setOff(p=>{const n=new Set(p);if(on)n.delete(b.key);else n.add(b.key);return n;});}}/>)}

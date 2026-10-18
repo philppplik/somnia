@@ -1,5 +1,6 @@
 import {MAX_FILTER_PICKS} from './filterOps';
 import type {FilterOp} from './protocol';
+import type {SlicerFilterMirror} from './slicerState';
 
 /** Period granularity of the filter timeline. Calendar quarters only; fiscal years are out of scope. */
 export type TimelineGranularity='year'|'quarter'|'month'|'day';
@@ -112,6 +113,27 @@ export function bucketDates(serials:readonly number[],granularity:TimelineGranul
 export const periodsFitValues=(buckets:readonly TimelineBucket[]):boolean=>new Set(buckets.flatMap(b=>b.values)).size<=MAX_FILTER_PICKS;
 /** The combined kind:'values' payload of the picked periods (distinct, insertion order). */
 export const pickedPeriodValues=(buckets:readonly TimelineBucket[]):string[]=>[...new Set(buckets.flatMap(b=>b.values))];
+
+/**
+ * Initial tick state for the period list when the session mirror knows a fresh filter
+ * on the bound column: a values filter keeps the periods whose serials it lists, a
+ * range filter the periods its half-open bounds overlap; blanks follow the op (a
+ * range never keeps blanks). Returns null when the mirror has nothing honest to
+ * offer (unknown, stale, cleared or another op kind) - the list then starts all-ticked.
+ */
+export function periodTicksFromMirror(buckets:readonly TimelineBucket[],mirror:SlicerFilterMirror):{off:Set<number>;blanksOn:boolean}|null{
+ if(mirror.stale||!mirror.op)return null;
+ const op=mirror.op;
+ if(op.kind==='values'){
+  const keep=new Set(op.values);
+  return {off:new Set(buckets.filter(b=>!b.values.some(v=>keep.has(v))).map(b=>b.key)),blanksOn:op.blanks};
+ }
+ if(op.kind==='range'){
+  const inRange=(v:string)=>{const n=Number(v);return n>=op.from&&n<op.to;};
+  return {off:new Set(buckets.filter(b=>!b.values.some(inRange)).map(b=>b.key)),blanksOn:false};
+ }
+ return null;
+}
 
 /**
  * The filter op for the picked periods: one period without blanks becomes an exact
