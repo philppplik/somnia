@@ -102,8 +102,6 @@ jobs:
       - name: E2E subset (dispatch filter, completes before job timeout and prints failure details)
         if: ${{ inputs.e2e_filter != '' }}
         run: npx playwright test ${{ inputs.e2e_filter }} --reporter=line --max-failures=${{ inputs.e2e_max_failures }}
-      - run: npm run test:e2e
-        if: ${{ inputs.e2e_filter == '' }}
       - name: Retain e2e failure evidence
         if: ${{ always() }}
         uses: actions/upload-artifact@v7
@@ -131,6 +129,43 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
           path: phase1/test-results/render
+  e2e:
+    if: ${{ inputs.e2e_filter == '' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
+      - run: npx playwright install --with-deps chromium
+      - name: E2E shard ${{ matrix.shard }}/4
+        run: npx playwright test --shard=${{ matrix.shard }}/4
+      - name: Retain e2e failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: somnia-e2e-results-${{ github.sha }}-shard-${{ matrix.shard }}
+          retention-days: 7
+          if-no-files-found: ignore
+          path: phase1/test-results
   snapshots:
     if: ${{ inputs.update_snapshots }}
     runs-on: ubuntu-24.04
