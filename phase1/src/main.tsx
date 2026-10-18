@@ -61,6 +61,9 @@ import {applyUiPrefs} from './lib/uiPrefs';
 import {invoke as tauriInvoke} from '@tauri-apps/api/core';
 import {installMcpRuntime} from './lib/agent/mcpRuntime';
 import {McpApprovalDialog} from './components/agent/McpApprovalDialog';
+import {installStudioLifecycle} from './lib/lifecycle/integration';
+import {connectSessionSafetyToLifecycle} from './lib/sessionSafety/lifecycleWiring';
+import {hasStudio,getStudio} from './lib/studios/registry';
 if(isTauri())void installMcpRuntime(tauriInvoke as never).refresh();
 // Somnia as MCP server: the Rust gateway forwards JSON-RPC to the WebView; the host owns the protocol server.
 if(isTauri())void (async()=>{
@@ -94,6 +97,9 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
+// Studio lifecycle (docs/studio-lifecycle.md): active/warm/suspended transitions, then connect session safety
+// (recovery-backed Documents/Sheets adapters) to the running host. Order matters: the host must exist before adapters register.
+{const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message)});const disconnectSafety=connectSessionSafetyToLifecycle();if(import.meta.hot)import.meta.hot.dispose(()=>{disconnectSafety();disposeLifecycle();});}
 // Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
 {const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);

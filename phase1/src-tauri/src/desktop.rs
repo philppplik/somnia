@@ -2942,6 +2942,7 @@ pub fn run() {
             ext_panel_open,
             crate::extension_activity_commands::extension_activity_query,
             crate::extension_activity_commands::extension_activity_export,
+            crate::lifecycle_commands::lifecycle_memory_sample,
             ext_worker_open,
             ext_worker_url,
             ext_close,

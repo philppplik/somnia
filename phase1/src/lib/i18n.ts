@@ -7,6 +7,7 @@ import {STORE_CATALOGUES} from './extensions/storeLocales';
 import {SCHEDULE_CATALOGUES} from './vibespace/scheduleI18n';
 import {SHEETS_RAIL_CATALOGUES} from './sheetsRailI18n';
 import {BOARD_CATALOGUES} from './vibespace/boardI18n';
+import {LIFECYCLE_CATALOGUES} from './lifecycle/i18n';
 import {BOARD_CATALOGUES as AGENT_BOARD_CATALOGUES} from './agentBoard/i18n';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
@@ -54,6 +55,7 @@ for (const [tag, extra] of Object.entries(EXPORT_CATALOGUES)) Object.assign(CATA
 for (const [tag, extra] of Object.entries(HANDOFF_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(LIFECYCLE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(AGENT_BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DIAGNOSTIC_LOCALES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SCHEDULE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);

@@ -1,3 +1,6 @@
+# Unreleased: Studio lifecycle
+- Studios move through active/warm/suspended/evicted states: a studio left in the background checkpoints its session and releases workers and caches after 30 seconds, and the memory probe (native RSS and system memory on desktop) can tighten that under pressure. Documents and Sheets use the session-safety recovery store as their checkpoint. New Settings > Advanced > Performance section: turn lifecycle off, pick a resource profile, and clear saved checkpoints and recovery copies (with a confirmation that names how many documents with unsaved edits are affected).
+
 # Unreleased: 3D Studio P0
 - 3D Studio: linked instances (`studio3d.selection.duplicateLinked`, `studio3d.object.makeSingleUser`) - duplicate objects sharing one geometry with a linked badge and user count in the outliner; geometry edits (edit mode, sculpt, UV ops, mirror modifier, mesh tools) are refused on a linked mesh until it is made single-user, and deleting one instance never disposes geometry the others still use.
 - 3D Studio: edit-mode vertex color fill and pick (`studio3d.edit.vcolFill`, `studio3d.edit.vcolPick`) - fill the selected vertices with the brush color (creates the color attribute on first use), pick a vertex color back into the brush.

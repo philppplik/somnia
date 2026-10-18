@@ -231,6 +231,7 @@ fn main() {
             "extension_activity_export",
             "check_channel_update",
             "install_channel_update",
+            "lifecycle_memory_sample",
             "runtime_status",
             "runtime_install",
             "runtime_remove",

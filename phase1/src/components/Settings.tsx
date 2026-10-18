@@ -111,6 +111,7 @@ import { THEME_CHOICES, type ThemeChoice } from "../lib/theme";
 import { patchState, useAppStore } from "../store/appStore";
 import type { CodeTheme, Contrast } from "../lib/appearance";
 import {NativeButton,NativeInput,NativeSelect} from './ui/native-controls';
+import {LifecycleSettings} from "./LifecycleSettings";
 export function Settings() {
   const { t, locale } = useT();
   const state = useAppStore();
@@ -416,6 +417,7 @@ export function Settings() {
             />
           </label>
           <p>{t("redesign.fastHint")}</p>
+          <LifecycleSettings/>
         </>
       )}
       {section === "Window" && (

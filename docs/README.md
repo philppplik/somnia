@@ -42,5 +42,6 @@ Change history: [Changelog](../CHANGELOG.md). Releases: <https://github.com/phil
 - Deploy: [SSH transport and server bootstrap](DEPLOY-SSH.md).
 
 The app source lives in [`phase1/`](../phase1/). Architecture decisions (ADR-001 to ADR-005) and per-feature design notes are in [`phase1/notes/`](../phase1/notes/). The collaboration relay is documented in [`relay/`](../relay/README.md). Somnia is MIT licensed, see [LICENSE](../LICENSE).
+- [Studio lifecycle](studio-lifecycle.md): active/warm/suspended/evicted states, checkpoint suspension, resource budgets, pressure handling and local telemetry.
 
 Conventions: documentation is English. One topic has one home: put new technical detail into the matching document above and link to it instead of copying it. `phase1/notes/` holds decisions and feature notes that explain why something was built; `docs/` holds how the system works now.

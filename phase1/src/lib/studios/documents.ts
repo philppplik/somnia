@@ -1,4 +1,5 @@
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {PanelDef,RailItemDef,StudioShellDef,InspectorDef,StudioLayout} from '../shell/types';
 import {DOCUMENTS_PANEL_COMMANDS,DOCUMENTS_PANELS} from '../documents/panels';
 import {registerDocumentsRailIcons} from '../documents/railIcons';
@@ -57,7 +58,7 @@ export const documentsStudio:StudioDef={
   inspector:'documents.inspector',tools:[]
  },commands:[{id:'documents.saveCopy',label:'cmd.documents.saveCopy'},{id:'documents.zoomIn',label:'cmd.documents.zoomIn'},{id:'documents.zoomOut',label:'cmd.documents.zoomOut'}],
  shortcuts:{'studio.documents':'Mod+2'},menus:{view:[]},canvas:'documents.canvas',shellV2:documentsShell,
- agentV2:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},agent:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agentV2:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},agent:{tools:['documents_inspect_block','documents_propose_block'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context,lifecycle:()=>getRegisteredLifecycleAdapter('documents')
 };
 registerStudio(documentsStudio);
 registerDocumentsRailIcons();

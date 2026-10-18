@@ -7,12 +7,9 @@
  * to the beta.5 line, so the slice of that contract this package needs is
  * declared here as a small interface with a no-op default host.
  *
- * TODO(lifecycle wiring): when the Lifecycle subsystem lands on beta.5, call
- * `setLifecycleHost()` once at app start with the real implementation:
- * `checksum` = `checksumParts` from `lib/lifecycle/checksum` (the algorithm
- * below is byte-for-byte compatible, so existing snapshots stay verifiable)
- * and `registerAdapter` = `registerLifecycleAdapter` from
- * `lib/lifecycle/adapters`. Then delete the local fallback checksum.
+ * Wired: `lifecycleWiring.ts` calls `setLifecycleHost()` once after the lifecycle manager starts
+ * (main.tsx) and registers the Documents and Sheets recovery adapters. The local fallback checksum below
+ * stays as the no-op default for tests and for builds where Lifecycle is not started.
  */
 
 /** Identity + payload checksum over heterogeneous parts (see the lifecycle checkpoint contract). */
