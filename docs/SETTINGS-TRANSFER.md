@@ -74,4 +74,4 @@ File name: `<name>.somnia-settings.json`. UTF-8 JSON, two-space indent, sorted k
 | `.../host.ts` | State patch and restore-point storage |
 | `phase1/src/components/SetupTransferPanel.tsx` | Settings UI |
 
-Tests: `npm run test:core` (`src/lib/settingsTransfer/*.test.ts`, `src/components/SetupTransferPanel.test.tsx`). End-to-end coverage of this flow in `tests/settings-modified.spec.ts` existed on the beta.4 line and is not part of this port yet.
+Tests: `npm run test:core` (`src/lib/settingsTransfer/*.test.ts`, `src/components/SetupTransferPanel.test.tsx`). Full-app reviewed-apply end-to-end coverage of this flow lives in `phase1/tests/settings-modified.spec.ts`: export/import roundtrip with sync pause and undo, legacy merge preview, shortcut conflict resolution and Replace mode with reset confirmation.
