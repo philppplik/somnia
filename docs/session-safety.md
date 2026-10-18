@@ -1,8 +1,8 @@
 # Session safety: verified checkpoints for Documents and Sheets
 
-Status: ported to the beta.5 line as a tested library (`phase1/src/lib/sessionSafety/`, branch `port/session-safety`).
-The app wiring (session registries, close guards, lifecycle manager) is a documented TODO; see
-[beta.5 wiring status](#beta5-wiring-status). Implements section 4 and the "first safety gate" of
+Status: the library (`phase1/src/lib/sessionSafety/`) is wired into the Documents and Sheets session registries, the
+close guards and the real-engine e2e acceptance tests (branch `feat/session-safety-wiring`). Only the lifecycle manager
+registration is still open; see [beta.5 wiring status](#beta5-wiring-status). Implements section 4 and the "first safety gate" of
 [concepts/performance-resource-architecture.md](concepts/performance-resource-architecture.md).
 
 ## Problem
@@ -89,16 +89,27 @@ Adapter semantics (unchanged from beta.4):
 
 ## beta.5 wiring status
 
-The library is complete and tested. What is NOT wired yet on beta.5 (TODO hooks, in priority order):
+### Wired
+
+| Where | What happens |
+| --- | --- |
+| `lib/documents/session.ts` | Every file session (`Entry`) owns a `SessionCheckpointer`. Each accepted edit, undo and redo bumps the store revision while the document is ready and edited, which is one checkpoint revision (`noteEdit`, debounced 1.5 s, at most 10 s). Switching away and back is not an edit. `capture()` runs `engine.save()` behind the edit queue and exports the undo journal plus a digest of all paragraph texts. |
+| `switchDocument` (open) | Loads the file, fingerprints it, waits for a pending flush, then `resume()`s the newest verified snapshot of the same file. The snapshot bytes replace the file bytes, the document is marked edited, the undo journal is reused only when the paragraph digest matches (`recovered`) and otherwise dropped (`recoveredNoHistory`). A changed file opens as it is, the snapshot is kept and the user sees `recoverySourceChanged`. A restored session writes a new checkpoint of itself. Nothing is written to the file. |
+| `evictExtra` | Before a dirty session past `MAX_LIVE_SESSIONS` loses its engine, a verified checkpoint is written (best effort). The existing in-memory `working` copy stays the fast path. |
+| `discardDocument(key)` | The user's explicit close: stops checkpointing and deletes the snapshots. `discardDocument(key, {keepRecovery: true})` is used when the file was replaced (different `url`), when a live session is rebuilt and in tests that simulate a lost engine. |
+| `lib/sheets/session.ts` | `acquireSheetsSession` builds the checkpointer once the file bytes are loaded (engines without `save`, such as test fakes, get none). `setSheetsDirty(name, true)` is the single edit hook: it bumps the revision and calls `noteEdit`. On open, a verified snapshot of the same file is opened instead of the file bytes, the selected sheet and cell are restored, the workbook is marked unsaved and the view shows `sheets.recovered`. |
+| Saved copies (Sheets) | `noteSheetsSaveStart` before serializing and `sheetsSaved` after a native save: the dirty flag is cleared, and the snapshots released, only if no edit arrived in between. Edits typed while the save dialog was open keep the workbook dirty. |
+| `endSheetsSession` / `releaseSheetsSession` | `endSheetsSession` (dead engine, replaced file, failed open) keeps the recovery copy. `releaseSheetsSession` is the media-close cleanup and deletes it. |
+| Close guards | `sessionSafety/closeRisk.ts` + `documents/guards.ts` and `sheets/guards.ts` register a window-close guard with `registerCloseGuard`. Nothing dirty: no prompt. Dirty and every checkpoint current: "kept as a recovery copy, offered when you reopen the file". A stale or pinned checkpoint: "latest edits are not backed up yet and will be lost". Closing a single file keeps its existing discard confirm. |
+| `tests/session-safety.spec.ts` | Unskipped. Both tests run against the real engines: the edit survives a studio switch, then (after the verified checkpoint landed) a lost session is simulated and the restored edit plus notice are checked. |
+| Unit tests | `documents/session.recovery.test.ts`, `sheets/sessionRecovery.test.ts`, `sessionSafety/closeRisk.test.ts`. |
+
+### Still open
 
 | beta.4 hook | beta.5 location to wire |
 | --- | --- |
-| `DocumentsCanvas` effect created the checkpointer, `noteEdit` on each accepted edit, `flushOnTeardown` on unmount, `resume` on open | `src/lib/documents/session.ts`: create/track the checkpointer per `Entry`; `evictExtra()` (the LRU suspend point past `MAX_LIVE_SESSIONS`) is where `prepareSuspend()`/`disposeIfSafe()` belong - today it stashes bytes in `entry.working` and drops undo history, exactly the `historyLost` case; `discardDocument()` calls `discardSession()`; `switchDocument()` resumes via the recovery store instead of only `entry.working`. |
-| `SheetsCanvas` effect created the checkpointer, teardown flush on unmount, resume on mount | `src/lib/sheets/session.ts`: beta.5 already keeps engines alive across studio/tab switches (`acquireSheetsSession`), so the checkpointer covers crash/reload, not the view switch. Attach it in `acquireSheetsSession` (fingerprint the loaded `original` bytes, `resume` in `s.ready`), `noteEdit` from the existing dirty path, and `discardSession` in `releaseSheetsSession` (already the media-close cleanup target). |
-| `registerMediaCloseCleanup(name => discardSession(...))` in the studio glue modules | `src/lib/media.ts` close cleanups already exist for sheets (`releaseSheetsSession`); add the recovery discard alongside, and the Documents close guard (beta.5 Documents still has no "discard unsaved edits?" confirm). |
-| `registerLifecycleAdapter('documents'/'sheets', ...)` | `setLifecycleHost()` + `registerRecoveryLifecycleAdapter()` once the Lifecycle subsystem is ported (see above). |
+| `registerLifecycleAdapter('documents'/'sheets', ...)` | `setLifecycleHost()` + `registerRecoveryLifecycleAdapter()` once the Lifecycle subsystem is ported (see above). Sessions already register with `registerActiveSession`, so the adapter sees them. |
 | Settings > Performance "Clear saved studio checkpoints" button | `recoveryDataCount()`/`clearRecoveryData()` in `flush.ts` are ready; the settings UI belongs to the Lifecycle settings port. |
-| `tests/session-safety.spec.ts` (Playwright) | Skipped until the wiring above lands; it encodes the acceptance criteria (unsaved edits survive a studio switch and are restored with a notice). |
 
 ## Retention and clearing (encryption option 1)
 
@@ -115,7 +126,10 @@ The library is complete and tested. What is NOT wired yet on beta.5 (TODO hooks,
 
 - `IndexedDbByteStore` has no unit tests (no IndexedDB in node); needs a browser/e2e run.
 - The recovery store is unencrypted local storage (open decision in the concept).
-- The Playwright spec (`tests/session-safety.spec.ts`) is skipped pending the wiring above; not run.
+- The Playwright spec (`tests/session-safety.spec.ts`) needs the built WASM engines and runs in CI; it simulates a lost engine by ending the session while keeping its recovery copy.
+- A recovery copy of a file whose window was closed (not the file) stays until the next open of that name or the 7-day TTL. A session replaced by a different file with the same name keeps the old copy and reports `source-changed`; the first new checkpoints do not touch it, but older slots are pruned after two newer ones.
+- Sheets: undo history is not restored (it lives inside the engine) and a typed-but-not-committed cell draft is not part of the checkpoint.
+- Documents: "Save a copy" does not clear the edited flag in beta.5, so the recovery copy stays until the file is closed or the TTL passes.
 - The unit tests exercise memory stores and injected clocks only; no real WASM engine, no native Tauri build.
 - An uncommitted Sheets cell draft (typed but not Enter) is only part of the checkpoint when the view passes it in.
 - Timeouts that kill an engine still lose it; the last debounced checkpoint is the recovery point.

@@ -2,10 +2,7 @@ import type {DocBlock,UndoJournal} from './edit';
 import {sha256Hex,type HistoryCheckpoint} from '../sessionSafety/snapshot';
 /**
  * Documents recovery glue: what a session-safety snapshot holds and how history is validated on restore.
- * Pure helpers only. TODO(session-safety wiring): in beta.4 this module also registered the media-close cleanup
- * (discardSession), a dirty close guard, a beforeunload warning and the lifecycle adapter. On beta.5 those hooks
- * belong in lib/documents/session.ts (switchDocument/discardDocument/evictExtra) and lib/media.ts;
- * see docs/session-safety.md, "beta.5 wiring status".
+ * Pure helpers only. The wiring lives in lib/documents/session.ts and lib/sheets/session.ts; see docs/session-safety.md.
  */
 export const documentsSessionId=(name:string)=>`documents:${name}`;
 /** Hash of all editable paragraph texts. Undo hunks are byte offsets into these, so history is only reused when the restored document has identical text. */

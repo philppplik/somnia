@@ -24,6 +24,10 @@ import {announceCaret} from '../collab/office/docsPresence';
 import {DocumentsEngine} from './engine';
 import {blockAfterTableEdit,cellOf} from './tableOps';
 import {inspectDocx} from './inspect';
+import {SessionCheckpointer,defaultRecoveryStore,discardSession,fingerprintBytes,registerActiveSession,whenFlushed,type Snapshot} from '../sessionSafety';
+import {asHistory,blocksDigest,documentsSessionId,validHistory} from './recovery';
+import {recoverableFor} from '../sessionSafety/recoveryIndex';
+const recoverableDocument=(key:string)=>recoverableFor('documents').some(r=>r.id===documentsSessionId(key));
 /** The one open document: engine, undo history and the refresh after each edit. UI components only call these functions. */
 let engine:DocumentsEngine|null=null;let undo=new UndoStack();let chain:Promise<unknown>=Promise.resolve();let pending=0;
 export const getEngine=()=>engine;
@@ -31,7 +35,9 @@ const ownerGuard=()=>{const e=engine,g=gen,en=cur;return ()=>{if(!e||engine!==e|
 const flags=()=>({canUndo:undo.canUndo,canRedo:undo.canRedo});
 /* ---- Per-file sessions: a file keeps its engine, undo history and dirty flag while the studio or tab is switched away. ---- */
 const STASH=['blocks','pages','pageSizes','words','rev','canUndo','canRedo','edited','caret','risks','engineMs','editError','notice','proofing','showHidden','trackChanges','showMarks','showMarkup'] as const;
-interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean;collab:DocsCollabBinding|null}
+interface Entry{key:string;url:string;engine:DocumentsEngine|null;undo:UndoStack;stash:Partial<DocumentsState>;working:Uint8Array|null;dirty:boolean;used:number;undoReleased:boolean;collab:DocsCollabBinding|null;
+ /** Session safety: fingerprint of the file this session opened, edit counter (the checkpoint revision), last seen store revision, checkpointer. */
+ fp:string;editSeq:number;lastRev:number;cp:SessionCheckpointer|null;unreg:(()=>void)|null}
 const entries=new Map<string,Entry>();let cur:Entry|null=null;let gen=0;let tick=0;let identity:string|null=null;
 export const MAX_LIVE_SESSIONS=4;
 export interface SessionDeps{createEngine:()=>DocumentsEngine;loadBytes:(url:string)=>Promise<Uint8Array>}
@@ -39,7 +45,7 @@ const defaultDeps:SessionDeps={createEngine:()=>new DocumentsEngine(),loadBytes:
 let deps=defaultDeps;
 export const setSessionDeps=(d:Partial<SessionDeps>|null)=>{deps=d?{...defaultDeps,...d}:defaultDeps;};
 /** Test hook: forget every session without touching engines. */
-export function resetSessionsForTest(){for(const e of entries.values())e.engine?.dispose?.();entries.clear();cur=null;engine=null;undo=new UndoStack();chain=Promise.resolve();pending=0;gen=0;goalX=null;}
+export function resetSessionsForTest(){for(const e of entries.values()){retire(e);e.engine?.dispose?.();}entries.clear();cur=null;engine=null;undo=new UndoStack();chain=Promise.resolve();pending=0;gen=0;goalX=null;}
 const live=(e:Entry)=>!!e.engine&&!e.engine.isDisposed;
 const msg=(err:unknown)=>err instanceof Error?err.message:String(err);
 /** Queue a task behind every pending edit, so a switch never overtakes an edit that was already accepted. */
@@ -55,8 +61,36 @@ function stashCurrent(){
  cur.stash=stash as Partial<DocumentsState>;cur.dirty=s.edited;
 }
 /** Drops a file's session (the file was closed or replaced). Synchronous, so close cleanups can call it. */
-export function discardDocument(key:string){
- const e=entries.get(key);if(!e)return;entries.delete(key);if(e.collab){e.collab.destroy();e.collab=null;}e.engine?.dispose?.();e.engine=null;
+/** True while a queued task (switch/evict) runs a checkpoint itself: everything accepted before it already reached the engine, and waiting for the queue would wait for itself. */
+let inQueue=false;
+/** Stops checkpointing for an entry. The recovery snapshots stay in the store. */
+function retire(e:Entry){e.cp?.close();e.unreg?.();e.unreg=null;}
+/** A checkpointer for one session. Everything it needs is read lazily from the entry, so it works while the entry is current or stashed. */
+function makeCheckpointer(entry:()=>Entry|null,key:string,fp:string):SessionCheckpointer{
+ const en=()=>{const e=entry();if(!e)throw new Error('Session closed.');return e;};
+ const blocksOf=(e:Entry)=>(cur===e?getDocumentsState().blocks:e.stash.blocks)??[];
+ return new SessionCheckpointer({
+  sessionId:documentsSessionId(key),studio:'documents',store:defaultRecoveryStore(),sourceFingerprint:fp,
+  getRevision:()=>entry()?.editSeq??-1,
+  isDirty:()=>isDocumentDirty(key),
+  historyRestorable:()=>true,hasUndoHistory:()=>{const e=entry();return !!e&&(e.undo.canUndo||e.undo.canRedo);},
+  quiesce:async()=>{if(!inQueue)await settleDocument();return true;},
+  async capture(){
+   const e=en();const eng=e.engine;if(!eng||eng.isDisposed)throw new Error('Engine is not running.');
+   const revision=e.editSeq;const bytes=await eng.save();if(!inspectDocx(bytes).ok)throw new Error('Engine produced an invalid document.');
+   const digest=await blocksDigest(blocksOf(e));
+   return{revision,payload:bytes,history:asHistory(e.undo.exportJournal(),digest),view:{},format:'docx',engineVersion:'documents'};
+  },
+ });
+}
+/**
+ * Forget a file's session. `keepRecovery` leaves the verified recovery snapshots in the store (the engine died, the file was replaced);
+ * the default is the user's explicit close, which deletes them.
+ */
+export function discardDocument(key:string,o:{keepRecovery?:boolean}={}){
+ const e=entries.get(key);
+ if(!e){if(!o.keepRecovery&&recoverableDocument(key))void discardSession(documentsSessionId(key)).catch(()=>undefined);return;}
+ entries.delete(key);if(!o.keepRecovery)void discardSession(documentsSessionId(key)).catch(()=>undefined);retire(e);if(e.collab){e.collab.destroy();e.collab=null;}e.engine?.dispose?.();e.engine=null;
  if(cur===e){cur=null;engine=null;undo=new UndoStack();}
 }
 async function evictExtra(){
@@ -68,8 +102,9 @@ async function evictExtra(){
    catch{victim.used=++tick;if(liveEntries().length>MAX_LIVE_SESSIONS+4)return;continue;}
    victim.undoReleased=true;
   }
+  if(victim.dirty){inQueue=true;try{await victim.cp?.checkpoint();}catch{/* the working copy below is the fallback */}finally{inQueue=false;}} // a verified copy outlives the worker; `working` below stays the fast path
   if(victim.collab){victim.collab.destroy();victim.collab=null;}
-  victim.engine!.dispose?.();victim.engine=null;victim.undo=new UndoStack();
+  retire(victim);victim.engine!.dispose?.();victim.engine=null;victim.undo=new UndoStack();
  }
 }
 /**
@@ -84,31 +119,50 @@ export function switchDocument(target:{key:string;url:string;retry?:boolean}|nul
   stashCurrent();cur=null;engine=null;undo=new UndoStack();goalX=null;identity=null;
   if(!target){resetDocuments();return null;}
   let entry=entries.get(target.key);
-  if(entry&&entry.url!==target.url){discardDocument(target.key);entry=undefined;}
+  if(entry&&entry.url!==target.url){discardDocument(target.key,{keepRecovery:true});entry=undefined;} // replaced file: its recovery copy is kept and reported as source-changed
   patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:''});
   try{
    if(entry&&live(entry)&&!target.retry){
     cur=entry;engine=entry.engine;undo=entry.undo;entry.used=++tick;identity=target.key;
-    patchDocuments({...entry.stash,status:'ready',name:target.key,error:'',rev:getDocumentsState().rev+1,...flags()});return entry.engine;
+    const back=getDocumentsState().rev+1;entry.lastRev=back; // coming back is not an edit
+    patchDocuments({...entry.stash,status:'ready',name:target.key,error:'',rev:back,...flags()});return entry.engine;
    }
    let lost=false;
    if(entry&&!live(entry)&&entry.dirty&&!entry.working)lost=true;
-   const raw=entry?.working??await deps.loadBytes(target.url);
-   const check=inspectDocx(raw);if(!check.ok)throw new Error(check.error);
+   let raw=entry?.working??await deps.loadBytes(target.url);
+   const fileCheck=inspectDocx(raw);if(!fileCheck.ok)throw new Error(fileCheck.error);
+   const fp=entry?.working?entry.fp:await fingerprintBytes(raw);
+   const sid=documentsSessionId(target.key);let holder:Entry|null=null;const cp=makeCheckpointer(()=>holder,target.key,fp);
+   // Crash/reload recovery: a verified snapshot of the same file replaces the on-disk bytes. A changed file keeps its snapshot and opens as is.
+   let rec:Snapshot|null=null,sourceChanged=false;
+   if(!entry?.working){
+    await whenFlushed(sid);
+    const got:{snap:Snapshot|null}={snap:null};
+    const r=await cp.resume(async snap=>{if(!inspectDocx(snap.payload).ok)throw new Error('Recovery copy is not a valid document.');got.snap=snap;},async()=>fp).catch(()=>null);
+    if(r?.ok&&got.snap){rec=got.snap;raw=rec.payload;lost=false;}else if(r&&!r.ok&&r.reason==='source-changed')sourceChanged=true;
+    if(my!==gen)return null;
+   }
+   const check=rec?inspectDocx(raw):fileCheck;if(!check.ok)throw new Error(check.error);
    const e=deps.createEngine();
    try{
     await e.init();const d=await e.open(raw.slice().buffer);
     if(my!==gen){e.dispose();return null;}
-    const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null};
-    const restored=!!entry?.working;if(entry&&!live(entry))entries.delete(target.key);else if(entry)discardDocument(target.key);
+    const fresh:Entry={key:target.key,url:target.url,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null,fp,editSeq:rec?1:0,lastRev:0,cp,unreg:null};
+    holder=fresh;
+    const restored=!!entry?.working||!!rec;if(entry&&!live(entry))entries.delete(target.key);else if(entry)discardDocument(target.key,{keepRecovery:true});
     entries.set(target.key,fresh);cur=fresh;engine=e;undo=fresh.undo;identity=target.key;
-    const notice=lost?'lost':restored&&entry!.undoReleased?'undoReleased':'';
+    fresh.unreg=registerActiveSession(sid,cp,{studio:'documents',isDirty:()=>isDocumentDirty(target.key)});
+    const notice=lost?'lost':sourceChanged?'recoverySourceChanged':restored&&entry?.undoReleased?'undoReleased':'';
     patchDocuments({...INITIAL_VIEW,status:'loading',name:target.key,error:'',risks:check.risks,engineMs:Math.round(d.openMs+d.layoutMs),edited:restored,notice,...flags()});
     await refresh(d);
     if(my!==gen)return null;
+    let recNotice:''|'recovered'|'recoveredNoHistory'='';
+    if(rec){const h=await validHistory(rec.meta.history,getDocumentsState().blocks);if(my!==gen)return null;if(h)undo.importJournal(h.journal);recNotice=h?'recovered':'recoveredNoHistory';patchDocuments({...flags(),notice:recNotice});}
     if(!restored)void attachDocsCollab(fresh,raw);
     else if(getCollab())patchDocuments({notice:'collabDirty'});   // edits exist only locally; sharing starts from the file on disk
-    patchDocuments({status:'ready'});await evictExtra();return e;
+    fresh.lastRev=getDocumentsState().rev;
+    patchDocuments({status:'ready'});if(rec)cp.noteEdit(); // the restored state gets its own verified checkpoint
+    await evictExtra();return e;
    }catch(err){e.dispose();throw err;}
   }catch(err){
    if(my===gen)patchDocuments({status:'error',error:msg(err)},err);
@@ -143,12 +197,16 @@ function detachDocsCollab(entry:Entry){
  const c=getCollab();if(c)announceCaret(c.awareness,null,0,0);
 }
 if(typeof window!=='undefined')onSessionChange(()=>{const live_=getCollab();for(const e of entries.values()){if(!live_)detachDocsCollab(e);}});
+/** Every accepted edit, undo and redo bumps the store revision while the document is ready and edited: that is one checkpoint revision. */
+subscribeDocuments(()=>{const st=getDocumentsState();const e=cur;if(!e||!e.cp||st.status!=='ready'||!st.edited||st.name!==e.key||st.rev===e.lastRev)return;e.lastRev=st.rev;e.editSeq++;e.cp.noteEdit();});
+/** Writes a verified checkpoint of a session now (lifecycle, tests). False when nothing could be verified. */
+export async function checkpointDocument(key:string):Promise<boolean>{const e=entries.get(key);if(!e?.cp)return false;await settleDocument();const r=await e.cp.checkpoint();return r.ok;}
 if(typeof window!=='undefined')subscribeDocuments(()=>{const c=getCollab();const st=getDocumentsState();if(!c||!cur?.collab)return;const caret=st.caret;if(caret)announceCaret(c.awareness,cur.key,caret.block,caret.head);else announceCaret(c.awareness,null,0,0);});
 /** Hands over an already open engine as the current document, synchronously (tests and callers that open the engine themselves). Null closes the current document. */
 export function attachEngine(e:DocumentsEngine|null,key?:string){
  if(!e){identity=null;void switchDocument(null);return;}
- ++gen;stashCurrent();const k=key??'document';if(entries.get(k)?.engine!==e)discardDocument(k);
- const en:Entry={key:k,url:k,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null};
+ ++gen;stashCurrent();const k=key??'document';if(entries.get(k)?.engine!==e)discardDocument(k,{keepRecovery:true});
+ const en:Entry={key:k,url:k,engine:e,undo:new UndoStack(),stash:{},working:null,dirty:false,used:++tick,undoReleased:false,collab:null,fp:'',editSeq:0,lastRev:0,cp:null,unreg:null};
  entries.set(k,en);cur=en;engine=e;undo=en.undo;chain=Promise.resolve();goalX=null;identity=key??null;
  patchDocuments({...INITIAL_VIEW,name:k,...flags(),editError:'',edited:false,notice:''});
 }

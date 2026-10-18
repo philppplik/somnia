@@ -1,8 +1,6 @@
 /**
  * Sheets recovery glue. The workbook engine keeps undo history internally, so snapshots hold the saved workbook
- * bytes and the view only. Pure helpers only. TODO(session-safety wiring): in beta.4 this module also registered the
- * media-close cleanup (discardSession) and the lifecycle adapter. On beta.5 those hooks belong in
- * lib/sheets/session.ts (acquireSheetsSession/releaseSheetsSession); see docs/session-safety.md, "beta.5 wiring status".
+ * bytes and the view only. Pure helpers only. The wiring lives in lib/documents/session.ts and lib/sheets/session.ts; see docs/session-safety.md.
  */
 export const sheetsSessionId=(name:string)=>`sheets:${name}`;
 export interface SheetsViewState{sheet:number;row:number;col:number;draft:{text:string}|null}

@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {applyEdit,type TextEdit} from './edit';
 import type {DocumentsEngine} from './engine';
 import {getDocumentsState,patchDocuments} from './store';
+import {MemoryByteStore,RecoveryStore,setRecoveryStoreForTests} from '../sessionSafety';
+import {resetRecoveryIndexForTests} from '../sessionSafety/recoveryIndex';
 import {discardDocument,dirtyDocumentNames,hasPendingEdits,hasUnsavedDocuments,isDocumentDirty,MAX_LIVE_SESSIONS,redoEdit,resetSessionsForTest,setSessionDeps,settleDocument,switchDocument,typeText,undoEdit} from './session';
 const docx=new Uint8Array(readFileSync(new URL('../../../test/documents/sample.docx',import.meta.url)));
 /** Stands in for the wasm worker: one paragraph of text, every call logged in order. */
@@ -19,7 +21,7 @@ class FakeEngine{
  dispose(){this.disposed=true;}
 }
 const made:FakeEngine[]=[];const loads:string[]=[];
-beforeEach(()=>{resetSessionsForTest();made.length=0;loads.length=0;setSessionDeps({createEngine:()=>{const e=new FakeEngine();made.push(e);return e as unknown as DocumentsEngine;},loadBytes:async url=>{loads.push(url);return url.startsWith('bad')?new Uint8Array([1,2,3]):docx;}});patchDocuments({status:'idle',caret:null});});
+beforeEach(()=>{resetSessionsForTest();setRecoveryStoreForTests(new RecoveryStore(new MemoryByteStore()));resetRecoveryIndexForTests();made.length=0;loads.length=0;setSessionDeps({createEngine:()=>{const e=new FakeEngine();made.push(e);return e as unknown as DocumentsEngine;},loadBytes:async url=>{loads.push(url);return url.startsWith('bad')?new Uint8Array([1,2,3]):docx;}});patchDocuments({status:'idle',caret:null});});
 const open=(name:string,url=`blob:${name}`)=>switchDocument({key:name,url});
 const caretAtEnd=()=>patchDocuments({caret:{block:0,anchor:5,head:5}});
 test('an edit survives switching to another studio and back, with dirty flag and undo',async()=>{

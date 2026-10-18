@@ -54,7 +54,8 @@ import {fillBlockProblem,fillDragOp,type AutoFillOp,type SeriesOp} from '../../l
 import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
 import {inRect,parseTsv,pasteFromEngineCopy,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
-import {acquireSheetsSession,getSheetsSession,releaseSheetsSession,saveSheetsCopy,setSheetsDirty,sheetsIsDirty,subscribeSheetsDirty} from '../../lib/sheets/session';
+import '../../lib/sheets/guards';
+import {acquireSheetsSession,endSheetsSession,getSheetsSession,noteSheetsSaveStart,saveSheetsCopy,sheetsSaved,setSheetsDirty,sheetsIsDirty,subscribeSheetsDirty} from '../../lib/sheets/session';
 import {noteFilterApplied,noteFilterHistory,resetSlicerFilter} from '../../lib/sheets/slicerState';
 import {registerDocSaver} from '../../lib/workDocs';
 import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
@@ -92,11 +93,11 @@ function Workbook({item}:{item:MediaItem}){
  const [cacheStamp,setCacheStamp]=useState('');const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
  const scroller=useRef<HTMLDivElement>(null);
- const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){releaseSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
+ const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){endSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
  // Open: the engine gets a copy; the original bytes stay here for recovery.
  // Open: the session registry owns the engine, so it survives studio/tab switches; the view only attaches. The original bytes stay in the session for recovery.
  useEffect(()=>{let live=true;const prev=getSheetsSession(item.name);if(!(prev&&prev.url===item.url&&!prev.engine.isDisposed))resetSlicerFilter(item.name);const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;const offDirty=subscribeSheetsDirty(()=>setDirtyState(sheetsIsDirty(item.name)));const offRead=sess.engine.subscribeSelectionRead(()=>{setEngineReadEpoch(x=>x+1);if(!sess.engine.hasPendingMutation){setRev(x=>x+1);setDirtyState(sheetsIsDirty(item.name));}});
-  sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(sess.book??opened);setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
+  sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(sess.book??opened);const rec=sess.recovery;if(rec){sess.recovery=null;if(rec==='restored'){setSheetState(sess.sheet);setSelState(sess.sel);setNotice(t('sheets.recovered'));}else setNotice(t('sheets.recoverySourceChanged'));}setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
   return()=>{live=false;offRead();offDirty();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
  // Collab: while a session shares this workbook, edits route through the shared model (concept 3.2).
@@ -534,7 +535,8 @@ function Workbook({item}:{item:MediaItem}){
     style={css}
     onMouseDown={e=>{e.preventDefault();setSelObj(null);if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{st?.fmt==='checkbox'&&cell?.value.t==='Bool'?(cell.value.v?'\u2611':'\u2610'):cellText(cell)}</div>);}
   return out;};
- const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ const markSaved=()=>{if(sheetsSaved(item.name))setDirtyState(false);};
+ const exportCopy=async()=>{try{noteSheetsSaveStart(item.name);const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')markSaved();setNotice(t('sheets.exported'));}catch(e){fail(e);}};
  const exportRef=useRef(exportCopy);exportRef.current=exportCopy;
  const historyRef=useRef(history);historyRef.current=history;const infoRef=useRef(info);infoRef.current=info;
  // Command layer bridge (sheets/commands.ts): exposes this workbook's engine to the sheets.* command specs while mounted.
@@ -556,7 +558,7 @@ function Workbook({item}:{item:MediaItem}){
    <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={collab.current?!collab.current.binding.canRedo:!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
    <Button variant="outline" disabled={phase.kind!=='ready'} onClick={()=>void exportCopy()} data-testid="sheets-export">{t('sheets.exportCopy')}</Button>
   </div>
-  <SheetsExportPopover name={item.name} ready={phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed} getBytes={()=>engine.current!.save()} onSaved={r=>{if(r==='saved')setDirty(false);if(r!=='cancelled')setNotice(t('sheets.exported'));}}/>
+  <SheetsExportPopover name={item.name} ready={phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed} getBytes={()=>{noteSheetsSaveStart(item.name);return engine.current!.save();}} onSaved={r=>{if(r==='saved')markSaved();if(r!=='cancelled')setNotice(t('sheets.exported'));}}/>
   {book&&book.warnings.length>0&&<ul className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-warnings">{book.warnings.map(w=><li key={w}>{w}</li>)}</ul>}
   <p className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-fidelity">{t('sheets.fidelity')}</p>
   <SheetsHandoffBar file={item.name} disabled={phase.kind!=='ready'} onError={setNotice} getRows={async()=>{
