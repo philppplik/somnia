@@ -1,3 +1,7 @@
+# Unreleased: Agent side panel
+
+- Animation studio: the agent side panel now drives the open animation through tools on a local Ollama run. The model can inspect the selected keyframe and stage a reviewed value change; accepting the preview commits exactly one native undo step through the animation session, and the panel offers Undo while that receipt is current. Pending reviews block new turns, cloud providers get no animation tools, and nothing is written to disk (docs/agent/ANIMATION-LIVE-REVIEW.md).
+
 # Unreleased: Engine hardening
 
 - Job-lease admission control now covers the first heavy call sites end to end (the beta.8 gap): video exports, sound playback renders and agent turns acquire scheduler leases with progress, cancellation and queue/backpressure handling, so the lifecycle driver budgets them and studio suspension sees the in-flight work (docs/studio-lifecycle.md).

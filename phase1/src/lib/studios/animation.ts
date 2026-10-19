@@ -52,6 +52,6 @@ export const animationStudio:StudioDef={
   heroAction:{id:'animation.render.open',labelKey:'animation.hero.render',icon:'Film'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'animation.inspector',tools:[]},
  // No global shortcut yet: allocation waits for the global shortcut inventory check (concept section 3).
  commands:[],shortcuts:{},menus:{view:[]},canvas:'animation.canvas',shellV2:animationShell,
- agent:{tools:[],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
+ agentV2:{tools:['animation_inspect_key','animation_propose_key'],contextProviders:['activeDocument'],quickActions:[]},agent:{tools:['animation_inspect_key','animation_propose_key'],contextProviders:['activeDocument'],quickActions:[]},deriveContext:context=>context
 };
 registerStudio(animationStudio);

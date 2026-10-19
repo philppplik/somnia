@@ -5,6 +5,7 @@ const contexts:Record<string,StudioAgentContext>={
  documents:{label:'Docs',scope:'Open document text, read-only AI context',actions:['Summarize this document','Suggest clearer wording','Review the structure']},
  sheets:{label:'Sheets',scope:'Selected cell and formula, read-only AI context',actions:['Explain this formula','Suggest a formula for this cell','Check this cell for errors']},
  slides:{label:'Slides',scope:'Canonical slide text, reviewed text edits',actions:['Improve the slide headings','Make slide text concise','Review the presentation story']},
+ animation:{label:'Animation',scope:'Open animation and selected key, reviewed key edits',actions:['Explain the selected key','Suggest a key adjustment','Review the composition structure']},
  sound:{label:'Sounds',scope:'Audio metadata and edit settings, no audio bytes',actions:['Suggest a clean fade in and fade out','Explain the current sound settings','Suggest normalization for this clip']},
  video:{label:'Video',scope:'Timeline and track metadata, read-only AI context',actions:['Review the timeline structure','Explain the export settings','Suggest pacing improvements']},
  photos:{label:'Photos',scope:'Develop settings and dimensions, no pixels',actions:['Suggest balanced exposure','Explain the current photo settings','Suggest a subtle contrast adjustment']},
