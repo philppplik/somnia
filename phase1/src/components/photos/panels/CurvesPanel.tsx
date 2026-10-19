@@ -83,7 +83,7 @@ function CurveBox({name,session,channel}:{name:string;session:PhotoSession;chann
   <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} vectorEffect="non-scaling-stroke"/>
   <circle cx={0} cy={255} r={4} fill="currentColor" opacity={0.5}/>
   <circle cx={255} cy={0} r={4} fill="currentColor" opacity={0.5}/>
-  {points.map((p,i)=><circle key={i} cx={p.x*255} cy={(1-p.y)*255} r={5} fill="var(--elevated)" stroke="var(--accent)" strokeWidth={2} data-testid={`photos-curves-pt-${i}`}/>)}
+  {points.map((p,i)=><circle key={i} cx={p.x*255} cy={(1-p.y)*255} r={5} fill="var(--bg-elevated)" stroke="var(--accent)" strokeWidth={2} data-testid={`photos-curves-pt-${i}`}/>)}
  </svg>;
 }
 

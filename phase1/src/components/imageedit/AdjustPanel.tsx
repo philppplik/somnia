@@ -76,7 +76,7 @@ function CurveEditor({ params, onChange, onCommit, disabled }: AdjustPanelProps)
   return (
     <svg
       ref={ref} width={S} height={S} viewBox={`0 0 ${S} ${S}`} role="group" aria-label={t('imageedit.adjust.curves')}
-      data-testid="adjust-curve" style={{ touchAction: 'none', borderRadius: 12, background: 'var(--surface, #F8F9FB)' }}
+      data-testid="adjust-curve" style={{ touchAction: 'none', borderRadius: 12, background: 'var(--bg-surface, #F8F9FB)' }}
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
     >
       <line x1={0} y1={S} x2={S} y2={0} stroke="currentColor" opacity={0.15} />

@@ -76,7 +76,7 @@ const HEAD_W0=48,HEAD_H0=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
 type AbsBox={left:number;top:number;width:number;height:number};
 const AbsBoxImg=({box,surface,...rest}:{box:AbsBox;surface?:boolean}&React.ImgHTMLAttributes<HTMLImageElement>)=>{
- const ref=useCallback((el:HTMLImageElement|null)=>{if(!el)return;el.style.left=box.left+'px';el.style.top=box.top+'px';el.style.width=box.width+'px';el.style.height=box.height+'px';el.style.zIndex='1';el.style.background=surface?'var(--surface)':'';},[box.left,box.top,box.width,box.height,surface]);
+ const ref=useCallback((el:HTMLImageElement|null)=>{if(!el)return;el.style.left=box.left+'px';el.style.top=box.top+'px';el.style.width=box.width+'px';el.style.height=box.height+'px';el.style.zIndex='1';el.style.background=surface?'var(--bg-surface)':'';},[box.left,box.top,box.width,box.height,surface]);
  return <img ref={ref} draggable={false} className="pointer-events-none absolute" {...rest}/>;
 };
 export function SheetsCanvas(){
@@ -542,7 +542,7 @@ function Workbook({item}:{item:MediaItem}){
    const css:React.CSSProperties={position:'absolute',left:HEAD_W+box.left+(frozenC?view.left:0),top:HEAD_H+box.top+(frozenR?view.top:0),width:box.width,height:box.height,textAlign:align,zIndex:frozenR&&frozenC?3:frozenR||frozenC?2:undefined,
     fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*geo.zoom*10)/10}px`:geo.zoom!==1?`${Math.round(12*geo.zoom*10)/10}px`:undefined,
     fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,textDecorationStyle:st?.underline&&st.ul2?'double':undefined,...(st?.rot===90?{writingMode:'vertical-rl' as const,transform:'rotate(180deg)'}:st?.rot===-90?{writingMode:'vertical-rl' as const}:st?.rot===255?{writingMode:'vertical-rl' as const,textOrientation:'upright' as const}:{}),
-    color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
+    color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--bg-surface, #fff)':undefined),
     borderLeft:side(bd?.l),borderRight:side(bd?.r),...cellBackground(cfl,multi&&inRect(range,r,c)&&!selected),borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
     whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap||st?.v==='top'?`${Math.round(16*geo.zoom)}px`:`${Math.max(16,box.height-1)}px`,...(cfl?.padLeft&&!st?.indent?{paddingLeft:cfl.padLeft}:{}),...(st?.indent?{[align==='right'?'paddingRight':'paddingLeft']:6+st.indent*9}:{})};
    out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}

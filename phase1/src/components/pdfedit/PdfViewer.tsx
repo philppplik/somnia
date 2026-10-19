@@ -140,7 +140,7 @@ export function PdfViewer({data,name,backend=pdfjsBackend,textLayer=false,onErro
    <NativeButton className={btn} aria-pressed={view.fit==='page'} onClick={()=>fit('page')}>Fit page</NativeButton>
    <NativeButton className={btn} aria-label="Rotate clockwise" onClick={()=>apply(v=>rotate(v,1))}>⟳</NativeButton>
   </div>
-  <div ref={stageRef} className="relative min-h-0 flex-1 touch-none select-none overflow-hidden bg-[var(--surface-2,#eef0f3)]" data-testid="pdf-stage"
+  <div ref={stageRef} className="relative min-h-0 flex-1 touch-none select-none overflow-hidden bg-[var(--canvas-bg,#eef0f3)]" data-testid="pdf-stage"
    style={{width:"100%",cursor:drag.current?'grabbing':textLayer?'text':'grab'}}
    onPointerDown={e=>{if(textLayer&&e.button===0)return;if(e.button!==0&&e.button!==1)return;e.currentTarget.setPointerCapture(e.pointerId);drag.current={x:e.clientX,y:e.clientY,id:e.pointerId};}}
    onPointerMove={e=>{const d=drag.current;if(!d||d.id!==e.pointerId)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;d.x=e.clientX;d.y=e.clientY;apply(v=>panBy(v,dx,dy,pageSize,viewport));}}

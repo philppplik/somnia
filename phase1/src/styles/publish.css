@@ -78,26 +78,26 @@
 .publish-rollback{display:flex;flex-direction:column;gap:12px}
 
 /* First-time setup uses the same surfaces and controls as the Publish panel. */
-.deploy-setup-nav{display:flex;gap:8px;list-style:none;padding:0;margin:0 0 16px;flex-wrap:wrap;font-size:12px;color:var(--text-muted)}
+.deploy-setup-nav{display:flex;gap:8px;list-style:none;padding:0;margin:0 0 16px;flex-wrap:wrap;font-size:12px;color:var(--text-secondary)}
 .deploy-setup-nav li{display:flex;gap:6px;align-items:center;flex:1;white-space:nowrap}
 .deploy-setup-nav li[data-current=true]{color:var(--accent);font-weight:600}
 .deploy-setup-nav li span{display:grid;place-items:center;border:1px solid currentColor;width:20px;height:20px;border-radius:50%;font-size:11px}
 .deploy-setup h3{font-size:15px;margin:0 0 6px}
 .deploy-setup details{margin:12px 0}
 .deploy-setup summary{cursor:pointer;font-weight:500;font-size:12px}
-.deploy-setup-script,.deploy-setup-key{font:11px/1.6 var(--mono,monospace);padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--border);max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
+.deploy-setup-script,.deploy-setup-key{font:11px/1.6 var(--mono,monospace);padding:12px;border-radius:12px;background:var(--bg-base);border:1px solid var(--border-default);max-height:180px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:8px 0}
 .deploy-setup-key{max-height:100px}
 .deploy-setup-changes{font-size:12px;line-height:1.7;padding-left:18px;margin:10px 0}
 .deploy-dns-table{width:100%;font-size:12px;text-align:left;border-collapse:collapse;margin:14px 0}
 .deploy-dns-table caption{text-align:left;font-weight:600;margin-bottom:8px}
-.deploy-dns-table td,.deploy-dns-table th{padding:6px;border-bottom:1px solid var(--border);overflow-wrap:anywhere}
+.deploy-dns-table td,.deploy-dns-table th{padding:6px;border-bottom:1px solid var(--border-default);overflow-wrap:anywhere}
 .deploy-setup-outcome{display:grid;gap:6px;font-size:12px;margin:12px 0}
 .deploy-setup .publish-card-main{min-width:0}
-.deploy-setup [data-ready=false]{color:var(--text)}
+.deploy-setup [data-ready=false]{color:var(--text-primary)}
 .publish-node-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .publish-node-keys{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .publish-node-keys li{display:flex;align-items:center;gap:10px}
 .publish-node-keys li code{flex:1;min-width:0}
 .publish-node-add{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-top:6px}
 .publish-node-logs summary{cursor:pointer;margin-top:6px}
-.publish-node-logs pre{max-height:180px;overflow:auto;margin:6px 0 0;padding:8px;font-size:11px;background:var(--surface-2,rgba(127,127,127,.12));border-radius:6px;white-space:pre-wrap}
+.publish-node-logs pre{max-height:180px;overflow:auto;margin:6px 0 0;padding:8px;font-size:11px;background:var(--bg-surface,rgba(127,127,127,.12));border-radius:6px;white-space:pre-wrap}
