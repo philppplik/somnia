@@ -684,7 +684,9 @@ mod tests {
 
     // Execute ONLY the read-only prefix, with all machine probes substituted by temp scripts.
     // Never execute the mutation suffix, even if the dry-run implementation regresses.
-    #[cfg(unix)]
+    // Linux only: the prefix intentionally fails closed without /etc/os-release (unsupported_os),
+    // which is the correct behaviour on macOS and makes this test environment-dependent there.
+    #[cfg(target_os = "linux")]
     #[test]
     fn dry_run_prefix_refuses_unrelated_caddy_and_unknown_ownership() {
         use std::os::unix::fs::PermissionsExt;
