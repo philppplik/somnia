@@ -12,7 +12,7 @@ test('v14: the session carries a master gain curve, v13 migrates with an empty o
  const s=fixture();s.masterCurve=[{at:0,db:0},{at:480,db:-12}];
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'round-trip preserves the master curve');
  const v13=JSON.parse(serializeArrangement(s));v13.version=13;delete v13.masterCurve;
- const migrated=validateArrangement(v13);assert.equal(migrated.version,14);assert.deepEqual(migrated.masterCurve,[]);
+ const migrated=validateArrangement(v13);assert.equal(migrated.version,15);assert.deepEqual(migrated.masterCurve,[]);
  const dup=fixture();dup.masterCurve=[{at:100,db:0},{at:100,db:-3}];
  assert.throws(()=>validateArrangement(dup),/duplicate automation point/);
  const hot=fixture();hot.masterCurve=[{at:100,db:13}];

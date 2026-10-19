@@ -10,7 +10,7 @@ test('v13: clips carry a pan curve, v12 migrates with an empty one, validation e
  const s=fixture();s.tracks[0].clips[0].panCurve=[{at:0,pan:-1},{at:480,pan:1}];
  assert.deepEqual(parseArrangement(serializeArrangement(s)),s,'round-trip preserves the clip pan curve');
  const v12=JSON.parse(serializeArrangement(s));v12.version=12;delete (v12 as Record<string,unknown>).masterCurve;for(const t of v12.tracks)for(const c of t.clips)delete c.panCurve;
- const migrated=validateArrangement(v12);assert.equal(migrated.version,14);assert.deepEqual(migrated.tracks[0].clips[0].panCurve,[]);
+ const migrated=validateArrangement(v12);assert.equal(migrated.version,15);assert.deepEqual(migrated.tracks[0].clips[0].panCurve,[]);
  const dup=fixture();dup.tracks[0].clips[0].panCurve=[{at:100,pan:0},{at:100,pan:0.5}];
  assert.throws(()=>validateArrangement(dup),/duplicate automation point/);
  const wide=fixture();wide.tracks[0].clips[0].panCurve=[{at:100,pan:2}];

@@ -17,6 +17,6 @@ test('v8 sessions migrate: every clip gains an empty name',()=>{
  const s=fixture();const v8=JSON.parse(serializeArrangement(s));
  v8.version=8;delete (v8 as Record<string,unknown>).masterCurve;for(const t of v8.tracks)for(const c of t.clips)delete c.name;
  const migrated=validateArrangement(v8);
- assert.equal(migrated.version,14);
+ assert.equal(migrated.version,15);
  assert.deepEqual(migrated,s);
 });
