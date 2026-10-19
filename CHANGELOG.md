@@ -1,6 +1,7 @@
 # Unreleased: Engine hardening
 
 - Job-lease admission control now covers the first heavy call sites end to end (the beta.8 gap): video exports, sound playback renders and agent turns acquire scheduler leases with progress, cancellation and queue/backpressure handling, so the lifecycle driver budgets them and studio suspension sees the in-flight work (docs/studio-lifecycle.md).
+- CI performance suite: the Phase 1 validation job now also runs the project-scale benchmark (index/read/parse over up to 2,048 files, `bench:projects`) and the undo-history memory benchmark in quick matrix with budgets (`bench:history`), next to the existing editor-core budgets; reports stay archived as workflow artifacts.
 
 # Unreleased: Studio shell consolidation
 
