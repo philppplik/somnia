@@ -20,9 +20,11 @@ interface Props{
  contentTestId?:string;
  /** Host-owned per-field test ids (public hooks); win over the schema field's testId. */
  fieldTestIds?:Record<string,string>;
+ /** Encoding progress 0..1 (shown while busy); with onStop the footer button stops the export instead of closing. */
+ progress?:number|null;onStop?:()=>void;
 }
 /** Shared Photoshop-style Advanced Export dialog (AE1): renders any studio's ExportSchema with DS primitives only. */
-export function AdvancedExportDialog({open,onClose,schema,values,onChange,onApply,preview,rendering,busy,errorKey,errorDetail,onExport,contentTestId,fieldTestIds}:Props){
+export function AdvancedExportDialog({open,onClose,schema,values,onChange,onApply,preview,rendering,busy,errorKey,errorDetail,onExport,contentTestId,fieldTestIds,progress,onStop}:Props){
  const {t}=useT();
  const [presets,setPresets]=useState(()=>loadExportPresets(schema.studio));
  const [presetName,setPresetName]=useState('');const [selectedPreset,setSelectedPreset]=useState('');
@@ -68,11 +70,12 @@ export function AdvancedExportDialog({open,onClose,schema,values,onChange,onAppl
     {preview&&<p className="m-0 text-xs text-ink-2" data-testid="ae-size">{t('export.finalSize')}: {formatExportSize(preview.bytes,{b:'B',kb:'KB',mb:'MB'})} · {preview.detail??t('export.dimensions',{width:preview.width,height:preview.height})}</p>}
     {rendering&&<p role="status" className="m-0 text-xs text-ink-3">{t('export.rendering')}</p>}
     {preview?.note&&<p className="m-0 text-xs text-ink-3">{t(preview.note)}</p>}
+    {busy&&typeof progress==='number'&&<progress className="w-full accent-[var(--accent)]" max={1} value={progress} aria-label={t('export.progress')}/>}
     {errorKey&&<p role="alert" className="m-0 text-xs text-warning">{t(errorKey,{message:errorDetail})}</p>}
    </div>
   </div>
   <div className="mt-4 flex justify-end gap-2">
-   <Button variant="outline" onClick={onClose}>{t('export.cancel')}</Button>
+   {busy&&onStop?<Button variant="outline" onClick={onStop}>{t('export.stop')}</Button>:<Button variant="outline" onClick={onClose}>{t('export.cancel')}</Button>}
    <Button variant="primary" disabled={busy||rendering||validation!==null} onClick={onExport}>{busy?t('export.rendering'):t('export.export')}</Button>
   </div>
   {validation&&<p role="alert" className="m-0 text-xs text-warning">{t(validation)}</p>}

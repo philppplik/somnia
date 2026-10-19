@@ -240,6 +240,7 @@
  "video.review.unavailable": "Export indisponible. Vérifiez les sources et les encodeurs.",
  "video.review.failed": "Échec de l’export. Les réglages sont conservés.",
  "cmd.video.export.open": "Exporter la vidéo...",
+ "cmd.video.export.advanced": "Export avancé...",
  "cmd.video.timeline.undo": "Annuler la modification du montage",
  "cmd.video.timeline.redo": "Rétablir la modification du montage",
  "cmd.video.project.save": "Enregistrer le projet vidéo",

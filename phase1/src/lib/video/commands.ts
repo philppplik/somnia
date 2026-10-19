@@ -6,6 +6,7 @@ import {addAudioTrackClip,addImageClip,addTimelineClip,duplicateTimelineClip,add
 import {addTitleClip,setTitleLength,updateTitle} from './titleSession';
 import {isTitleClip,type TitleSpec} from './titles';
 import {isFreeze,isReversed,timelineDuration,CLIP_TRANSITIONS,type ClipRotation,type ClipTransition} from './timeline';
+import {setVideoExportAdvanced} from './exportAdvancedState';
 let exportOpener:((name:string)=>void)|null=null;
 export function registerVideoExportOpener(open:(name:string)=>void){exportOpener=open;return()=>{if(exportOpener===open)exportOpener=null;};}
 export const activeVideoSession=()=>getVideoSession(getMedia().active);
@@ -69,6 +70,7 @@ export function videoCommandSpecs():CommandSpec<unknown,unknown>[] {
   spec('video.title.duration','Set selected title card duration',(p:{seconds:number})=>setTitleLength(root(),clip().id,p.seconds),object({seconds:number(0.05,3600)}),titleSelection,'Edit'),
   spec('video.project.save','Save video project',()=>{if(!saveVideoProject(root()))fail('The project is not ready yet.');},undefined,()=>ready()&&videoIsDirty(activeVideoSession()!),'Project'),
   spec('video.export.open','Review video export',()=>exportOpener!(root()),undefined,()=>!!exportOpener&&!!activeVideoSession(),'Project'),
+  spec('video.export.advanced','Advanced export of the video timeline',()=>setVideoExportAdvanced(root()),undefined,()=>!!exportOpener&&ready()&&!!activeVideoSession()!.clips.length,'Project'),
   spec('video.export.range','Set export range in seconds',(p:{start:number;end:number})=>setVideoExportRange(root(),{start:p.start,end:p.end}),object({start:number(),end:number()}),ready),
   spec('video.export.rangeClear','Clear export range',()=>setVideoExportRange(root(),null),undefined,()=>ready()&&!!activeVideoSession()!.exportRange,'Project'),
   spec('video.export.scale','Set export resolution scale',(p:{scale:number})=>setVideoExportOptions(root(),{scale:p.scale}),object({scale:{enum:[1,0.5,0.25]}}),ready),

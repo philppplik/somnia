@@ -240,6 +240,7 @@
  "video.review.unavailable": "Export unavailable. Check source media and encoder support.",
  "video.review.failed": "Export failed. Timeline and settings are kept.",
  "cmd.video.export.open": "Export video...",
+ "cmd.video.export.advanced": "Advanced export...",
  "cmd.video.timeline.undo": "Undo timeline edit",
  "cmd.video.timeline.redo": "Redo timeline edit",
  "cmd.video.project.save": "Save video project",

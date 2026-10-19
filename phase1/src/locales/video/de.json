@@ -240,6 +240,7 @@
  "video.review.unavailable": "Export nicht verfügbar. Quellen und Encoder prüfen.",
  "video.review.failed": "Export fehlgeschlagen. Timeline und Einstellungen bleiben erhalten.",
  "cmd.video.export.open": "Video exportieren...",
+ "cmd.video.export.advanced": "Erweiterter Export...",
  "cmd.video.timeline.undo": "Schnitt rückgängig machen",
  "cmd.video.timeline.redo": "Schnitt wiederholen",
  "cmd.video.project.save": "Videoprojekt speichern",

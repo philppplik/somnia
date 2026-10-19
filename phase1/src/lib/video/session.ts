@@ -424,17 +424,17 @@ export function exportVideo(name:string):{blob:Blob;fileName:string}|null{
  const s=sessions.get(name);if(!s?.result)return null;
  return{blob:s.result.blob,fileName:exportName(name,!isNeutralTimeline(s.clips,name,s.probe?.duration??0),s.format)};
 }
-export function downloadVideo(name:string):boolean{
+export function downloadVideo(name:string,fileName?:string):boolean{
  const out=exportVideo(name);if(!out)return false;
- const a=document.createElement('a');a.href=URL.createObjectURL(out.blob);a.download=out.fileName;a.click();
+ const a=document.createElement('a');a.href=URL.createObjectURL(out.blob);a.download=fileName||out.fileName;a.click();
  setTimeout(()=>URL.revokeObjectURL(a.href),30_000);return true;
 }
 /** Full UI flow: encode, then download the result. */
-export async function exportVideoFile(name:string):Promise<'downloaded'|'cancelled'|'unavailable'>{
+export async function exportVideoFile(name:string,fileName?:string):Promise<'downloaded'|'cancelled'|'unavailable'>{
  // Clear the previous notification even when encoding cannot start.
  patch(name,{exportOutcome:undefined});
  const r=await runVideoExport(name);
- const outcome=r==='exported'?(downloadVideo(name)?'downloaded':'unavailable'):r;
+ const outcome=r==='exported'?(downloadVideo(name,fileName)?'downloaded':'unavailable'):r;
  patch(name,{exportOutcome:outcome});
  return outcome;
 }
