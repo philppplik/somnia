@@ -3,7 +3,8 @@ import {autoCorrectOn,setAutoCorrect} from './autocorrect';
 import {getDocumentsState,patchDocuments,stepZoom} from './store';
 import {setTableLayout,insertSectionBreak,removeSectionBreak,setHfVariants,typeText,redoEdit,setAlign,setParagraphStyle,toggleList,clearList,shiftListLevel,stepFontSize,stepIndent,toggleFormat,undoEdit,editTable,insertTable,setHeaderFooter,insertImage,resizeImageToPercent,setImageAlt,removeImage,setColumnWidth,styleTable,setPageSetup,setFindOpen,setFindQuery,findStep,replaceAll,replaceCurrent} from './session';
 import {proofWordOk,checkFormatPatch,MIN_SPACING_PT,MAX_SPACING_PT,MIN_SCALE_PCT,MAX_SCALE_PCT,lineRuleProblem,imageWrapProblem,imageCropProblem,type ImageWrap,type ImageAlign,type LineRule,stylePatchProblem,STYLE_ID_RE,type StylePatch,tocProblem,type TocOptions,listOptionsProblem,type ListOptionsPatch,pageSetupProblem,LIST_STYLES,type ListStyleId} from './protocol';
-import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions} from './session';
+import {deleteStyle,saveStyle,setCharStyle,insertToc,updateToc,removeToc,continueNumbering,restartNumbering,setListStyle,setListOptions,insertFootnote,renumberFootnotes,addFigureCaption,renumberFigures} from './session';
+import {scanFootnotes,scanFigures} from './notes';
 import {validFindQuery,validReplaceText} from './find';
 import {findMedia} from '../media';
 import {tableLayoutProblem,SECTION_BREAKS,hfVariantsProblem,tableStyleProblem,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,MIN_COL_PT,MAX_COL_PT} from './protocol';
@@ -289,6 +290,10 @@ export function registerDocumentsCommands(){
   },()=>ready()&&!!getDocumentsState().caret),
   add('documents.toc.update','Update table of contents',async()=>{await updateToc();},()=>ready()&&!!getDocumentsState().caret),
   add('documents.toc.remove','Remove table of contents',async()=>{await removeToc();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.footnote.insert','Insert footnote',async()=>{await insertFootnote();},()=>ready()&&!!getDocumentsState().caret),
+  add('documents.footnote.renumber','Renumber footnotes',async()=>{await renumberFootnotes();},()=>ready()&&scanFootnotes(getDocumentsState().blocks).refs.length>0),
+  add('documents.figure.caption','Add figure caption',async()=>{await addFigureCaption();},()=>ready()&&getDocumentsState().imageBlock!==null),
+  add('documents.figure.renumber','Renumber figure captions',async()=>{await renumberFigures();},()=>ready()&&scanFigures(getDocumentsState().blocks).length>0),
   add('documents.list.continue','Continue list numbering',async()=>{await continueNumbering();},()=>ready()&&!!getDocumentsState().caret&&getDocumentsState().para?.list==='numbered'),
   add('documents.list.options','List numbering options',()=>{setInfoDialog('list');},()=>ready()&&!!getDocumentsState().caret&&(getDocumentsState().para?.list==='bullet'||getDocumentsState().para?.list==='numbered')),
   add('documents.list.options.set','Set list level options',async p=>{

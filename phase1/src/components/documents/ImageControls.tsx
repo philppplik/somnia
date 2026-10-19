@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {imageCropProblem,IMAGE_WRAPS,IMAGE_ALIGNS,type ImageWrap,type ImageAlign,IMAGE_WIDTH_PERCENTS,MAX_IMAGE_BYTES,validHfText,MAX_HF_CHARS} from '../../lib/documents/protocol';
-import {insertImage,removeImage,resizeImageToPercent,setImageAlt,setImageWrap,setImageCrop} from '../../lib/documents/session';
+import {insertImage,removeImage,resizeImageToPercent,setImageAlt,setImageWrap,setImageCrop,addFigureCaption} from '../../lib/documents/session';
 import {patchDocuments,useDocuments} from '../../lib/documents/store';
 import {useT} from '../../lib/useT';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
@@ -41,6 +41,7 @@ export function ImageControls(){
     {CROP_SIDES.map((s,i)=><NativeInput key={s} className="h-7 w-14 rounded-sm border border-subtle bg-surface px-1 text-xs tabular-nums text-ink" inputMode="decimal" maxLength={4} value={crop[i]} aria-label={t('documents.image.crop.'+s)} placeholder={t('documents.image.crop.'+s)} aria-invalid={cropVals===null} onChange={e=>setCrop(crop.map((x,j)=>j===i?e.currentTarget.value:x))} data-testid={'documents-image-crop-'+s}/>)}
     <NativeButton className={tool} disabled={cropVals===null} onClick={()=>{if(cropVals)void setImageCrop(cropVals);}} data-testid="documents-image-crop-apply">{t('documents.para.opt.apply')}</NativeButton>
     <NativeButton className={tool} onClick={()=>void setImageCrop([0,0,0,0])} data-testid="documents-image-crop-reset">{t('documents.image.crop.reset')}</NativeButton></span>}
+   <NativeButton className={tool} onClick={()=>void addFigureCaption()} data-testid="documents-image-caption">{t('documents.figure.caption')}</NativeButton>
    <NativeButton className={tool} onClick={()=>void removeImage()} data-testid="documents-image-remove">{t('documents.image.remove')}</NativeButton>
   </span>}
  </>;

@@ -340,6 +340,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
 import {hangingPatch} from './hanging';
 import {autoLink,autoCorrect,autoCorrectOn} from './autocorrect';
 import {printDocument} from './print';
+import {FOOTNOTE_HEADING,MAX_FOOTNOTES,MAX_FIGURES,footnoteNoteNum,nextFootnoteNumber,noteByteLen,planFigureRenumber,planFootnoteRenumber,scanFootnotes,scanFigures} from './notes';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??null:null;};
 interface Pos{block:number;off:number}
@@ -775,6 +776,78 @@ export const updateToc=()=>run(async()=>{
 export const removeToc=()=>run(async()=>{
  const sp=tocSpot();await structural(eng=>eng.removeToc(sp.block),sp,eng=>nearEditable(eng,sp.block>=CELL_BASE?0:sp.block));
 });
+/* ---- Footnotes and figure captions: plain-text markers (`[^n]` references, `[^n]: text` notes under a Footnotes heading, `Figure n: text` captions) that the app numbers and places. ---- */
+/** Inserts a superscript footnote reference at the caret and a matching empty note under the Footnotes heading at the end of the body (created when missing), then moves the caret into the note. One undo step. */
+export const insertFootnote=()=>run(async()=>{
+ const st=getDocumentsState();const c=st.caret;
+ if(!c)throw new Error('Place the caret where the reference should go.');
+ if(c.block>=CELL_BASE)throw new Error('Footnotes cannot be added inside a table.');
+ const here=st.blocks.find(b=>b.index===c.block);
+ if(!here||!here.editable||here.kind!=='para')throw new Error('Place the caret in a body paragraph.');
+ const scan=scanFootnotes(st.blocks);const n=nextFootnoteNumber(scan);
+ if(n>MAX_FOOTNOTES)throw new Error(`A document holds at most ${MAX_FOOTNOTES} footnotes.`);
+ const marker=`[^${n}]`;let note:Spot={block:0,off:0};
+ await structural(async eng=>{
+  await eng.insert(c.block,c.head,marker);
+  await eng.format({block:c.block,off:c.head},{block:c.block,off:c.head+noteByteLen(marker)},{vertAlign:'superscript'});
+  let bs=await eng.blocks();
+  const top=()=>bs.filter(b=>b.kind==='para'&&b.editable&&b.index<CELL_BASE);
+  let head=top().find(b=>(b.text??'').trim()===FOOTNOTE_HEADING);
+  if(!head){
+   const parasNow=top();const last=parasNow[parasNow.length-1];
+   if(!last)throw new Error('The document has no editable paragraph.');
+   await eng.split(last.index,noteByteLen(last.text??''));
+   await eng.insert(last.index+1,0,FOOTNOTE_HEADING);
+   await eng.setParagraphStyle(last.index+1,last.index+1,'Heading1');
+   bs=await eng.blocks();
+   head=top().find(b=>(b.text??'').trim()===FOOTNOTE_HEADING)!;
+  }
+  const after=top().filter(b=>b.index>head!.index&&footnoteNoteNum(b.text??'')!==null);
+  const anchorBlock=after.length?after[after.length-1]:top().find(b=>b.index===head!.index)!;
+  await eng.split(anchorBlock.index,noteByteLen(anchorBlock.text??''));
+  const prefix=`[^${n}]: `;
+  const ni=anchorBlock.index+1;
+  await eng.insert(ni,0,prefix);
+  const doc=await eng.format({block:ni,off:0},{block:ni,off:noteByteLen(`[^${n}]`)},{vertAlign:'superscript'});
+  note={block:ni,off:noteByteLen(prefix)};
+  return doc;
+ },{block:c.block,off:c.head},()=>Promise.resolve(note));
+});
+/** Renumbers footnotes by order of first appearance (repeated references share their note's number). One undo step. */
+export const renumberFootnotes=()=>run(async()=>{
+ const st=getDocumentsState();const plan=planFootnoteRenumber(st.blocks);
+ if(!scanFootnotes(st.blocks).refs.length)throw new Error('The document has no footnotes.');
+ if(!plan.length)throw new Error('The footnotes are already numbered in order.');
+ const c=st.caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(async eng=>{let doc;for(const e of plan)doc=await eng.replace({block:e.block,hunks:e.hunks});return doc!;},spot,spot);
+});
+/** Adds a `Figure n: ` caption in italics directly below the selected picture and moves the caret into it. One undo step. */
+export const addFigureCaption=()=>run(async()=>{
+ const st=getDocumentsState();const block=st.imageBlock;
+ if(block===null)throw new Error('Select a picture first.');
+ const img=st.blocks.find(b=>b.index===block);
+ if(!img||!img.image)throw new Error('The selected picture is gone.');
+ const n=nextFigureNumber(st.blocks);
+ if(n>MAX_FIGURES)throw new Error(`A document holds at most ${MAX_FIGURES} figure captions.`);
+ const next=st.blocks.filter(b=>b.kind==='para'&&b.editable&&b.index<CELL_BASE&&b.index>block).sort((a,b)=>a.index-b.index)[0];
+ if(!next)throw new Error('The picture needs a paragraph below it to hold the caption.');
+ const prefix=`Figure ${n}: `;const caption:Spot={block:next.index,off:noteByteLen(prefix)};
+ const before=st.caret?{block:st.caret.block,off:st.caret.head}:await nearEditable(engine!,block);
+ await structural(async eng=>{
+  await eng.split(next.index,0);
+  await eng.insert(next.index,0,prefix);
+  return eng.format({block:next.index,off:0},{block:next.index,off:noteByteLen(prefix)},{italic:true});
+ },before,caption);
+});
+/** Renumbers every `Figure n:` caption from 1 in document order. One undo step. */
+export const renumberFigures=()=>run(async()=>{
+ const st=getDocumentsState();const plan=planFigureRenumber(st.blocks);
+ if(!scanFigures(st.blocks).length)throw new Error('The document has no figure captions.');
+ if(!plan.length)throw new Error('The figure captions are already numbered in order.');
+ const c=st.caret;const spot=c?{block:c.block,off:c.head}:await nearEditable(engine!,0);
+ await structural(async eng=>{let doc;for(const e of plan)doc=await eng.replace({block:e.block,hunks:e.hunks});return doc!;},spot,spot);
+});
+
 /** Continues the numbering of the nearest numbered list above: the caret's list (and its later items) count on from it. One undo step; refused in tables, in bullet lists and when no numbered list is above. */
 export const continueNumbering=()=>run(async()=>{
  const n=await paraSpan();if(!n)return;

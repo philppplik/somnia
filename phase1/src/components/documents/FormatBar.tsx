@@ -4,7 +4,7 @@ import {customParagraphStyles,useStyleList} from '../../lib/documents/styles';
 import {TableSizeDialog} from './TableSizeDialog';
 import {HeaderFooterDialog} from './HeaderFooterDialog';
 import {SECTION_BREAKS} from '../../lib/documents/protocol';
-import {insertSectionBreak,removeSectionBreak} from '../../lib/documents/session';
+import {insertSectionBreak,removeSectionBreak,insertFootnote} from '../../lib/documents/session';
 import {PageLookDialog} from './PageLookDialog';
 import {ProofDialog} from './ProofDialog';
 import {HeaderFooterVariantsDialog} from './HeaderFooterVariantsDialog';
@@ -92,6 +92,7 @@ export function FormatBar({format,held,para,enabled,inCell=false}:{format:Format
   <NativeButton className={tool+' border border-subtle'} onClick={()=>setGotoOpen(true)} data-testid="documents-goto-open">{t('documents.goto.title')}</NativeButton>
   {gotoOpen&&<GoToPageDialog onClose={()=>setGotoOpen(false)}/>}
   <ImageControls/>
+  <NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>void insertFootnote()} data-testid="documents-footnote-insert">{t('documents.footnote.insert')}</NativeButton>
   {inCell&&<NativeSelect className={sel+' w-28'} aria-label={t('documents.table.label')} title={t('documents.table.label')} disabled={!enabled} value="" onChange={e=>{const op=e.currentTarget.value as TableOp;e.currentTarget.value='';if((TABLE_OPS as readonly string[]).includes(op))void editTable(op);}} data-testid="documents-table-menu">
    <option value="" disabled>{t('documents.table.label')}</option>{TABLE_OPS.map(o=><option key={o} value={o} data-testid={'documents-table-'+o}>{t('documents.table.'+o)}</option>)}</NativeSelect>}
   {inCell&&<NativeButton className={tool+' border border-subtle'} disabled={!enabled} onClick={()=>setStyleOpen(true)} data-testid="documents-table-style-open">{t('documents.tableStyle.title')}</NativeButton>}

@@ -5223,6 +5223,28 @@
       "hasEnabled": true
     },
     {
+      "id": "documents.figure.caption",
+      "title": "Add figure caption",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.figure.renumber",
+      "title": "Renumber figure captions",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "documents.find.next",
       "title": "Find next",
       "category": "View",
@@ -5310,6 +5332,28 @@
     {
       "id": "documents.fontSize.increase",
       "title": "Increase font size",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.footnote.insert",
+      "title": "Insert footnote",
+      "category": "View",
+      "source": "documents",
+      "keywords": [
+        "document",
+        "docx"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "documents.footnote.renumber",
+      "title": "Renumber footnotes",
       "category": "View",
       "source": "documents",
       "keywords": [

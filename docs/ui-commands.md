@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1143 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1147 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -400,6 +400,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.export.open` | Export document | Project | documents |  |
 | `documents.export.pagePng` | Save a page as a PNG image | View | documents |  |
 | `documents.export.pdf` | Export as PDF | Project | documents |  |
+| `documents.figure.caption` | Add figure caption | View | documents |  |
+| `documents.figure.renumber` | Renumber figure captions | View | documents |  |
 | `documents.find.next` | Find next | View | documents |  |
 | `documents.find.open` | Find in document | View | documents |  |
 | `documents.find.previous` | Find previous | View | documents |  |
@@ -409,6 +411,8 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.focusParagraph` | Focus paragraph | View | documents-panels |  |
 | `documents.fontSize.decrease` | Decrease font size | View | documents |  |
 | `documents.fontSize.increase` | Increase font size | View | documents |  |
+| `documents.footnote.insert` | Insert footnote | View | documents |  |
+| `documents.footnote.renumber` | Renumber footnotes | View | documents |  |
 | `documents.formatPainter.copy` | Copy formatting | View | documents |  |
 | `documents.formatPainter.paste` | Paste formatting | View | documents |  |
 | `documents.goToPage` | Go to document page | View | documents-panels |  |
