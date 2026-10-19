@@ -3419,6 +3419,7 @@
   "cmd.help.errorReport": "Copiar informe de error (extracto del registro y versión)",
   "cmd.pdf.page.rotate": "PDF: Girar página en sentido horario",
   "cmd.pdf.redo": "PDF: Rehacer",
+  "cmd.pdf.export.advanced": "PDF: Exportación avanzada…",
   "cmd.pdf.saveCopy": "PDF: Guardar copia editada",
   "cmd.pdf.undo": "PDF: Deshacer",
   "cmd.sheets.redo": "Rehacer cambio del libro",

@@ -17,6 +17,8 @@ import {
 import { registerCommandSpec } from "../../lib/commandBridge";
 import { pdfCommandSpecs } from "../../lib/pdfedit/commands";
 import { installBeforeUnload } from "../../lib/closeFlow";
+import { setPdfExportAdvanced } from "../../lib/pdfedit/exportAdvancedState";
+import { PdfExportAdvanced } from "./PdfExportAdvanced";
 import { hasDirtyPdfs } from "../../lib/pdfedit/session";
 import {NativeButton} from '../ui/native-controls';
 export const pdfButton =
@@ -35,6 +37,7 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
       name,
       getSession: () => s,
       exportCopy: exportPdfCopy,
+      openAdvanced: (n) => setPdfExportAdvanced(n),
       rotate: (n, page) => editPdf(n, { kind: "rotate", page }),
       history: historyPdf,
     }).map((spec) => registerCommandSpec(spec));
@@ -122,6 +125,7 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           Save copy{s.dirty ? " *" : ""}
         </NativeButton>
       </div>
+      <PdfExportAdvanced name={item.name} />
       {s.error && (
         <div
           role="alert"

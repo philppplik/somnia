@@ -3419,6 +3419,7 @@
   "cmd.help.errorReport": "Copy error report (log excerpt and version)",
   "cmd.pdf.page.rotate": "PDF: Rotate page clockwise",
   "cmd.pdf.redo": "PDF: Redo",
+  "cmd.pdf.export.advanced": "PDF: Advanced export…",
   "cmd.pdf.saveCopy": "PDF: Save edited copy",
   "cmd.pdf.undo": "PDF: Undo",
   "cmd.sheets.redo": "Redo workbook change",

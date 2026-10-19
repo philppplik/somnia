@@ -3419,6 +3419,7 @@
   "cmd.help.errorReport": "Copier le rapport d'erreur (extrait du journal et version)",
   "cmd.pdf.page.rotate": "PDF : Faire pivoter la page dans le sens horaire",
   "cmd.pdf.redo": "PDF : Rétablir",
+  "cmd.pdf.export.advanced": "PDF : Export avancé…",
   "cmd.pdf.saveCopy": "PDF : Enregistrer la copie modifiée",
   "cmd.pdf.undo": "PDF : Annuler",
   "cmd.sheets.redo": "Rétablir la modification du classeur",

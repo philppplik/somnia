@@ -9,6 +9,7 @@ function setup(session: any) {
   for (const spec of pdfCommandSpecs({
     name: 'a.pdf', getSession: () => session,
     exportCopy: async (n) => { calls.push(['export', n]); },
+    openAdvanced: (n) => { calls.push(['advanced', n]); },
     rotate: async (n, p) => { calls.push(['rotate', n, p]); },
     history: async (n, dir) => { calls.push(['history', n, dir]); },
   })) d.register(spec);
@@ -19,7 +20,7 @@ const live = { editing: true, busy: false, page: 3, undo: [new Uint8Array(1)], r
 test('levels: only rotate is open to agent origins', async () => {
   const { d } = setup(live);
   const lv = Object.fromEntries(d.list().map(c => [c.id, c.level]));
-  assert.deepEqual(lv, { 'pdf.saveCopy': 'ui', 'pdf.page.rotate': 'propose', 'pdf.undo': 'ui', 'pdf.redo': 'ui' });
+  assert.deepEqual(lv, { 'pdf.saveCopy': 'ui', 'pdf.export.advanced': 'ui', 'pdf.page.rotate': 'propose', 'pdf.undo': 'ui', 'pdf.redo': 'ui' });
   await assert.rejects(d.runCommand('pdf.undo', {}, { origin: 'agent' }), { code: 'forbidden-origin' });
   await assert.rejects(d.runCommand('pdf.saveCopy', {}, { origin: 'mcp' }), { code: 'forbidden-origin' });
 });

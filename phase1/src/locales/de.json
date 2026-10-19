@@ -3419,6 +3419,7 @@
   "cmd.help.errorReport": "Fehlerbericht kopieren (Log-Auszug und Version)",
   "cmd.pdf.page.rotate": "PDF: Seite im Uhrzeigersinn drehen",
   "cmd.pdf.redo": "PDF: Wiederholen",
+  "cmd.pdf.export.advanced": "PDF: Erweiterter Export …",
   "cmd.pdf.saveCopy": "PDF: Bearbeitete Kopie speichern",
   "cmd.pdf.undo": "PDF: Rückgängig",
   "cmd.sheets.redo": "Arbeitsmappen-Änderung wiederholen",

@@ -4,6 +4,7 @@
  * the legacy bridge, and agents/MCP reach the non-`ui` levels through the dispatcher.
  *
  * - pdf.saveCopy    ui       opens a save dialog, so interactive origins only.
+ * - pdf.export.advanced ui   opens the Advanced Export dialog (editable copy, flattened print or screen copy).
  * - pdf.page.rotate propose  edits the in-memory editing copy only; nothing reaches disk until
  *                            the user saves a copy, and undo reverts it. Optional 0-based `page`
  *                            (defaults to the page currently shown).
@@ -19,6 +20,8 @@ export interface PdfCommandDeps {
   name: string;
   getSession: () => Pick<PdfSession, 'editing' | 'busy' | 'page' | 'undo' | 'redo'> | null | undefined;
   exportCopy: (name: string) => Promise<unknown>;
+  /** Opens the Advanced Export dialog for this PDF. */
+  openAdvanced?: (name: string) => void;
   rotate: (name: string, page: number) => Promise<unknown>;
   history: (name: string, dir: 'undo' | 'redo') => Promise<unknown>;
 }
@@ -33,6 +36,12 @@ export function pdfCommandSpecs(d: PdfCommandDeps): CommandSpec<any, unknown>[] 
       level: 'ui', params: noParams,
       run: () => d.exportCopy(d.name),
     },
+    ...(d.openAdvanced ? [{
+      id: 'pdf.export.advanced', title: 'PDF: Advanced export', category: 'Project',
+      level: 'ui' as const, params: noParams,
+      enabled: () => !!s()?.bytes && !s()!.busy,
+      run: () => d.openAdvanced!(d.name),
+    }] : []),
     {
       id: 'pdf.page.rotate', title: 'PDF: Rotate page clockwise', category: 'Tools',
       level: 'propose',
