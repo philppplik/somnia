@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1149 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1156 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -558,6 +558,13 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `edit.duplicate` | Duplicate selected element | Edit | core | `Mod+D` |
 | `edit.encodeEntities` | Encode special characters (HTML entities) | Edit | core |  |
 | `edit.format` | Apply formatting | Edit | core | `Alt+Shift+F` |
+| `edit.lines.join` | Join lines | Edit | core |  |
+| `edit.lines.lower` | Change selection to lowercase | Edit | core |  |
+| `edit.lines.sortAsc` | Sort lines ascending | Edit | core |  |
+| `edit.lines.sortDesc` | Sort lines descending | Edit | core |  |
+| `edit.lines.trim` | Trim trailing whitespace | Edit | core |  |
+| `edit.lines.unique` | Remove duplicate lines | Edit | core |  |
+| `edit.lines.upper` | Change selection to uppercase | Edit | core |  |
 | `edit.redo` | Redo | Edit | core | `Mod+Shift+Z` |
 | `edit.undo` | Undo | Edit | core | `Mod+Z` |
 | `edit.unwrap` | Unwrap selected element (keep content) | Edit | core |  |

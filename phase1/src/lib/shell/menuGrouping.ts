@@ -43,7 +43,7 @@ export const SUBMENU_RULES:Readonly<Record<MenuId,readonly SubmenuRule[]>>={
   pre('build',['frameworks.build','frameworks.run']),
  ],
  Edit:[
-  ids('code',['edit.format','edit.wrap','edit.unwrap','edit.encodeEntities','edit.decodeEntities']),
+  ids('code',['edit.format','edit.wrap','edit.unwrap','edit.encodeEntities','edit.decodeEntities','edit.lines.sortAsc','edit.lines.sortDesc','edit.lines.unique','edit.lines.trim','edit.lines.join','edit.lines.upper','edit.lines.lower']),
   pre('design',['design.'],[pre('designLayers',['design.layer.','design.select','design.deselect','design.nudge','design.duplicate','design.delete','design.align','design.distribute']),pre('designArtboards',['design.artboard.'])]),
   pre('vector',['vector.']),
   pre('sheets',['sheets.']),

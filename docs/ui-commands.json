@@ -6941,6 +6941,83 @@
       "hasEnabled": true
     },
     {
+      "id": "edit.lines.join",
+      "title": "Join lines",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "merge",
+        "single line"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.lower",
+      "title": "Change selection to lowercase",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "case",
+        "small"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.sortAsc",
+      "title": "Sort lines ascending",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "order",
+        "sort"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.sortDesc",
+      "title": "Sort lines descending",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "order",
+        "sort"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.trim",
+      "title": "Trim trailing whitespace",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "spaces",
+        "whitespace"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.unique",
+      "title": "Remove duplicate lines",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "dedupe",
+        "unique"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.lines.upper",
+      "title": "Change selection to uppercase",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "capital",
+        "case"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "edit.redo",
       "title": "Redo",
       "category": "Edit",

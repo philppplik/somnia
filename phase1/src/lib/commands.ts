@@ -1,3 +1,4 @@
+import {runLineOp} from './codeLineOps';
 import {openTranscriptHub} from './transcript/session';
 import {openLocalReferences} from './localReferencesSession';
 import {openCodeSymbols} from './codeSymbolsSession';
@@ -163,6 +164,9 @@ registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export.md'
 for(const id of ['settings.open','problems.toggle','theme.toggle','palette.open']){const c=registry.get(id);if(c)c.category='Tools';}
 
 for(const [id,title,fn] of [['edit.encodeEntities','Encode special characters (HTML entities)',encodeEntities],['edit.decodeEntities','Decode special characters (HTML entities)',decodeEntities]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:'Edit',keywords:['html','entities','escape','unescape','special characters'],run:()=> /* History: mounted code editor dispatch owns its CodeMirror undo entry. */ {const v=getActiveEditor();if(!v||!transformSelection(v,fn))patchState({notice:'Select text in the code editor first.'});else v.focus();}});
+
+/** Line operations (sort, unique, trim, join, case) on the selected lines or the whole file in the code editor. */
+for(const [op,title,keywords] of [['sortAsc','Sort lines ascending',['sort', 'order']],['sortDesc','Sort lines descending',['sort', 'order']],['unique','Remove duplicate lines',['dedupe', 'unique']],['trim','Trim trailing whitespace',['whitespace', 'spaces']],['join','Join lines',['merge', 'single line']],['upper','Change selection to uppercase',['case', 'capital']],['lower','Change selection to lowercase',['case', 'small']]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`edit.lines.${op}`,title,category:'Edit',keywords:[...keywords],run:()=> /* History: one CodeMirror transaction in the mounted editor owns the undo entry. */ {const v=getActiveEditor();if(!v)patchState({notice:'Open a file in the code editor first.'});else if(!runLineOp(v,op))patchState({notice:op==='upper'||op==='lower'?'Select text in the code editor first.':'Nothing to change.'});else v.focus();}});
 
 /** Apply formatting to the selection, or to the whole file when nothing is selected. */
 export async function applyFormatting(){const v=getActiveEditor();const file=getState().activeFile;const lang=langFor(file);

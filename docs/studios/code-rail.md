@@ -41,3 +41,7 @@ No rail item carries a `when` yet. `when` expressions read the StudioContext, an
 - The four `studio-shell-snapshot.spec.ts` baselines change on purpose: two new icons on the left rail, one inspector icon on the right rail, and the generic inspector replaces the old right-side tabs. Regenerate them with the CI `update_snapshots` input after the panel wave lands.
 - The Code canvas should publish a StudioContext (selection, mode, services) so rail items and inspector sections can use `when`.
 - The diff-split toggle and the Extensions/Settings/Chat/Agent buttons are still shell-owned JSX in `IconRail.tsx`, not manifest items.
+
+## Line operations
+
+Edit menu, Code studio: sort lines ascending or descending (natural, case-insensitive order), remove duplicate lines, trim trailing whitespace, join lines, uppercase and lowercase selection (`edit.lines.*`, code in `src/lib/codeLineOps.ts`). They act on the whole lines touched by the selection, or on the whole file when nothing is selected; case changes act on the exact selection and need one. One CodeMirror transaction each, so one undo step. Line endings (LF or CRLF) and a final newline are kept.

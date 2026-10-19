@@ -79,3 +79,7 @@ cd phase1
 npx tsx --test src/lib/vectorstudio/*.test.ts src/components/vectorstudio/tools/*.test.*
 npx playwright test -c pw.local.config.ts tests/vector-studio.spec.ts
 ```
+
+## Hide and lock text objects
+
+Text objects hide and lock like paths: the Layers panel text rows have Lock and Hide buttons, and `vector.toggleHidden` / `vector.toggleLocked` accept a text id. A hidden text is not drawn, not selectable and skipped by fit-to-content export; it is written as `display="none"`. A locked text cannot be selected from the canvas or the panel; it is written as `data-vs-locked="1"`. Both read back from SVG written by this editor. Each toggle is one undo step. Texts still have no rename.

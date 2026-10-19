@@ -186,3 +186,11 @@ bytes ship: encoding is the operating system's (WebCodecs). ffmpeg.wasm was reje
   non-English locales. Fixtures
   (`tests/assets/clip.webm`, `clip.mp4`) are 2-second synthetic clips generated with the local
   ffmpeg binary - test tooling only, nothing of it ships.
+
+## Clip colour correction
+
+Each media, image and freeze clip can carry a colour correction: brightness, contrast and saturation as whole numbers from -100 to 100 (0 = untouched). Inspector > Clip > Colour has one slider per channel and a reset; a drag is one undo step. UI command `video.clip.color` takes any subset of the three channels; all zero clears it.
+
+- Maths: the CSS filter definitions (brightness, then contrast, then saturate). The preview applies them as a CSS filter on the player; the export runs the same formulas as a pixel pass on each fitted frame, so it does not depend on `ctx.filter` (missing in some WebKit builds). Code: `src/lib/video/colorAdjust.ts`.
+- Saved in the `.video-project` file as `color` on the clip and part of the dirty signature. Files written before this change load unchanged.
+- Limits: not keyframed, one correction per clip, no curves or LUTs, titles never carry one. The export pass reads each colour-corrected frame back from the canvas, so exports with corrected clips are slower.
