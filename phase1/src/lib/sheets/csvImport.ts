@@ -88,6 +88,8 @@ export function importSheetName(file:string,existing:readonly string[]):string{
 export const escapeCellInput=(v:string):string=>v.startsWith('=')?"'"+v:v;
 
 export interface ImportChunk{rowOffset:number;values:string[][]}
+export type ImportTarget={kind:'newSheet';name:string}|{kind:'cell'};
+
 export interface ImportPlan{chunks:ImportChunk[];rows:number;cols:number;truncated:boolean}
 export type ImportResult={ok:true;plan:ImportPlan}|{ok:false;reason:ImportProblem};
 

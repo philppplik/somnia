@@ -340,7 +340,7 @@ async function structural(op:(e:DocumentsEngine)=>Promise<import('./protocol').O
 import {hangingPatch} from './hanging';
 import {autoLink,autoCorrect,autoCorrectOn} from './autocorrect';
 import {printDocument} from './print';
-import {FOOTNOTE_HEADING,MAX_FOOTNOTES,MAX_FIGURES,footnoteNoteNum,nextFootnoteNumber,noteByteLen,planFigureRenumber,planFootnoteRenumber,scanFootnotes,scanFigures} from './notes';
+import {FOOTNOTE_HEADING,MAX_FOOTNOTES,MAX_FIGURES,footnoteNoteNum,nextFigureNumber,nextFootnoteNumber,noteByteLen,planFigureRenumber,planFootnoteRenumber,scanFootnotes,scanFigures} from './notes';
 const enc=new TextEncoder();const u8=(s:string)=>enc.encode(s).length;
 const blockText=(i:number)=>{const b=getDocumentsState().blocks.find(x=>x.index===i);return b&&b.editable?b.text??null:null;};
 interface Pos{block:number;off:number}
