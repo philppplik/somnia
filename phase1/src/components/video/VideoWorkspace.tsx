@@ -9,6 +9,7 @@ import {TitlePreview} from './TitlePreview';
 import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
+import {colorCssFilter,colorOf} from '../../lib/video/colorAdjust';
 import {blendAt,clipFadeGain,clipRanges,cropOf,gainAt,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
@@ -112,6 +113,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // wipe is a clip polygon - inverse-mapped like the crop when the clip itself is rotated/mirrored.
  const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual,cropOverride?:ClipCrop)=>{
   const f=flipOf(clip),r=rotationOf(clip),w=el.clientWidth,h=el.clientHeight;
+  const cf=isTitleClip(clip)?'':colorCssFilter(colorOf(clip));if(el.style.filter!==cf)el.style.filter=cf;
   const cr=cropOverride??cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
   const dx=(trans?.dx??0)*w,dy=(trans?.dy??0)*h;
   const wipe=trans?.rect?{x0:trans.rect.x*w,y0:trans.rect.y*h,x1:(trans.rect.x+trans.rect.w)*w,y1:(trans.rect.y+trans.rect.h)*h}:null;

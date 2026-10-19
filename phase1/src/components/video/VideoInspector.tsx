@@ -12,6 +12,22 @@ import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
+import {colorOf,hasColor,type ClipColor} from '../../lib/video/colorAdjust';
+import {setTimelineClipColor} from '../../lib/video/session';
+
+const COLOR_CHANNELS=['brightness','contrast','saturation'] as const;
+/** Brightness, contrast and saturation of the selected clip (-100..100). Dragging is one undo step. */
+function ClipColorControls({name,clip}:{name:string;clip:import('../../lib/video/timeline').TimelineClip}){
+ const t=useT();const v=colorOf(clip);
+ return <div className="grid gap-1" data-testid="video-clip-color">
+  <div className="flex items-center justify-between">{t('video.clipColor')}
+   <Button size="compact" disabled={!hasColor(clip)} onClick={()=>setTimelineClipColor(name,clip.id,{brightness:0,contrast:0,saturation:0})} data-testid="video-clip-color-reset">{t('video.clipColorReset')}</Button>
+  </div>
+  {COLOR_CHANNELS.map(ch=><label key={ch} className="grid gap-1">{t(`video.clipColor.${ch}`,{value:v[ch]})}
+   <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={1} value={v[ch]} onChange={e=>setTimelineClipColor(name,clip.id,{[ch]:Number(e.target.value)} as Partial<ClipColor>,`color:${clip.id}:${ch}`)} data-testid={`video-clip-color-${ch}`}/>
+  </label>)}
+ </div>;
+}
 
 
 
@@ -139,6 +155,7 @@ export function VideoControls({name}:{name:string}){
    <label>{t('video.imageDuration',{seconds:(selected.out_s-selected.in_s).toFixed(2)})}
     <NativeInput type="number" className={`${field} mt-1`} min={0.05} max={3600} step={0.5} value={selected.out_s} onChange={e=>setImageClipLength(name,selected.id,Number(e.target.value),`image-len:${selected.id}`)} data-testid="video-image-duration"/>
    </label>
+   <ClipColorControls name={name} clip={selected}/>
    <label className="grid gap-1">{t('video.clipFlip')}
     <NativeSelect className={field} value={flipOf(selected)} onChange={e=>setTimelineClipFlip(name,selected.id,e.target.value as ClipFlip)} data-testid="video-clip-flip">
      {(['none','h','v','hv'] as const).map(f=><option key={f} value={f}>{t(`video.clipFlip.${f}`)}</option>)}
@@ -191,6 +208,7 @@ export function VideoControls({name}:{name:string}){
      {[0.25,0.5,0.75,1,1.25,1.5,2,3,4].map(v=><option key={v} value={v}>{t('video.clipSpeedValue',{speed:v})}</option>)}
     </NativeSelect>
    </label>}
+   <ClipColorControls name={name} clip={selected}/>
    <label className="grid gap-1">{t('video.clipFlip')}
     <NativeSelect className={field} value={flipOf(selected)} onChange={e=>setTimelineClipFlip(name,selected.id,e.target.value as ClipFlip)} data-testid="video-clip-flip">
      {(['none','h','v','hv'] as const).map(f=><option key={f} value={f}>{t(`video.clipFlip.${f}`)}</option>)}
