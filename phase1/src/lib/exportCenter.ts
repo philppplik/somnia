@@ -27,7 +27,7 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  video:['video.export.advanced','video.export.open','video.export.start'],
  pdf:['pdf.saveCopy'],
  '3d':['studio3d.export.advanced','studio3d.export.glb','studio3d.export.gltf','studio3d.render.turntable','studio3d.render.still'],
- animation:['animation.export.frame','animation.export.sequence'],
+ animation:['animation.export.advanced','animation.export.frame','animation.export.sequence'],
 };
 
 /** A preset bundles existing export commands with fixed payloads (format/quality choices). It adds no new command. */

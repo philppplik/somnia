@@ -148,6 +148,7 @@
  "cmd.animation.workarea.reset": "Reset work area to the whole composition",
  "cmd.animation.playback.loop": "Toggle looped playback",
  "cmd.animation.graph.toggle": "Switch between timeline and graph editor",
+ "cmd.animation.export.advanced": "Advanced export…",
  "cmd.animation.export.frame": "Export current frame as PNG",
  "cmd.animation.export.sequence": "Export work area as PNG sequence (ZIP)",
  "cmd.animation.export.gif": "Export work area as GIF",

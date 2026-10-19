@@ -618,6 +618,18 @@
       "hasEnabled": true
     },
     {
+      "id": "animation.export.advanced",
+      "title": "Advanced export…",
+      "category": "Project",
+      "source": "animation",
+      "keywords": [
+        "animation",
+        "keyframe",
+        "timeline"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "animation.export.apng",
       "title": "Export work area as APNG (animated PNG)",
       "category": "Project",

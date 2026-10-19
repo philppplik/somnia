@@ -1,3 +1,4 @@
+import {AnimationExportAdvanced} from './AnimationExportAdvanced';
 import {evaluate} from '../../lib/animation/interpolate';
 import {gradientAt} from '../../lib/animation/gradientAnim';
 import {repeaterCopies,repeaterAt} from '../../lib/animation/repeater';
@@ -47,7 +48,7 @@ export function AnimationCanvas(){
    data:{playhead:s.view.playhead,layers:d?findComp(d)?.layers.length??0:0},busy:false,services:{ready:!!d,renderSetup:s.renderSetup}});
  },[s.doc,s.dirty,s.view.selectedLayer,s.view.playhead,s.renderSetup]);
  return <main className="center" aria-label={t('animation.title')}><div className="workspace"><section className="code-pane flex min-h-0 flex-col" aria-label={t('animation.title')}>
-  <FileTabs/>
+  <FileTabs/><AnimationExportAdvanced/>
   {doc?<Workspace doc={doc}/>:<StudioEmptyState studio="animation" icon={<Sparkles/>}
    onOpen={()=>{if(!animationSession().recover())throw new Error(t('animation.start.restoreEmpty'));}}
    onCreate={()=>executeCommand('animation.project.new')}/>}

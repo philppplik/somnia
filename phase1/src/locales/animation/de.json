@@ -148,6 +148,7 @@
  "cmd.animation.workarea.reset": "Arbeitsbereich auf ganze Komposition zurücksetzen",
  "cmd.animation.playback.loop": "Schleifenwiedergabe umschalten",
  "cmd.animation.graph.toggle": "Zwischen Timeline und Graph-Editor wechseln",
+ "cmd.animation.export.advanced": "Erweiterter Export …",
  "cmd.animation.export.frame": "Aktuellen Frame als PNG exportieren",
  "cmd.animation.export.sequence": "Arbeitsbereich als PNG-Sequenz exportieren (ZIP)",
  "cmd.animation.export.gif": "Arbeitsbereich als GIF exportieren",

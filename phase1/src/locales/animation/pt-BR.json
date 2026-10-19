@@ -148,6 +148,7 @@
  "cmd.animation.workarea.reset": "Redefinir a área de trabalho para toda a composição",
  "cmd.animation.playback.loop": "Alternar reprodução em loop",
  "cmd.animation.graph.toggle": "Alternar entre linha do tempo e editor de gráfico",
+ "cmd.animation.export.advanced": "Exportação avançada…",
  "cmd.animation.export.frame": "Exportar o quadro atual como PNG",
  "cmd.animation.export.sequence": "Exportar a área de trabalho como sequência PNG (ZIP)",
  "cmd.animation.export.gif": "Exportar área de trabalho como GIF",
