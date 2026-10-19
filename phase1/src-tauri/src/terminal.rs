@@ -420,6 +420,10 @@ mod tests {
         fn process_id(&self) -> Option<u32> {
             None
         }
+        #[cfg(windows)]
+        fn as_raw_handle(&self) -> Option<std::os::windows::raw::HANDLE> {
+            None
+        }
     }
     impl ChildKiller for FakeChild {
         fn kill(&mut self) -> std::io::Result<()> {
