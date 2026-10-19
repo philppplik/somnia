@@ -18,7 +18,7 @@ import type { PdfSession } from './session';
 export interface PdfCommandDeps {
   /** Name (key) of the open PDF session this registration belongs to. */
   name: string;
-  getSession: () => Pick<PdfSession, 'editing' | 'busy' | 'page' | 'undo' | 'redo'> | null | undefined;
+  getSession: () => Pick<PdfSession, 'editing' | 'busy' | 'page' | 'undo' | 'redo' | 'bytes'> | null | undefined;
   exportCopy: (name: string) => Promise<unknown>;
   /** Opens the Advanced Export dialog for this PDF. */
   openAdvanced?: (name: string) => void;
@@ -36,12 +36,12 @@ export function pdfCommandSpecs(d: PdfCommandDeps): CommandSpec<any, unknown>[] 
       level: 'ui', params: noParams,
       run: () => d.exportCopy(d.name),
     },
-    ...(d.openAdvanced ? [{
+    ...(d.openAdvanced ? ([{
       id: 'pdf.export.advanced', title: 'PDF: Advanced export', category: 'Project',
       level: 'ui' as const, params: noParams,
       enabled: () => !!s()?.bytes && !s()!.busy,
       run: () => d.openAdvanced!(d.name),
-    }] : []),
+    }] as CommandSpec<any, unknown>[]) : []),
     {
       id: 'pdf.page.rotate', title: 'PDF: Rotate page clockwise', category: 'Tools',
       level: 'propose',

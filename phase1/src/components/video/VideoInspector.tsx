@@ -34,7 +34,7 @@ function MarkerControls({name,markers,playhead}:{name:string;markers:import('../
 const COLOR_CHANNELS=['brightness','contrast','saturation'] as const;
 /** Brightness, contrast and saturation of the selected clip (-100..100). Dragging is one undo step. */
 function ClipColorControls({name,clip}:{name:string;clip:import('../../lib/video/timeline').TimelineClip}){
- const t=useT();const v=colorOf(clip);
+ const {t}=useT();const v=colorOf(clip);
  return <div className="grid gap-1" data-testid="video-clip-color">
   <div className="flex items-center justify-between">{t('video.clipColor')}
    <Button size="compact" disabled={!hasColor(clip)} onClick={()=>setTimelineClipColor(name,clip.id,{brightness:0,contrast:0,saturation:0})} data-testid="video-clip-color-reset">{t('video.clipColorReset')}</Button>

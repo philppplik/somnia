@@ -17,7 +17,7 @@ export const VIDEO_PROJECT_VERSION=3;
 /** Versions this build reads: 1 (clips only) and 2 (+ audio track). */
 export const VIDEO_PROJECT_READ_VERSIONS=[1,2,3];
 
-interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;aspect?:string;clips:unknown[];audio?:unknown[];overlay?:unknown[]}
+interface VideoProjectFile{version:number;app:'somnia-video';format?:VideoFormat;scale?:number;quality?:string;fps?:number|null;aspect?:string;clips:unknown[];audio?:unknown[];overlay?:unknown[];markers?:unknown[]}
 
 /** Stable identity of the edit list for dirty tracking. Ids are included: a split changes them, and that IS an edit. */
 export const clipsSignature=(clips:TimelineClip[],audioClips:AudioClip[]=[],overlayClips:OverlayClip[]=[],markers:TimelineMarker[]=[])=>JSON.stringify([
