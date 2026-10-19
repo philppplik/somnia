@@ -567,6 +567,6 @@ Depends on: v10 diff viewer, v11 updater for smooth extension and app updates.
 - Done: mobile shell feature, Tauri android config and capability, a mobile frontend mode (the native command surface is shimmed to the browser paths) and a manual AAB build workflow with a signing wire that surfaces build errors as CI annotations.
 - Open: no store submission; signing needs the maintainer's keystore secrets; no on-device verification yet.
 
-### Bottom terminal (2026-10-19, pending maintainer decision)
-- Done: feat/bottom-terminal rebased onto beta5 and pushed: PTY-backed interactive terminal sessions in the bottom panel (desktop), next to Problems, with resize and replay.
-- Open: merge waits on the maintainer's decision about three new dependencies (@xterm/xterm, @xterm/addon-fit, portable-pty).
+### Bottom terminal (2026-10-19, integrated)
+- Done: PTY-backed interactive terminal sessions in the bottom panel (desktop), next to Problems, with resize and replay; the browser shows an honest desktop-only note. Dependencies approved by the maintainer: @xterm/xterm, @xterm/addon-fit, portable-pty. Full CI matrix green including the Windows native build.
+- Open: none known.
