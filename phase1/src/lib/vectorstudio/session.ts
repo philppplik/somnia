@@ -66,10 +66,10 @@ export function commit(next:VectorDocument,patch:Partial<VectorSession>={}){
  const nodePath=patch.nodePath===undefined?state.nodePath:patch.nodePath;
  const validNodePath=next.paths.find(p=>p.id===nodePath&&!p.hidden&&!p.locked)?.id??null;
  past.push(state.doc);if(past.length>HISTORY_LIMIT)past.shift();future=[];
- const textSel=selection.length?null:(next.texts??[]).some(t=>t.id===state.textSel)?state.textSel:null;
+ const textSel=selection.length?null:(next.texts??[]).some(t=>t.id===state.textSel&&!t.hidden&&!t.locked)?state.textSel:null;
  const imageSel=selection.length||textSel?null:(next.images??[]).some(i=>i.id===state.imageSel)?state.imageSel:null;
  set({...patch,doc:next,dirty:true,error:null,selection,textSel,imageSel,nodePath:validNodePath,selectedNode:validNodePath?(patch.selectedNode===undefined?state.selectedNode:patch.selectedNode):null});}
-const liveText=(doc:VectorDocument)=>(doc.texts??[]).some(t=>t.id===state.textSel)?state.textSel:null;
+const liveText=(doc:VectorDocument)=>(doc.texts??[]).some(t=>t.id===state.textSel&&!t.hidden&&!t.locked)?state.textSel:null;
 const liveImage=(doc:VectorDocument)=>(doc.images??[]).some(i=>i.id===state.imageSel)?state.imageSel:null;
 export function undo(){const prev=past.pop();if(!prev)return;future.push(state.doc);set({doc:prev,dirty:true,selection:selectionIds(prev,state.selection),textSel:liveText(prev),imageSel:liveImage(prev)});}
 export function redo(){const next=future.pop();if(!next)return;past.push(state.doc);set({doc:next,dirty:true,selection:selectionIds(next,state.selection),textSel:liveText(next),imageSel:liveImage(next)});}
@@ -93,7 +93,7 @@ export function renameGroup(group:string,name:string){
  const names={...(state.doc.groupNames??{})},n=name.trim().slice(0,80);if(n)names[group]=n;else delete names[group];
  const {groupNames:_old,...rest}=state.doc;commit(Object.keys(names).length?{...rest,groupNames:names}:rest);}
 export function renamePath(id:string,name:string){commit(mapPaths(p=>({...p,name}))([id]));}
-export function toggleHidden(id:string){const target=state.doc.paths.find(p=>p.id===id);if(!target)return;const ids=state.doc.paths.filter(p=>p.id===id||(target.compound!==undefined&&p.compound===target.compound)).map(p=>p.id);commit(mapPaths(p=>{const {hidden:_h,...rest}=p;return target.hidden?rest:{...rest,hidden:true as const};})(ids));}
+export function toggleHidden(id:string){const target=state.doc.paths.find(p=>p.id===id);if(!target){if((state.doc.texts??[]).some(t=>t.id===id))commit({...state.doc,texts:(state.doc.texts??[]).map(t=>{if(t.id!==id)return t;const {hidden:_h,...rest}=t;return t.hidden?rest:{...rest,hidden:true as const};})});return;}const ids=state.doc.paths.filter(p=>p.id===id||(target.compound!==undefined&&p.compound===target.compound)).map(p=>p.id);commit(mapPaths(p=>{const {hidden:_h,...rest}=p;return target.hidden?rest:{...rest,hidden:true as const};})(ids));}
 /** z-order: 'front'|'back'|'forward'|'backward'. */
 export function reorder(mode:'front'|'back'|'forward'|'backward',ids:readonly string[]=state.selection){
  ids=selectionIds(state.doc,ids);const paths=[...state.doc.paths];const chosen=paths.filter(p=>ids.includes(p.id));if(!chosen.length)return;
@@ -184,7 +184,7 @@ if(typeof window!=='undefined')window.addEventListener('beforeunload',event=>{
 });
 
 /** Text objects. Each call is one undo step; invalid input throws before history is touched. */
-export const selectText=(id:string|null)=>{if(id!==null&&!(state.doc.texts??[]).some(t=>t.id===id))return;set({textSel:id,...(id!==null?{selection:[],imageSel:null,nodePath:null,selectedNode:null}:{})});};
+export const selectText=(id:string|null)=>{if(id!==null&&!(state.doc.texts??[]).some(t=>t.id===id&&!t.hidden&&!t.locked))return;set({textSel:id,...(id!==null?{selection:[],imageSel:null,nodePath:null,selectedNode:null}:{})});};
 export function addText(p:{x:number;y:number;text?:string}&Partial<Omit<VectorText,'id'|'text'|'x'|'y'>>):string{
  finite(p.x,p.y);const id=newId('t');
  const t=normalizeText({fontFamily:'sans-serif',fontSize:Math.max(12,Math.round(Math.min(state.doc.width,state.doc.height)/20)),...p,id,text:p.text??'Text'});

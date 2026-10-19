@@ -82,7 +82,7 @@ export function VectorCanvas(){
  const selImage=images.find(i=>i.id===s.imageSel);
  const hitImage=(pt:Point):string|null=>{for(let i=images.length-1;i>=0;i--){const m=images[i];if(pt.x>=m.x-tol&&pt.x<=m.x+m.width+tol&&pt.y>=m.y-tol&&pt.y<=m.y+m.height+tol)return m.id;}return null;};
  const selText=texts.find(t=>t.id===s.textSel);const selTextBox=selText?textBox(selText):null;
- const hitText=(pt:Point,back=false):string|null=>{for(let i=texts.length-1;i>=0;i--){if(!!texts[i].back!==back)continue;const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
+ const hitText=(pt:Point,back=false):string|null=>{for(let i=texts.length-1;i>=0;i--){if(!!texts[i].back!==back||texts[i].hidden||texts[i].locked)continue;const b=textBox(texts[i]),q=unrotateAround(texts[i],pt);if(q.x>=b.minX-tol&&q.x<=b.maxX+tol&&q.y>=b.minY-tol&&q.y<=b.maxY+tol)return texts[i].id;}return null;};
  const selBox=boxOf(selected.map(preview));
 
  const onDown=(e:RPointerEvent<SVGSVGElement>)=>{

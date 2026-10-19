@@ -119,7 +119,7 @@ export function vectorCommandSpecs(active: () => boolean): CommandSpec<any, unkn
       params: object({ group: id, name: { type: 'string', maxLength: 80 } }, ['group', 'name']), enabled: open,
       run: (p: { group: string; name: string }) => { /* History: one vector commit; unknown group is refused. */ if (!S.getVectorSession().doc.paths.some(q => q.group === p.group)) throw new Error('Unknown group'); S.renameGroup(p.group, p.name); } },
     { id: 'vector.toggleHidden', title: 'Toggle vector path visibility', category: 'Edit', level: 'ui', params: object({ id }, ['id']), enabled: open,
-      run: (p: { id: string }) => { /* History: one vector commit, including compound contours. */ target(p.id); S.toggleHidden(p.id); } },
+      run: (p: { id: string }) => { /* History: one vector commit, including compound contours. Text objects hide the same way. */ if (!(S.getVectorSession().doc.texts ?? []).some(t => t.id === p.id)) target(p.id); S.toggleHidden(p.id); } },
     { id: 'vector.reorder', title: 'Arrange vector paths', category: 'Edit', level: 'ui',
       params: object({ mode: { type: 'string', enum: ['front', 'back', 'forward', 'backward'] }, ids }, ['mode']), enabled: open,
       run: (p: { mode: 'front' | 'back' | 'forward' | 'backward'; ids?: string[] }) => { /* History: one vector commit only when order changes. */ S.reorder(p.mode, p.ids); } },

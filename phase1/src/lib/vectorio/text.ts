@@ -29,6 +29,8 @@ export function normalizeText(t: Partial<VectorText> | undefined): VectorText | 
     fill: swatchColor(t.fill) ?? '#000000',
     ...(rot(t.rotation) ? { rotation: rot(t.rotation) } : {}),
     ...(t.back === true ? { back: true } : {}),
+    ...(t.hidden === true ? { hidden: true as const } : {}),
+    ...(t.locked === true ? { locked: true as const } : {}),
     ...(op(t.opacity) < 1 ? { opacity: op(t.opacity) } : {}),
   };
 }
@@ -48,6 +50,8 @@ export function textSvg(t: VectorText): string {
   if (t.anchor !== 'start') attrs.push(`text-anchor="${t.anchor}"`);
   attrs.push(`fill="${t.fill}"`);
   if (t.back) attrs.push('data-vs-back="1"');
+  if (t.hidden) attrs.push('display="none"');
+  if (t.locked) attrs.push('data-vs-locked="1"');
   if (t.opacity !== undefined && t.opacity < 1) attrs.push(`opacity="${r3(t.opacity)}"`);
   const tr = textTransform(t);
   if (tr) attrs.push(`transform="${tr}"`);
@@ -57,7 +61,7 @@ export function textSvg(t: VectorText): string {
 /** SVG transform of a rotated text (about its anchor point), undefined when not rotated. */
 export const textTransform = (t: Pick<VectorText, 'x' | 'y' | 'rotation'>): string | undefined => (t.rotation ? `rotate(${r3(t.rotation)} ${r3(t.x)} ${r3(t.y)})` : undefined);
 const ROTATE = /^rotate\(\s*(-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?) (-?\d+(?:\.\d+)?)\s*\)$/;
-const TEXT_ATTRS = new Set(['data-vs-back', 'opacity', 'transform', 'data-vs-text', 'x', 'y', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'fill', 'xml:space', 'id']);
+const TEXT_ATTRS = new Set(['data-vs-locked', 'display', 'data-vs-back', 'opacity', 'transform', 'data-vs-text', 'x', 'y', 'font-family', 'font-size', 'font-weight', 'font-style', 'text-anchor', 'fill', 'xml:space', 'id']);
 /** Reads back only text this editor wrote. Anything else (transforms, CSS, other attributes, nested markup) is an error so nothing is dropped silently. */
 export function parseTextElement(el: XmlElement, id: string, bad: (m: string) => void): VectorText | null {
   if (el.attrs['data-vs-text'] !== '1') { bad('<text> is not supported (only text created by this editor is read back)'); return null; }
@@ -71,6 +75,9 @@ export function parseTextElement(el: XmlElement, id: string, bad: (m: string) =>
   if (!fill) { bad('<text> fill must be a #rgb or #rrggbb colour'); return null; }
   if (el.attrs['data-vs-back'] !== undefined && el.attrs['data-vs-back'] !== '1') { bad('<text> data-vs-back must be "1"'); return null; }
   const back = el.attrs['data-vs-back'] === '1' ? true : undefined;
+  if (el.attrs['data-vs-locked'] !== undefined && el.attrs['data-vs-locked'] !== '1') { bad('<text> data-vs-locked must be "1"'); return null; }
+  if (el.attrs.display !== undefined && el.attrs.display !== 'none') { bad('<text> display must be "none" when present'); return null; }
+  const locked = el.attrs['data-vs-locked'] === '1' ? true as const : undefined, hidden = el.attrs.display === 'none' ? true as const : undefined;
   let rotation: number | undefined, opacity: number | undefined;
   if (el.attrs.transform !== undefined) {
     const m = ROTATE.exec(el.attrs.transform);
@@ -88,7 +95,7 @@ export function parseTextElement(el: XmlElement, id: string, bad: (m: string) =>
     if (el.text.trim() || el.children.some((c) => c.name.replace(/^.*:/, '') !== 'tspan' || c.children.length)) { bad('<text> may only contain plain <tspan> lines'); return null; }
     lines = el.children.map((c) => c.text);
   } else lines = el.text.split('\n');
-  const t = normalizeText({ id, x: num('x'), y: num('y'), text: lines.join('\n'), fontFamily: el.attrs['font-family'], fontSize: size, fontWeight: weight as VectorText['fontWeight'], fontStyle: style as VectorText['fontStyle'], anchor: anchor as VectorText['anchor'], fill, rotation, opacity, back });
+  const t = normalizeText({ id, x: num('x'), y: num('y'), text: lines.join('\n'), fontFamily: el.attrs['font-family'], fontSize: size, fontWeight: weight as VectorText['fontWeight'], fontStyle: style as VectorText['fontStyle'], anchor: anchor as VectorText['anchor'], fill, rotation, opacity, back, hidden, locked });
   if (!t) bad('<text> is empty');
   return t;
 }

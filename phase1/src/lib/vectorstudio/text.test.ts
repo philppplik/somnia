@@ -124,3 +124,22 @@ test('layers list helpers and vector.selectText: label is the shortened first li
  await assert.rejects(d.runCommand('vector.selectText',{id},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
  const {textLabel}=await import('../../components/vectorstudio/VectorPanels');assert.equal(textLabel('First line\nSecond'),'First line');assert.equal(textLabel('x'.repeat(100)).length,40);assert.equal(textLabel('  \nabc'),'abc');
 });
+test('text objects hide and lock like paths: one undo step, not selectable, SVG roundtrip, fit-to-content skips hidden',async()=>{
+ const d=setup();
+ await d.runCommand('vector.addText',{x:20,y:50,text:'Hi'},o);
+ const id=S.getVectorSession().textSel!;
+ await d.runCommand('vector.toggleLocked',{id},o);
+ let t=S.getVectorSession().doc.texts![0];assert.equal(t.locked,true);assert.equal(S.getVectorSession().textSel,null);
+ S.selectText(id);assert.equal(S.getVectorSession().textSel,null,'locked text refuses selection');
+ await d.runCommand('vector.toggleLocked',{id},o);assert.equal(S.getVectorSession().doc.texts![0].locked,undefined);
+ S.selectText(id);assert.equal(S.getVectorSession().textSel,id);
+ await d.runCommand('vector.toggleHidden',{id},o);
+ t=S.getVectorSession().doc.texts![0];assert.equal(t.hidden,true);assert.equal(S.getVectorSession().textSel,null);
+ S.undo();assert.equal(S.getVectorSession().doc.texts![0].hidden,undefined);
+ S.redo();
+ await assert.rejects(d.runCommand('vector.toggleHidden',{id:'nope'},o),/not in the current document/);
+ const both=normalizeDoc({width:200,height:100,paths:[],texts:[{...t,hidden:true,locked:true}]} as any);
+ const svg=exportSvg(both);assert.match(svg,/display="none"/);assert.match(svg,/data-vs-locked="1"/);
+ const back=importSvg(svg).doc.texts![0];assert.equal(back.hidden,true);assert.equal(back.locked,true);
+ assert.throws(()=>exportAreaDoc(both,[],'content' as any),/Nothing visible/);
+});

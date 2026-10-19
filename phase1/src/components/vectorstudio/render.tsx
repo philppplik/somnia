@@ -39,7 +39,7 @@ export function GradientDefs({gradients}:{gradients?:readonly Gradient[]}){
 
 /** Text objects, painted above all paths (same markup the exporter writes). */
 export function TextLayer({texts}:{texts:readonly VectorText[]}){
- return <>{texts.map(t=><text key={t.id} data-text-id={t.id} x={t.x} y={t.y} fontFamily={t.fontFamily} fontSize={t.fontSize} fontWeight={t.fontWeight} fontStyle={t.fontStyle} textAnchor={t.anchor} fill={t.fill} opacity={t.opacity} transform={textTransform(t)} xmlSpace="preserve">
+ return <>{texts.filter(t=>!t.hidden).map(t=><text key={t.id} data-text-id={t.id} x={t.x} y={t.y} fontFamily={t.fontFamily} fontSize={t.fontSize} fontWeight={t.fontWeight} fontStyle={t.fontStyle} textAnchor={t.anchor} fill={t.fill} opacity={t.opacity} transform={textTransform(t)} xmlSpace="preserve">
   {textLines(t).map((l,i)=><tspan key={i} x={t.x} dy={i===0?0:t.fontSize*LINE_HEIGHT}>{l}</tspan>)}</text>)}</>;}
 
 /** Placed images (reference layers), painted behind all paths and texts. */

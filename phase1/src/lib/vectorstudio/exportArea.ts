@@ -22,7 +22,7 @@ export function exportAreaDoc(doc:VectorDocument,selection:readonly string[],are
  if(!Number.isFinite(padding)||padding<PADDING_LIMITS.min||padding>PADDING_LIMITS.max)throw new RangeError(`padding must be ${PADDING_LIMITS.min}-${PADDING_LIMITS.max}`);
  if(area==='page')return doc;
  const chosen:VectorPath[]=area==='selection'?selectedPaths(doc,selection):doc.paths.filter(p=>!p.hidden);
- const texts=area==='content'?doc.texts??[]:[],images=area==='content'?doc.images??[]:[];
+ const texts=area==='content'?(doc.texts??[]).filter(t=>!t.hidden):[],images=area==='content'?doc.images??[]:[];
  if(!chosen.length&&!texts.length&&!images.length)throw Error(area==='selection'?'Select at least one object to export':'Nothing visible to export');
  let box:Box|null=null;
  // inside a clipping group only the part within the mask counts; the mask shape itself is not painted

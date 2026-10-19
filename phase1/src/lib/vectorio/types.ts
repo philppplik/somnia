@@ -89,6 +89,8 @@ export interface VectorText {
   rotation?: number; // degrees about (x, y), -360..360, omitted when 0
   opacity?: number; // 0..1, omitted when 1
   back?: boolean; // painted behind all shapes instead of above them, omitted when false
+  hidden?: true; // not drawn, not selectable and skipped by fit-to-content export; written as display="none", omitted when visible
+  locked?: true; // cannot be selected, moved or edited from the canvas; written as data-vs-locked="1", omitted when unlocked
 }
 
 /** A placed raster image (extension): PNG/JPEG/WebP data URI, painted behind all paths and texts. Exported as `<image data-vs-image="1">`. */
