@@ -6,6 +6,7 @@ import {LOWER_THIRD,CENTER_OVERLAY,newImageOverlay,newVideoOverlay,newTitleOverl
 import {cuesToTitleOverlays,parseSubtitles} from './subtitles';
 import {colorOf,hasColor,type ClipColor} from './colorAdjust';
 import {picFadeOf} from './picFade';
+import {addMarker,moveMarker,removeMarker,renameMarker,sanitizeMarkers,type TimelineMarker} from './markers';
 import {cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,CLIP_ROTATIONS,fullClip,isFreeze,IMAGE_DEFAULT_SECONDS,newClipId,MIN_CLIP_SECONDS as MIN_EXPORT_RANGE,sliceTimeline,type ClipCrop,type ClipFlip,type ClipRotation,type ClipTransition,isNeutralTimeline,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,setCropKey,setCropKeys,clearCropKeys,setGainKey,setGainKeys,clearGainKeys,setCrossfade,setReversed,setTransition,transitionOf,isReversed,speedOf,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {VIDEO_HISTORY_LIMIT,emptyVideoHistory,pushHistory,redoHistory,undoHistory,type VideoHistory,type VideoSnapshot} from './history';
 import {audioTrackEnd,duplicateAudioClip,fullAudioClip,moveAudioClip,removeAudioClip,resizeAudioClip,sanitizeAudioClips,setAudioClipDuck,setAudioClipEdge,setAudioClipFades,setAudioClipGain,setAudioClipMuted,type AudioClip,sliceAudioClips} from './audioTrack';
@@ -26,7 +27,7 @@ export interface VideoResult{blob:Blob;url:string;report:VideoReport}
 export type VideoExportOutcome='downloaded'|'cancelled'|'unavailable';
 export interface VideoSession{exportOutcome?:VideoExportOutcome;name:string;status:VideoStatus;error:string;probe:VideoProbe|null;capabilities:VideoCapabilities|null;clips:TimelineClip[];/** The free-placed audio track (music/voiceover), mixed over the edit list. */
 audioClips:AudioClip[];selectedClipId:string|null;/** Selection on the audio track; selecting one track clears the other. */
-selectedAudioClipId:string|null;/** Titles and images drawn over the running video. */overlayClips:OverlayClip[];selectedOverlayClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
+selectedAudioClipId:string|null;/** Titles and images drawn over the running video. */overlayClips:OverlayClip[];/** Named timeline points (not rendered). */markers:TimelineMarker[];selectedOverlayClipId:string|null;history:VideoHistory;/** Signature of the clip list at the last save/load; the session is dirty when the current list differs. */
 savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;exportRange:{start:number;end:number}|null;progress:VideoProgress|null;result:VideoResult|null;ext:string}
 const sessions=new Map<string,VideoSession>();
 let filmstrip:FilmstripController|null|undefined;
@@ -78,7 +79,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
  fingerprints.set(item.name,fingerprintOf(item.url));
  const restored=lifecycleStash.take(item.name,fingerprints.get(item.name)!);
  const restore=()=>{if(restored&&sessions.has(item.name))patch(item.name,recipePatch(restored));};
- put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],overlayClips:[],selectedOverlayClipId:null,selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,exportRange:null,progress:null,result:null,ext:fileExtension(item.name)});
+ put({name:item.name,status:'loading',error:'',probe:null,capabilities:null,clips:[],audioClips:[],overlayClips:[],markers:[],selectedOverlayClipId:null,selectedClipId:null,selectedAudioClipId:null,history:emptyVideoHistory(),savedSig:clipsSignature([],[]),format:DEFAULT_FORMAT,exportOptions:DEFAULT_EXPORT_OPTIONS,exportRange:null,progress:null,result:null,ext:fileExtension(item.name)});
  if(getMedia().items.find(i=>i.name===item.name)?.kind==='video-project'){
   try{
    const text=await fetch(item.url).then(r=>r.text());
@@ -87,7 +88,7 @@ async function openVideoFresh(item:{name:string;url:string}):Promise<void>{
    const clips=sanitizeClips(parsed.clips,sourceDurations(parsed.clips));
    const audioClips=sanitizeAudioClips(parsed.audioClips,{});
    const overlayClips=parsed.overlayClips;
-   patch(item.name,{status:'ready',ext:'',clips,audioClips,overlayClips,format:parsed.format,exportOptions:parsed.exportOptions,savedSig:clipsSignature(clips,audioClips,overlayClips)});
+   patch(item.name,{status:'ready',ext:'',clips,audioClips,overlayClips,markers:parsed.markers,format:parsed.format,exportOptions:parsed.exportOptions,savedSig:clipsSignature(clips,audioClips,overlayClips,parsed.markers)});
    restore();
   }catch(e){patch(item.name,{status:'error',error:message(e)},e);}
   return;
@@ -118,7 +119,7 @@ export function editTimeline(root:string,edit:(clips:TimelineClip[])=>TimelineCl
  if(!next)return;
  const clean=sanitizeClips(next,sourceDurations(next));
  if(sameClips(clean,s.clips))return;
- put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips},opts?.historyKey??null,Date.now())});
+ put({...s,clips:clean,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers},opts?.historyKey??null,Date.now())});
 }
 /** Restores a snapshot: clamps both tracks against the sources that are still open and keeps the selection only when it survives. */
 const restoreTimeline=(root:string,step:{history:VideoHistory;snapshot:VideoSnapshot}|null)=>{
@@ -126,9 +127,9 @@ const restoreTimeline=(root:string,step:{history:VideoHistory;snapshot:VideoSnap
  const clean=sanitizeClips(step.snapshot.clips,sourceDurations(step.snapshot.clips));
  const cleanAudio=sanitizeAudioClips(step.snapshot.audioClips,audioDurationsOf(step.snapshot.audioClips));
  const cleanOverlays=sanitizeOverlayClips(step.snapshot.overlayClips??s.overlayClips);
- put({...s,clips:clean,audioClips:cleanAudio,overlayClips:cleanOverlays,selectedOverlayClipId:cleanOverlays.some(c=>c.id===s.selectedOverlayClipId)?s.selectedOverlayClipId:null,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,selectedAudioClipId:cleanAudio.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:step.history});
+ put({...s,clips:clean,audioClips:cleanAudio,overlayClips:cleanOverlays,markers:step.snapshot.markers?sanitizeMarkers(step.snapshot.markers):s.markers,selectedOverlayClipId:cleanOverlays.some(c=>c.id===s.selectedOverlayClipId)?s.selectedOverlayClipId:null,selectedClipId:clean.some(c=>c.id===s.selectedClipId)?s.selectedClipId:null,selectedAudioClipId:cleanAudio.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:step.history});
 };
-const snapshotOf=(s:VideoSession):VideoSnapshot=>({clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips});
+const snapshotOf=(s:VideoSession):VideoSnapshot=>({clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers});
 /** One timeline edit back (video AND audio track). The export result is not revived - re-export after undoing. */
 export const undoVideoEdit=(root:string)=>{const s=sessions.get(root);restoreTimeline(root,s?undoHistory(s.history,snapshotOf(s)):null);};
 /** Re-applies the newest undone edit. */
@@ -146,7 +147,7 @@ export function editAudioTrack(root:string,edit:(clips:AudioClip[])=>AudioClip[]
  if(!next)return;
  const clean=sanitizeAudioClips(next,audioDurationsOf(next));
  if(sameAudio(clean,s.audioClips))return;
- put({...s,audioClips:clean,selectedAudioClipId:clean.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips},opts?.historyKey??null,Date.now())});
+ put({...s,audioClips:clean,selectedAudioClipId:clean.some(c=>c.id===s.selectedAudioClipId)?s.selectedAudioClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers},opts?.historyKey??null,Date.now())});
 }
 /** Adds an audio file's full range to the track at `at` (default: end of the current content). Probes the source on demand. */
 export async function addAudioTrackClip(root:string,item:{name:string;url:string},at?:number):Promise<string|null>{
@@ -184,7 +185,7 @@ export function editOverlays(root:string,edit:(clips:OverlayClip[])=>OverlayClip
  if(!next)return;
  const clean=sanitizeOverlayClips(next);
  if(sameOverlays(clean,s.overlayClips))return;
- put({...s,overlayClips:clean,selectedOverlayClipId:clean.some(c=>c.id===s.selectedOverlayClipId)?s.selectedOverlayClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips},opts?.historyKey??null,Date.now())});
+ put({...s,overlayClips:clean,selectedOverlayClipId:clean.some(c=>c.id===s.selectedOverlayClipId)?s.selectedOverlayClipId:null,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers},opts?.historyKey??null,Date.now())});
 }
 /** Adds a title overlay (lower third) at `at` and selects it. */
 export const addOverlayTitle=(root:string,at:number)=>{const c=newTitleOverlay({},at);editOverlays(root,clips=>[...clips,c]);patch(root,{selectedOverlayClipId:c.id,selectedClipId:null,selectedAudioClipId:null});return c.id;};
@@ -267,6 +268,18 @@ export function setTimelineClipColor(root:string,id:string,color:Partial<ClipCol
  const next=colorOf({color:{...colorOf(clip),...color}});
  editTimeline(root,clips=>clips.map(c=>c.id===id?{...c,color:hasColor({color:next})?next:undefined}:c),historyKey?{historyKey}:undefined);
 }
+/** Applies a marker-list edit as one undo step. A clamped no-op records nothing. */
+export function editMarkers(root:string,edit:(m:TimelineMarker[])=>TimelineMarker[],opts?:{historyKey?:string}){
+ const s=sessions.get(root);if(!s)return;
+ const dur=timelineDuration(s.clips);
+ const next=sanitizeMarkers(edit(s.markers),dur>0?dur:undefined);
+ if(JSON.stringify(next)===JSON.stringify(s.markers))return;
+ put({...s,markers:next,history:pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers},opts?.historyKey??null,Date.now())});
+}
+export const addTimelineMarker=(root:string,at:number,label='')=>editMarkers(root,m=>addMarker(m,at,label));
+export const removeTimelineMarker=(root:string,id:string)=>editMarkers(root,m=>removeMarker(m,id));
+export const renameTimelineMarker=(root:string,id:string,label:string)=>editMarkers(root,m=>renameMarker(m,id,label),{historyKey:`marker:${id}`});
+export const moveTimelineMarker=(root:string,id:string,at:number)=>editMarkers(root,m=>moveMarker(m,id,at));
 /** Sets a clip's picture fade from and to black (seconds; 0 clears a side). Media, image and freeze clips. */
 export function setTimelineClipPicFade(root:string,id:string,fade:{fadeIn?:number;fadeOut?:number},historyKey?:string){
  const s=sessions.get(root);if(!s)return;
@@ -385,7 +398,7 @@ export function resetTimeline(root:string){
  if(!s.clips.length&&!s.audioClips.length&&!project)return;
  revoke(s.result);
  const changed=s.clips.length>0||s.audioClips.length>0;
- put({...s,clips:next,audioClips:[],overlayClips:[],selectedOverlayClipId:null,selectedClipId:null,selectedAudioClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips},null,Date.now()):s.history});
+ put({...s,clips:next,audioClips:[],overlayClips:[],markers:[],selectedOverlayClipId:null,selectedClipId:null,selectedAudioClipId:null,result:null,history:changed?pushHistory(s.history,{clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers},null,Date.now()):s.history});
 }
 export const setVideoFormat=(root:string,format:VideoFormat)=>patch(root,{format});
 /** Limits the export to a timeline range (seconds, clamped to the timeline; null or an empty range exports everything). */
@@ -455,13 +468,13 @@ export function closeVideo(name:string){
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);
 export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.clips):0;
 /** Unsaved edit-list changes: the current clips differ from the last saved/loaded state. Undoing back to that state clears the dirty flag. */
-export const videoIsDirty=(s:VideoSession|null)=>!!s&&s.status!=='loading'&&clipsSignature(s.clips,s.audioClips,s.overlayClips)!==s.savedSig;
+export const videoIsDirty=(s:VideoSession|null)=>!!s&&s.status!=='loading'&&clipsSignature(s.clips,s.audioClips,s.overlayClips,s.markers)!==s.savedSig;
 /** Names of all open video sessions with unsaved timeline changes (workDocs dirty list). */
 export const dirtyVideoNames=()=>[...sessions.values()].filter(videoIsDirty).map(s=>s.name);
 /** The serialized project for download or tests; null while the session is not ready. */
 export function serializeVideoProjectCopy(root:string):{text:string;fileName:string}|null{
  const s=sessions.get(root);if(!s||s.status==='loading')return null;
- return{text:serializeVideoProject(s.clips,s.audioClips,s.format,s.exportOptions,s.overlayClips),fileName:projectFileName(root)};
+ return{text:serializeVideoProject(s.clips,s.audioClips,s.format,s.exportOptions,s.overlayClips,s.markers),fileName:projectFileName(root)};
 }
 /** Saves the edit list as a .video-project download and marks the session clean. Media bytes are NOT included - clips reference sources by name. */
 export function saveVideoProject(root:string):boolean{
@@ -469,7 +482,7 @@ export function saveVideoProject(root:string):boolean{
  const url=URL.createObjectURL(new Blob([copy.text],{type:'application/x-somnia-video-project'}));
  const a=document.createElement('a');a.href=url;a.download=copy.fileName;a.click();
  setTimeout(()=>URL.revokeObjectURL(url),30_000);
- patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips,sessions.get(root)!.audioClips,sessions.get(root)!.overlayClips)});
+ patch(root,{savedSig:clipsSignature(sessions.get(root)!.clips,sessions.get(root)!.audioClips,sessions.get(root)!.overlayClips,sessions.get(root)!.markers)});
  return true;
 }
 
@@ -491,14 +504,14 @@ export const useVideoPlayhead=()=>useSyncExternalStore(cb=>{playheadSubs.add(cb)
 /* Lifecycle (docs/studio-lifecycle.md): recipe-only checkpoints. Source bytes, filmstrips and export results are never captured; the timeline recipe is re-applied when the same source re-opens. */
 const fingerprints=new Map<string,string>();
 const lifecycleStash=new RecipeStash<VideoRecipe>();
-export interface VideoRecipe{clips:TimelineClip[];audioClips:AudioClip[];overlayClips:OverlayClip[];selectedClipId:string|null;selectedAudioClipId:string|null;selectedOverlayClipId:string|null;history:{past:VideoSnapshot[];future:VideoSnapshot[]};savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;exportRange:{start:number;end:number}|null}
+export interface VideoRecipe{clips:TimelineClip[];audioClips:AudioClip[];overlayClips:OverlayClip[];markers?:TimelineMarker[];selectedClipId:string|null;selectedAudioClipId:string|null;selectedOverlayClipId:string|null;history:{past:VideoSnapshot[];future:VideoSnapshot[]};savedSig:string;format:VideoFormat;exportOptions:VideoExportOptions;exportRange:{start:number;end:number}|null}
 const edited=(s:VideoSession)=>s.status!=='loading'&&(videoIsDirty(s)||s.history.past.length>0||s.history.future.length>0||s.exportRange!==null||s.format!==DEFAULT_FORMAT||JSON.stringify(s.exportOptions)!==JSON.stringify(DEFAULT_EXPORT_OPTIONS));
-const recipeOf=(s:VideoSession):VideoRecipe=>structuredClone({clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,selectedClipId:s.selectedClipId,selectedAudioClipId:s.selectedAudioClipId,selectedOverlayClipId:s.selectedOverlayClipId,history:{past:s.history.past,future:s.history.future},savedSig:s.savedSig,format:s.format,exportOptions:s.exportOptions,exportRange:s.exportRange});
+const recipeOf=(s:VideoSession):VideoRecipe=>structuredClone({clips:s.clips,audioClips:s.audioClips,overlayClips:s.overlayClips,markers:s.markers,selectedClipId:s.selectedClipId,selectedAudioClipId:s.selectedAudioClipId,selectedOverlayClipId:s.selectedOverlayClipId,history:{past:s.history.past,future:s.history.future},savedSig:s.savedSig,format:s.format,exportOptions:s.exportOptions,exportRange:s.exportRange});
 const recipePatch=(r:VideoRecipe):Partial<VideoSession>=>{
  const clips=sanitizeClips(r.clips,sourceDurations(r.clips));
  const audioClips=sanitizeAudioClips(r.audioClips,audioDurationsOf(r.audioClips));
  const overlayClips=sanitizeOverlayClips(r.overlayClips);
- return{clips,audioClips,overlayClips,
+ return{clips,audioClips,overlayClips,markers:sanitizeMarkers(r.markers),
   selectedClipId:clips.some(c=>c.id===r.selectedClipId)?r.selectedClipId:null,
   selectedAudioClipId:audioClips.some(c=>c.id===r.selectedAudioClipId)?r.selectedAudioClipId:null,
   selectedOverlayClipId:overlayClips.some(c=>c.id===r.selectedOverlayClipId)?r.selectedOverlayClipId:null,
@@ -510,7 +523,7 @@ export function sanitizeVideoRecipe(v:unknown):VideoRecipe|null{
  if(!r||typeof r!=='object'||!Array.isArray(r.clips)||!Array.isArray(r.audioClips)||!Array.isArray(r.overlayClips)||typeof r.savedSig!=='string'||typeof r.format!=='string')return null;
  const h=r.history;if(!h||!Array.isArray(h.past)||!Array.isArray(h.future))return null;
  const range=r.exportRange&&Number.isFinite(r.exportRange.start)&&Number.isFinite(r.exportRange.end)?{start:r.exportRange.start,end:r.exportRange.end}:null;
- return{clips:r.clips,audioClips:r.audioClips,overlayClips:r.overlayClips,selectedClipId:r.selectedClipId??null,selectedAudioClipId:r.selectedAudioClipId??null,selectedOverlayClipId:r.selectedOverlayClipId??null,history:{past:h.past.slice(-VIDEO_HISTORY_LIMIT),future:h.future.slice(0,VIDEO_HISTORY_LIMIT)},savedSig:r.savedSig,format:r.format as VideoFormat,exportOptions:sanitizeExportOptions(r.exportOptions),exportRange:range};
+ return{clips:r.clips,audioClips:r.audioClips,overlayClips:r.overlayClips,markers:sanitizeMarkers(r.markers),selectedClipId:r.selectedClipId??null,selectedAudioClipId:r.selectedAudioClipId??null,selectedOverlayClipId:r.selectedOverlayClipId??null,history:{past:h.past.slice(-VIDEO_HISTORY_LIMIT),future:h.future.slice(0,VIDEO_HISTORY_LIMIT)},savedSig:r.savedSig,format:r.format as VideoFormat,exportOptions:sanitizeExportOptions(r.exportOptions),exportRange:range};
 }
 export function createVideoLifecycleAdapter(){
  return createRecipeAdapter<VideoRecipe>({

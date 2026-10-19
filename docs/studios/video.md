@@ -202,3 +202,12 @@ Media, image and freeze clips can fade their picture in from black and out to bl
 - Linear ramp over the clip's timeline length (after speed). If both fades are longer than the clip they shrink together to fit. Code: `src/lib/video/picFade.ts`.
 - Preview: a brightness filter on the player. Export: a black layer at the matching opacity over the fitted frame (no pixel read-back needed for the fade alone).
 - Saved in the `.video-project` file as `picFadeIn` / `picFadeOut`, part of the dirty signature; old files load unchanged. Titles carry none (use the title card background instead).
+
+## Timeline markers
+
+Named points on the timeline for planning cuts and navigating long edits. They are never rendered into the export.
+
+- Inspector > Markers: "Add at playhead", a label field per marker (up to 60 characters) and a remove button. Markers show as small diamonds above the timeline track; clicking one moves the playhead there.
+- UI commands: `video.marker.add` (optional `at` in seconds, default the playhead; optional `label`), `video.marker.rename` (`id`, `label`) and `video.marker.remove` (`id`).
+- Up to 200 markers per project, sorted by time, clamped to the timeline length. Each edit is one undo step; typing in a label coalesces into one step.
+- Saved in the `.video-project` file as `markers` (omitted when empty), part of the dirty signature and of the suspend/restore recipe; old files load unchanged. Code: `src/lib/video/markers.ts`.

@@ -8,6 +8,7 @@ import {VolumeX} from '../../lib/icons';
 const tickStep=(duration:number)=>duration<=30?1:duration<=120?5:duration<=600?30:60;
 const shortName=(n:string)=>n.replace(/^.*[\\/]/,'').replace(/\.[^.]+$/,'');
 interface Props{
+ markers?:{id:string;at:number;label:string}[];
  clips:TimelineClip[];selectedId:string|null;position:number;missing:Set<string>;
  onSeek:(s:number)=>void;onSelect:(id:string|null)=>void;onTrim:(id:string,edge:'in'|'out',sourceTime:number)=>void;onMove:(id:string,by:number)=>void;
  label:string;
@@ -25,7 +26,7 @@ interface Props{
  overlayLane?:ReactNode;
 }
 /** Segmented timeline: one block per clip, drag to reorder, edge handles trim the selected clip, the playhead seeks. */
-export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane,overlayLane,onDropMedia}:Props){
+export function VideoTimeline({markers,clips,selectedId,position,missing,onSeek,onSelect,onTrim,onMove,label,renderStrip,trackHeight,zoom=1,onZoom,domain,audioLane,overlayLane,onDropMedia}:Props){
  const {t}=useT();
  const track=useRef<HTMLDivElement>(null);
  const scroller=useRef<HTMLDivElement>(null);
@@ -138,6 +139,12 @@ export function VideoTimeline({clips,selectedId,position,missing,onSeek,onSelect
      style={{left:`${r.start/duration*100}%`,width:`${d/duration*100}%`,background:'linear-gradient(to top right, transparent 44%, var(--accent) 44%, var(--accent) 56%, transparent 56%), linear-gradient(to bottom right, transparent 44%, var(--accent) 44%, var(--accent) 56%, transparent 56%)'}}
      data-testid="video-transition"/>;
    })}
+   {duration>0&&!!markers?.length&&<svg className="pointer-events-none absolute left-0 top-[-8px] h-3 w-full overflow-visible" aria-hidden={false}>
+    {markers.map(m=><g key={m.id} className="pointer-events-auto cursor-pointer" role="button" aria-label={m.label||`${m.at.toFixed(1)}s`} onPointerDown={e=>e.stopPropagation()} onClick={()=>onSeek(m.at)} data-testid="video-marker">
+     <title>{m.label||`${m.at.toFixed(1)}s`}</title>
+     <rect x={pct(m.at)} y="2" width="8" height="8" className="fill-accent [transform-box:fill-box] [transform-origin:center] translate-x-[-4px] rotate-45"/>
+    </g>)}
+   </svg>}
    <div className="pointer-events-none absolute top-[-4px] bottom-[-4px] w-0.5 -translate-x-1/2 bg-ink" style={{left:pct(position)}} data-testid="video-playhead"/>
   </div>
   <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-between text-[10px] text-ink-3">

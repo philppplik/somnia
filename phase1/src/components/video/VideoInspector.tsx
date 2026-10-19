@@ -13,7 +13,23 @@ import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSess
 import {TitleAddRow,TitleInspector} from './TitleInspector';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {colorOf,hasColor,type ClipColor} from '../../lib/video/colorAdjust';
-import {setTimelineClipColor,setTimelineClipPicFade} from '../../lib/video/session';
+import {setTimelineClipColor,setTimelineClipPicFade,addTimelineMarker,removeTimelineMarker,renameTimelineMarker} from '../../lib/video/session';
+
+/** Named timeline points: add at the playhead, rename, delete. Ticks on the timeline seek to them. */
+function MarkerControls({name,markers,playhead}:{name:string;markers:import('../../lib/video/markers').TimelineMarker[];playhead:number}){
+ const {t}=useT();
+ return <div className="grid gap-1" data-testid="video-markers">
+  <div className="flex items-center justify-between">{t('video.markers')}
+   <Button size="compact" onClick={()=>addTimelineMarker(name,playhead)} data-testid="video-marker-add">{t('video.markerAdd')}</Button>
+  </div>
+  {markers.length===0&&<span className="text-ink-3">{t('video.markersEmpty')}</span>}
+  {markers.map(m=><div key={m.id} className="flex items-center gap-1" data-testid="video-marker-row">
+   <span className="w-12 shrink-0 tabular-nums text-ink-3">{m.at.toFixed(1)}s</span>
+   <NativeInput type="text" className={field} maxLength={60} value={m.label} placeholder={t('video.markerLabel')} aria-label={t('video.markerLabel')} onChange={e=>renameTimelineMarker(name,m.id,e.target.value)}/>
+   <Button size="compact" onClick={()=>removeTimelineMarker(name,m.id)} aria-label={t('video.markerRemove')} data-testid="video-marker-remove">×</Button>
+  </div>)}
+ </div>;
+}
 
 const COLOR_CHANNELS=['brightness','contrast','saturation'] as const;
 /** Brightness, contrast and saturation of the selected clip (-100..100). Dragging is one undo step. */
@@ -63,6 +79,7 @@ export function VideoControls({name}:{name:string}){
  const selectedOverlay=s.overlayClips.find(c=>c.id===s.selectedOverlayClipId)??null;
  const selectedIndex=selected?s.clips.findIndex(c=>c.id===selected.id):-1;
  return <fieldset disabled={!ready} className="m-0 min-w-0 border-0 p-0" data-testid="video-controls">
+  {ready&&<MarkerControls name={name} markers={s.markers} playhead={playhead}/>}
   <div className={row} data-testid="video-facts">
    <span className="text-ink">{t('video.facts')}</span>
    {v&&<span className="text-ink-3">{t('video.info',{duration:dur.toFixed(2),width:v.width,height:v.height,codec:v.codec??'?'})}{v.fps?` · ${t('video.infoFps',{fps:v.fps})}`:''}</span>}

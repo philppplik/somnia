@@ -434,7 +434,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
      <Button size="icon" variant="ghost" aria-label={t('video.zoomIn')} disabled={zoom>=20} onClick={()=>setZoom(z=>zoomInStep(z))} data-testid="video-zoom-in"><ZoomIn size={15}/></Button>
     </div>
     <div className="px-4 pb-2 pt-1">
-     <VideoTimeline clips={clips} selectedId={session?.selectedClipId??null} position={playhead} missing={missing}
+     <VideoTimeline markers={session?.markers} clips={clips} selectedId={session?.selectedClipId??null} position={playhead} missing={missing}
       onSeek={seek} onSelect={id=>selectTimelineClip(item.name,id)}
       onTrim={(id,edge,at)=>trimTimelineClip(item.name,id,edge,at,`trim:${id}:${edge}`)}
       onMove={(id,by)=>moveTimelineClip(item.name,id,by)}
