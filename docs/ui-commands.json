@@ -8083,6 +8083,21 @@
       "hasEnabled": true
     },
     {
+      "id": "sheets.importCsv",
+      "title": "Import a CSV or TSV file",
+      "category": "Edit",
+      "source": "sheets",
+      "keywords": [
+        "csv",
+        "data",
+        "file",
+        "import",
+        "tsv"
+      ],
+      "allowInInput": true,
+      "hasEnabled": true
+    },
+    {
       "id": "sheets.insertFunction",
       "title": "Start a formula with a function from the library",
       "category": "Edit",
@@ -8708,6 +8723,22 @@
         "advanced",
         "export",
         "metadata",
+        "slides"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "slides.exportPdf",
+      "title": "Export slides as PDF",
+      "category": "Project",
+      "source": "slides",
+      "keywords": [
+        "document",
+        "export",
+        "handout",
+        "pdf",
+        "print",
+        "share",
         "slides"
       ],
       "hasEnabled": true

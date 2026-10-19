@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1141 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1143 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -668,6 +668,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `sheets.formulas.open` | Open Smart Formula builder | View | sheets |  |
 | `sheets.freeze` | Freeze panes | View | sheets |  |
 | `sheets.highlight` | Highlight cells with a rule or color scale | Edit | sheets |  |
+| `sheets.importCsv` | Import a CSV or TSV file | Edit | sheets |  |
 | `sheets.insertFunction` | Start a formula with a function from the library | Edit | sheets |  |
 | `sheets.insertSymbol` | Add a symbol such as a currency sign, arrow or Greek letter to the end of the selected cell text | Edit | sheets |  |
 | `sheets.names` | Define or delete a named range | Edit | sheets |  |
@@ -728,6 +729,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `slides.editText` | Apply slide text | Edit | slides |  |
 | `slides.editTheme` | Edit theme | Edit | slides |  |
 | `slides.export.advanced` | Advanced export... | Project | slides |  |
+| `slides.exportPdf` | Export slides as PDF | Project | slides |  |
 | `slides.exportPng` | Export slides as PNG images | Project | slides |  |
 | `slides.formatParagraph` | Align text and set bullets | Edit | slides |  |
 | `slides.formatText` | Format text box text | Edit | slides |  |

@@ -14,6 +14,7 @@ import {getCollab,onSessionChange} from '../collab/session';
 import {buildMismatches} from '../collab/buildSync';
 import {shareSlidesFile,adoptSlidesFile} from '../collab/office/officeSession';
 import {buildPngZip,exportScale,exportZipName} from './exportPng';
+import {buildSlidesPdf,exportPdfName} from './exportPdf';
 import {openSlidesModel,slidesModelMeta,type SlidesOpKind} from '../collab/office/slidesModel';
 import {SlidesCollabBinding} from '../collab/office/slidesBinding';
 import {slidesClientPort} from '../collab/office/slidesPort';
@@ -128,6 +129,23 @@ export async function exportSlidesPng(){
     }
     const zip=buildPngZip(pngs),url=URL.createObjectURL(new Blob([new Uint8Array(zip)],{type:'application/zip'})),a=document.createElement('a');
     a.href=url;a.download=exportZipName(e.state.name);a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
+    patch(e,{busy:false});
+  }catch(error){patch(e,{busy:false,error:String(error)},error);}
+}
+
+export async function exportSlidesPdf(){
+  const e=sessions.get(getMedia().active??'');const summary=e?.state.summary;
+  if(!e||!summary||!e.state.working||e.state.busy||e.disposed)return;
+  const revision=e.revision;patch(e,{busy:true,error:''});
+  try{
+    const scale=exportScale(summary.widthPt,summary.heightPt),pngs:Uint8Array[]=[];
+    for(let i=0;i<summary.slides;i++){
+      const png=await e.client.render(i,scale);
+      if(e.disposed||e.revision!==revision)throw Error('The presentation changed during export');
+      pngs.push(png);
+    }
+    const pdf=await buildSlidesPdf(pngs,summary.widthPt,summary.heightPt),url=URL.createObjectURL(new Blob([new Uint8Array(pdf)],{type:'application/pdf'})),a=document.createElement('a');
+    a.href=url;a.download=exportPdfName(e.state.name);a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);
     patch(e,{busy:false});
   }catch(error){patch(e,{busy:false,error:String(error)},error);}
 }
