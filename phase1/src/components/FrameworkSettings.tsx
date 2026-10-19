@@ -15,7 +15,7 @@ export function FrameworkSettings() {
   };
   return <div className="framework-settings" style={{display:'grid',gap:16,maxWidth:620}}>
     <p>{t('frameworks.description')}</p>
-    <div style={{border:'1px solid var(--border)',borderRadius:25,padding:24,display:'grid',gap:12}}>
+    <div className="grid gap-3 rounded-[25px] border border-line p-6">
       <strong>{t('frameworks.helper')}</strong>
       <p role="status">{t(!isTauri()?'frameworks.desktopOnly':!status?'frameworks.checking':status.installed?'frameworks.ready':'frameworks.notInstalled')}</p>
       {status?.installed && <small>{t('frameworks.version')} {status.version}</small>}

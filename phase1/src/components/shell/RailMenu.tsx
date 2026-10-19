@@ -13,7 +13,7 @@ export function RailMenu({x,y,label,items,onClose}:{x:number;y:number;label:stri
   window.addEventListener('keydown',key);window.addEventListener('pointerdown',down);
   return()=>{window.removeEventListener('keydown',key);window.removeEventListener('pointerdown',down);};
  },[onClose]);
- return <div ref={root} role="menu" aria-label={label} data-testid="rail-menu" className="menu-popup" style={{position:'fixed',left:x,top:y,zIndex:50}} onKeyDown={e=>{const items=[...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role=menuitem]:not(:disabled)')];const n=nextMenuItemIndex(e.key,items.indexOf(document.activeElement as HTMLButtonElement),items.length);if(n===null)return;e.preventDefault();items[n]?.focus();}}>
-  {items.map((it,i)=>it.separator?<div key={i} role="separator" className="my-1 h-px bg-line"/>:<button key={i} role="menuitem" className="menu-item" style={{width:'100%',background:'none',border:0,textAlign:'left'}} disabled={it.disabled} onClick={()=>{it.onClick();onClose();}}>{it.label}</button>)}
+ return <div ref={root} role="menu" aria-label={label} data-testid="rail-menu" className="menu-popup fixed z-50" style={{left:x,top:y}} onKeyDown={e=>{const items=[...e.currentTarget.querySelectorAll<HTMLButtonElement>('[role=menuitem]:not(:disabled)')];const n=nextMenuItemIndex(e.key,items.indexOf(document.activeElement as HTMLButtonElement),items.length);if(n===null)return;e.preventDefault();items[n]?.focus();}}>
+  {items.map((it,i)=>it.separator?<div key={i} role="separator" className="my-1 h-px bg-line"/>:<button key={i} role="menuitem" className="menu-item w-full border-0 bg-transparent text-left" disabled={it.disabled} onClick={()=>{it.onClick();onClose();}}>{it.label}</button>)}
  </div>;
 }
