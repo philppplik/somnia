@@ -352,6 +352,7 @@
   "sound.rack.missing": "Processador indisponível: abra a fonte ou verifique o motor. A saída fica bloqueada.",
   "sound.rack.presetName": "Nome do preset",
   "sound.rack.savePreset": "Salvar preset",
+  "sound.rack.deletePreset": "Excluir preset",
   "sound.rack.tail": "Duração fixa: as caudas terminam no limite da sessão.",
   "sound.rack.order": "Edições → rack da faixa → nível/pan → soma → rack master. Renderize após editar.",
   "sound.arrange.command.rack.set": "Rack de efeitos",

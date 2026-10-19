@@ -23,3 +23,7 @@ Tests cover neutral v1 migration, v2 round-trip, strict rack and preset parsing,
 The browser harness has real worker PCM mixing, rack UI insertion/bypass, local preset save, session reopen/relink and WAV download. Its decoder is a fixture stub and rack is deliberately bypassed. These are not evidence that active Rust DSP ran. Build Sound WASM and run processor fixtures plus real compressed import/playback on the integrated branch before claiming production audio validation. Screenshots cover light/dark/narrow layout and actual rack controls.
 
 Roadmap-Delta B1: ordered track/master built-in insert racks, bypass/reorder/duplicate/delete, local rack presets, v2 persistence/migration and a float-PCM pinned-DSP bridge. Spectrum/LUFS and target mastering are later B slices, not implied by B1. No plugin hosting, codecs, recording or new dependencies.
+
+## Preset management (sound studio upgrade)
+
+Rack presets can now be deleted: every preset chip in the rack has a delete button (`sound.rack.deletePreset`, 5 languages). Storage logic lives in `lib/sound/rackPresets.ts` (load, save, delete, injectable storage). Saving a new name when the twelve-preset bound is reached is rejected with a message instead of silently dropping the oldest preset; saving an existing name still replaces it in place. One invalid stored entry is skipped without hiding the other presets. Duplicating an insert now places the copy directly after the original with a collision-safe id. No new dependency, store or command. Tests: `rackPresets.test.ts`.

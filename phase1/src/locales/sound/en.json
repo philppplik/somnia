@@ -352,6 +352,7 @@
   "sound.rack.missing": "Processor unavailable: reopen its source or check the pinned engine. Output is blocked, not silently skipped.",
   "sound.rack.presetName": "Preset name",
   "sound.rack.savePreset": "Save rack preset",
+  "sound.rack.deletePreset": "Delete rack preset",
   "sound.rack.tail": "Same-length render: effect tails stop at the session boundary.",
   "sound.rack.order": "Clip edits → track rack → track level/pan → sum → master rack. Render again after changes.",
   "sound.arrange.command.rack.set": "Effects rack",

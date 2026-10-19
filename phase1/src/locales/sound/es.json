@@ -352,6 +352,7 @@
   "sound.rack.missing": "Procesador no disponible: abre su fuente o comprueba el motor. La salida se bloquea.",
   "sound.rack.presetName": "Nombre del preset",
   "sound.rack.savePreset": "Guardar preset",
+  "sound.rack.deletePreset": "Eliminar preset",
   "sound.rack.tail": "Duración fija: las colas terminan al final de la sesión.",
   "sound.rack.order": "Ediciones → rack de pista → nivel/panorama → suma → rack máster. Renderiza de nuevo al editar.",
   "sound.arrange.command.rack.set": "Rack de efectos",

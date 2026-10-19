@@ -352,6 +352,7 @@
   "sound.rack.missing": "Prozessor fehlt: Quelle erneut öffnen oder Engine prüfen. Ausgabe wird blockiert, nicht still übersprungen.",
   "sound.rack.presetName": "Preset-Name",
   "sound.rack.savePreset": "Rack-Preset speichern",
+  "sound.rack.deletePreset": "Rack-Preset löschen",
   "sound.rack.tail": "Gleiche Dauer: Effektfahnen enden an der Sessiongrenze.",
   "sound.rack.order": "Clip-Änderungen → Spur-Rack → Pegel/Panorama → Summe → Master-Rack. Nach Änderungen neu rendern.",
   "sound.arrange.command.rack.set": "Effekt-Rack",

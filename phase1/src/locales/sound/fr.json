@@ -352,6 +352,7 @@
   "sound.rack.missing": "Processeur indisponible : rouvrir sa source ou vérifier le moteur. La sortie est bloquée.",
   "sound.rack.presetName": "Nom du préréglage",
   "sound.rack.savePreset": "Enregistrer le rack",
+  "sound.rack.deletePreset": "Supprimer le rack",
   "sound.rack.tail": "Durée fixe : les queues s’arrêtent à la fin de la session.",
   "sound.rack.order": "Éditions → rack de piste → niveau/pan → somme → rack master. Recalculer après modification.",
   "sound.arrange.command.rack.set": "Rack d’effets",
