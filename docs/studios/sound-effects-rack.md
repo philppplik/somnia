@@ -27,3 +27,7 @@ Roadmap-Delta B1: ordered track/master built-in insert racks, bypass/reorder/dup
 ## Preset management (sound studio upgrade)
 
 Rack presets can now be deleted: every preset chip in the rack has a delete button (`sound.rack.deletePreset`, 5 languages). Storage logic lives in `lib/sound/rackPresets.ts` (load, save, delete, injectable storage). Saving a new name when the twelve-preset bound is reached is rejected with a message instead of silently dropping the oldest preset; saving an existing name still replaces it in place. One invalid stored entry is skipped without hiding the other presets. Duplicating an insert now places the copy directly after the original with a collision-safe id. No new dependency, store or command. Tests: `rackPresets.test.ts`.
+
+## Copy and reset (sound studio upgrade)
+
+"Copy rack to..." copies the current rack (slots, enabled flags, parameters, bypass) to the master or any other track in one undoable `sound.arrange.rack.set`; the target rack is replaced, and the copy gets fresh insert ids. Each insert has a reset button that clears its parameters back to the processor defaults. Logic is in `lib/sound/rackOps.ts` (`copyRack`, `resetSlotParams`, `newInsertId`), tests in `rackOps.test.ts`.
