@@ -10,7 +10,8 @@ import {useTitlePlayback} from './useTitlePlayback';
 import {FilmstripStrip} from './FilmstripStrip';
 import {WaveformStrip} from './WaveformStrip';
 import {colorCssFilter,colorOf} from '../../lib/video/colorAdjust';
-import {blendAt,clipFadeGain,clipRanges,cropOf,gainAt,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
+import {hasPicFade,picFadeLevel,picFadeOf} from '../../lib/video/picFade';
+import {clipDuration,blendAt,clipFadeGain,clipRanges,cropOf,gainAt,flipOf,isFreeze,isImageClip,locate,rotationOf,speedOf,timelineDuration,cropAt,transitionOf,transitionVisual,isReversed,type BlendEntry,type ClipCrop,type TimelineClip,type TransitionVisual} from '../../lib/video/timeline';
 import {shuttleFaster,shuttleSlower} from '../../lib/video/shuttle';
 import {audioClipDuration,audioEnvelope,audioTrackEnd,duckGainAt} from '../../lib/video/audioTrack';
 import {AudioLane} from './AudioLane';
@@ -111,9 +112,9 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
  // with an inverse-mapped polygon, so the preview shows the same contain-fitted region the export renders.
  // A wipe/slide transition on the incoming clip composes here: slide is an outermost screen-space translate,
  // wipe is a clip polygon - inverse-mapped like the crop when the clip itself is rotated/mirrored.
- const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual,cropOverride?:ClipCrop)=>{
+ const applyPreviewTransform=(el:HTMLElement,clip:TimelineClip,trans?:TransitionVisual,cropOverride?:ClipCrop,local=0)=>{
   const f=flipOf(clip),r=rotationOf(clip),w=el.clientWidth,h=el.clientHeight;
-  const cf=isTitleClip(clip)?'':colorCssFilter(colorOf(clip));if(el.style.filter!==cf)el.style.filter=cf;
+  const fadeLvl=isTitleClip(clip)||!hasPicFade(clip)?1:picFadeLevel(picFadeOf(clip,clipDuration(clip)),clipDuration(clip),local);const cf=isTitleClip(clip)?'':[colorCssFilter(colorOf(clip)),fadeLvl<1?`brightness(${fadeLvl.toFixed(3)})`:''].filter(Boolean).join(' ');if(el.style.filter!==cf)el.style.filter=cf;
   const cr=cropOverride??cropOf(clip),cropped=cr.left>0||cr.top>0||cr.right>0||cr.bottom>0;
   const dx=(trans?.dx??0)*w,dy=(trans?.dy??0)*h;
   const wipe=trans?.rect?{x0:trans.rect.x*w,y0:trans.rect.y*h,x1:(trans.rect.x+trans.rect.w)*w,y1:(trans.rect.y+trans.rect.h)*h}:null;
@@ -162,7 +163,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
    const el=slotOf(e.range.index).current;if(!el)continue;
    const url=urlOf(e.range.clip.source);
    if(el.dataset.slotClip!==e.range.clip.id){el.dataset.slotClip=e.range.clip.id;if(el.src!==url){el.src=url;el.currentTime=e.sourceTime;}}
-   applyPreviewTransform(el,e.range.clip,transVisual(e));
+   applyPreviewTransform(el,e.range.clip,transVisual(e),undefined,Math.max(0,playhead-e.range.start));
    // Speed applies in the preview too; preservesPitch off so the preview sounds like the export (resampled, shifted pitch).
    el.playbackRate=speedOf(e.range.clip)*rateMul;el.preservesPitch=false;
    if(isReversed(e.range.clip)){if(!el.paused)el.pause();el.currentTime=e.sourceTime;}
@@ -171,7 +172,7 @@ export function VideoWorkspace({item,withPanel=false}:{item:MediaItem;withPanel?
   for(const e of blend){
    if(!isImageClip(e.range.clip))continue;
    const el=stageRef.current?.querySelector<HTMLImageElement>(`img[data-img-clip="${e.range.clip.id}"]`);if(!el)continue;
-   applyPreviewTransform(el,e.range.clip,transVisual(e),e.range.clip.cropKeys?.length?cropAt(e.range.clip,Math.max(0,playhead-e.range.start)):undefined);
+   applyPreviewTransform(el,e.range.clip,transVisual(e),e.range.clip.cropKeys?.length?cropAt(e.range.clip,Math.max(0,playhead-e.range.start)):undefined,Math.max(0,playhead-e.range.start));
   }
   for(const slot of [slotA,slotB]){
    const el=slot.current;

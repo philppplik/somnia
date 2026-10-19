@@ -3,7 +3,8 @@ import {ALL_FORMATS,AudioSample,AudioSampleSink,AudioSampleSource,BufferSource,B
 import type {AudioCodec,VideoCodec} from 'mediabunny';
 import {cappedFps,resolveOutputSize,sanitizeExportOptions,type VideoExportOptions,type VideoFormat} from './recipe';
 import {applyColorToPixels,colorOf,hasColor} from './colorAdjust';
-import {clipFadeGain,clipRanges,clipSourceTime,cropAt,gainAt as clipGainAt,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,isReversed,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
+import {hasPicFade,picFadeLevel,picFadeOf} from './picFade';
+import {clipDuration,clipFadeGain,clipRanges,clipSourceTime,cropAt,gainAt as clipGainAt,cropOf,fadeInOf,fadeOf,fadeOutOf,flipOf,hasCrop,isFreeze,isImageClip,isReversed,rotationOf,speedOf,timelineDuration,transitionOf,transitionVisual,type ClipRange,type ClipRotation,type TimelineClip} from './timeline';
 import {audioEnvelope,duckGainAt,type AudioClip} from './audioTrack';
 import {WindowMixer} from './mixer';
 import {DEFAULT_TITLE,drawTitleCard,isTitleClip,needsSourceFile,type TitleClip} from './titles';
@@ -275,12 +276,14 @@ export async function exportTimeline(sources:Record<string,ArrayBuffer>,clips:Ti
   const colorScr=new Map<number,{canvas:OffscreenCanvas;ctx:OffscreenCanvasRenderingContext2D}>();
   const sideFrame=async(i:number,t:number):Promise<OffscreenCanvas|HTMLCanvasElement|ImageBitmap|VideoFrame|null>=>{
    const f=await sideFrameRaw(i,t),c=ranges[i].clip;
-   if(!f||isTitleClip(c)||!hasColor(c))return f;
+   const fading=hasPicFade(c);
+   if(!f||isTitleClip(c)||(!hasColor(c)&&!fading))return f;
    const w=outW,h=outH;
    let scr=colorScr.get(i);
    if(!scr){const canvas=new OffscreenCanvas(w,h),ctx2=canvas.getContext('2d',{willReadFrequently:true});if(!ctx2)return f;scr={canvas,ctx:ctx2};colorScr.set(i,scr);}
    scr.ctx.drawImage(f as CanvasImageSource,0,0,w,h);
-   const img=scr.ctx.getImageData(0,0,w,h);applyColorToPixels(img.data,colorOf(c));scr.ctx.putImageData(img,0,0);
+   if(hasColor(c)){const img=scr.ctx.getImageData(0,0,w,h);applyColorToPixels(img.data,colorOf(c));scr.ctx.putImageData(img,0,0);}
+   if(fading){const dur=clipDuration(c),lvl=picFadeLevel(picFadeOf(c,dur),dur,t-ranges[i].start);if(lvl<1){scr.ctx.fillStyle=`rgba(0,0,0,${(1-lvl).toFixed(4)})`;scr.ctx.fillRect(0,0,w,h);}}
    return scr.canvas;
   };
   // Transformed clips (mirror and/or quarter turn) draw through this instead of a bare drawImage. Titles never pass a

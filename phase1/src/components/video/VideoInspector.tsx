@@ -13,7 +13,7 @@ import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSess
 import {TitleAddRow,TitleInspector} from './TitleInspector';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
 import {colorOf,hasColor,type ClipColor} from '../../lib/video/colorAdjust';
-import {setTimelineClipColor} from '../../lib/video/session';
+import {setTimelineClipColor,setTimelineClipPicFade} from '../../lib/video/session';
 
 const COLOR_CHANNELS=['brightness','contrast','saturation'] as const;
 /** Brightness, contrast and saturation of the selected clip (-100..100). Dragging is one undo step. */
@@ -22,6 +22,10 @@ function ClipColorControls({name,clip}:{name:string;clip:import('../../lib/video
  return <div className="grid gap-1" data-testid="video-clip-color">
   <div className="flex items-center justify-between">{t('video.clipColor')}
    <Button size="compact" disabled={!hasColor(clip)} onClick={()=>setTimelineClipColor(name,clip.id,{brightness:0,contrast:0,saturation:0})} data-testid="video-clip-color-reset">{t('video.clipColorReset')}</Button>
+  </div>
+  <div className="grid grid-cols-2 gap-1" data-testid="video-clip-picfade">
+   <label className="grid gap-1">{t('video.picFadeIn')}<NativeInput type="number" className={field} min={0} max={30} step={0.1} value={clip.picFadeIn??0} onChange={e=>setTimelineClipPicFade(name,clip.id,{fadeIn:Number(e.target.value)},`picfade:${clip.id}:in`)} data-testid="video-clip-picfade-in"/></label>
+   <label className="grid gap-1">{t('video.picFadeOut')}<NativeInput type="number" className={field} min={0} max={30} step={0.1} value={clip.picFadeOut??0} onChange={e=>setTimelineClipPicFade(name,clip.id,{fadeOut:Number(e.target.value)},`picfade:${clip.id}:out`)} data-testid="video-clip-picfade-out"/></label>
   </div>
   {COLOR_CHANNELS.map(ch=><label key={ch} className="grid gap-1">{t(`video.clipColor.${ch}`,{value:v[ch]})}
    <NativeInput type="range" className="accent-[var(--accent)]" min={-100} max={100} step={1} value={v[ch]} onChange={e=>setTimelineClipColor(name,clip.id,{[ch]:Number(e.target.value)} as Partial<ClipColor>,`color:${clip.id}:${ch}`)} data-testid={`video-clip-color-${ch}`}/>
