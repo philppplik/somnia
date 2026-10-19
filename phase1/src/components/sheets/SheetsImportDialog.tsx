@@ -49,7 +49,7 @@ export function SheetsImportDialog({existingSheets}:{existingSheets:readonly str
   }catch(e){setError(e instanceof Error?e.message:String(e));}
   finally{setSheetsImportState({working:false});}
  };
- return <Dialog open={state.open} onOpenChange={next=>{if(!next)close();else setSheetsImportState({open:true});}}><DialogContent aria-label={t('sheets.import.title')} data-testid="sheets-import">
+ return <Dialog open={state.open} onOpenChange={next=>{if(!next)close();else setSheetsImportState({open:true});}}><DialogContent className="confirm-dialog max-h-[85vh] overflow-auto" aria-label={t('sheets.import.title')} data-testid="sheets-import">
   <DialogTitle>{t('sheets.import.title')}</DialogTitle>
   <div className="flex max-h-[70vh] flex-col gap-3 overflow-auto text-xs">
    <NativeInput ref={fileRef} type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values" className="hidden" tabIndex={-1} aria-label={t('sheets.import.choose')} onChange={e=>{const f=e.currentTarget.files?.[0];if(f)read(f);e.currentTarget.value='';}}/>
