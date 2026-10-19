@@ -86,6 +86,11 @@ export function SheetsWorkbookPanel({context}:PanelHostProps){
  </div>
  <Facts values={[[t('sheets.panel.rows'),s.info?.rows],[t('sheets.panel.cols'),s.info?.cols],[t('sheets.panel.merges'),s.layout?.merges.length],[t('sheets.panel.frozen'),`${s.layout?.freeze?.rows??0} / ${s.layout?.freeze?.cols??0}`]]}/>
  <div className="flex flex-wrap gap-1"><button className={button} disabled={!s.canUndo||action.busy} onClick={()=>void action.run('sheets.undo')}>{t('cmd.edit.undo')}</button><button className={button} disabled={!s.canRedo||action.busy} onClick={()=>void action.run('sheets.redo')}>{t('cmd.edit.redo')}</button><button className={button} disabled={action.busy} onClick={()=>void action.run('sheets.saveCopy')}>{t('sheets.exportCopy')}</button></div>
+ <div className="flex flex-col gap-2 border-t border-subtle pt-3" role="group" aria-label={t('sheets.import.title')}>
+  <span>{t('sheets.import.title')}</span>
+  <p className="text-ink-3">{t('sheets.import.hint')}</p>
+  <div><Button variant="outline" size="compact" disabled={action.busy} onClick={()=>void action.run('sheets.importCsv')} data-testid="sheets-import-open">{t('sheets.import.open')}</Button></div>
+ </div>
  {!!s.workbook?.warnings.length&&<ul className="list-inside list-disc text-ink-3">{s.workbook.warnings.map((w,i)=><li key={i}>{w}</li>)}</ul>}<p role="status">{action.notice}</p></Region>;
 }
 export function SheetsCellPanel({context}:PanelHostProps){

@@ -25,6 +25,8 @@ import {parseValidationManageCommand} from './validationOps';
 import {parsePivotEditCommand,PIVOT_AREAS,PIVOT_VALUE_FUNCS,PIVOT_SHOW_AS,PIVOT_NUMBER_FORMATS,PIVOT_LAYOUTS,PIVOT_SUBTOTALS,PIVOT_GROUPS,PIVOT_ORDERS,MAX_PIVOT_ITEMS,MAX_PIVOT_TEXT} from './pivotEditOps';
 import {parseDataToolCommand,CONSOLIDATE_FUNCTIONS,MAX_CONSOLIDATE_SOURCES,MAX_SOURCE_CHARS} from './dataToolOps';
 import {setSheetsShortcutsOpen} from './shortcuts';
+import {setSheetsImportState} from './importState';
+import type {ImportPlan,ImportTarget} from './csvImport';
 import {parsePagesCommand} from './pageBreaks';
 import {parseReviewCommand,type ReviewKind} from './reviewInfo';
 import {parseSymbolCommand} from './symbols';
@@ -117,6 +119,8 @@ export interface SheetsPanelController {
  exportFile(op:ExportOp):void|Promise<void>;
  /** The column names in the first row of the selection. */
  pivotFields():PivotField[]|Promise<PivotField[]>;
+ /** Writes a validated CSV/TSV import block onto a new sheet or from the active cell (one undo step per engine-sized band). */
+ importDelimited(plan:ImportPlan,target:ImportTarget):void|Promise<void>;
  replaceText(op:ReplaceOp):number|Promise<number>;
  /** Removes duplicate rows inside the selected block (one undo step); resolves to the number removed. */
  removeDuplicates(op:DedupeOp):number|Promise<number>;
@@ -131,7 +135,7 @@ let current:SheetsPanelController|null=null;
 export const getSheetsPanelController=()=>current;
 export function registerSheetsPanelController(controller:SheetsPanelController){current=controller;return()=>{if(current===controller)current=null;};}
 const requireController=()=>{if(!current?.ready())throw Error('No workbook is ready.');return current;};
-export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste','sheets.autoFill','sheets.series','sheets.spellChange','sheets.findSpecial','sheets.shiftCells','sheets.validationManage'] as const;
+export const SHEETS_PANEL_COMMAND_IDS=['sheets.navigate','sheets.setCell','sheets.analyzeRange','sheets.format','sheets.resize','sheets.freeze','sheets.editLines','sheets.sheet','sheets.sort','sheets.filter','sheets.fill','sheets.highlight','sheets.validation','sheets.replace','sheets.dedupe','sheets.split','sheets.annotate','sheets.names','sheets.table','sheets.pivot','sheets.pageSetup','sheets.export','sheets.view','sheets.protect','sheets.chart','sheets.sparkline','sheets.whatif','sheets.object','sheets.picture','sheets.savedView','sheets.outline','sheets.cellLayout','sheets.cellTools','sheets.insertFunction','sheets.dataTools','sheets.pivotEdit','sheets.cfManage','sheets.validationCheck','sheets.noteReview','sheets.audit','sheets.insertSymbol','sheets.review','sheets.pages','sheets.shortcuts','sheets.paste','sheets.autoFill','sheets.series','sheets.spellChange','sheets.findSpecial','sheets.shiftCells','sheets.validationManage','sheets.importCsv'] as const;
 export function sheetsPanelCommandSpecs():CommandSpec[]{
  return [
  {id:'sheets.navigate',title:'Go to a spreadsheet cell or range',category:'View',level:'ui',allowInInput:true,
@@ -287,6 +291,9 @@ export function sheetsPanelCommandSpecs():CommandSpec[]{
  {id:'sheets.export',title:'Export as PDF, CSV, TSV or HTML',category:'Edit',level:'ui',allowInInput:true,
   params:{type:'object',properties:{format:{type:'string',enum:['pdf','csv','tsv','html']},scope:{type:'string',enum:['sheet','all','selection']},fit:{type:'boolean'}},required:['format'],additionalProperties:false},
   enabled:()=>!!current?.ready(),run:p=>requireController().exportFile(parseExportCommand(p))},
+ {id:'sheets.importCsv',title:'Import a CSV or TSV file',category:'Edit',level:'ui',allowInInput:true,
+  keywords:['csv','tsv','import','file','data'],
+  enabled:()=>!!current?.ready(),run:()=>{requireController();setSheetsImportState({open:true});}},
  ];
 }
 export function registerSheetsPanelCommands(){const offs=sheetsPanelCommandSpecs().map(s=>registerCommandSpec(s));return()=>offs.forEach(off=>off());}
