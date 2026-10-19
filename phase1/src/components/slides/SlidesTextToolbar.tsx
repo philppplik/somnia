@@ -9,6 +9,7 @@ import {Button} from '../ui/button';
 import {NumberField} from '../ui/number-field';
 import {Menu,MenuTrigger,MenuContent,MenuItem} from '../ui/menu';
 import {TEXT_COLORS,GRADIENT_PRESETS,OPACITY_STEPS,LINE_WIDTHS,colorKey} from '../../lib/slides/textFormat';
+import {SLIDE_ICONS,slideIconPng} from '../../lib/slides/slideIcons';
 import {MIN_SIZE_PT,MAX_SIZE_PT,ARRANGE_MODES,TRANSITION_KINDS,TRANSITION_DIRS,TRANSITION_SPEEDS,LINE_DASHES,readSlideTransition,readShapeStyle,readParagraphFormat,PARA_ALIGNS,PARA_BULLETS,SHAPE_PRESETS,boundsEditIssue} from '../../lib/slides/deckPackage';
 import {ALIGN_MODES} from '../../lib/slides/shapeGeometry';
 import {useValidShape} from './SlidesShapeOverlay';
@@ -44,10 +45,19 @@ export function SlidesTextToolbar(){
       :await commandDispatcher.tryRunCommand('slides.insertImage',{source:s.source,slideId,name:f.name,data},{origin:'ui'});
     setBad(!r.ok);
   };
+  const pickIcon=async(key:string)=>{
+    setBad(false);
+    const png=await slideIconPng(key).catch(()=>null);
+    if(!png){setBad(true);return;}
+    const r=await commandDispatcher.tryRunCommand('slides.insertImage',{source:s.source,slideId,name:`icon-${key}.png`,data:encodeBase64(png)},{origin:'ui'});
+    setBad(!r.ok);
+  };
   return <div role="toolbar" aria-label={t('slides.textToolbar')} data-slot="slides-text-toolbar" className="flex shrink-0 flex-wrap items-end gap-2 border-b border-subtle px-4 py-2">
     <Button size="compact" variant="outline" disabled={!ready} onClick={()=>run('slides.addTextBox',{source:s.source,slideId,text:t('slides.newTextBoxText')})}>{t('slides.addTextBox')}</Button>
     <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready}>{t('slides.shape')}</Button>}/>
       <MenuContent>{SHAPE_PRESETS.map(k=><MenuItem key={k} onClick={()=>run('slides.addShape',{source:s.source,slideId,preset:k})}>{t(`slides.shape.${k}`)}</MenuItem>)}</MenuContent></Menu>
+    <Menu><MenuTrigger render={<Button size="compact" variant="outline" disabled={!ready}>{t('slides.icon')}</Button>}/>
+      <MenuContent>{SLIDE_ICONS.map(({key,Icon})=><MenuItem key={key} onClick={()=>void pickIcon(key)}><Icon size={14}/>{t(`slides.icon.${key}`)}</MenuItem>)}</MenuContent></Menu>
     <Button size="compact" variant={f?.bold?'primary':'outline'} aria-pressed={!!f?.bold} disabled={!ready||!box} onClick={()=>fmt({bold:!f?.bold})}>{t('slides.fmt.bold')}</Button>
     <Button size="compact" variant={f?.italic?'primary':'outline'} aria-pressed={!!f?.italic} disabled={!ready||!box} onClick={()=>fmt({italic:!f?.italic})}>{t('slides.fmt.italic')}</Button>
     <div className="w-24"><NumberField label={t('slides.fmt.size')} value={f?.sizePt!=null&&Number.isInteger(f.sizePt)?f.sizePt:null} mixed={!!shape&&(f?.sizePt==null||!Number.isInteger(f.sizePt))} resetKey={`${valid?.selection.shapeId}:${s.slideIds.join()}`} min={MIN_SIZE_PT} max={MAX_SIZE_PT} disabled={!ready||!box}
