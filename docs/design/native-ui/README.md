@@ -76,6 +76,7 @@ All file links are repository-relative, so they remain useful on a feature branc
 46. [Photos auto tone and auto white balance](photos-auto-tone.md)
 47. [Photos star ratings](photos-ratings.md)
 48. [Photos pick / reject flags](photos-flags.md)
+49. [Studio shell panel consolidation](shell-panel-consolidation.md)
 
 ## The system in one view
 

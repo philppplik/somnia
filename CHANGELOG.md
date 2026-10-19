@@ -1,3 +1,10 @@
+# Unreleased: Studio shell consolidation
+
+- Studio inspectors and panels share one set of panel styles (`src/components/shell/panelStyles.ts`): fields, sections, labels, hints, sliders and checkboxes, adopted across animation, video, sound, photos, vector and design. A new ratchet test rejects reintroduced copies.
+- Fixed dark-theme surfaces that referenced missing design tokens and fell back to light colors: the Vector Studio canvas backdrop no longer renders light grey in dark theme (the artboard itself stays a light document surface), Sheets frozen rows and image surface, sound arrange clips, photos curves, image adjust panel, SVG editor and the deploy setup wizard use the canonical `--bg-surface`, `--canvas-bg`, `--border-default` and text tokens. See `docs/design/native-ui/shell-panel-consolidation.md`.
+- Vector tools, node and pen panels render from shared Tailwind classes instead of inline style objects; only dynamic drag geometry stays inline. Sound inspector number inputs use the shared NativeInput primitive.
+
+
 # Unreleased: Framework adapters
 
 - Existing projects are classified into a build and run plan: plain static, Vite (React, Vue, Svelte, Solid, Preact), Astro static or Node, Next export or standalone, SvelteKit static or Node, Nuxt generate or Node server, and plain Node servers such as Express.
