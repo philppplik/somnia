@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1147 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1148 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -1095,6 +1095,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.distributeSelection` | Distribute vector selection | Edit | vector |  |
 | `vector.duplicateSelection` | Duplicate selected vector paths | Edit | vector |  |
 | `vector.duplicateText` | Duplicate a text object | Edit | vector |  |
+| `vector.export.advanced` | Vector: Advanced export... | Project | vector |  |
 | `vector.export.open` | Vector: Export... | Project | vector |  |
 | `vector.exportPng` | Export vector PNG | Project | vector |  |
 | `vector.exportSvg` | Export vector SVG | Project | vector |  |

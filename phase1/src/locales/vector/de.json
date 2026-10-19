@@ -316,6 +316,7 @@
  "vector.hero.page":"Ganze Seite",
  "vector.hero.format":"Format",
  "cmd.vector.export.open":"Vektor: Exportieren...",
+ "cmd.vector.export.advanced":"Vektor: Erweiterter Export...",
  "vector.hero.disabled":"Erstelle oder öffne eine Vektorzeichnung.",
  "vector.shell.replaceHint": "Zeichnung durch SVG ersetzen. Rückgängig stellt die vorherige Zeichnung wieder her."
 }

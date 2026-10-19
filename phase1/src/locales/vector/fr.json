@@ -316,6 +316,7 @@
  "vector.hero.page":"Page entière",
  "vector.hero.format":"Format",
  "cmd.vector.export.open":"Vectoriel : Exporter...",
+ "cmd.vector.export.advanced":"Vectoriel : Export avancé...",
  "vector.hero.disabled":"Créez ou ouvrez un dessin vectoriel.",
  "vector.shell.replaceHint": "Remplacer le dessin par un SVG. Annuler restaure le dessin précédent."
 }

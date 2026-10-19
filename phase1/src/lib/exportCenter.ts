@@ -22,7 +22,7 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  slides:['slides.export.advanced','slides.saveCopy'],
  design:['design.export.advanced','design.export.open','design.exportSvg','design.exportAllSvg','design.exportProject'],
  photos:['photos.export.open','photos.export.png','photos.export.jpeg','photos.export.advanced'],
- vector:['vector.export.open','vector.exportSvg','vector.exportPng'],
+ vector:['vector.export.advanced','vector.export.open','vector.exportSvg','vector.exportPng'],
  sound:['sound.export.open','sound.export'],
  video:['video.export.open','video.export.start'],
  pdf:['pdf.saveCopy'],

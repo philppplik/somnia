@@ -7,7 +7,7 @@ export const EXPORT_CATALOGUES={
   'export.meta.title':'Title','export.meta.author':'Author','export.meta.copyright':'Copyright','export.meta.description':'Description',
   'export.presets':'Presets','export.preset.save':'Save preset','export.preset.name':'Preset name','export.preset.delete':'Delete preset','export.preset.empty':'No presets yet.',
   'export.preview':'Preview','export.finalSize':'Final size','export.dimensions':'{width} × {height} px','export.rendering':'Rendering preview…','export.export':'Export','export.cancel':'Cancel',
-  'export.error.name':'Enter a file name.','export.error.dims':'Check size: 1–16384 px, at most 16 MP, scale 1–800%.','export.error.render':'Preview failed: {message}',
+  'export.error.area':'Nothing to export in this area.','export.group.area':'Area','export.error.name':'Enter a file name.','export.error.dims':'Check size: 1–16384 px, at most 16 MP, scale 1–800%.','export.error.render':'Preview failed: {message}',
   'export.note.webpMeta':'WebP stores no metadata; the other fields still apply.','export.note.p3':'Display P3 is not supported by this browser; exporting sRGB.',
  },
  de:{
@@ -17,7 +17,7 @@ export const EXPORT_CATALOGUES={
   'export.meta.title':'Titel','export.meta.author':'Autor','export.meta.copyright':'Urheberrecht','export.meta.description':'Beschreibung',
   'export.presets':'Vorlagen','export.preset.save':'Vorlage speichern','export.preset.name':'Vorlagenname','export.preset.delete':'Vorlage löschen','export.preset.empty':'Noch keine Vorlagen.',
   'export.preview':'Vorschau','export.finalSize':'Endgröße','export.dimensions':'{width} × {height} px','export.rendering':'Vorschau wird gerendert…','export.export':'Exportieren','export.cancel':'Abbrechen',
-  'export.error.name':'Dateinamen eingeben.','export.error.dims':'Größe prüfen: 1–16384 px, höchstens 16 MP, Skalierung 1–800 %.','export.error.render':'Vorschau fehlgeschlagen: {message}',
+  'export.error.area':'In diesem Bereich gibt es nichts zu exportieren.','export.group.area':'Bereich','export.error.name':'Dateinamen eingeben.','export.error.dims':'Größe prüfen: 1–16384 px, höchstens 16 MP, Skalierung 1–800 %.','export.error.render':'Vorschau fehlgeschlagen: {message}',
   'export.note.webpMeta':'WebP speichert keine Metadaten; die übrigen Felder gelten weiter.','export.note.p3':'Display P3 wird von diesem Browser nicht unterstützt; Export in sRGB.',
  },
  es:{
@@ -27,7 +27,7 @@ export const EXPORT_CATALOGUES={
   'export.meta.title':'Título','export.meta.author':'Autor','export.meta.copyright':'Derechos de autor','export.meta.description':'Descripción',
   'export.presets':'Preajustes','export.preset.save':'Guardar preajuste','export.preset.name':'Nombre del preajuste','export.preset.delete':'Eliminar preajuste','export.preset.empty':'Aún no hay preajustes.',
   'export.preview':'Vista previa','export.finalSize':'Tamaño final','export.dimensions':'{width} × {height} px','export.rendering':'Renderizando vista previa…','export.export':'Exportar','export.cancel':'Cancelar',
-  'export.error.name':'Introduce un nombre de archivo.','export.error.dims':'Revisa el tamaño: 1–16384 px, máximo 16 MP, escala 1–800 %.','export.error.render':'Error de vista previa: {message}',
+  'export.error.area':'No hay nada que exportar en esta área.','export.group.area':'Área','export.error.name':'Introduce un nombre de archivo.','export.error.dims':'Revisa el tamaño: 1–16384 px, máximo 16 MP, escala 1–800 %.','export.error.render':'Error de vista previa: {message}',
   'export.note.webpMeta':'WebP no guarda metadatos; los demás campos siguen aplicándose.','export.note.p3':'Este navegador no admite Display P3; se exporta en sRGB.',
  },
  fr:{
@@ -37,7 +37,7 @@ export const EXPORT_CATALOGUES={
   'export.meta.title':'Titre','export.meta.author':'Auteur','export.meta.copyright':'Droits d’auteur','export.meta.description':'Description',
   'export.presets':'Préréglages','export.preset.save':'Enregistrer le préréglage','export.preset.name':'Nom du préréglage','export.preset.delete':'Supprimer le préréglage','export.preset.empty':'Aucun préréglage.',
   'export.preview':'Aperçu','export.finalSize':'Taille finale','export.dimensions':'{width} × {height} px','export.rendering':'Rendu de l’aperçu…','export.export':'Exporter','export.cancel':'Annuler',
-  'export.error.name':'Saisissez un nom de fichier.','export.error.dims':'Vérifiez la taille : 1–16384 px, 16 MP max, échelle 1–800 %.','export.error.render':'Échec de l’aperçu : {message}',
+  'export.error.area':'Rien à exporter dans cette zone.','export.group.area':'Zone','export.error.name':'Saisissez un nom de fichier.','export.error.dims':'Vérifiez la taille : 1–16384 px, 16 MP max, échelle 1–800 %.','export.error.render':'Échec de l’aperçu : {message}',
   'export.note.webpMeta':'WebP ne stocke pas de métadonnées ; les autres champs s’appliquent.','export.note.p3':'Display P3 n’est pas pris en charge par ce navigateur ; export en sRGB.',
  },
  'pt-BR':{

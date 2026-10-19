@@ -2,6 +2,7 @@ import {GRID_LIMITS} from './grid';
 import {alignTextToPage} from './textAlign';
 import {SHAPE_LIMITS} from './shapes';
 import {requestVectorExport} from './exportSetup';
+import {setVectorExportAdvancedOpen} from './exportAdvancedState';
 import type {CommandSpec} from '../commandSpec';
 import * as S from './session';
 import type {AlignMode} from './transforms';
@@ -27,6 +28,7 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
  const ready=()=>active()&&S.getVectorSession().open;
  const selected=()=>ready()&&S.getVectorSession().selection.length>0;
  return [
+  {id:'vector.export.advanced',title:'Vector: Advanced export with size, area and metadata',category:'Project',level:'ui',keywords:['vector','export','advanced','metadata','png','svg'],enabled:ready,params:empty,run:()=>setVectorExportAdvancedOpen(true)},
   {id:'vector.export.open',title:'Vector: Export...',category:'Project',level:'ui',enabled:ready,params:empty,run:requestVectorExport},
   ...(['select','node','pen','rect','ellipse','line','polygon','star','text'] as const).map(tool=>({id:'vector.tool.'+tool,title:'Use vector '+tool+' tool',category:'View' as const,level:'ui' as const,params:empty,enabled:ready,run:()=>S.setTool(tool)})),
   {id:'vector.rotateSelection',title:'Rotate vector selection',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{degrees:{type:'number'}},required:['degrees']},

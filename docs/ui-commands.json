@@ -13249,6 +13249,21 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.export.advanced",
+      "title": "Vector: Advanced export...",
+      "category": "Project",
+      "source": "vector",
+      "keywords": [
+        "advanced",
+        "export",
+        "metadata",
+        "png",
+        "svg",
+        "vector"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "vector.export.open",
       "title": "Vector: Export...",
       "category": "Project",
