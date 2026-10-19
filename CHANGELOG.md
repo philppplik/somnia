@@ -1,3 +1,7 @@
+# Unreleased: Engine hardening
+
+- Job-lease admission control now covers the first heavy call sites end to end (the beta.8 gap): video exports, sound playback renders and agent turns acquire scheduler leases with progress, cancellation and queue/backpressure handling, so the lifecycle driver budgets them and studio suspension sees the in-flight work (docs/studio-lifecycle.md).
+
 # Unreleased: Studio shell consolidation
 
 - Studio inspectors and panels share one set of panel styles (`src/components/shell/panelStyles.ts`): fields, sections, labels, hints, sliders and checkboxes, adopted across animation, video, sound, photos, vector and design. A new ratchet test rejects reintroduced copies.
