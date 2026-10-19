@@ -6882,6 +6882,74 @@
       "hasEnabled": true
     },
     {
+      "id": "edit.code.allOccurrences",
+      "title": "Select all occurrences of selection",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "all",
+        "cursor",
+        "multi"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.code.cursorAbove",
+      "title": "Add cursor above",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "cursor",
+        "multi"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.code.cursorBelow",
+      "title": "Add cursor below",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "cursor",
+        "multi"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.code.deleteLine",
+      "title": "Delete line",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "line",
+        "remove"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.code.nextOccurrence",
+      "title": "Add next occurrence to selection",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "cursor",
+        "multi",
+        "next"
+      ],
+      "hasEnabled": true
+    },
+    {
+      "id": "edit.code.toggleComment",
+      "title": "Toggle comment",
+      "category": "Edit",
+      "source": "core",
+      "keywords": [
+        "comment",
+        "uncomment"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "edit.decodeEntities",
       "title": "Decode special characters (HTML entities)",
       "category": "Edit",

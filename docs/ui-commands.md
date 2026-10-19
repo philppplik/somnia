@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1156 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1162 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -553,6 +553,12 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.zoomIn` | Zoom in on the document | View | documents |  |
 | `documents.zoomOut` | Zoom out of the document | View | documents |  |
 | `documents.zoomReset` | Reset document zoom to 100% | View | documents |  |
+| `edit.code.allOccurrences` | Select all occurrences of selection | Edit | core |  |
+| `edit.code.cursorAbove` | Add cursor above | Edit | core |  |
+| `edit.code.cursorBelow` | Add cursor below | Edit | core |  |
+| `edit.code.deleteLine` | Delete line | Edit | core |  |
+| `edit.code.nextOccurrence` | Add next occurrence to selection | Edit | core |  |
+| `edit.code.toggleComment` | Toggle comment | Edit | core |  |
 | `edit.decodeEntities` | Decode special characters (HTML entities) | Edit | core |  |
 | `edit.delete` | Delete selected element | Edit | core | `Delete` |
 | `edit.duplicate` | Duplicate selected element | Edit | core | `Mod+D` |

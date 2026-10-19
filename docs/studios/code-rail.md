@@ -45,3 +45,7 @@ No rail item carries a `when` yet. `when` expressions read the StudioContext, an
 ## Line operations
 
 Edit menu, Code studio: sort lines ascending or descending (natural, case-insensitive order), remove duplicate lines, trim trailing whitespace, join lines, uppercase and lowercase selection (`edit.lines.*`, code in `src/lib/codeLineOps.ts`). They act on the whole lines touched by the selection, or on the whole file when nothing is selected; case changes act on the exact selection and need one. One CodeMirror transaction each, so one undo step. Line endings (LF or CRLF) and a final newline are kept.
+
+## Multi-cursor and line commands
+
+Edit menu, Code studio: add next occurrence to selection, select all occurrences, add cursor above or below, delete line, toggle comment (`edit.code.*`, `src/lib/codeEditorCommands.ts`). They wrap CodeMirror's own commands, which are bound to keys in the editor already (Mod+D stays Duplicate in this editor, so "next occurrence" is menu and palette only). Write commands refuse a read-only editor. One transaction each, one undo step.
