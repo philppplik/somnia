@@ -47,7 +47,7 @@ const SPECS:Spec[]=[
  {id:'pixel-garden.hidden-tool',name:'Hidden Tool',summary:'Suspended by policy, not listed.',category:'Images',publisher:'pixel-garden',versions:['0.1.0'],caps:[],state:'policy-suspended'},
 ];
 export function fixtureCatalog():StoreCatalog{
- const extensions:StoreListing[]=SPECS.map(s=>({id:s.id,name:s.name,summary:s.summary,category:s.category,publisherId:s.publisher,releases:s.versions.map((v,i)=>makeRelease(s.id,v,s.publisher,s.caps,s.net??[],i===s.versions.length-1?(s.state??'listed'):'listed'))}));
+ const extensions:StoreListing[]=SPECS.map(s=>({id:s.id,name:s.name,summary:s.summary,category:s.category,publisherId:s.publisher,releases:s.versions.map((v,i)=>{const r=makeRelease(s.id,v,s.publisher,s.caps,s.net??[],i===s.versions.length-1?(s.state??'listed'):'listed');if(s.id==='hq.html-mail-kit')r.review={reviewer:'Somnia extension review team'};return r;})}));
  return {catalogSchemaVersion:1,sequence:42,generatedAt:iso(2*H),policyRevision:POLICY,publishers:FIXTURE_PUBLISHERS,extensions,tombstones:[]};
 }
 export const EMPTY_FEED:SecurityFeed={securitySchemaVersion:1,sequence:7,generatedAt:iso(2*H),incidents:[]};

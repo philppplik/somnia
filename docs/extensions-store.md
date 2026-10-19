@@ -70,7 +70,11 @@ Behavior on a match: **disable and notify**. The extension is disabled, its capa
 
 Install paths also check the blocklist: `inspectCandidate` returns `blocked`, `install()` rejects `blocked`, `setEnabled(true)` throws `blocked`.
 
-**Not active by default.** The host needs the bundled public key and the signed index URL through `DefaultHostOptions.blocklist`. With none configured, nothing is blocked.
+**Wired, but inactive until a maintainer key is published.** `blocklistWiring.ts` hosts the service for the app: it bridges matches into the legacy registry lane (disable plus safety notice via `CONSENT_BLOCKED`) and the v2 lane (`PermissionBroker.setBlocked`), gates loads at every enable point, exposes the service to the extensions popup and the Blocklist card in Settings → Extensions, and starts the launch + 24 h monitor when the app boots. The shipping config (`BLOCKLIST_CONFIG.publicKeyBase64`) carries an empty key, so the monitor stands down and nothing is blocked. Activation is a maintainer step that does not touch app code:
+
+1. Generate a key pair once: `node phase1/scripts/extensions/sign-blocklist.mjs --generate`. Store the private JWK as the `SOMNIA_BLOCKLIST_PRIVATE_KEY` secret of the `extension-blocklist` GitHub environment (behind a required-reviewer protection rule).
+2. Maintain `docs/extensions/catalog/blocklist.json` on `main` and sign it with `node phase1/scripts/extensions/sign-blocklist.mjs docs/extensions/catalog/blocklist.json` (workflow input). The `.sig` travels next to the feed at the URLs in `BLOCKLIST_CONFIG`.
+3. Embed the printed public key (base64) into `BLOCKLIST_CONFIG.publicKeyBase64` with the release that should enforce the list. Until then the card reads "not active" and the dialog text below never shows.
 
 ## Restricted Mode
 
@@ -85,8 +89,8 @@ Missing, corrupt, oversized (over 4 MB) or unreadable consent data counts as res
 ## Known limits
 
 - The index is unsigned and hosted on a mutable branch. A compromised repository or reviewer account can change an entry and its hash together.
-- The store consent candidate is labelled `hash-match` (`asCandidate`, `popupHostDefault.ts`). It means "SHA-256 equals the index entry". It is not a signature check, and it never sets the verified mark.
-- The verified mark in Browse comes from the index entry itself: `reviewed: true` (optional `reviewedBy`, up to 80 characters, only valid with `reviewed: true`). Missing or `false` means no mark. A matching hash, a GitHub repository or an author name never earns it. The mark says a maintainer reviewed the entry, not that the code is safe. Because the index is unsigned, anyone who can change the index can set the flag (see the first limit above); a signed index is planned separately.
+- The store consent candidate is labelled `hash-match` (`asCandidate`, `popupHostDefault.ts`). It means "SHA-256 equals the index entry". It is not a signature check. The verified mark on the consent card comes only from `ConsentCandidate.verified`, set when the index entry carries `reviewed` (`storeHostDefault.stage`).
+- The verified mark comes from the index entry itself: `reviewed: true` (optional `reviewedBy`, up to 80 characters, only valid with `reviewed: true`). Missing or `false` means no mark. A matching hash, a GitHub repository or an author name never earns it. The mark passes through the listing (`Release.review`), the Browse card and the install consent (`ConsentCandidate.verified`), and is persisted per installed `id@version` (`reviewedMarks.ts`) so the Extensions manager keeps showing it after install; it is cleared on remove. The mark says a maintainer reviewed the entry, not that the code is safe. Because the index is unsigned, anyone who can change the index can set the flag (see the first limit above); a signed index is planned separately.
 - `submitReport()` always rejects. The report dialog falls back to the public issue form (`publicIssueUrl`). There is no private security-report route yet.
 - Catalog packages with worker code are refused (`Catalog worker code is not supported yet`). Only declarative extensions and sandboxed panels install from the Store.
 - Native (Tier B) extensions cannot be installed from the Store (`E_NATIVE_STORE_FORBIDDEN`).

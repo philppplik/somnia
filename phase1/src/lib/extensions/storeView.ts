@@ -33,6 +33,8 @@ export type NetworkTag={kind:'none'}|{kind:'hosts';count:number}|{kind:'many'};
 export type FilesTag='none'|'read'|'write';
 export interface StoreCard {
  id:string; name:string; summary:string; category:string; publisher:Publisher|null; publisherName:string; verified:boolean; official:boolean;
+ /** Maintainer review mark from the source index. Separate fact from publisher `verified`; never inferred. */
+ reviewed:boolean; reviewer:string|null;
  release:Release; listing:StoreListing; files:FilesTag; network:NetworkTag; unknownPermission:boolean; deprecated:boolean; state:CardState; installedVersion:string|null;
 }
 export const MANY_HOSTS=4;
@@ -68,7 +70,7 @@ export function buildCards(catalog:StoreCatalog,feed:SecurityFeed,installed:Read
   const r=storeRelease(l,feed);if(!r)continue;
   const inst=installed.get(l.id)??null;const blocked=isBlocked(r,feed);
   const state:CardState=blocked?'blocked':inst===null?'install':compareVersions(r.version,inst)>0?'update':'installed';
-  out.push({id:l.id,name:l.name,summary:l.summary,category:l.category,publisher:p,publisherName:p?.displayName??l.publisherId,verified:isVerifiedPublisher(p??undefined,now),official:p?.official===true,release:r,listing:l,files:filesTag(r),network:networkTag(r),unknownPermission:r.capabilities.some(c=>!isKnownCapability(c)),deprecated:r.state==='deprecated',state,installedVersion:inst});
+  out.push({id:l.id,name:l.name,summary:l.summary,category:l.category,publisher:p,publisherName:p?.displayName??l.publisherId,verified:isVerifiedPublisher(p??undefined,now),official:p?.official===true,reviewed:r.review!=null,reviewer:r.review?.reviewer??null,release:r,listing:l,files:filesTag(r),network:networkTag(r),unknownPermission:r.capabilities.some(c=>!isKnownCapability(c)),deprecated:r.state==='deprecated',state,installedVersion:inst});
  }
  return out.sort((a,b)=>a.name.localeCompare(b.name));
 }

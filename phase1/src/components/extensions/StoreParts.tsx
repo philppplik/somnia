@@ -11,10 +11,10 @@ export {candidateBound,chipTone};
 export function fmtDate(iso:string|null,locale:string){if(!iso)return '';const d=new Date(iso);return Number.isNaN(d.getTime())?'':new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeZone:'UTC'}).format(d);}
 export function useAge(){const {t}=useT();return (ts:number,now:number)=>{const a=relativeAge(ts,now);return t(`store.age.${a.unit}`,{count:a.n});};}
 
-/** Icon-only verified mark. A real button so Enter opens the explainer; the name never relies on colour. */
-export function StoreBadge({size=18,onExplain}:{size?:number;onExplain:()=>void}){
- const {t}=useT();
- return <NativeButton type="button" className="store-badge" aria-label={t('store.verified')} title={t('store.verified')} onClick={e=>{e.stopPropagation();onExplain();}}><VerifiedBadge criterion={t('store.verified')} size={size}/></NativeButton>;
+/** Icon-only verified/reviewed mark. A real button so Enter opens the explainer; the name never relies on colour. */
+export function StoreBadge({size=18,onExplain,label}:{size?:number;onExplain:()=>void;label?:string}){
+ const {t}=useT();const text=label??t('store.verified');
+ return <NativeButton type="button" className="store-badge" aria-label={text} title={text} onClick={e=>{e.stopPropagation();onExplain();}}><VerifiedBadge criterion={text} size={size}/></NativeButton>;
 }
 export function StatusChip({tone,children}:{tone:'ok'|'warn'|'bad'|'neutral';children:ReactNode}){return <span className={`store-chip store-chip-${tone}`}>{children}</span>;}
 export function AccessTags({card}:{card:StoreCard}){

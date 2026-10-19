@@ -1,4 +1,4 @@
-import {fetchCatalog,reviewCatalogPackage,installReviewedPackage,classifyFetchError,permissionExplanation,type CatalogEntry,type ReviewedPackage} from './catalog';
+import {fetchCatalog,isReviewed,reviewCatalogPackage,installReviewedPackage,classifyFetchError,permissionExplanation,type CatalogEntry,type ReviewedPackage} from './catalog';
 import {loadExtensions} from './registry';
 import {migrateLegacy} from './legacy/migrate';
 import {getConsentBroker,type ConsentCandidate} from './consentUiHost';
@@ -8,6 +8,7 @@ import type {ManifestV2} from './manifestV2';
 import type {Publisher,Release,SecurityFeed,StoreCatalog,StoreListing} from './store';
 import type {ConcernReport,StageResult,StoreHost,StoreLoad,StoreSnapshot} from './storeHost';
 import {sha256Hex} from './candidateInspect';
+import {recordReviewedMark} from './reviewedMarks';
 
 const slug=(s:string)=>s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'unknown';
 const EMPTY_DIGEST={sha256:'',bytes:0};
@@ -37,7 +38,7 @@ export function listingsFromEntries(entries:readonly CatalogEntry[],blocked:(id:
   if(!publishers.has(pid))publishers.set(pid,{id:pid,displayName:e.author,githubOwnerId:0,authorizedSubmitterIds:[],repositories:[],securityContact:'',supportUrl:e.repo,rulesAcceptedAt:'',
    // The shipping index carries no 2FA declaration. The type only allows true, the UI compares with === true, so this stays an unproven false.
    declaredGithub2FA:false as unknown as true,state:'registered',official:false});
-  const release:Release={id:e.id,version:e.version,channel:'stable',state:blocked(e.id,e.version)?'security-blocked':'listed',packageFormat:2,manifest:'somnia-extension.toml',engine:'sandboxed',apiVersion:e.apiVersion,minSomnia:somniaMin,
+  const release:Release={id:e.id,version:e.version,channel:'stable',state:blocked(e.id,e.version)?'security-blocked':'listed',...(isReviewed(e)?{review:{reviewer:e.reviewedBy??'the Somnia maintainers'}}:{}),packageFormat:2,manifest:'somnia-extension.toml',engine:'sandboxed',apiVersion:e.apiVersion,minSomnia:somniaMin,
    source:{repositoryId:0,url:e.repo,commit:'',extensionPath:''},
    artifact:{sha256:e.sha256,bytes:0,githubAssetId:0,url:e.download,filename:e.download.split('/').pop()??'',expandedBytes:0,fileCount:0,largestFileBytes:0},
    provenance:{artifactSha256:e.sha256,repositoryId:0,commit:'',workflowIdentity:'',attestation:EMPTY_DIGEST},
@@ -80,7 +81,7 @@ export function createCatalogStoreHost(deps:CatalogStoreDeps={}):StoreHost{
     const opts={somniaRange:'>=1.0.0 <99.0.0',apiRange:'>=2.0.0 <3.0.0',license:'SEE LICENSE IN LICENSE',description:entry.description||entry.name};
     let migrated:ManifestV2,previous:ManifestV2|undefined;
     try{migrated=migrateLegacy(reviewed.manifest,opts).manifest;previous=prior?migrateLegacy(prior,opts).manifest:undefined;}catch{return {kind:'error',code:'incompatible'};}
-    const candidate:ConsentCandidate={manifest:migrated,artifactHash:entry.sha256,manifestHash:await sha256Hex(new TextEncoder().encode(JSON.stringify(reviewed.manifest))),validation:'valid',source:'store',sourcePath:entry.repo,...(previous?{previous}:{})};
+    const candidate:ConsentCandidate={manifest:migrated,artifactHash:entry.sha256,manifestHash:await sha256Hex(new TextEncoder().encode(JSON.stringify(reviewed.manifest))),validation:'valid',source:'store',sourcePath:entry.repo,...(isReviewed(entry)?{verified:{label:`Reviewed by ${entry.reviewedBy??'the Somnia maintainers'}`,sourceId:entry.id}}:{}),...(previous?{previous}:{})};
     return {reviewed,candidate};
    };
    const first=await bring();
@@ -99,6 +100,7 @@ export function createCatalogStoreHost(deps:CatalogStoreDeps={}):StoreHost{
      await approve();
      const r=commitReviewed(current.reviewed);
      if(!r.ok){await getConsentBroker().forget(id);throw new Error(r.errors[0]??'failed');}
+     if(isReviewed(current.reviewed.entry))recordReviewedMark(id,ver,current.reviewed.entry.reviewedBy??'the Somnia maintainers');
     },
    }};
   },

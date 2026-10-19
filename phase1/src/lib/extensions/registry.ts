@@ -18,7 +18,12 @@ const OFF='somnia.extensions.enabled.v1';
 /** Extensions are off until the user switches them on (ADR-003). Only ids in this list run. */
 export function enabledIds():string[]{try{const raw=JSON.parse(localStorage.getItem(OFF)||'[]');return Array.isArray(raw)?raw.filter((x):x is string=>typeof x==='string'):[];}catch{return[];}}
 export function setExtensionEnabled(id:string,on:boolean){const next=enabledIds().filter(x=>x!==id);if(on)next.push(id);localStorage.setItem(OFF,JSON.stringify(next));notify();}
-export const loadActiveExtensions=()=>{if(extensionsRestricted(localStorage))return [];const on=enabledIds();return loadExtensions().filter(x=>on.includes(x.id)).map(effectiveManifest);};
+let blockGate:(id:string,version:string)=>boolean=()=>false;
+/** Registered once at startup by the trusted blocklist wiring (blocklistWiring.ts). Extensions have no way to set it. */
+export function setExtensionBlockGate(gate:(id:string,version:string)=>boolean):void{blockGate=gate;}
+/** True when the verified security feed blocks this exact id and version. Defaults to false before the wiring starts. */
+export const isExtensionBlocked=(id:string,version:string):boolean=>blockGate(id,version);
+export const loadActiveExtensions=()=>{if(extensionsRestricted(localStorage))return [];const on=enabledIds();return loadExtensions().filter(x=>on.includes(x.id)&&!blockGate(x.id,x.version)).map(effectiveManifest);};
 const REV='somnia.extensions.revoked.v1';
 /** Permissions the user switched off after install, per extension id. Revoked permissions are removed from the manifest before it runs. */
 export function revokedPermissions():Record<string,string[]>{try{const v=JSON.parse(localStorage.getItem(REV)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{};}catch{return{};}}

@@ -19,6 +19,7 @@ import type {ManifestV2} from './manifestV2';
 import type {BlocklistService} from './blocklist';
 import {migrateLegacy} from './legacy/migrate';
 import {storagePrefix} from './storageKeys';
+import {clearReviewedMarks,recordReviewedMark,reviewedMarkFor} from './reviewedMarks';
 
 const label=(p:string)=>p;
 const legacyConsent=(m:ExtensionManifest)=>migrateLegacy(m,{somniaRange:'>=1.0.0 <99.0.0',apiRange:'>=2.0.0 <3.0.0',license:'SEE LICENSE IN LICENSE',description:m.name}).manifest;
@@ -33,7 +34,8 @@ const rowsOf=(m:ExtensionManifest):GrantRow[]=>{
 };
 const contributions=(m:ExtensionManifest)=>[m.contributes.panels.length&&'panels',m.contributes.codeThemes.length&&'themes',m.contributes.commands.length&&'commands',m.contributes.snippets.length&&'snippets'].filter(Boolean) as string[];
 const toPopup=(m:ExtensionManifest,on:string[]):PopupExtension=>({
- id:m.id,name:m.name,version:m.version,description:'',publisher:'',badge:null,
+ id:m.id,name:m.name,version:m.version,description:'',publisher:'',
+ badge:(()=>{const mark=reviewedMarkFor(m.id,m.version);return mark?{criterion:`Reviewed by ${mark.reviewer}`}:null;})(),
  enabled:on.includes(m.id)&&!extensionsRestricted(localStorage),
  grants:rowsOf(m),contributions:contributions(m),lastActivity:null,
  source:{provider:'local',verification:'no-signed-match'},
@@ -46,7 +48,8 @@ const asCandidate=(e:CatalogEntry,r:ReviewedPackage):CandidateState=>({kind:'rea
 /** Host adapter over the current registry, catalog and the persistent activity bridge. Branch 4 broker wiring replaces rows/grant calls at integration. */
 export interface DefaultHostOptions {blocklist?:()=>BlocklistService|null; packages?:V2PackageStore}
 const v2Popup=(m:ManifestV2,e:{enabled:boolean;revoked:string[];folders:Record<string,string[]>;clipboard:boolean;blocked?:string}|undefined,origin:string):PopupExtension=>({
- id:m.id,name:m.name,version:m.version,description:m.description,publisher:m.publisher,badge:null,
+ id:m.id,name:m.name,version:m.version,description:m.description,publisher:m.publisher,
+ badge:(()=>{const mark=reviewedMarkFor(m.id,m.version);return mark?{criterion:`Reviewed by ${mark.reviewer}`}:null;})(),
  enabled:!!e?.enabled&&!e.blocked&&!extensionsRestricted(localStorage),
  grants:grantsFromManifest(m,{revoked:e?.revoked,folders:e?.folders,clipboard:e?.clipboard}),
  contributions:Object.entries(m.contributes).filter(([,v])=>Array.isArray(v)&&v.length>0).map(([k])=>k),lastActivity:null,
@@ -78,7 +81,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
    if(v2Ids().has(id)&&!loadExtensions().some(m=>m.id===id)){await broker().setRevoked(id,row,!on);consentChanged();return;}
    setPermissionRevoked(id,label(row),!on);},
   remove:async(id,deleteData)=>{
-   const v2=v2Ids().has(id);removeExtension(id);
+   const v2=v2Ids().has(id);removeExtension(id);clearReviewedMarks(id);
    if(v2)packages.remove(id);
    // The consent record belongs to both lanes (store installs of v1 packages are approved through it too).
    if(v2||broker().snapshot().extensions[id])await broker().forget(id);
@@ -89,11 +92,11 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
    const entries=await fetchCatalog();const inst=loadExtensions();const old=inst.find(m=>m.id===id);const e=entries.find(x=>x.id===id);
    if(!old||!e||installStateOf(e,inst).state!=='update-available'||(declined()[id]??[]).includes(e.version)){staged.delete(id);return;}
    const review=await reviewCatalogPackage(e);const added=review.manifest.permissions.filter(p=>!old.permissions.includes(p));
-   if(added.length===0){installReviewedPackage(review);staged.delete(id);return;}
+   if(added.length===0){installReviewedPackage(review);if(isReviewed(review.entry))recordReviewedMark(review.entry.id,review.entry.version,review.entry.reviewedBy??'the Somnia maintainers');staged.delete(id);return;}
    staged.set(id,{review,added});
   },
   reviewUpdate:async id=>{const s=staged.get(id);if(!s)throw new Error('No update is waiting.');return{version:s.review.entry.version,added:s.added.map(p=>`project.${p.replace('project.','')}`),blocked:false};},
-  acceptUpdate:async id=>{const s=staged.get(id);if(!s)throw new Error('No update is waiting.');installReviewedPackage(s.review);staged.delete(id);},
+  acceptUpdate:async id=>{const s=staged.get(id);if(!s)throw new Error('No update is waiting.');installReviewedPackage(s.review);if(isReviewed(s.review.entry))recordReviewedMark(s.review.entry.id,s.review.entry.version,s.review.entry.reviewedBy??'the Somnia maintainers');staged.delete(id);},
   keepCurrent:async id=>{const s=staged.get(id);if(!s)return;const d=declined();d[id]=[...(d[id]??[]),s.review.entry.version];localStorage.setItem(DECLINED,JSON.stringify(d));staged.delete(id);},
   queryActivity:(f,o,l)=>queryExtensionActivity(f,o,l),
   exportActivity:f=>exportExtensionActivity(f),
@@ -114,7 +117,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
    const prior=broker().snapshot().extensions[id]?.approved??(old?legacyConsent(old):undefined);
    const candidate:ConsentCandidate={manifest,artifactHash:r?r.entry.sha256:st!.artifactHash,
     manifestHash:r?await sha256Hex(new TextEncoder().encode(JSON.stringify(r.manifest))):st!.manifestHash,
-    validation:'valid',source:r?'store':'manual',sourcePath:r?r.entry.repo:st!.origin,...(prior?{previous:prior}:{})};
+    validation:'valid',source:r?'store':'manual',sourcePath:r?r.entry.repo:st!.origin,...(r&&isReviewed(r.entry)?{verified:{label:`Reviewed by ${r.entry.reviewedBy??'the Somnia maintainers'}`,sourceId:r.entry.id}}:{}),...(prior?{previous:prior}:{})};
    await requestInstallConsent(candidate,{
     revalidate:async()=>{if(blocked(manifest.id,manifest.version))throw new Error('blocked');return candidate;},
     commit:async(c,approve)=>{
@@ -126,6 +129,7 @@ export function createDefaultHost(options:DefaultHostOptions={}):ExtensionsPopup
       await approve();
       const result=r?installReviewedPackage(r):installExtension(JSON.stringify(st!.manifest),{disabled:true});
       if(!result.ok){await broker().disable(id);throw new Error(result.errors[0]??'failed');}
+      if(r&&isReviewed(r.entry))recordReviewedMark(r.entry.id,r.entry.version,r.entry.reviewedBy??'the Somnia maintainers');
       await broker().disable(id);
      }else{
       const v2=st as Extract<Staged,{lane:'v2'}>;

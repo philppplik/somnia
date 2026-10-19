@@ -93,3 +93,18 @@ test('store stage hands a bound candidate to consent and commits only after appr
  await assert.rejects(()=>r.request.commit(r.request.candidate,async()=>{throw new Error('declined');}),/declined/);assert.equal(installed,0);
  await r.request.commit(r.request.candidate,async()=>{});assert.equal(installed,1);
 });
+test('reviewed index flag passes through listings, stage candidate and install mark',async()=>{
+ const marked:CatalogEntry={...entry,reviewed:true,reviewedBy:'Jane'};
+ const {extensions}=listingsFromEntries([marked]);
+ assert.deepEqual(extensions[0].releases[0].review,{reviewer:'Jane'});
+ assert.equal(extensions.length,1);
+ const unreviewed=listingsFromEntries([entry]);assert.equal(unreviewed.extensions[0].releases[0].review,undefined);
+ const manifest={id:'acme.hello',name:'Hello',version:'1.2.0',apiVersion:1 as const,permissions:['project.read' as const],contributes:{commands:[],panels:[],codeThemes:[],snippets:[]}};
+ const reviewed={entry:marked,manifest} as unknown as ReviewedPackage;
+ const h=createCatalogStoreHost({fetchCatalog:async()=>[marked],installed:()=>[],review:async()=>reviewed,commitReviewed:()=>({ok:true as const,manifest:manifest as never})});
+ await h.load();const r=await h.stage('acme.hello','1.2.0',entry.sha256,'install');if(r.kind!=='staged')assert.fail('staged');
+ assert.deepEqual(r.request.candidate.verified,{label:'Reviewed by Jane',sourceId:'acme.hello'});
+ const h2=createCatalogStoreHost({fetchCatalog:async()=>[entry],installed:()=>[],review:async()=>({entry,manifest} as unknown as ReviewedPackage),commitReviewed:()=>({ok:true as const,manifest:manifest as never})});
+ await h2.load();const r2=await h2.stage('acme.hello','1.2.0',entry.sha256,'install');if(r2.kind!=='staged')assert.fail('staged');
+ assert.equal(r2.request.candidate.verified,undefined,'unreviewed entries never get the mark');
+});
