@@ -1130,6 +1130,7 @@
   "finish2.preview.moduleCycles_other": "{count} Importzyklen gefunden: {chains}. Die Imports, die eine Schleife schließen, wurden übersprungen, die Module laufen eventuell nicht.",
   "finish2.preview.errors_one": "Skriptfehler ({count})",
   "finish2.preview.errors_other": "Skriptfehler ({count})",
+  "finish2.preview.errorsSuppressed": "Weitere Skriptfehler werden für diese Vorschau nicht mehr angezeigt.",
   "finish2.preview.openError": "{file} Zeile {line} Spalte {col} öffnen: {message}",
   "finish2.preview.empty": "Die Datei ist leer.",
   "finish2.comparison.title": "{path} vergleichen",

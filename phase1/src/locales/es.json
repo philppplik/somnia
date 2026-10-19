@@ -1130,6 +1130,7 @@
   "finish2.preview.moduleCycles_other": "Se encontraron {count} ciclos de importación: {chains}. Se omitieron las importaciones que cierran un bucle, así que estos módulos pueden no ejecutarse.",
   "finish2.preview.errors_one": "Error de script ({count})",
   "finish2.preview.errors_other": "Errores de script ({count})",
+  "finish2.preview.errorsSuppressed": "Se omiten más errores de script en esta vista previa.",
   "finish2.preview.openError": "Abrir {file} línea {line} columna {col}: {message}",
   "finish2.preview.empty": "El archivo está vacío.",
   "finish2.comparison.title": "Comparar {path}",

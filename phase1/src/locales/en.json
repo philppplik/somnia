@@ -1130,6 +1130,7 @@
   "finish2.preview.moduleCycles_other": "{count} import cycles found: {chains}. The imports that close a loop were skipped, so these modules may not run.",
   "finish2.preview.errors_one": "Script error ({count})",
   "finish2.preview.errors_other": "Script errors ({count})",
+  "finish2.preview.errorsSuppressed": "Further script errors are suppressed for this preview.",
   "finish2.preview.openError": "Open {file} line {line} column {col}: {message}",
   "finish2.preview.empty": "The file is empty.",
   "finish2.comparison.title": "Compare {path}",

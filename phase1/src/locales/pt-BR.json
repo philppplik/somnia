@@ -1130,6 +1130,7 @@
   "finish2.preview.moduleCycles_other": "{count} ciclos de importação encontrados: {chains}. As importações que fecham um laço foram ignoradas, então estes módulos podem não executar.",
   "finish2.preview.errors_one": "Erro de script ({count})",
   "finish2.preview.errors_other": "Erros de script ({count})",
+  "finish2.preview.errorsSuppressed": "Erros de script adicionais são omitidos nesta visualização.",
   "finish2.preview.openError": "Abrir {file} linha {line} coluna {col}: {message}",
   "finish2.preview.empty": "O arquivo está vazio.",
   "finish2.comparison.title": "Comparar {path}",

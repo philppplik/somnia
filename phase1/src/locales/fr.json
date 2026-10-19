@@ -1130,6 +1130,7 @@
   "finish2.preview.moduleCycles_other": "{count} cycles d’import trouvés : {chains}. Les imports qui ferment une boucle ont été ignorés, ces modules peuvent donc ne pas s’exécuter.",
   "finish2.preview.errors_one": "Erreur de script ({count})",
   "finish2.preview.errors_other": "Erreurs de script ({count})",
+  "finish2.preview.errorsSuppressed": "Les erreurs de script suivantes sont masquées pour cet aperçu.",
   "finish2.preview.openError": "Ouvrir {file}, ligne {line}, colonne {col} : {message}",
   "finish2.preview.empty": "Le fichier est vide.",
   "finish2.comparison.title": "Comparer {path}",
