@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState,useSyncExternalStore} from 'react';
 import {useT} from '../../lib/useT';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
@@ -10,7 +11,7 @@ import {MAX_PRESET_NAME,subscribeUserPresets,userExportPresets} from '../../lib/
 import type {Composition} from '../../lib/animation/model';
 import {useAnimationState} from '../../lib/animation/session';
 import {exportCheck} from '../../lib/animation/exportCheck';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const SCALES=[25,50,75,100,150,200];const FPS=[12,15,24,30,60];
 const size=formatBytes;
 /** Export size, frame rate, frame range and presets, with a readout (frames, duration, pixels, rough size) per format before anything is rendered. Session state: no undo step. */

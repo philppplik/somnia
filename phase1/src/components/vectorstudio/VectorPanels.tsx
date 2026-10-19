@@ -1,3 +1,4 @@
+import {panelField as field, panelLabel as row} from '../shell/panelStyles';
 import {VectorImportControls} from './VectorImportControls';
 import {pngDimensions} from '../../lib/vectorstudio/exportFiles';
 import {commandDispatcher} from '../../lib/commandDispatcher';
@@ -27,10 +28,10 @@ import {Textarea} from '../ui/native-controls';
 import {TEXT_LIMITS,FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS} from '../../lib/vectorio';
 import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../lib/vectorstudio/fonts';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
-const field='h-8 w-full min-w-0 rounded-sm border border-line bg-elevated px-2 text-[12px] text-ink';
+
 /** First non-empty line of a text, shortened for the layers list. */
 export const textLabel=(text:string)=>{const l=(text.split('\n').map(x=>x.trim()).find(Boolean)??'');return l.length>40?l.slice(0,39)+'…':l;};
-const row='grid gap-1 text-[11px] text-ink-3';
+
 const run=(id:string,p?:unknown)=>void executeCommand('vector.'+id,p);
 /** Persist filtering, not engine data. Hidden paths stay visible in this list so users can restore them. */
 export function VectorLayersPanel({panelId,context}:PanelHostProps){

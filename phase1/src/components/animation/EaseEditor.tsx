@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useEffect,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -11,7 +12,7 @@ import {useGraphTools} from '../../lib/animation/graphTools';
 import {executeCommand} from '../../lib/commands';
 const compact='h-6 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
 let openMemo=true;
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 type H=readonly [number,number];
 /** Cubic-bezier editor for the primary selected key: numeric handles with a curve, plus named easings saved in the document. */

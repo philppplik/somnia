@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -8,7 +9,7 @@ import {textPathEdit,textPathStartAt} from '../../lib/animation/textAnimators';
 import type {Edit} from '../../lib/animation/edit';
 import type {Composition,Layer} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** Text on a path: pick a path shape layer to copy the baseline from, move the start along it, or take the text off the path. Hovering Use path previews it without a history step. */
 export function TextOnPath({layer,comp}:{layer:Layer;comp:Composition}){
  const {t}=useT();const at=useAnimationState().view.playhead;const keyed=!!layer.source.textPathStartAnim?.keys.length;const edit=(e:Edit)=>{setErr(null);try{animationSession().dispatch(e);}catch(x){setErr((x as Error).message);}};const [from,setFrom]=useState('');const [err,setErr]=useState<string|null>(null);

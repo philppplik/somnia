@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {StudioStatus} from '../studios/StudioStatus';
 import {PathLayerMorph} from './PathLayerMorph';
 import {effectColor,effectBypassed,defaultEffect,styleDefaults,EFFECT_KINDS,strokeWidthAt,strokeOpacityAt,colorAt} from '../../lib/animation/effects';
@@ -50,7 +51,7 @@ import {EASE_LABEL,fmt,PROP_LABEL,renderSummary} from './format';
 import {PropertyModifiers} from './PropertyModifiers';
 import {ExportSettingsPanel} from './ExportSettingsPanel';
 import {RenderQueuePanel} from './RenderQueuePanel';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 const KINDS:LayerKind[]=['solid','text','shape','null'];
 /** Left panel: composition list and layer creation. The timeline owns the layer list, so it is not repeated here. */

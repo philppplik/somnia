@@ -1,3 +1,4 @@
+import {panelFieldMini as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -7,7 +8,7 @@ import {executeCommand} from '../../lib/commands';
 import {MAX_REPEATS,type RepeatMode} from '../../lib/animation/keyRepeat';
 import {MAX_JITTER_FRAMES} from '../../lib/animation/keyJitterTime';
 import type {ValueMode} from '../../lib/animation/keyValues';
-const field='h-6 min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
+
 /** Timeline strip control: repeat the selected keys as cycles or ping-pong. */
 export function KeyRepeat({count:selected,layers}:{count:number;layers:readonly string[]}){
  const {t}=useT();const [n,setN]=useState('2');const [mode,setMode]=useState<RepeatMode>('cycle');

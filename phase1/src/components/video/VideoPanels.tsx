@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {getVideoSession} from '../../lib/video/session';
@@ -13,7 +14,7 @@ import type {PanelHostProps,InspectorSectionProps} from '../../lib/shell/types';
 import {Button} from '../ui/button';
 import {TitleInspector} from './TitleInspector';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
 function useActive(){const media=useMedia();const s=useVideoSession(media.active);return {media,s,selected:s?.clips.find(c=>c.id===s.selectedClipId),ready:s?.status==='ready'};}
 export function SourcesPanel({context,panelId}:PanelHostProps){

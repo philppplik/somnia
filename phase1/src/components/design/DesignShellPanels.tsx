@@ -11,7 +11,8 @@ import {ARTBOARD_PRESETS,documentPalette,documentStats,presetFor} from '../../li
 import {DesignLayersPanel} from './DesignLayersPanel';
 import {DesignInspectorPanel} from './DesignInspectorPanel';
 const run=(id:string,payload?:unknown)=>{void executeCommand(id,payload);};
-const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text aria-[invalid=true]:border-red-500';
+import {panelFieldCompact} from '../shell/panelStyles';
+const field=panelFieldCompact+' aria-[invalid=true]:border-red-500';
 const box='grid gap-2 p-3 text-xs text-ink-2';
 const label=(key:string,fallback:string,t:(k:string)=>string)=>{const v=t(key);return v===key?fallback:v;};
 

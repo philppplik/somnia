@@ -1,3 +1,4 @@
+import {panelSection as row, panelSlider as input} from '../shell/panelStyles';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {PHOTO_CONTROLS,type PhotoControl} from '../../lib/photos/studioSettings';
@@ -5,8 +6,8 @@ import {beginPhotoGesture,endPhotoGesture,flipPhoto,previewPhotoSettings,rotateP
 import {Button} from '../ui/button';
 import {RotateCcw,RotateCw,ArrowLeftRight,ArrowUpDown} from '../../lib/icons';
 import {NativeInput} from '../ui/native-controls';
-const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const input='w-full accent-[var(--accent)]';
+
+
 const SECTIONS=['light','color','effects','detail','transform'] as const;
 function Slider({name,control,disabled}:{name:string;control:PhotoControl;disabled:boolean}){
  const {t}=useT();

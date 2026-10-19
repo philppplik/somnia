@@ -1,4 +1,6 @@
+import {panelSection as row, panelCheck as check, panelSlider as input, panelFieldCompact as field} from '../shell/panelStyles';
 import {Button} from '../ui/button';
+import {NativeInput} from '../ui/native-controls';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {PluginParams} from './PluginParams';
@@ -6,10 +8,10 @@ import {stepLabel} from '../../lib/sound/steps';
 import {LIMITS,isNeutral} from '../../lib/sound/recipe';
 import {useSoundSession} from '../../lib/sound/session';
 import {executeCommand} from '../../lib/commands';
-const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
-const input='w-full accent-[var(--accent)]';
-const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
+
+
+
 const signed=(n:number)=>`${n>0?'+':''}${n}`;
 /** The edit steps, in the fixed order the engine applies them: trim, reverse, pitch, effect, fades, normalize. */
 export function SoundControls({name,group='all'}:{name:string;group?:'all'|'selection'|'effects'|'levels'|'summary'}){
@@ -25,8 +27,8 @@ export function SoundControls({name,group='all'}:{name:string;group?:'all'|'sele
    <span className="text-ink">{t('sound.selection')}</span>
    {reg?<><span className="text-ink-3" data-testid="sound-region-chip">{t('sound.region.'+reg.mode,{start:reg.start.toFixed(2),end:reg.end.toFixed(2)})}</span><Button size="compact" className="justify-self-start" onClick={()=>void executeCommand('sound.region.clear')} data-testid="sound-region-clear">{t('sound.region.clear')}</Button></>:<>
     <div className="grid grid-cols-2 gap-2">
-     <label>{t('sound.selStart')}<input type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.start:''} onChange={e=>select({start:Number(e.target.value),end:sel?.end??dur})} data-testid="sound-sel-start"/></label>
-     <label>{t('sound.selEnd')}<input type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.end:''} onChange={e=>select({start:sel?.start??0,end:Number(e.target.value)})} data-testid="sound-sel-end"/></label>
+     <label>{t('sound.selStart')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.start:''} onChange={e=>select({start:Number(e.target.value),end:sel?.end??dur})} data-testid="sound-sel-start"/></label>
+     <label>{t('sound.selEnd')}<NativeInput type="number" className={`${field} mt-1`} min={0} max={dur} step={0.01} value={sel?sel.end:''} onChange={e=>select({start:sel?.start??0,end:Number(e.target.value)})} data-testid="sound-sel-end"/></label>
     </div>
     <p className="m-0 text-ink-3">{sel?t('sound.selLength',{seconds:(sel.end-sel.start).toFixed(2)}):t('sound.selHint')}</p>
     <div className="flex flex-wrap gap-1">
@@ -56,8 +58,8 @@ export function SoundControls({name,group='all'}:{name:string;group?:'all'|'sele
   </div>
   </>}
   {show('levels')&&<><div className={`${row} grid-cols-2`}>
-   <label>{t('sound.fadeIn')}<input type="number" className={`${field} mt-1`} min={LIMITS.fadeMs[0]} max={LIMITS.fadeMs[1]} step={10} value={c.fadeInMs} onChange={e=>set(x=>({...x,fadeInMs:Number(e.target.value)}))} data-testid="sound-fade-in"/></label>
-   <label>{t('sound.fadeOut')}<input type="number" className={`${field} mt-1`} min={LIMITS.fadeMs[0]} max={LIMITS.fadeMs[1]} step={10} value={c.fadeOutMs} onChange={e=>set(x=>({...x,fadeOutMs:Number(e.target.value)}))} data-testid="sound-fade-out"/></label>
+   <label>{t('sound.fadeIn')}<NativeInput type="number" className={`${field} mt-1`} min={LIMITS.fadeMs[0]} max={LIMITS.fadeMs[1]} step={10} value={c.fadeInMs} onChange={e=>set(x=>({...x,fadeInMs:Number(e.target.value)}))} data-testid="sound-fade-in"/></label>
+   <label>{t('sound.fadeOut')}<NativeInput type="number" className={`${field} mt-1`} min={LIMITS.fadeMs[0]} max={LIMITS.fadeMs[1]} step={10} value={c.fadeOutMs} onChange={e=>set(x=>({...x,fadeOutMs:Number(e.target.value)}))} data-testid="sound-fade-out"/></label>
   </div>
   <div className={row}>
    <label className="flex items-center gap-2 text-ink"><input type="checkbox" className={check} checked={c.normalize.on} onChange={e=>set(x=>({...x,normalize:{...x.normalize,on:e.target.checked}}))} data-testid="sound-normalize"/>{t('sound.normalize')}</label>

@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -7,7 +8,7 @@ import {animationSession} from '../../lib/animation/session';
 import {maskEdit,morphProblem,MorphError,type MorphOpts} from '../../lib/animation/masks';
 import type {Layer,LayerMask} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** Path-to-path morph: key this mask's path at the playhead to another path mask's shape. Optional point matching (arc-length resampling), reverse and start point. Refusals are shown in the user's language. */
 export function MaskMorph({layer,m,index}:{layer:Layer;m:LayerMask;index:number}){
  const {t}=useT();const others=(layer.masks??[]).filter(o=>o.id!==m.id&&o.shape==='path'&&o.path);const [pick,setPick]=useState('');const [err,setErr]=useState<{key:string;params?:Record<string,number>}|string|null>(null);

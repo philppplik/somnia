@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -6,7 +7,7 @@ import {executeCommand} from '../../lib/commands';
 import {useAnimationState} from '../../lib/animation/session';
 import {normalizeOverlays,OVERLAY_KEYS,type OverlayKey} from '../../lib/animation/guides';
 import type {Composition} from '../../lib/animation/model';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** Left-panel section: overlay switches (view only) and ruler guides (saved with the composition, undoable). */
 export function GuidesPanel({comp}:{comp:Composition}){
  const {t}=useT();const o=normalizeOverlays(useAnimationState().view.overlays);const [axis,setAxis]=useState<'x'|'y'>('x');const [at,setAt]=useState('');const [err,setErr]=useState('');

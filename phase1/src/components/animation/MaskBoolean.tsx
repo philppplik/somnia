@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -7,7 +8,7 @@ import {maskBooleanEdit} from '../../lib/animation/pathLayer';
 import {BOOL_OPS} from '../../lib/animation/pathBoolean';
 import type {Layer,LayerMask} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** Boolean of this mask with another mask of the layer. Hovering Apply shows the result as a preview transaction (no history step). */
 export function MaskBoolean({layer,mask,index}:{layer:Layer;mask:LayerMask;index:number}){
  const {t}=useT();const [other,setOther]=useState('');const [op,setOp]=useState('unite');const [err,setErr]=useState<string|null>(null);

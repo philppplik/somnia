@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -8,7 +9,7 @@ import {pathLayerEdit,booleanEdits} from '../../lib/animation/pathLayer';
 import {MorphError,type MorphOpts} from '../../lib/animation/masks';
 import type {Layer} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 type Shown={key:string;params?:Record<string,number>}|string;
 /** Animate path and morph into another path shape layer at the playhead. Hover previews the result without a history step; refusals are shown in the user's language. */
 export function PathLayerMorph({layer,others}:{layer:Layer;others:readonly Layer[]}){

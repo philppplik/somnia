@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {MaskBoolean} from './MaskBoolean';
 import {MaskMorph} from './MaskMorph';
 import {useT} from '../../lib/useT';
@@ -9,7 +10,7 @@ import {selectMask,selectPoint,setMaskClip,setPen,useMaskSelection,activeMask} f
 import {resolveMask} from '../../lib/animation/masks';
 import {MAX_MASK_POINTS,type MaskProp} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 const mask=(params:unknown)=>void executeCommand('animation.layer.mask',params);
 const matte=(params:unknown)=>void executeCommand('animation.layer.matte',params);

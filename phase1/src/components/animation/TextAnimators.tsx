@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -8,7 +9,7 @@ import {animationSession,useAnimationState} from '../../lib/animation/session';
 import {animatorEdit,applyTextPresetEdit,userTextPresets,DEFAULT_ANIMATOR_COLOR,TEXT_PRESETS} from '../../lib/animation/textAnimators';
 import {evaluate} from '../../lib/animation/interpolate';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const fmt=(n:number)=>String(Math.round(n*100)/100);
 const run=(params:unknown)=>void executeCommand('animation.text.animator',params);
 /** Inspector section for per-character text animators: selector range, softness, offset (keyable), shift, scale and opacity. */

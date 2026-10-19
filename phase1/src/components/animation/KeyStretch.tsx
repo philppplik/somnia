@@ -1,3 +1,4 @@
+import {panelFieldMini as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -6,7 +7,7 @@ import {executeCommand} from '../../lib/commands';
 import {MIN_STRETCH,MAX_STRETCH,stretchPlan,type StretchAnchor} from '../../lib/animation/keyStretch';
 import type {Composition,KeyRef} from '../../lib/animation/model';
 import type {StyleKeyRef} from '../../lib/animation/keyLanes';
-const field='h-6 min-w-0 rounded-sm border border-subtle bg-transparent px-1 text-xs text-ink select-text';
+
 /** Timeline strip control: scale the selected keys in time around the first key or the playhead. */
 export function KeyStretch({comp,keys,styleKeys,at}:{comp:Composition;keys:readonly KeyRef[];styleKeys:readonly StyleKeyRef[];at:number}){
  const {t}=useT();const [pct,setPct]=useState('200');const [anchor,setAnchor]=useState<StretchAnchor>('first');

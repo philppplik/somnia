@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useMemo,useState} from 'react';
 import {detectBeats,estimateBpm} from '../../lib/animation/audioBeats';
 import {useT} from '../../lib/useT';
@@ -12,7 +13,7 @@ import {InspectorNumberField} from '../studios/InspectorNumberField';
 import {REACTIVE_PROPS,type ReactiveProp} from '../../lib/animation/audioReactive';
 import {AudioWaveform} from './AudioWaveform';
 const run=(id:string,params?:unknown)=>void executeCommand(id,params);
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const sec=(n:number)=>String(Math.round(n*1000)/1000);
 function N(p:{label:string;value:number;min?:number;max?:number;step?:number;resetKey:string;disabled:boolean;onCommit:(n:number)=>void}){return <InspectorNumberField {...p} className={field} format={sec}/>;}
 /** Inspector for an audio layer: file info, waveform, trim, offset and volume keyframes. Every change is a validated command. */

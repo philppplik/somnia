@@ -1,3 +1,4 @@
+import {panelSection as row, panelCheck as check, panelFieldCompact as field} from '../shell/panelStyles';
 import {useMemo,useState} from 'react';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
@@ -11,9 +12,9 @@ import {isTitleClip} from '../../lib/video/titles';
 import {addTitleClip,setTitleLength,updateTitle} from '../../lib/video/titleSession';
 import {TitleAddRow,TitleInspector} from './TitleInspector';
 import {NativeInput,NativeSelect} from '../ui/native-controls';
-const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const check='!size-4 !w-4 shrink-0 accent-[var(--accent)]';
-const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
+
+
 /** Facts, timeline, selected-clip and export settings of the active video project. Playback lives in the workspace. */
 export function VideoControls({name}:{name:string}){
  const {t}=useT();const s=useVideoSession(name);

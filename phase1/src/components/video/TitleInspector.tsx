@@ -1,10 +1,11 @@
+import {panelSection as row, panelFieldCompact as field} from '../shell/panelStyles';
 import {Plus} from '../../lib/icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
 import {MAX_TITLE_CHARS,MAX_TITLE_SECONDS,sanitizeTitleSpec,type TitleClip,type TitleSpec} from '../../lib/video/titles';
 import {NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
-const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
+
 /** "Add title card" row for the Video inspector. */
 export function TitleAddRow({onAdd,disabled}:{onAdd:()=>void;disabled?:boolean}){
  const {t}=useT();

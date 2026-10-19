@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {NativeSelect} from '../ui/native-controls';
@@ -6,7 +7,7 @@ import {executeCommand} from '../../lib/commands';
 import {useQueueState} from '../../lib/animation/renderQueueRun';
 import {queueSummary,MAX_QUEUE} from '../../lib/animation/renderQueue';
 import {EXPORT_FORMATS,type ExportFormat} from '../../lib/animation/exportSettings';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** Render queue: capture the current export setup as jobs, then render them one after another. Session state, no undo step. */
 export function RenderQueuePanel({busy}:{busy:boolean}){
  const {t}=useT();const q=useQueueState();const [format,setFormat]=useState<ExportFormat>('gif');const [err,setErr]=useState('');

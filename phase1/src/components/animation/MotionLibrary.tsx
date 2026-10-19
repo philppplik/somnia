@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useEffect,useRef,useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -7,7 +8,7 @@ import {layerSetIds} from '../../lib/animation/layerSet';
 import {exportMotionsJson,legacyMotions,motionEdits,parseMotionsJson,useMotions,userMotions,MOTION_FILE_LIMIT,type MotionSet} from '../../lib/animation/motionLibrary';
 import {pruneSelection} from '../../lib/animation/selection';
 import {executeCommand} from '../../lib/commands';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const migrated=new Set<string>();
 /** Motion presets stored in the document. Hover or focus previews on the canvas, a click applies in one undo step. Files are previewed before they are added. */
 export function MotionLibrary({layerId,locked}:{layerId:string;locked:boolean}){

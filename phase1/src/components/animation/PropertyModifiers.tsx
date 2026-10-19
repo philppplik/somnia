@@ -1,3 +1,4 @@
+import {panelField as field} from '../shell/panelStyles';
 import {useState} from 'react';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
@@ -8,7 +9,7 @@ import {tickToFrame} from '../../lib/animation/time';
 import {frameToTick,TRANSFORM_KEYS,type Composition,type Layer,type TransformKey} from '../../lib/animation/model';
 import {executeCommand} from '../../lib/commands';
 import {PROP_LABEL} from './format';
-const field='h-8 w-full min-w-0 rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 const withAxis=(m:Extract<Modifier,{type:'wiggle'}>,v:string):Modifier=>{const {axis:_a,...rest}=m;return v==='x'||v==='y'?{...rest,axis:v}:rest;};
 const fmt=(n:number)=>String(Math.round(n*1000)/1000);
 /** Wiggle (seeded noise), loop and link modifiers of one transform property. Wiggle and loop were commands only; link binds the property to another layer's property (value = source x multiplier + offset). Every change is one undo step. */

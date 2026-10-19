@@ -4,7 +4,8 @@ import {useT} from '../../lib/useT';
 import {FIELD_RULES, MIXED, normalizeHex, parseNumberField, shared} from '../../lib/design/inspectorModel';
 import type {AlignKind, DesignInspectorProps, DesignNodePatch, DesignNodeView} from '../../lib/design/panelContract';
 const row = 'grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const field = 'h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text aria-[invalid=true]:border-red-500';
+import {panelFieldCompact} from '../shell/panelStyles';
+const field=panelFieldCompact+' aria-[invalid=true]:border-red-500';
 type NumKey = keyof typeof FIELD_RULES;
 /** Numeric field: commits on Enter/blur, Escape reverts, invalid input is rejected visibly and never reaches the document. */
 function NumField({id, label, value, unit, disabled, onCommit}: {id: NumKey; label: string; value: number | typeof MIXED | undefined; unit?: string; disabled?: boolean; onCommit(v: number): void}) {
