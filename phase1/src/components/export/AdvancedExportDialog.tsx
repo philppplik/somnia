@@ -9,7 +9,8 @@ import {RangeField} from '../ui/range-field';
 import {NativeSelect} from '../ui/native-controls';
 import {Field} from '../ui/field';
 import {exportFieldGroups,visibleExportFields,loadExportPresets,saveExportPreset,deleteExportPreset,formatExportSize,type ExportSchema,type ExportValues,type ExportValue,type ExportField} from '../../lib/export/schema';
-export interface ExportPreview{url:string;bytes:number;width:number;height:number;note:string|null}
+/** `url` is the image preview (absent for audio); `detail` replaces the pixel dimensions line (already translated). */
+export interface ExportPreview{url:string|null;bytes:number;width:number;height:number;note:string|null;detail?:string}
 interface Props{
  open:boolean;onClose:()=>void;schema:ExportSchema;values:ExportValues;
  onChange:(id:string,value:ExportValue)=>void;onApply:(values:ExportValues)=>void;
@@ -63,8 +64,8 @@ export function AdvancedExportDialog({open,onClose,schema,values,onChange,onAppl
    </div>
    <div className="grid content-start gap-2" data-testid="ae-preview">
     <h3 className="m-0 text-xs font-semibold text-ink-2">{t('export.preview')}</h3>
-    {preview?<img alt={t('export.preview')} src={preview.url} className="max-h-56 w-full rounded border border-subtle bg-panel object-contain"/>:<div className="grid max-h-56 min-h-24 w-full place-items-center rounded border border-subtle bg-panel text-xs text-ink-3">{rendering?t('export.rendering'):t('export.preview')}</div>}
-    {preview&&<p className="m-0 text-xs text-ink-2" data-testid="ae-size">{t('export.finalSize')}: {formatExportSize(preview.bytes,{b:'B',kb:'KB',mb:'MB'})} · {t('export.dimensions',{width:preview.width,height:preview.height})}</p>}
+    {preview?.url?<img alt={t('export.preview')} src={preview.url} className="max-h-56 w-full rounded border border-subtle bg-panel object-contain"/>:preview?null:<div className="grid max-h-56 min-h-24 w-full place-items-center rounded border border-subtle bg-panel text-xs text-ink-3">{rendering?t('export.rendering'):t('export.preview')}</div>}
+    {preview&&<p className="m-0 text-xs text-ink-2" data-testid="ae-size">{t('export.finalSize')}: {formatExportSize(preview.bytes,{b:'B',kb:'KB',mb:'MB'})} · {preview.detail??t('export.dimensions',{width:preview.width,height:preview.height})}</p>}
     {rendering&&<p role="status" className="m-0 text-xs text-ink-3">{t('export.rendering')}</p>}
     {preview?.note&&<p className="m-0 text-xs text-ink-3">{t(preview.note)}</p>}
     {errorKey&&<p role="alert" className="m-0 text-xs text-warning">{t(errorKey,{message:errorDetail})}</p>}

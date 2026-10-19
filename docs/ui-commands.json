@@ -9477,6 +9477,17 @@
       "hasEnabled": true
     },
     {
+      "id": "sound.export.advanced",
+      "title": "Advanced export...",
+      "category": "Project",
+      "source": "sound",
+      "keywords": [
+        "audio",
+        "sound"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "sound.export.open",
       "title": "Export audio...",
       "category": "Project",

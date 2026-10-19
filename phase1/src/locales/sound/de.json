@@ -135,6 +135,7 @@
   "sound.review.close": "Schließen",
   "sound.review.submit": "WAV exportieren",
   "cmd.sound.export.open": "Audio exportieren...",
+  "cmd.sound.export.advanced": "Erweiterter Export...",
   "sound.arrange.title": "Arrangement & Mix",
   "sound.arrange.clipEditor": "Clip-Editor",
   "sound.arrange.name": "Sessionname",

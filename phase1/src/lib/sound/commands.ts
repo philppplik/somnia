@@ -2,6 +2,7 @@ import {commandRegistry} from '../commandRegistry';
 import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {getMedia,setActiveMedia} from '../media';
+import {setSoundExportAdvanced} from './exportAdvancedState';
 import {getSoundSession,updateSoundSettings,resetSoundSettings,setSoundSelection,applySoundRegion,clearSoundRegion,setSoundListen,saveSound,isSoundExportReady} from './session';
 import type {SoundSettings} from './recipe';
 import type {SoundRegionMode} from './protocol';
@@ -38,6 +39,7 @@ export function soundCommandSpecs():CommandSpec<unknown,unknown>[] {
   add('sound.transport.toggle','Play or pause audio','View',()=>transport!.toggle(),undefined,()=>ready()&&transport?.name===activeSoundName()),
   add<{seconds:number}>('sound.transport.seek','Seek in audio','View',p=>transport!.seek(Math.max(0,p.seconds)),object({seconds:num}),()=>ready()&&transport?.name===activeSoundName()),
   add('sound.export.open','Review audio export','Project',()=>exportOpener!(requireName()),undefined,()=>!!exportOpener&&ready()),
+  add('sound.export.advanced','Advanced export of the audio clip','Project',()=>setSoundExportAdvanced(requireName()),undefined,()=>!!exportOpener&&ready()&&isSoundExportReady(activeSoundName())),
   add('sound.export','Export audio WAV copy','Project',()=>saveSound(requireName()),undefined,()=>isSoundExportReady(activeSoundName())),
  ] as CommandSpec<unknown,unknown>[];
 }

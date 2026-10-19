@@ -23,7 +23,7 @@ export const EXPORT_GROUP_IDS:Readonly<Record<string,readonly string[]>>={
  design:['design.export.advanced','design.export.open','design.exportSvg','design.exportAllSvg','design.exportProject'],
  photos:['photos.export.open','photos.export.png','photos.export.jpeg','photos.export.advanced'],
  vector:['vector.export.advanced','vector.export.open','vector.exportSvg','vector.exportPng'],
- sound:['sound.export.open','sound.export'],
+ sound:['sound.export.advanced','sound.export.open','sound.export'],
  video:['video.export.open','video.export.start'],
  pdf:['pdf.saveCopy'],
  '3d':['studio3d.export.glb','studio3d.export.gltf','studio3d.render.turntable','studio3d.render.still'],

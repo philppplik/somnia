@@ -144,11 +144,15 @@ export type SaveOutcome='saved'|'cancelled'|'downloaded'|'unavailable';
 export async function saveSound(name:string):Promise<SaveOutcome>{
  if(!isSoundExportReady(name))return 'unavailable';
  const out=exportSound(name);if(!out)return 'unavailable';
+ return saveSoundBlob(out.blob,out.fileName);
+}
+/** Same save path for any rendered WAV (the Advanced Export dialog passes its own bytes). */
+export async function saveSoundBlob(blob:Blob,fileName:string):Promise<SaveOutcome>{
  const {isTauri,invoke}=await import('@tauri-apps/api/core');
- if(!isTauri())return downloadSound(name)?'downloaded':'unavailable';
- const grant=await invoke<{token:string}|null>('audio_save_pick',{suggestedName:out.fileName});
+ if(!isTauri()){const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fileName;a.click();setTimeout(()=>URL.revokeObjectURL(url),30_000);return 'downloaded';}
+ const grant=await invoke<{token:string}|null>('audio_save_pick',{suggestedName:fileName});
  if(!grant)return 'cancelled';
- await invoke('audio_save_write',new Uint8Array(await out.blob.arrayBuffer()),{headers:{'x-somnia-token':grant.token}});
+ await invoke('audio_save_write',new Uint8Array(await blob.arrayBuffer()),{headers:{'x-somnia-token':grant.token}});
  return 'saved';
 }
 
