@@ -30,6 +30,7 @@ import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../l
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 
 /** First non-empty line of a text, shortened for the layers list. */
+export const textName=(x:{text:string;name?:string})=>x.name?x.name:textLabel(x.text);
 export const textLabel=(text:string)=>{const l=(text.split('\n').map(x=>x.trim()).find(Boolean)??'');return l.length>40?l.slice(0,39)+'…':l;};
 
 const run=(id:string,p?:unknown)=>void executeCommand('vector.'+id,p);
@@ -38,7 +39,7 @@ export function VectorLayersPanel({panelId,context}:PanelHostProps){
  const {t}=useT(),s=useVectorSession();const [filter,setFilter]=usePanelState(`${context.studio}.${panelId}.filter`,'');
  const [folded,setFolded]=usePanelState(`${context.studio}.${panelId}.folded`,'');const collapsed=new Set(folded.split(',').filter(Boolean));
  const rows=layerRows(s.doc.paths,p=>(p.name??t('vector.path')).toLocaleLowerCase().includes(filter.toLocaleLowerCase()),collapsed);
- const textRows=(s.doc.texts??[]).filter(x=>textLabel(x.text).toLocaleLowerCase().includes(filter.toLocaleLowerCase())).reverse();
+ const textRows=(s.doc.texts??[]).filter(x=>textName(x).toLocaleLowerCase().includes(filter.toLocaleLowerCase())).reverse();
  return <div className="grid gap-2 p-2 text-[12px]" data-testid="vector-shell-layers">
   <NativeInput className={field} value={filter} onChange={e=>setFilter(e.target.value)} placeholder={t('vector.shell.filter')} aria-label={t('vector.shell.filter')}/>
   {!s.open?<p>{t('vector.shell.empty')}</p>:rows.length===0&&textRows.length===0?<p className="text-ink-3">{t('vector.noLayers')}</p>:<ul className="m-0 grid list-none gap-1 p-0">{rows.map(row=>{if(row.kind==='group'){const open=!collapsed.has(row.group),all=row.ids.every(id=>s.selection.includes(id));return <li key={'g:'+row.group} data-testid="vector-layer-group" className={'flex flex-wrap items-center gap-1 rounded-sm p-1 '+(all?'bg-accent-soft':'')}>
@@ -53,9 +54,10 @@ export function VectorLayersPanel({panelId,context}:PanelHostProps){
    <NativeInput className={field+' col-span-2'} key={p.id+':'+p.name} defaultValue={p.name??''} aria-label={t('vector.rename')} onBlur={e=>{if(e.target.value!==p.name)run('renamePath',{id:p.id,name:e.target.value});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/>
   </li>;})}</ul>}
   {s.open&&textRows.length>0&&<div className="grid gap-1" data-testid="vector-layer-texts"><p className="m-0 font-medium">{t('vector.shell.layers.texts')} ({textRows.length})</p><ul className="m-0 grid list-none gap-1 p-0">{textRows.map(x=><li key={x.id} data-testid="vector-layer-text" className={'grid grid-cols-1 gap-1 rounded-sm p-1 '+(s.textSel===x.id?'bg-accent-soft':'')}>
-   <NativeButton type="button" className="truncate rounded-sm bg-transparent p-1 text-left hover:bg-hover" aria-pressed={s.textSel===x.id} onClick={()=>run('selectText',{id:x.id})}>{textLabel(x.text)}{x.back?' · '+t('vector.shell.layers.textBehind'):''}</NativeButton>
+   <NativeButton type="button" className="truncate rounded-sm bg-transparent p-1 text-left hover:bg-hover" aria-pressed={s.textSel===x.id} onClick={()=>run('selectText',{id:x.id})}>{textName(x)}{x.back?' · '+t('vector.shell.layers.textBehind'):''}</NativeButton>
    <span className="flex gap-1"><Button size="compact" aria-pressed={!!x.locked} onClick={()=>run('toggleLocked',{id:x.id})} data-testid="vector-text-lock">{x.locked?t('vector.shell.unlock'):t('vector.shell.lock')}</Button><Button size="compact" aria-pressed={!!x.hidden} onClick={()=>run('toggleHidden',{id:x.id})} data-testid="vector-text-hide">{x.hidden?t('vector.show'):t('vector.hide')}</Button>
-   <Button size="compact" onClick={()=>run('deleteText',{id:x.id})}>{t('vector.shell.textDelete')}</Button></span></li>)}</ul></div>}
+   <Button size="compact" onClick={()=>run('deleteText',{id:x.id})}>{t('vector.shell.textDelete')}</Button></span>
+   <NativeInput className={field} key={x.id+':'+x.name} defaultValue={x.name??''} placeholder={textLabel(x.text)} aria-label={t('vector.rename')} data-testid="vector-text-rename" onBlur={e=>{if(e.target.value!==(x.name??''))run('setText',{id:x.id,patch:{name:e.target.value}});}} onKeyDown={e=>{if(e.key==='Enter')e.currentTarget.blur();}}/></li>)}</ul></div>}
  </div>;
 }
 export function VectorToolsPanel(){const {t}=useT(),s=useVectorSession();return <div role="toolbar" aria-label={t('vector.toolbar')} className="grid grid-cols-2 gap-1 p-2" data-testid="vector-shell-tools">{VECTOR_TOOLS.map(tool=><Button key={tool} size="compact" disabled={!s.open} aria-pressed={s.tool===tool} className={s.tool===tool?'bg-accent-soft text-accent':''} onClick={()=>run('setTool',{tool})}>{t('vector.tool.'+tool)}</Button>)}</div>;}
@@ -183,7 +185,7 @@ export function VectorImageSection(){const {t}=useT(),s=useVectorSession(),file=
   {cur&&<>{num('x',-1e6,1e6,1)}{num('y',-1e6,1e6,1)}{num('width',IMAGE_LIMITS.minSize,IMAGE_LIMITS.maxSize,1)}{num('height',IMAGE_LIMITS.minSize,IMAGE_LIMITS.maxSize,1)}{num('opacity',0,1,0.05)}
    <Button size="compact" className="col-span-2" data-testid="vector-image-delete" onClick={()=>run('deleteImage',{id:cur.id})}>{t('vector.shell.image.delete')}</Button></>}
  </div>;}
-export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useSystemFonts();const cur=(s.doc.texts??[]).find(x=>x.id===s.textSel);
+export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useSystemFonts();const cur=(s.doc.texts??[]).find(x=>x.id===s.textSel);const alignTargets=(()=>{const seen=new Set<string>(),out:{id:string;label:string}[]=[];for(const p of s.doc.paths){const k=p.compound!==undefined?'c'+p.compound:p.group!==undefined?'g'+p.group:p.id;if(seen.has(k)||p.hidden)continue;seen.add(k);out.push({id:p.id,label:p.name??t('vector.path')});}for(const o of s.doc.texts??[])if(o.id!==cur?.id&&!o.hidden)out.push({id:o.id,label:textName(o)});return out.slice(0,8);})();
  const set=(patch:object)=>cur&&run('setText',{id:cur.id,patch});
  if(!cur)return <p className="m-0 text-ink-3" data-testid="vector-shell-text">{t('vector.shell.textHint')}</p>;
  return <div className="grid gap-2" data-testid="vector-shell-text">
@@ -202,7 +204,8 @@ export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useS
   <label className={row}>{t('vector.shell.textAnchor')}<NativeSelect className={field} value={cur.anchor} onChange={e=>set({anchor:e.target.value})}>{TEXT_ANCHORS.map(v=><option key={v} value={v}>{t('vector.shell.textAnchor.'+v)}</option>)}</NativeSelect></label>
   <p className="m-0 text-ink-3">{t('vector.shell.textLimits')}</p>
   <Menu><MenuTrigger render={<Button size="compact" variant="outline" data-testid="vector-text-align-menu">{t('vector.shell.align')}</Button>}/>
-   <MenuContent><MenuGroup><MenuGroupLabel>{t('vector.shell.align.page')}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignText',{id:cur.id,mode})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup></MenuContent></Menu>
+   <MenuContent><MenuGroup><MenuGroupLabel>{t('vector.shell.align.page')}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignText',{id:cur.id,mode})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup>
+    {alignTargets.length>0&&<MenuGroup><MenuGroupLabel>{t('vector.shell.align.object')}</MenuGroupLabel>{alignTargets.map(o=><MenuGroup key={o.id}><MenuGroupLabel>{o.label}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} data-testid={'vector-text-align-to-'+mode} onClick={()=>run('alignText',{id:cur.id,mode,to:o.id})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup>)}</MenuGroup>}</MenuContent></Menu>
   <Button size="compact" onClick={()=>run('duplicateText',{id:cur.id})} data-testid="vector-text-duplicate">{t('vector.shell.textDuplicate')}</Button>
   <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}

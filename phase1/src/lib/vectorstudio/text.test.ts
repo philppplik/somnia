@@ -143,3 +143,32 @@ test('text objects hide and lock like paths: one undo step, not selectable, SVG 
  const back=importSvg(svg).doc.texts![0];assert.equal(back.hidden,true);assert.equal(back.locked,true);
  assert.throws(()=>exportAreaDoc(both,[],'content' as any),/Nothing visible/);
 });
+test('text name: set through setText, trimmed, cleared when empty, SVG roundtrip, Layers label',async()=>{
+ const d=setup();await d.runCommand('vector.addText',{x:10,y:40,text:'Hello'},o);
+ const id=S.getVectorSession().textSel!;
+ await d.runCommand('vector.setText',{id,patch:{name:'  Headline  '}},o);
+ assert.equal(S.getVectorSession().doc.texts![0].name,'Headline');
+ const svg=exportSvg(S.getVectorSession().doc);assert.match(svg,/data-vs-name="Headline"/);
+ assert.equal(importSvg(svg).doc.texts![0].name,'Headline');
+ const {textName}=await import('../../components/vectorstudio/VectorPanels');
+ assert.equal(textName(S.getVectorSession().doc.texts![0]),'Headline');
+ await d.runCommand('vector.setText',{id,patch:{name:''}},o);
+ assert.equal(S.getVectorSession().doc.texts![0].name,undefined);
+ assert.equal(textName(S.getVectorSession().doc.texts![0]),'Hello');
+});
+test('align a text to another object: path edge, other text, errors; one undo step',async()=>{
+ const d=setup();S.addPath({...rectPath({x:100,y:100,w:80,h:60}),id:'r'} as any,false);
+ await d.runCommand('vector.addText',{x:10,y:40,text:'Hello',anchor:'start'},o);
+ const id=S.getVectorSession().textSel!;
+ await d.runCommand('vector.alignText',{id,mode:'left',to:'r'},o);
+ const t=S.getVectorSession().doc.texts![0];assert.ok(Math.abs(textBox(t).minX-100)<0.01);
+ await d.runCommand('vector.alignText',{id,mode:'bottom',to:'r'},o);
+ assert.ok(Math.abs(textBox(S.getVectorSession().doc.texts![0]).maxY-160)<0.01);
+ await d.runCommand('vector.alignText',{id,mode:'centerX',to:'r'},o);
+ const b=textBox(S.getVectorSession().doc.texts![0]);assert.ok(Math.abs((b.minX+b.maxX)/2-140)<0.01);
+ S.undo();assert.ok(Math.abs(textBox(S.getVectorSession().doc.texts![0]).minX-100)<0.01);
+ await assert.rejects(d.runCommand('vector.alignText',{id,mode:'left',to:'nope'},o),/Unknown object/);
+ await assert.rejects(d.runCommand('vector.alignText',{id,mode:'left',to:id},o),/itself/);
+ await d.runCommand('vector.alignText',{id,mode:'top'},o);// page alignment still works
+ assert.ok(Math.abs(textBox(S.getVectorSession().doc.texts![0]).minY)<0.01);
+});

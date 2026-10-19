@@ -88,6 +88,7 @@
  "vector.shell.rotate":"Rotation en degrés",
  "vector.shell.align":"Aligner",
  "vector.shell.align.selection":"Aligner sur la sélection",
+ "vector.shell.align.object": "Aligner sur un objet",
  "vector.shell.align.page":"Aligner sur la page",
  "vector.shell.distribute":"Répartir",
  "vector.shell.align.left":"Gauche",
