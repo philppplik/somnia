@@ -3,6 +3,7 @@ import {registerCommandSpec} from '../commandBridge';
 import type {CommandSpec} from '../commandSpec';
 import {clearRecentScenes} from './recentSession';
 import {getStudio3DState,patchStudio3D,subscribeStudio3D} from './session';
+import {setStudio3DExportAdvanced} from './exportAdvancedState';
 import {SHADOW_QUALITIES,SHADOW_TYPES,isUnit,type EnvSettings,type GizmoMode,type SnapSettings,type ExportUnit,type ExportFormat,type PivotMode} from './model';
 import {PARAM_SPECS,MATERIAL_PRESET_IDS} from './primitives';
 import {ALPHA_MODES,TEXTURE_SLOTS,MAX_EMISSIVE_INTENSITY,type TextureSlot} from './materials';
@@ -17,7 +18,7 @@ import type {MirrorAxis,PrimitiveKind,LightKind,LightRigPreset,TransformPatch,Ma
 import type {NormalsOp} from './editMesh';
 import type {Vec3} from './stage';
 export interface TurntableOptions{frames?:number;width?:number;height?:number;transparent?:boolean;/** 'zip' downloads one archive; 'folder' writes the PNG frames into a folder the user picks; 'webm' records one WebM video. */out?:'zip'|'folder'|'webm';/** Frames per second of the WebM video (1-60, default 30). */fps?:number;}
-export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean}
+export interface RenderOptions{/** id of a camera object; the viewport camera when omitted */camera?:number;width?:number;height?:number;transparent?:boolean;/** Output file name without extension (Advanced Export). */name?:string}
 /** What the lazy viewport offers. The command layer never imports three.js. */
 export interface Studio3DController{
  openFiles(files:File[],force?:boolean):Promise<void>;
@@ -33,7 +34,7 @@ export interface Studio3DController{
  /** Set the label text of an annotation pin. */
  setPinText(id:number,text:string):void;
  setPrimitive(id:number,patch:Record<string,number>):void;
- exportGltf(opts?:{textures?:'embed'|'external';clips?:string[]|null}):Promise<void>;
+ exportGltf(opts?:{textures?:'embed'|'external';clips?:string[]|null;name?:string}):Promise<void>;
  setExportOptions(p:{textures?:'embed'|'external';clips?:string[]|null}):void;
  setTextureFile(id:number,slot:TextureSlot,file:File|null):Promise<void>;
  generateTexture(id:number,slot:TextureSlot,spec:TexgenSpec):void;
@@ -261,13 +262,13 @@ export interface Studio3DController{
  cursorToSelection():void;
  setMeasure(on:boolean):void;
  renderStill(opts?:RenderOptions):Promise<void>;
- exportGlb(opts?:{clips?:string[]|null}):Promise<void>;
+ exportGlb(opts?:{clips?:string[]|null;name?:string}):Promise<void>;
  save(sidecar?:boolean,embedEnv?:boolean):Promise<void>;
  deleteSelection(ids?:number[]):void;
  duplicateSelection(ids?:number[]):number[];
  duplicateLinkedSelection(ids?:number[]):number[];
  makeSingleUser(id:number):void;
- exportMesh(format:Exclude<ExportFormat,'glb'>):Promise<void>;
+ exportMesh(format:Exclude<ExportFormat,'glb'>,name?:string):Promise<void>;
  setUnit(unit:ExportUnit):void;
  renderTurntable(opts?:TurntableOptions):Promise<void>;
  cancelRender():void;
@@ -456,7 +457,7 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{mode:PivotMode}>('studio3d.pivot.set','Set the 3D transform pivot','Tools',p=>need().setPivotMode(p.mode),object({mode:{enum:['center','origin','cursor']}},['mode']),()=>!!controller),
   add<{x:number;y:number;z:number}>('studio3d.cursor.set','Move the 3D cursor','Tools',p=>{for(const k of['x','y','z']as const)if(!Number.isFinite(p[k]))throw new Error('Cursor coordinates must be finite numbers.');need().setCursor({x:p.x,y:p.y,z:p.z});},object({x:{type:'number'},y:{type:'number'},z:{type:'number'}},['x','y','z']),()=>!!controller),
   add<{on?:boolean}>('studio3d.measure.set','Toggle the 3D measure tool','Tools',p=>need().setMeasure(p?.on??!getStudio3DState().measure),object({on:{type:'boolean'}},[]),()=>!!controller),
-  add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'}},[])),
+  add<RenderOptions>('studio3d.render.still','Render a PNG still of the 3D view or a 3D camera','Project',p=>need().renderStill(p??{}),object({camera:{type:'integer',minimum:0},width:{type:'integer',minimum:1,maximum:16384},height:{type:'integer',minimum:1,maximum:16384},transparent:{type:'boolean'},name:{type:'string',minLength:1,maxLength:120}},[])),
   add<{slot:TextureSlot}>('studio3d.texture.open','Choose an image for a texture slot of the selected 3D object','Edit',p=>textureOpener!(p.slot),object({slot:{enum:[...TEXTURE_SLOTS]}}),()=>hasScene()&&!!textureOpener&&getStudio3DState().selectedInfo?.material!=null),
   add<{id:number;slot:TextureSlot}>('studio3d.texture.preview','Show a small preview image of a texture slot','Edit',p=>need().texturePreview(p.id,p.slot),object({id:{type:'integer',minimum:0},slot:{enum:[...TEXTURE_SLOTS]}},['id','slot']),hasScene),
   add('studio3d.cursor.toSelection','Move the 3D cursor to the selection centre','Tools',()=>need().cursorToSelection(),undefined,()=>!!controller),
@@ -541,15 +542,16 @@ export function studio3DCommandSpecs():CommandSpec<unknown,unknown>[]{
   add<{id?:number;min?:(number|null)[]|null;max?:(number|null)[]|null}>('studio3d.bone.limits','Set or clear joint limits of a bone in degrees (null keeps an axis open)','Edit',p=>need().setBoneLimits(p.min??null,p.max??null,p.id),object({id:{type:'integer',minimum:0},min:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]},max:{anyOf:[{type:'null'},{type:'array',items:{anyOf:[{type:'number',minimum:-720,maximum:720},{type:'null'}]},minItems:3,maxItems:3}]}},[]),hasRig),
   add<{bone:number|null}>('studio3d.skin.preview','Preview a bone\'s influence as vertex colours on the selected skinned 3D mesh','View',p=>need().setWeightPreview(p.bone),object({bone:{anyOf:[{type:'null'},{type:'integer',minimum:0}]}},['bone']),hasSkinnedMesh),
   add<{on?:boolean}>('studio3d.anim.autokey','Turn auto-key on or off: transform changes are recorded as keys at the current time','View',p=>need().autoKey(p?.on??!getStudio3DState().autoKey),object({on:{type:'boolean'}},[]),hasScene),
-  add<{clips?:string[]|null}>('studio3d.export.glb','Export the scene as GLB','Project',p=>need().exportGlb(p??{}),object({clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
-  add<{textures?:'embed'|'external';clips?:string[]|null}>('studio3d.export.gltf','Export the scene as glTF (embedded, or a ZIP with separate textures)','Project',p=>need().exportGltf(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]}},[])),
+  add('studio3d.export.advanced','Advanced export of the 3D scene: format, name, options','Project',()=>setStudio3DExportAdvanced(true),undefined,hasScene),
+  add<{clips?:string[]|null;name?:string}>('studio3d.export.glb','Export the scene as GLB','Project',p=>need().exportGlb(p??{}),object({clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]},name:{type:'string',minLength:1,maxLength:120}},[])),
+  add<{textures?:'embed'|'external';clips?:string[]|null;name?:string}>('studio3d.export.gltf','Export the scene as glTF (embedded, or a ZIP with separate textures)','Project',p=>need().exportGltf(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]},name:{type:'string',minLength:1,maxLength:120}},[])),
   add<{textures?:'embed'|'external';clips?:string[]|null;selection?:boolean}>('studio3d.export.options','Set the glTF export options: texture mode, which clips to export and whether to write only the selection','Project',p=>need().setExportOptions(p??{}),object({textures:{enum:['embed','external']},clips:{anyOf:[{type:'null'},{type:'array',items:{type:'string',minLength:1,maxLength:200},minItems:0,maxItems:64}]},selection:{type:'boolean'}},[])),
   add<{unit?:ExportUnit;upAxis?:'y'|'z'}>('studio3d.import.options','Set the mesh import options for OBJ, STL and PLY files: the units the file is written in and its up axis','Project',p=>{const u=p?.unit;if(u!==undefined&&!isUnit(u))throw new Error('Unit must be m, cm, mm or in.');const a=p?.upAxis;patchStudio3D({...(u!==undefined?{importUnit:u}:{}),...(a!==undefined?{importUpAxis:a}:{})});},object({unit:{enum:['m','cm','mm','in']},upAxis:{enum:['y','z']}},[]),()=>!!controller),
   add<{sidecar?:boolean;embedEnv?:boolean}>('studio3d.save','Save the 3D scene','Project',p=>need().save(!!p?.sidecar,!!p?.embedEnv),object({sidecar:{type:'boolean'},embedEnv:{type:'boolean'}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.delete','Delete the selected 3D objects','Edit',p=>need().deleteSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicate','Duplicate the selected 3D objects','Edit',p=>need().duplicateSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
   add<{ids?:number[]}>('studio3d.selection.duplicateLinked','Duplicate the selected 3D objects as linked instances sharing geometry','Edit',p=>need().duplicateLinkedSelection(p?.ids),object({ids:{type:'array',items:{type:'integer',minimum:0},minItems:1,maxItems:500}},[]),hasScene),
-  add<{format:'stl'|'obj'}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format),object({format:{enum:['stl','obj']}}),hasScene),
+  add<{format:'stl'|'obj';name?:string}>('studio3d.export.mesh','Export the scene as STL or OBJ','Project',p=>need().exportMesh(p.format,p.name),object({format:{enum:['stl','obj']},name:{type:'string',minLength:1,maxLength:120}},['format']),hasScene),
   add<{unit:ExportUnit}>('studio3d.unit.set','Set the unit used for STL and OBJ export','Project',p=>need().setUnit(p.unit),object({unit:{enum:['m','cm','mm','in']}}),()=>!!controller),
   add<TurntableOptions>('studio3d.render.turntable','Render a turntable as a ZIP of PNG frames, a PNG sequence in a chosen folder, or a WebM video','Project',p=>need().renderTurntable(p??{}),object({frames:{type:'integer',minimum:2,maximum:360},width:{type:'integer',minimum:1,maximum:8192},height:{type:'integer',minimum:1,maximum:8192},transparent:{type:'boolean'},out:{enum:['zip','folder','webm']},fps:{type:'integer',minimum:1,maximum:60}},[]),hasScene),
   add<{id:string}>('studio3d.recent.open','Open a recent 3D scene','Project',p=>recentOpener!(p.id),object({id:{type:'string',minLength:1,maxLength:200}}),()=>!!recentOpener&&getStudio3DState().recent.length>0),

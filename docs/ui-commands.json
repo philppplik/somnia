@@ -10902,6 +10902,19 @@
       "hasEnabled": true
     },
     {
+      "id": "studio3d.export.advanced",
+      "title": "Advanced export...",
+      "category": "Project",
+      "source": "studio3d",
+      "keywords": [
+        "3d",
+        "gltf",
+        "model",
+        "scene"
+      ],
+      "hasEnabled": true
+    },
+    {
       "id": "studio3d.export.glb",
       "title": "Export the scene as GLB",
       "category": "Project",

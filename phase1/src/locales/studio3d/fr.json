@@ -51,6 +51,7 @@
  "studio3d.view.shading.matcap": "Matcap",
  "cmd.studio3d.select": "Sélectionner un objet 3D",
  "cmd.studio3d.render.still": "Rendre une image PNG de la vue 3D",
+ "cmd.studio3d.export.advanced": "Export avancé...",
  "cmd.studio3d.export.glb": "Exporter la scène en GLB",
  "studio3d.insert.group": "Ajouter à la scène",
  "studio3d.insert.cube": "Cube",

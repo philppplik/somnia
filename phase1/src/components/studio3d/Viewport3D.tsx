@@ -71,6 +71,8 @@ function toStandard(m:THREE.Material):THREE.Material{
 const base=(name:string)=>name.replace(/^.*[\\/]/,'');
 const download=(blob:Blob,name:string)=>{const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 const stem=(name:string)=>base(name).replace(/\.[^.]+$/,'')||'scene';
+/** File stem for an export: the name chosen in the Advanced Export dialog when given (path characters and a known extension dropped), else the scene name. */
+const outStem=(chosen:string|undefined,fallback:string)=>{const c=(chosen??'').replace(/[\\/:*?"<>|]/g,'_').replace(/\.(glb|gltf|stl|obj|png)$/i,'').trim();return c||stem(fallback||'scene');};
 /** The scene outlives the viewport: switching studios and back must never drop unsaved work. A new open or blank scene replaces it (after confirmation when dirty). */
 let sharedStage:Stage|null=null;
 /** Custom environment map bytes, kept so the map survives remounting the viewport. */
@@ -863,12 +865,12 @@ export default function Viewport3D(){
   const capture=async(cam:THREE.PerspectiveCamera|THREE.OrthographicCamera,want:{width:number;height:number}|null,transparent:boolean):Promise<Blob>=>
    withCaptureFrame(cam,want,transparent,async()=>{renderer.render(scene,cam);return readCanvasBlob();});
   const maxSize=()=>{const gl=renderer.getContext();return Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) as number,gl.getParameter(gl.MAX_TEXTURE_SIZE) as number,16384);};
-  const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean}={})=>{
+  const renderStill=async(opts:{camera?:number;width?:number;height?:number;transparent?:boolean;name?:string}={})=>{
    let cam:THREE.PerspectiveCamera|THREE.OrthographicCamera=camera;
    if(opts.camera!==undefined){const c=stage.find(opts.camera) as THREE.PerspectiveCamera|THREE.OrthographicCamera|undefined;if(!c||!(c as THREE.PerspectiveCamera).isPerspectiveCamera&&!(c as THREE.OrthographicCamera).isOrthographicCamera)throw Object.assign(new Error('That object is not a camera.'),{expected:true});cam=c;}
    const aspect=(cam as THREE.PerspectiveCamera).isPerspectiveCamera?(cam as THREE.PerspectiveCamera).aspect:((cam as THREE.OrthographicCamera).right-(cam as THREE.OrthographicCamera).left)/((cam as THREE.OrthographicCamera).top-(cam as THREE.OrthographicCamera).bottom);
    const want=opts.width||opts.height?clampRenderSize(opts.width??Math.round((opts.height!)*(aspect||1)),opts.height??Math.round((opts.width!)/(aspect||1)),maxSize()):null;
-   download(await capture(cam,want,!!opts.transparent),`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
+   download(await capture(cam,want,!!opts.transparent),opts.name?.trim()?`${outStem(opts.name,'')}.png`:`${stem(getStudio3DState().name||'scene')}-${cam===camera?'still':'camera'}.png`);
   };
   let cancelFlag=false;
   const renderTurntable=async(opts:{frames?:number;width?:number;height?:number;transparent?:boolean;out?:'zip'|'folder'|'webm';fps?:number}={})=>{
@@ -926,7 +928,7 @@ export default function Viewport3D(){
     camera.position.copy(pos0);camera.lookAt(target);controls.enabled=enabled0;patchStudio3D({render:null});invalidate();
    }
   };
-  const exportMesh=async(format:'stl'|'obj')=>{
+  const exportMesh=async(format:'stl'|'obj',chosenName?:string)=>{
    const target=selRoot()??holder;
    let meshes=0;target.traverse(o=>{if((o as THREE.Mesh).isMesh)meshes++;});
    if(!meshes)throw Object.assign(new Error('There is no mesh to export. Open a model or add a shape first.'),{expected:true});
@@ -937,7 +939,7 @@ export default function Viewport3D(){
     if(format==='stl')blob=new Blob([new STLExporter().parse(target,{binary:true}) as unknown as BlobPart],{type:'model/stl'});
     else blob=new Blob([new OBJExporter().parse(target)],{type:'model/obj'});
    }finally{target.scale.copy(prev);target.updateMatrixWorld(true);invalidate();}
-   download(blob,exportFileName(stem(getStudio3DState().name||'scene'),format,unit));
+   download(blob,exportFileName(outStem(chosenName,getStudio3DState().name),format,unit));
   };
   const deleteSelection=(ids?:number[])=>{
    const set=ids??currentSet();if(!set.length)throw Object.assign(new Error('Select something first.'),{expected:true});
@@ -1010,21 +1012,21 @@ export default function Viewport3D(){
   loadUnit();
   try{patchStudio3D({materialPresets:readPresets(localStorage)});}catch{/* keep current */}
   const setUnit=(u:unknown)=>{if(!isUnit(u))throw Object.assign(new Error('Unit must be m, cm, mm or in.'),{expected:true});patchStudio3D({unit:u});try{writeProjectUnit(localStorage,projectName(),u);}catch{/* session only */}};
-  const exportGlb=async(opts?:{clips?:string[]|null})=>{
+  const exportGlb=async(opts?:{clips?:string[]|null;name?:string})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
    const sel=selRoot();const x=sel?{input:sel as THREE.Object3D,animations:undefined}:exportInput(false,opts?.clips);
    const result=await newExporter().parseAsync(x.input,{...exportOpts(true),...(x.animations?{animations:x.animations}:{})}) as ArrayBuffer;
    const glbProblems=validateGlb(new Uint8Array(result));
    if(glbProblems.length)patchStudio3D({notice:`The exported GLB may be damaged: ${glbProblems[0].detail}${glbProblems.length>1?` (+${glbProblems.length-1} more structural problems)`:''}`});
-   download(new Blob([result],{type:'model/gltf-binary'}),`${stem(getStudio3DState().name||'scene')}.glb`);
+   download(new Blob([result],{type:'model/gltf-binary'}),`${outStem(opts?.name,getStudio3DState().name)}.glb`);
    stage.markSaved();
   };
   /** glTF 2.0 as one self-contained .gltf file, or as a ZIP with the .gltf and its textures as separate files. */
-  const exportGltf=async(opts?:{textures?:'embed'|'external';clips?:string[]|null})=>{
+  const exportGltf=async(opts?:{textures?:'embed'|'external';clips?:string[]|null;name?:string})=>{
    if(!holder.children.length)throw Object.assign(new Error('There is nothing to export. Open a model first.'),{expected:true});
    const sel=selRoot();const x=sel?{input:sel as THREE.Object3D,animations:undefined}:exportInput(false,opts?.clips);
    const result=await newExporter().parseAsync(x.input,{...exportOpts(false),...(x.animations?{animations:x.animations}:{})}) as {images?:{uri?:string;mimeType?:string}[]};
-   const mode=opts?.textures??getStudio3DState().exportTextures;const name=stem(getStudio3DState().name||'scene');
+   const mode=opts?.textures??getStudio3DState().exportTextures;const name=outStem(opts?.name,getStudio3DState().name);
    if(mode==='external'){
     const {files}=extractGltfTextures(result);const {zipSync,strToU8}=await import('fflate');
     const zip=zipSync({[`${name}.gltf`]:strToU8(JSON.stringify(result)),...Object.fromEntries([...files].map(([n,b])=>[n,b]))});

@@ -51,6 +51,7 @@
  "studio3d.view.shading.matcap": "Matcap",
  "cmd.studio3d.select": "Select a 3D object",
  "cmd.studio3d.render.still": "Render a PNG still of the 3D view",
+ "cmd.studio3d.export.advanced": "Advanced export...",
  "cmd.studio3d.export.glb": "Export the scene as GLB",
  "studio3d.insert.group": "Add to scene",
  "studio3d.insert.cube": "Cube",
