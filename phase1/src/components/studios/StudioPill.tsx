@@ -4,12 +4,14 @@ import {StudioGlyph} from './StudioGlyph';
 import {studioShortName} from './studioShortName';
 import {Button} from '../ui/button';
 import {listStudios} from '../../lib/studios';
+import {splitStudios} from '../../lib/studios/visible';
+import {NativeSelect} from '../ui/native-controls';
 import {requestStudio,useAppStore} from '../../store/appStore';
 import {useT} from '../../lib/useT';
 import './studio-pill.css';
 /** Only registered, runtime-ready Studios appear. This is not the document tablist. */
 export function StudioPill(){
- const s=useAppStore();const {t}=useT();const studios=listStudios();const tooltipPrefix=useId();
+ const s=useAppStore();const {t}=useT();const all=listStudios();const {visible:studios,hidden}=splitStudios(all,s.activeStudio,s.uiPrefs.maxStudios);const tooltipPrefix=useId();
  return <Tooltip.Provider delay={250}><div role="radiogroup" aria-label={t('studio.switcher')} className="studio-pill relative flex shrink-0 gap-1 rounded-[var(--r-control)] bg-hover p-1" onKeyDown={e=>{
   const index=studios.findIndex(x=>x.id===s.activeStudio);
   const next=e.key==='Home'?0:e.key==='End'?studios.length-1:e.key==='ArrowRight'||e.key==='ArrowDown'?(index+1)%studios.length:e.key==='ArrowLeft'||e.key==='ArrowUp'?(index+studios.length-1)%studios.length:-1;
@@ -24,6 +26,7 @@ export function StudioPill(){
    <Tooltip.Portal><Tooltip.Positioner className="z-50" side="bottom" sideOffset={8}><Tooltip.Popup id={`${tooltipPrefix}-${studio.id}`} role="tooltip" className="studio-pill-tooltip">{shortName}</Tooltip.Popup></Tooltip.Positioner></Tooltip.Portal>
   </Tooltip.Root>;
  })}
- <span className="sr-only" aria-live="polite" aria-atomic="true">{t('studio.announcement',{studio:t(studios.find(x=>x.id===s.activeStudio)?.label??'studio.code')})}</span>
+ {hidden.length>0&&<NativeSelect aria-label={t('studio.more')} value="" onChange={e=>{if(e.target.value)requestStudio(e.target.value);}} className="studio-pill-more"><option value="">{t('studio.more')}</option>{hidden.map(h=><option key={h.id} value={h.id}>{t(h.label)}</option>)}</NativeSelect>}
+ <span className="sr-only" aria-live="polite" aria-atomic="true">{t('studio.announcement',{studio:t(all.find(x=>x.id===s.activeStudio)?.label??'studio.code')})}</span>
  </div></Tooltip.Provider>;
 }
