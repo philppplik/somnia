@@ -457,6 +457,9 @@ pub fn run() {
         .with_inner_size(LogicalSize::new(800.0, 600.0))
         .build(&event_loop)
         .expect("window");
+    // Re-apply the client size once the frame is gone: with decorations off the first
+    // inner size can leave a strip of unpainted window to the right and below the page.
+    window.set_inner_size(LogicalSize::new(800.0, 600.0));
     if let Some(m) = window.primary_monitor() {
         let (ms, ws) = (m.size(), window.outer_size());
         let mp = m.position();
@@ -536,7 +539,7 @@ pub fn run() {
                         std::thread::spawn(move || {
                             let send = |v: Value| { let _ = p.send_event(Ui::Js(json!({"event": v}).to_string())); };
                             send(json!({"type": "phase", "phase": "preparing"}));
-                            let dir = options::expand(&WinPlatform, &o.install_dir);
+                            let dir = options::resolve_dir(&WinPlatform, &o.install_dir);
                             *INSTALL_DIR.lock().unwrap() = Some(PathBuf::from(&dir));
                             let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos();
                             let tmp = std::env::temp_dir().join(format!("somnia-setup-{}-{nonce}", std::process::id()));
@@ -546,7 +549,7 @@ pub fn run() {
                             match out {
                                 Outcome::Success => send(json!({"type": "success"})),
                                 Outcome::Cancelled => send(json!({"type": "cancelled"})),
-                                Outcome::Failed(e) => { log(&format!("failed: {e:?}")); send(json!({"type": "error", "error": error_json(&e)})); }
+                                Outcome::Failed(e) => { log(&format!("failed: {e:?} (install_dir input {:?})", o.install_dir)); send(json!({"type": "error", "error": error_json(&e)})); }
                             }
                             r.store(false, Ordering::SeqCst);
                         });

@@ -37,6 +37,39 @@ fn expands_env_and_validates() {
     assert_eq!(validate(&p, &o, 1), Err(FieldError::NotAbsolute));
 }
 #[test]
+fn quoted_or_padded_folder_is_accepted_and_cleaned() {
+    let p = plat();
+    for raw in [
+        "\"C:\\Users\\a\\AppData\\Local\\Somnia\"",
+        "  \"C:\\Users\\a\\AppData\\Local\\Somnia\"  ",
+        "'C:\\Users\\a\\AppData\\Local\\Somnia'",
+        "\"%LOCALAPPDATA%\\Somnia\"",
+    ] {
+        let mut o = Options::default();
+        o.install_dir = raw.into();
+        assert_eq!(
+            validate(&p, &o, 1).unwrap(),
+            std::path::PathBuf::from("C:\\Users\\a\\AppData\\Local\\Somnia"),
+            "{raw}"
+        );
+        assert_eq!(
+            resolve_dir(&p, raw),
+            "C:\\Users\\a\\AppData\\Local\\Somnia"
+        );
+    }
+    // quotes inside the path and garbage stay rejected
+    let mut o = Options::default();
+    o.install_dir = "C:\\a\"b\\Somnia".into();
+    assert_eq!(validate(&p, &o, 1), Err(FieldError::NotAbsolute));
+    o.install_dir = "\"\"".into();
+    assert_eq!(validate(&p, &o, 1), Err(FieldError::Empty));
+}
+#[test]
+fn default_folder_that_does_not_exist_yet_passes_preflight() {
+    let p = plat();
+    assert!(preflight(&p, &Options::default(), 100).is_ok());
+}
+#[test]
 fn disk_full_and_permission_errors() {
     let mut p = plat();
     p.free = 5;

@@ -84,6 +84,20 @@ fn is_absolute_windows(s: &str) -> bool {
         || s.starts_with("\\\\")
 }
 
+/// Strip whitespace and surrounding quotes. Windows "Copy as path" and saved
+/// settings can leave `"C:\\...\\Somnia"` in the folder field; a quoted path is
+/// the same folder, so it must not be rejected.
+pub fn clean_dir(raw: &str) -> String {
+    raw.trim()
+        .trim_matches(|c: char| c == '"' || c == '\'' || c.is_whitespace())
+        .to_string()
+}
+
+/// Folder as it is shown to the user and used by the installer: cleaned, then `%VAR%` expanded.
+pub fn resolve_dir(p: &dyn Platform, raw: &str) -> String {
+    expand(p, &clean_dir(raw))
+}
+
 /// Validate folder before install (options-spec: nonempty, absolute, writable, space from real build size).
 pub fn validate(
     p: &dyn Platform,
@@ -93,11 +107,11 @@ pub fn validate(
     if opts.install_dir.chars().any(|c| c.is_control()) {
         return Err(FieldError::NotAbsolute);
     }
-    let trimmed = opts.install_dir.trim();
+    let trimmed = clean_dir(&opts.install_dir);
     if trimmed.is_empty() {
         return Err(FieldError::Empty);
     }
-    let expanded = expand(p, trimmed);
+    let expanded = expand(p, &trimmed);
     // NSIS /D is a raw final argument. Reject quotes/newlines and drive roots.
     if !is_absolute_windows(&expanded)
         || expanded

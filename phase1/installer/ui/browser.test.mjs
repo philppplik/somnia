@@ -15,6 +15,14 @@ before(async()=>{
 });
 after(async()=>{await browser?.close();await new Promise(r=>server?.close(r));});
 async function page(query='') {const p=await browser.newPage({viewport:{width:800,height:600},reducedMotion:'reduce'});await p.goto(base+query);await p.locator('.screen:not([hidden])').waitFor();return p;}
+test('oversized window shows no white frame around the 800x600 page',async()=>{
+ for(const scheme of ['light','dark']){
+  const p=await browser.newPage({viewport:{width:836,height:640},colorScheme:scheme,reducedMotion:'reduce'});await p.goto(base);await p.locator('.screen:not([hidden])').waitFor();
+  try{const c=await p.evaluate(()=>[document.documentElement,document.body,document.querySelector('.window')].map(e=>getComputedStyle(e).backgroundColor));
+   assert.equal(c[0],c[2]);assert.equal(c[1],c[2]);assert.notEqual(c[0],'rgba(0, 0, 0, 0)');
+   if(scheme==='dark')assert.notEqual(c[0],'rgb(255, 255, 255)');}finally{await p.close();}
+ }
+});
 test('license requires real visible scroll and acceptance',async()=>{
  const p=await page();try{
  await p.locator('#btn-install').click();await p.locator('#s-license').waitFor({state:'visible'});
