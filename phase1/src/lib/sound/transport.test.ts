@@ -1,7 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {getSoundPlayback,playSound,pauseSound,closeSoundPlayback} from './transport';
-import {openSound,setSoundEngineFactory,closeSound} from './session';
+import {openSound,setSoundEngineFactory,closeSound,createSoundLifecycleAdapter} from './session';
 import {jobScheduler} from '../jobs/scheduler';
 import type {SoundEngineLike} from './engine';
 class AudioFixture extends EventTarget {
@@ -25,4 +25,16 @@ test('app-owned audio continues without a mounted workspace and releases real-ti
   await playSound('transport.wav');closeSoundPlayback('transport.wav');
   assert.equal(jobScheduler.hasLease('sound.playback:transport.wav'),false);assert.equal(AudioFixture.all[0].src,'');
  }finally{closeSoundPlayback('transport.wav');closeSound('transport.wav');Object.assign(globalThis,{Audio:previous});}
+});
+test('lifecycle suspend closes app-owned playback through the registered suspend hook',async()=>{
+ const previous=globalThis.Audio;Object.assign(globalThis,{Audio:AudioFixture});
+ const engine={init:async()=>[],process:async()=>({wav:new ArrayBuffer(4),peaks:new Float32Array(2),ms:1,report:{input:{duration_s:2},output:{duration_s:2},steps:[]}}),dispose(){}} as unknown as SoundEngineLike;
+ setSoundEngineFactory(()=>engine);
+ try{
+  await openSound({name:'suspend.wav',url:'data:audio/wav;base64,AAAA'});
+  await playSound('suspend.wav');assert.equal(getSoundPlayback('suspend.wav').playing,true);
+  await createSoundLifecycleAdapter().suspend!();
+  assert.equal(getSoundPlayback('suspend.wav').playing,false,'suspend closed the playback entry');
+  assert.equal(jobScheduler.hasLease('sound.playback:suspend.wav'),false,'playback lease released at suspend');
+ }finally{closeSoundPlayback('suspend.wav');closeSound('suspend.wav');Object.assign(globalThis,{Audio:previous});}
 });

@@ -77,3 +77,15 @@ test('recipes are validated, corrupted checkpoints refused, revision moves with 
  assert.ok(b.revision>a.revision);
  await assert.rejects(()=>adapter.resume!({...b,checksum:'bad'}),/verification/);
 });
+test('an early re-open between suspend and resume still receives the stashed recipe',async()=>{
+ const adapter=createSoundLifecycleAdapter();
+ await openSound(A);
+ updateSoundSettings(A.name,s=>({...s,pitch:3}));
+ await wait(300);
+ const snap=(await adapter.snapshot!())!;
+ await adapter.suspend!(); // suspend stashes live recipes before releasing sessions
+ await openSound(A); // shell preview race: the file re-opens before resume
+ assert.equal(getSoundSession(A.name)!.settings.pitch,3,'stashed recipe applied to the early re-open');
+ await adapter.resume!(snap);
+ assert.equal(getSoundSession(A.name)!.settings.pitch,3);
+});

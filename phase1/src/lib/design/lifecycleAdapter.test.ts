@@ -63,3 +63,13 @@ test('history is bounded, revision and size estimate follow edits',async()=>{
  assert.ok(adapter.estimateBytes!()>0);
  assert.deepEqual(adapter.pinReasons!(),[]);
 });
+
+test('resume rejects a checkpoint with malformed history arrays',async()=>{
+ const adapter=createDesignLifecycleAdapter();
+ startDesign();rename('X');
+ const snap=(await adapter.snapshot!())!;
+ const payload=structuredClone(snap.payload) as {past:unknown};
+ payload.past='corrupted';
+ const forged={...snap,payload,checksum:(await import('../lifecycle/recipeKit')).payloadChecksum('design',1,snap.revision,payload)};
+ await assert.rejects(()=>adapter.resume!(forged),/malformed/);
+});
