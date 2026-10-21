@@ -2,6 +2,7 @@ import {reportError} from '../log';
 import {useSyncExternalStore} from 'react';
 import {PhotosEngine,type PhotosResponse} from './engine';
 import {getMedia,registerMediaCloseCleanup,registerMediaCloseGuard,subscribeMedia} from '../media';
+import {jobScheduler} from '../jobs/scheduler';
 import {defaultImageHost,editedName} from '../imageEditorHost';
 import {renderAdvancedPhotoExport} from './advancedExport';
 import type {PhotoAdvancedOptions} from './photosExportSchema';
@@ -92,13 +93,19 @@ export async function openPhoto(item:{name:string;url:string;mime:string}):Promi
   const bytes=await fetch(item.url).then(r=>r.arrayBuffer());
   if(bytes.byteLength===0||bytes.byteLength>PHOTO_INPUT.maxBytes)throw Error(t('photos.error.size',{max:PHOTO_INPUT.maxBytes/1_000_000}));
   sources.set(item.name,bytes);
-  const e=getEngine();
-  const loaded=await e.load(bytes.slice(0));loadedKey=sourceKey(item.name,{spots:[],dabs:[],localEV:0,localSat:0,grads:[],gradEV:0,gradSat:0,rads:[],curves:emptyCurves(),hsl:neutralHsl(),brushes:[],vignetteAmount:0,vignetteMidpoint:50,defringe:0,lumMask:neutralLumMask()});
-  if(!sessions.has(item.name))return;
-  const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
-  const session=sessions.get(item.name);if(!session)return;
-  const current=frameOf(await e.renderPhoto(effective(session)));
-  if(!sessions.has(item.name))return;
+  // The engine is a process-wide singleton: load + initial renders run under the
+  // exclusive photos.engine lease so concurrent studios cannot interleave engine state.
+  const result=await jobScheduler.run({kind:'activation',priority:1,documentId:item.name,exclusive:['photos.engine']},async()=>{
+   const e=getEngine();
+   const loaded=await e.load(bytes.slice(0));loadedKey=sourceKey(item.name,{spots:[],dabs:[],localEV:0,localSat:0,grads:[],gradEV:0,gradSat:0,rads:[],curves:emptyCurves(),hsl:neutralHsl(),brushes:[],vignetteAmount:0,vignetteMidpoint:50,defringe:0,lumMask:neutralLumMask()});
+   if(!sessions.has(item.name))return null;
+   const original=frameOf(await e.renderPhoto(neutralPhotoSettings));
+   const session=sessions.get(item.name);if(!session)return null;
+   const current=frameOf(await e.renderPhoto(effective(session)));
+   return {loaded,original,current};
+  });
+  if(!result||!sessions.has(item.name))return;
+  const {loaded,original,current}=result;
   patch(item.name,{status:'ready',error:'',sourceWidth:loaded.width??0,sourceHeight:loaded.height??0,original,frame:current});
  }catch(e){resetEngine(e);if(sessions.has(item.name))patch(item.name,{status:'error',error:message(e)},e);}
 }
@@ -117,9 +124,11 @@ async function render(name:string){
  const s=sessions.get(name);if(!s||!sources.has(name)||s.status==='error')return;
  const run=(runs.get(name)??0)+1;runs.set(name,run);patch(name,{status:'processing',error:''});
  try{
-  await ensureEngineSource(name);
-  const e=getEngine();
-  const r=frameOf(await e.renderPhoto(effective(s)));
+  const r=await jobScheduler.run({kind:'activation',priority:1,documentId:name,exclusive:['photos.engine']},async()=>{
+   await ensureEngineSource(name);
+   const e=getEngine();
+   return frameOf(await e.renderPhoto(effective(s)));
+  });
   if(runs.get(name)!==run||!sessions.has(name))return;
   patch(name,{status:'ready',error:'',frame:r});
  }catch(e){resetEngine(e);if(runs.get(name)===run&&sessions.has(name))patch(name,{status:'error',error:message(e)},e);}
@@ -178,8 +187,10 @@ export function closePhoto(name:string){
 /** AE1 preview path: renders the advanced option pipeline without saving. */
 export async function renderPhotoExportPreview(name:string,options:PhotoAdvancedOptions){
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
- await ensureEngineSource(name);
- return renderAdvancedPhotoExport(getEngine(),s.now,options);
+ return jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['photos.engine'],exclusive:['photos.engine']},async()=>{
+  await ensureEngineSource(name);
+  return renderAdvancedPhotoExport(getEngine(),s.now,options);
+ });
 }
 /** AE1 save path: renders with the advanced options and writes the file under the chosen name. The original is never overwritten. */
 export async function exportPhotoCopyAdvanced(name:string,options:PhotoAdvancedOptions,injectedHost?:PhotoSaveHost):Promise<PhotoSaveOutcome>{
@@ -202,8 +213,10 @@ export async function handBackPhotoBytes(name:string):Promise<Uint8Array>{
 }
 export async function renderPhotoBytes(name:string,format:'png'|'jpeg'='png'):Promise<Uint8Array>{
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
- await ensureEngineSource(name);
- const r=await getEngine().exportPhoto(s.now,format);
+ const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['photos.engine'],exclusive:['photos.engine']},async()=>{
+  await ensureEngineSource(name);
+  return getEngine().exportPhoto(s.now,format);
+ });
  if(!r.bytes)throw Error('Export returned no bytes.');
  return new Uint8Array(r.bytes);
 }
@@ -212,9 +225,11 @@ export interface PhotoSaveHost {save(blob:Blob,suggestedName:string):Promise<boo
 /** Exports the developed copy at the engine's bounded source resolution. The original is never overwritten. */
 export async function exportPhotoCopy(name:string,format:'png'|'jpeg',injectedHost?:PhotoSaveHost):Promise<PhotoSaveOutcome>{
  const s=sessions.get(name);if(!s||s.status==='error'||!sources.has(name))throw Error(t('photos.error.notReady'));
- const snapshot=s.now;
- await ensureEngineSource(name);
- const r=await getEngine().exportPhoto(snapshot,format);
+ const snapshot=structuredClone(s.now);
+ const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['photos.engine'],exclusive:['photos.engine']},async()=>{
+  await ensureEngineSource(name);
+  return getEngine().exportPhoto(snapshot,format);
+ });
  if(!r.bytes)throw Error('Export returned no bytes.');
  const host=injectedHost??await defaultImageHost();
  const ok=await host.save(new Blob([r.bytes],{type:format==='png'?'image/png':'image/jpeg'}),editedName(name,format==='png'?'png':'jpg'));

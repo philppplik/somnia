@@ -17,7 +17,8 @@ import {FilmstripController} from './filmstrip-controller';
 import {FilmstripEngine} from './filmstrip-engine';
 import {fileExtension,sniffVideo} from './format';
 import {openVideoDialog} from './open';
-import {closeMediaForced,getMedia,setActiveMedia,subscribeMedia,type MediaKind} from '../media';
+import {closeMediaForced,getMedia,registerMediaCloseGuard,setActiveMedia,subscribeMedia,type MediaKind} from '../media';
+import {jobScheduler} from '../jobs/scheduler';
 import {registerWorkProvider} from '../workDocs';
 import {registerLifecycleAdapter} from '../lifecycle/adapters';
 import {createRecipeAdapter,fingerprintOf,RecipeStash} from '../lifecycle/recipeKit';
@@ -64,6 +65,8 @@ export function useVideoSession(name:string|null|undefined){return useSyncExtern
 const sourceDurations=(clips:TimelineClip[])=>Object.fromEntries([...new Set(clips.map(c=>c.source))].flatMap(n=>{const d=sessions.get(n)?.probe?.duration;return d?[[n,d]]:[];}));
 /** Opens that are still fetching/probing, so concurrent callers await the same probe instead of racing it. */
 const opening=new Map<string,Promise<void>>();
+/** Abort handles of queued/running exports; the scheduler lease and the engine cancel ride on them. */
+const exports=new Map<string,AbortController>();
 /** Probes a media item (idempotent; concurrent calls share the in-flight probe). The original bytes stay untouched; export renders a copy. */
 export async function openVideo(item:{name:string;url:string}):Promise<void>{
  const inflight=opening.get(item.name);if(inflight)return inflight;
@@ -416,29 +419,38 @@ export const setVideoExportOptions=(root:string,o:Partial<VideoExportOptions>)=>
 export async function runVideoExport(name:string):Promise<'exported'|'cancelled'|'unavailable'>{
  const s=sessions.get(name);
  if(!s||s.status!=='ready'||!s.clips.length)return'unavailable';
- const clipSources:Record<string,ArrayBuffer>={};
- for(const n of new Set([...s.clips.filter(needsSourceFile).map(c=>c.source),...s.audioClips.map(c=>c.source)])){
+ // Capture the timeline, audio, overlays, range, format and options at queue time: the queued job
+ // renders this snapshot, not later edits or another studio's state.
+ const range=s.exportRange;
+ const clips=structuredClone(range?sliceTimeline(s.clips,range.start,range.end):s.clips);
+ const audioClips=structuredClone(range?sliceAudioClips(s.audioClips,range.start,range.end):s.audioClips);
+ const overlayClips=structuredClone(s.overlayClips);
+ const format=s.format,exportOptions=s.exportOptions;
+ if(!clips.length){patch(name,{status:'error',error:'The export range is empty.'});return'unavailable';}
+ const input:Record<string,ArrayBuffer>={};
+ for(const n of new Set([...clips.filter(needsSourceFile).map(c=>c.source),...audioClips.map(c=>c.source)])){
   const bytes=sources.get(n);
   if(!bytes){patch(name,{status:'error',error:`Clip source "${n}" is no longer open. Re-open the file to export this timeline.`});return'unavailable';}
-  clipSources[n]=bytes.slice(0);
+  input[n]=bytes.slice(0);
  }
+ const controller=new AbortController();exports.set(name,controller);
  revoke(s.result);put({...s,status:'exporting',error:'',progress:null,result:null,exportOutcome:undefined});
  try{
   const{engine:e}=getEngine();
-  const range=s.exportRange;
- const clips=range?sliceTimeline(s.clips,range.start,range.end):s.clips;
- const audioClips=range?sliceAudioClips(s.audioClips,range.start,range.end):s.audioClips;
- if(!clips.length){patch(name,{status:'error',error:'The export range is empty.'});return'unavailable';}
- const r=await e.export(clipSources,clips,s.format,p=>{if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},audioClips,s.exportOptions,s.overlayClips);
+  const r=await jobScheduler.run({kind:'export',priority:2,documentId:name,resources:['video.engine',...Object.keys(input).map(n=>'video.source:'+n)],exclusive:['video.export'],estimatedBytes:Object.values(input).reduce((sum,b)=>sum+b.byteLength,0),signal:controller.signal},async lease=>{
+   const cancel=()=>e.cancelExport();lease.signal.addEventListener('abort',cancel,{once:true});
+   try{lease.signal.throwIfAborted();return await e.export(input,clips,format,p=>{lease.progress(p.ratio);if(sessions.get(name)?.status==='exporting')patch(name,{progress:p});},audioClips,exportOptions,overlayClips);}
+   finally{lease.signal.removeEventListener('abort',cancel);}
+  });
   const cur=sessions.get(name);if(!cur)return'unavailable';
   const blob=new Blob([r.bytes],{type:r.mime});
   put({...cur,status:'ready',progress:null,result:{blob,url:URL.createObjectURL(blob),report:r.report}});
   return'exported';
  }catch(e){
-  if(e instanceof Error&&e.name==='ExportCancelled'){patch(name,{status:'ready',progress:null});return'cancelled';}
+  if(controller.signal.aborted||e instanceof Error&&e.name==='ExportCancelled'){patch(name,{status:'ready',progress:null});return'cancelled';}
   resetEngine(e);if(sessions.has(name))patch(name,{status:'error',error:message(e),progress:null},e);
   return'unavailable';
- }
+ }finally{if(exports.get(name)===controller)exports.delete(name);}
 }
 /** The rendered file for download, or null while nothing has been exported. */
 export function exportVideo(name:string):{blob:Blob;fileName:string}|null{
@@ -459,12 +471,15 @@ export async function exportVideoFile(name:string,fileName?:string):Promise<'dow
  patch(name,{exportOutcome:outcome});
  return outcome;
 }
-export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')engine?.cancelExport();}
+export function cancelVideoExport(name:string){if(sessions.get(name)?.status==='exporting')exports.get(name)?.abort();}
 export function closeVideo(name:string){
  sources.delete(name);fingerprints.delete(name);
  getFilmstrip()?.unregister(name);
  const s=sessions.get(name);if(!s)return;revoke(s.result);sessions.delete(name);emit();
 }
+// Closing a view is safe; closing an exporting document requires cancelling its job first.
+registerMediaCloseGuard(name=>!exports.has(name)&&!jobScheduler.needsResource('video.source:'+name));
+
 export const videoIsEdited=(s:VideoSession|null)=>!!s&&!isNeutralTimeline(s.clips,s.name,s.probe?.duration??0);
 export const videoTimelineDuration=(s:VideoSession|null)=>s?timelineDuration(s.clips):0;
 /** Unsaved edit-list changes: the current clips differ from the last saved/loaded state. Undoing back to that state clears the dirty flag. */
