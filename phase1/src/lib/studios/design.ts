@@ -2,7 +2,6 @@ import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerBlankProjectFactory} from './blank';
 import {startDesign} from '../design/session';
 import {registerStudio,type StudioDef} from './registry';
-import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {InspectorDef,MenuItemDef,PanelDef,RailItemDef,StudioLayout,StudioShellDef,ToolDef} from '../shell/types';
 import '../design/shellRail';
 /**

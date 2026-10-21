@@ -1,6 +1,5 @@
 import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
-import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 import {PHOTOS_LEFT_RAIL,PHOTOS_RIGHT_RAIL} from '../photos/shellRail';
 import {PHOTOS_EXTRA_RAIL,PHOTOS_PANELS,PHOTOS_PANEL_LAYOUT} from '../photos/panelManifest';

@@ -1,6 +1,5 @@
 import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
-import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef,StudioLayout} from '../shell/types';
 /** Pure data. React hosts are registered by components/sound/registerShell.ts. */
 export const SOUND_LAYOUT:StudioLayout={leftOpen:true,rightOpen:true,leftWidth:260,rightWidth:320,leftPanels:['clips'],rightPanels:['inspector'],activeLeft:'clips',activeRight:'inspector'};

@@ -1,6 +1,5 @@
 import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
-import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 /** Pure-data shell. Video panel hosts are registered by components/video/registerShell.ts. */
 export const videoShell:StudioShellDef={
