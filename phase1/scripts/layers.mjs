@@ -55,7 +55,7 @@ export function assertCoverage(graph, cwd = projectRoot, entries = ['packages/ed
   function visit(path) {
     for (const entry of readdirSync(resolve(cwd, path), {withFileTypes: true})) {
       const child = `${path}/${entry.name}`;
-      if (child.startsWith('src/lib/frameworks/templates/')) continue;
+      if (child.startsWith('src/lib/frameworks/templates/') || child.startsWith('src/lib/frameworks/fixtures/')) continue;
       if (entry.isDirectory()) visit(child);
       else if (/\.[cm]?[jt]sx?$/.test(child) && !/\.(test|spec)\.[cm]?[jt]sx?$/.test(child) && !modules.has(child)) missing.push(child);
     }
