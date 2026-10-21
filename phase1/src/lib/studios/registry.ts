@@ -1,20 +1,12 @@
 /** Studios describe editor workspaces. Document buffers/history remain in editor-core. */
 export type StudioId = string;
 export type StudioViewMode = 'design'|'split'|'code';
-/** A mode must point to a real command; switching never creates a document. */
-export interface StudioMode {
- id:string;
- label:string;
- command:string;
- /** Existing Code canvas view, when the mode uses that host. */
- viewMode?:StudioViewMode;
-}
 export interface FormatClaim {ext:string;mime?:string;priority:number}
 export interface RailItem<T extends string=string> {id:T;label:string;icon:string;global?:boolean}
 export interface StudioCommand {id:string;label:string}
 export interface StudioTool {id:string;command:string}
 export interface StudioDef {
- modes?:readonly StudioMode[];
+ modes?:readonly import('./modes').StudioMode[];
  id:StudioId;label:string;icon:string;order:number;formats:readonly FormatClaim[];
  shell:{leftRail:readonly RailItem<'layers'|'files'|'search'|'assets'|'components'|'css'|'versions'>[];rightRail:readonly RailItem<'design'|'prototype'|'code'>[];
   header:{menus:readonly ('Project'|'Edit'|'View'|'Insert'|'Tools'|'Help')[];views:readonly {mode:StudioViewMode;icon:string;command:string}[];/** Optional hero action. No field keeps the Publish button. */heroAction?:import('../shell/types').HeroActionDef};
