@@ -1,4 +1,5 @@
 import { log, logWarn } from '../log';
+import { validateReplay, type ProviderReplay } from './providerReplay';
 import { jobScheduler, type JobLease } from '../jobs/scheduler';
 import { createAIProvenance } from './privacy';
 import { AgentError, ToolUnreconciledError, describeAgentError, toAgentError } from './errors';
@@ -65,6 +66,10 @@ export class AgentSession {
     for (const m of snapshot.messages) {
       if(m?.images!==undefined)throw Error('Image-bearing snapshots cannot be restored');
       if (!m || !['user', 'assistant', 'tool'].includes(m.role) || typeof m.content !== 'string') throw Error('Invalid session message.');
+      if (m.providerReplay !== undefined) {
+        if (m.role !== 'assistant') throw Error('Replay requires an assistant message.');
+        validateReplay(m.providerReplay);
+      }
       if (m.toolCallId !== undefined && typeof m.toolCallId !== 'string') throw Error('Invalid tool result.');
       if (m.toolCalls && (!Array.isArray(m.toolCalls) || m.toolCalls.some(t => !t || !t.id || typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.arguments !== 'string'))) throw Error('Invalid session tool calls.');
       if (awaiting.size) {
@@ -120,6 +125,7 @@ export class AgentSession {
         if (bytes(outgoing) > this.limits.context) throw new AgentError('limit', 'context', 'Agent context exceeds limit. Start a new chat or narrow context.');
         // The last step offers no tools, so the model must answer in text instead of the turn failing.
         const finalStep = step + 1 >= this.limits.steps;
+        let replay: ProviderReplay | undefined;
         let text = '', finish: string | null = null;
         let fragments = new Map<number, AgentToolCall>();
         let tokens = this.limits.tokens;
@@ -127,6 +133,11 @@ export class AgentSession {
           for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools && !finalStep ? this.options.tools.definitions() : [], maxOutputTokens: tokens, signal: controller.signal })) {
             controller.signal.throwIfAborted();
             if (event.type === 'text') { text += event.text; this.emit({ ...event, turnId }); }
+            else if (event.type === 'provider-replay') {
+              validateReplay(event.replay);
+              if (event.replay.provider !== this.options.provider.id || event.replay.model !== this.options.model) throw new AgentError('provider-error', 'protocol', 'Mismatched provider replay.');
+              replay = clone(event.replay);
+            }
             else if (event.type === 'usage') this.emit({ ...event, turnId });
             else if (event.type === 'finish') finish = event.reason;
             else if (event.type === 'tool-call') {
@@ -158,7 +169,7 @@ export class AgentSession {
         const toolCalls = [...fragments.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
         if (toolCalls.length && finish !== 'tool_calls' || !toolCalls.length && finish === 'tool_calls') throw new AgentError('provider-error', 'protocol', 'Incomplete tool-call response.', true);
         if (!toolCalls.length) {
-          working.push({ role: 'assistant', content: text, provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
+          working.push({ role: 'assistant', content: text, ...(replay ? {providerReplay: replay} : {}), provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
           this.options.tools?.markProvenance(createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model));
           if (bytes(working) > this.limits.context) throw new AgentError('limit', 'context', 'Agent history exceeds limit.');
           this.messages = clone(working);
@@ -179,7 +190,7 @@ export class AgentSession {
         if (calls + toolCalls.length > this.limits.calls) throw new AgentError('limit', 'tool-calls', 'Agent tool-call limit reached.');
         // Do not stage writes on the last step: no request remains to complete the turn.
         if (finalStep) throw new AgentError('limit', 'steps', 'Agent step limit reached.');
-        working.push({ role: 'assistant', content: text, toolCalls, provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
+        working.push({ role: 'assistant', content: text, toolCalls, ...(replay ? {providerReplay: replay} : {}), provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
         for (const call of toolCalls) {
           controller.signal.throwIfAborted(); calls++;
           this.emit({ type: 'tool', call, status: 'running', turnId });

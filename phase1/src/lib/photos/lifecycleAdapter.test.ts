@@ -84,3 +84,21 @@ test('recipes from a checkpoint are validated',()=>{
  assert.equal(sanitizePhotoRecipe(null),null);
  assert.equal(sanitizePhotoRecipe({now:{exposure:1},saved:5}),null);
 });
+
+test('an early re-open between suspend and resume still receives the stashed recipe',async()=>{
+ const adapter=createPhotosLifecycleAdapter();
+ await openPhoto(item);
+ commitPhotoSettings(item.name,s=>({...s,contrast:10}));
+ const snap=(await adapter.snapshot!())!;
+ await adapter.suspend!();
+ await openPhoto(item); // early re-open, as the shell preview pane would do
+ const early=getPhotoSession(item.name)!;
+ assert.equal(early.now.contrast,10,'recipe was already waiting for the early re-open');
+ assert.equal(early.past.length,1);
+ await adapter.resume!(snap); // late resume must not clobber the live session
+ assert.equal(getPhotoSession(item.name)!.now.contrast,10);
+ closePhoto(item.name);
+ await openPhoto(item); // drain the re-stashed recipe so later tests start clean
+ assert.equal(getPhotoSession(item.name)!.now.contrast,10);
+ assert.equal(pendingPhotoRecipes(),0);
+});

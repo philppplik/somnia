@@ -1,4 +1,5 @@
 import type {InspectorSectionDef,PanelDef} from '../shell/types';
+import './panelI18n'; // The manifest names titleKeys; their catalogues must be registered wherever the manifest loads (beta5 got this via static panel imports, lost with lazyPanel).
 import type {DocBlock} from './edit';
 import {utf16ToUtf8Offset} from './text';
 

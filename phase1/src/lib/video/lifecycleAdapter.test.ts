@@ -67,3 +67,21 @@ test('checkpoint recipes are validated and corrupted checkpoints are refused',as
  assert.ok(b.revision>a.revision);
  await assert.rejects(()=>adapter.resume!({...a,checksum:'bad'}),/verification/);
 });
+
+test('an early re-open between suspend and resume still receives the stashed recipe',async()=>{
+ const adapter=createVideoLifecycleAdapter();
+ await open();
+ addTitleClip(NAME,Number.MAX_SAFE_INTEGER,{text:'Early',size:90});
+ const snap=(await adapter.snapshot!())!;
+ await adapter.suspend!();
+ await openVideo(getMedia().items.find(i=>i.name===NAME)!); // shell preview race
+ const early=getVideoSession(NAME)!;
+ assert.equal(early.clips.length,1,'recipe was already waiting for the early re-open');
+ assert.equal(early.clips[0].title?.text,'Early');
+ await adapter.resume!(snap); // late resume must not clobber the live session
+ assert.equal(getVideoSession(NAME)!.clips.length,1);
+ closeVideo(NAME);
+ await openVideo(getMedia().items.find(i=>i.name===NAME)!); // drain the re-stashed recipe
+ assert.equal(getVideoSession(NAME)!.clips.length,1);
+ assert.equal(pendingVideoRecipes(),0);
+});

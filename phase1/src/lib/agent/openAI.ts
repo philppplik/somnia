@@ -1,3 +1,5 @@
+import { catalogEntries } from './catalogEntries';
+import { replayFor, validateReplay } from './providerReplay';
 import { runWithProviderConsent } from './privacy';
 import { OPENAI_ACCOUNT_OAUTH_CONFIG, assertUsableAccountToken, toAccountAuthError } from './openAIAccount';
 import type { OpenAIAccountAuth } from './openAIAccount';
@@ -166,7 +168,7 @@ export class OpenAIProvider implements AgentProvider {
       catch { throw Error('Provider endpoints must be HTTPS URLs.'); }
       return value;
     };
-    this.chatEndpoint = endpoint(options.endpoints?.chat, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.responsesEndpoint : options.vendor?.chat ?? OPENAI_CHAT_ENDPOINT);
+    this.chatEndpoint = endpoint(options.endpoints?.chat, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.responsesEndpoint : options.vendor?.responses ?? options.vendor?.chat ?? OPENAI_CHAT_ENDPOINT);
     this.modelsEndpoint = endpoint(options.endpoints?.models, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.modelsEndpoint : options.vendor?.models ?? OPENAI_MODELS_ENDPOINT);
   }
   private inFlightRefresh?: Promise<string>;
@@ -241,7 +243,7 @@ export class OpenAIProvider implements AgentProvider {
     request.signal.throwIfAborted();
     const credential = await this.credential();
     request.signal.throwIfAborted();
-    if (this.options.account) {
+    if (this.options.account || this.options.vendor?.responses) {
       yield* this.streamResponses(request, credential);
       return;
     }
@@ -251,6 +253,7 @@ export class OpenAIProvider implements AgentProvider {
       [vendor?.maxTokensField ?? 'max_completion_tokens']: request.maxOutputTokens,
       stream_options: { include_usage: true },
       messages: request.messages.map(m => ({ role: !vendor && m.role === 'system' && !/^gpt-(3\.5|4)(?:[.-]|$)/.test(request.model) ? 'developer' : m.role, content: m.content,
+        ...(vendor?.id === 'deepseek' && m.role === 'assistant' && request.tools.length && replayFor(m, this.id, request.model) ? {reasoning_content: replayFor(m, this.id, request.model)!.reasoningContent} : {}),
         ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
         ...(m.toolCalls ? { tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })) } : {}) })),
       ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', function: t })) } : {}),
@@ -264,7 +267,8 @@ export class OpenAIProvider implements AgentProvider {
       }
       throw new AgentError('provider-error', 'protocol', `${this.label} did not return an event stream.`);
     }
-    let ended = false;
+    let ended = false, reasoningContent = '';
+    let sawReasoning = false;
     for await (const data of dataEvents(response.body, request.signal)) {
       if (data === '[DONE]') { ended = true; break; }
       let chunk;
@@ -282,6 +286,11 @@ export class OpenAIProvider implements AgentProvider {
         if (!choice || typeof choice !== 'object') throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} stream choice.`);
         if ((choice.index ?? 0) !== 0) continue;
         const delta = choice.delta ?? {};
+        if (vendor?.id === 'deepseek' && delta.reasoning_content !== undefined && delta.reasoning_content !== null) {
+          if (typeof delta.reasoning_content !== 'string') throw new AgentError('provider-error', 'protocol', 'Invalid DeepSeek reasoning fragment.');
+          sawReasoning = true; reasoningContent += delta.reasoning_content;
+          if (new TextEncoder().encode(reasoningContent).byteLength > maxEventBytes) throw new AgentError('limit', 'context', 'Provider reasoning exceeds size limit.');
+        }
         if (typeof delta.content === 'string' && delta.content) yield { type: 'text', text: delta.content };
         if (delta.tool_calls !== undefined && !Array.isArray(delta.tool_calls)) throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} tool calls.`);
         for (const tool of delta.tool_calls ?? []) {
@@ -296,6 +305,7 @@ export class OpenAIProvider implements AgentProvider {
         if (typeof choice.finish_reason === 'string') yield { type: 'finish', reason: choice.finish_reason };
       }
     }
+    if (ended && sawReasoning) yield {type: 'provider-replay', replay: {provider: 'deepseek', model: request.model, reasoningContent}};
     if (!ended) throw new AgentError('provider-error', 'protocol', 'Provider stream ended without completion.', true);
   }
 
@@ -318,6 +328,13 @@ export class OpenAIProvider implements AgentProvider {
       if (message.role === 'user') {
         input.push({ role: 'user', content: [{ type: 'input_text', text: message.content }] });
       } else if (message.role === 'assistant') {
+        const replay = replayFor(message, this.id, request.model);
+        if (this.options.vendor?.responses && replay?.output) {
+          input.push(...structuredClone(replay.output));
+          // Meta requires an assistant message after a reasoning-only output.
+          if (replay.output.length && replay.output.at(-1)?.type === 'reasoning') input.push({role: 'assistant', content: [{type: 'output_text', text: ''}]});
+          continue;
+        }
         if (message.content) input.push({ role: 'assistant', content: [{ type: 'output_text', text: message.content }] });
         for (const call of message.toolCalls ?? []) input.push({ type: 'function_call', call_id: call.id, name: call.name, arguments: call.arguments });
       } else {
@@ -332,6 +349,7 @@ export class OpenAIProvider implements AgentProvider {
     }
     const body = JSON.stringify({
       model: request.model, store: false, stream: true,
+      ...(this.options.vendor?.responses ? {max_output_tokens: request.maxOutputTokens, include: ['reasoning.encrypted_content']} : {}),
       ...(instructions ? { instructions } : {}),
       input,
       ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', name: t.name, description: t.description, parameters: t.parameters })) } : {}),
@@ -340,7 +358,7 @@ export class OpenAIProvider implements AgentProvider {
     if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
       if (response.body && response.headers.get('content-type')?.includes('json')) {
         const err = await readJson(response, request.signal, 4096).catch(() => undefined);
-        if (err) throw accountApiError(502, err);
+        if (err) throw this.options.account ? accountApiError(502, err) : apiError(502, err, `${this.label} request failed`);
       }
       throw new AgentError('provider-error', 'protocol', `${this.label} did not return an event stream.`);
     }
@@ -383,16 +401,22 @@ export class OpenAIProvider implements AgentProvider {
         if (usage && typeof usage === 'object') yield { type: 'usage', usage: { inputTokens: finite(usage.input_tokens), outputTokens: finite(usage.output_tokens) } };
         if (type === 'response.incomplete') {
           const reason = finished.incomplete_details?.reason;
-          if (reason === 'content_filter') throw new AgentError('provider-error', 'moderation', 'OpenAI account response was stopped by a content filter.');
-          if (reason === 'max_output_tokens') throw new AgentError('limit', 'output-tokens', 'OpenAI account response exceeded its output budget.', true);
-          throw new AgentError('provider-error', 'protocol', 'OpenAI account response did not complete.', true);
+          if (reason === 'content_filter') throw new AgentError('provider-error', 'moderation', `${this.label} response was stopped by a content filter.`);
+          if (reason === 'max_output_tokens') throw new AgentError('limit', 'output-tokens', `${this.label} response exceeded its output budget.`, true);
+          throw new AgentError('provider-error', 'protocol', `${this.label} response did not complete.`, true);
         }
-        if (refused) throw new AgentError('provider-error', 'moderation', 'OpenAI account response was a refusal.');
+        if (this.options.vendor?.responses) {
+          if (!Array.isArray(finished.output)) throw new AgentError('provider-error', 'protocol', 'Missing Responses replay output.');
+          const replay = {provider: this.options.vendor.id, model: request.model, output: finished.output};
+          validateReplay(replay);
+          yield {type: 'provider-replay', replay};
+        }
+        if (refused) throw new AgentError('provider-error', 'moderation', `${this.label} response was a refusal.`);
         yield { type: 'finish', reason: sawFunctionCall ? 'tool_calls' : 'stop' };
       } else if (type === 'response.failed') {
-        throw accountApiError(502, { error: event.response?.error });
+        throw this.options.account ? accountApiError(502, {error: event.response?.error}) : apiError(502, {error: event.response?.error}, `${this.label} request failed`);
       } else if (type === 'error') {
-        throw accountApiError(502, { error: event.error ?? event });
+        throw this.options.account ? accountApiError(502, {error: event.error ?? event}) : apiError(502, {error: event.error ?? event}, `${this.label} request failed`);
       }
       // All other Responses event types (created, reasoning, content parts,
       // item.done, rate limits, ...) carry no adapter output and are ignored.
@@ -428,6 +452,7 @@ export class OpenAIProvider implements AgentProvider {
       guardedSignal.throwIfAborted();
       if ((!this.options.vendor && value?.object !== 'list') || !Array.isArray(value?.data) || value.data.length > 10000)
         throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`);
+      try { catalogEntries(value); } catch { throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`); }
       const models: OpenAIModel[] = []; const ids = new Set<string>();
       for (const model of value.data) {
         if (!model || typeof model.id !== 'string' || !model.id || model.id.length > 512 || /[\r\n\0]/.test(model.id) || (!this.options.vendor && (typeof model.owned_by !== 'string' || !Number.isSafeInteger(model.created) || model.created < 0)))
