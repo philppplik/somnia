@@ -1,8 +1,8 @@
-import {SlidesCanvas} from './slides/SlidesCanvas';
-import {PsdViewer} from './PsdViewer';
-import {SoundWorkspace} from './sound/SoundWorkspace';
-import {VideoWorkspace} from './video/VideoWorkspace';
 import {lazy,Suspense} from 'react';
+const SlidesCanvas=lazy(()=>import('./slides/SlidesCanvas').then(m=>({default:m.SlidesCanvas})));
+const PsdViewer=lazy(()=>import('./PsdViewer').then(m=>({default:m.PsdViewer})));
+const SoundWorkspace=lazy(()=>import('./sound/SoundWorkspace').then(m=>({default:m.SoundWorkspace})));
+const VideoWorkspace=lazy(()=>import('./video/VideoWorkspace').then(m=>({default:m.VideoWorkspace})));
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
 const DocxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.DocxViewer})));
 const XlsxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.XlsxViewer})));
@@ -30,7 +30,7 @@ export function AudioOpenHint(){const {t}=useT();
  return <div className="flex items-center gap-2 border-b border-subtle px-3 py-1 text-xs" data-testid="audio-open-sound"><span className="flex-1"/>
   <Button size="compact" variant="ghost" onClick={()=>requestStudio('sound','manual')}>{t('handoff.openInSound')}</Button></div>;}
 /** Preview for an opened PNG, JPEG or PDF. */
-export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
+function MediaViewerContent({item}:{item:MediaItem}){const {t}=useT();
  if(item.kind==='audio')return <div className="flex min-h-0 flex-1 flex-col"><AudioOpenHint/><SoundWorkspace key={item.name} item={item} withPanel/></div>;
  if(item.kind==='video'||item.kind==='video-project')return <VideoWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
@@ -71,3 +71,5 @@ function useDebounced<T>(value:T,ms:number,on:boolean):T{
  const [v,setV]=useState(value);
  useEffect(()=>{if(!on){setV(value);return;}const id=window.setTimeout(()=>setV(value),ms);return()=>window.clearTimeout(id);},[value,ms,on]);
  return on?v:value;}
+
+export function MediaViewer(props:{item:MediaItem}){return <Suspense fallback={null}><MediaViewerContent {...props}/></Suspense>;}

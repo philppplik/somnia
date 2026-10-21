@@ -1,4 +1,5 @@
-import {DevelopPanel} from './photos/DevelopPanel';
+import {lazy,Suspense} from 'react';
+const DevelopPanel=lazy(()=>import('./photos/DevelopPanel').then(m=>({default:m.DevelopPanel})));
 import {effectiveWorkflow} from '../lib/projectSettingsIO';
 import {registerRasterPhotoPort,notifyRasterPhotoChange,savePhotoCopy} from '../lib/agent/photoWorkspace';
 import {LayerSession,type CraftLayerQuery} from '../lib/craft/layerSession';
@@ -138,7 +139,7 @@ export function RasterRightPanel(){const c=useRasterEditor();const app=useAppSto
  {c.source&&c.layerQuery&&['adjust','filter'].includes(tab)&&<p className="p-3 text-xs">Layer mode: legacy adjustments and transforms are disabled until non-destructive migration is ready.</p>}
  {c.source&&!c.layerQuery&&tab==='adjust'&&<AdjustPanel params={snap.adjust} disabled={c.busy} onChange={adjust=>c.live({...snap,adjust})} onCommit={c.endLive}/>}
  {c.source&&!c.layerQuery&&tab==='filter'&&<section className="image-editor-filter"><label className="image-editor-format">{t('imageeditor.filter')}<NativeSelect value={snap.filter?.type??''} disabled={c.busy} data-testid="image-editor-filter-select" onChange={e=>{const type=e.target.value as FilterType|'';c.commit({...snap,filter:type?newFilterOperation(`filter-${crypto.randomUUID()}`,type):null});}}><option value="">{t('imageeditor.filterNone')}</option>{FILTER_TYPES.map(f=><option key={f} value={f}>{t(`imageedit.filters.${f}`)}</option>)}</NativeSelect></label>{snap.filter&&<><FilterPanel operation={snap.filter} disabled={c.busy} onChange={filter=>c.live({...snap,filter})} onCommit={c.endLive}/><Button size="compact" disabled={c.busy} onClick={()=>c.commit({...snap,stack:[...snap.stack,snap.filter!],filter:null})}>{t('imageeditor.filterApply')}</Button></>}</section>}
- {c.source&&tab==='develop'&&<DevelopPanel key={c.source.url}/>}
+ {c.source&&tab==='develop'&&<Suspense fallback={null}><DevelopPanel key={c.source.url}/></Suspense>}
  {c.source&&tab==='layers'&&<RasterLayersPanel/>}
  {c.source&&tab==='history'&&c.layerQuery&&<p className="p-3 text-xs">Worker layer history: {c.layerQuery.undo} undo / {c.layerQuery.redo} redo. Use Undo and Redo in the options bar.</p>}
  {c.source&&!c.layerQuery&&tab==='history'&&<ImageHistory past={c.docState.past} now={snap} future={c.docState.future} disabled={c.busy} onJump={c.jump} onToggle={id=>c.commit({...snap,stack:toggleOp(snap.stack,id)})} onRemove={id=>c.commit({...snap,stack:removeOp(snap.stack,id)})}/>}
