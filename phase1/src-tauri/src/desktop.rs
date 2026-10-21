@@ -3114,6 +3114,7 @@ pub fn run() {
             read_dropped_files,
             is_store_package,
             list_files,
+            read_file,
             read_media,
             read_project_resource,
             image_pick,

@@ -34,7 +34,6 @@ export const soundShell:StudioShellDef={
  ],defaultLayout:SOUND_LAYOUT,
 };
 export const soundStudio:StudioDef={
- lifecycle:()=>getRegisteredLifecycleAdapter('sound'),
  id:'sound',label:'studio.sound',icon:'AudioWaveform',order:4,
  formats:['mp3','wav','flac','ogg','oga','aif','aiff'].map(ext=>({ext,priority:10})),
  shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'sound.export.open',labelKey:'sound.hero.export',icon:'AudioWaveform'}},bottomBar:{slots:[],viewportPresets:[]},inspector:'sound.inspector',tools:[]},

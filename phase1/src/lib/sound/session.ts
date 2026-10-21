@@ -40,6 +40,9 @@ const version=(r:{wav:ArrayBuffer;peaks:Float32Array;report:SoundReport;ms:numbe
 const revoke=(v:SoundVersion|null,keep?:SoundVersion|null)=>{if(v&&v!==keep)URL.revokeObjectURL(v.url);};
 export const getSoundSession=(name:string|null|undefined)=>name?sessions.get(name)??null:null;
 export function subscribeSound(fn:()=>void){listeners.add(fn);return()=>{listeners.delete(fn);};}
+/** Extra cleanup contributed by satellite modules (the playback transport) at suspend time. */
+const suspendHooks=new Set<()=>void>();
+export function registerSoundSuspendHook(fn:()=>void):()=>void{suspendHooks.add(fn);return()=>{suspendHooks.delete(fn);};}
 export function useSoundSession(name:string|null|undefined){return useSyncExternalStore(subscribeSound,()=>getSoundSession(name),()=>null);}
 /** Starts decoding a media item (idempotent). The original bytes stay untouched; every edit renders a copy. */
 export async function openSound(item:{name:string;url:string}):Promise<void>{
@@ -173,7 +176,7 @@ export function createSoundLifecycleAdapter(){
  return createRecipeAdapter<SoundRecipe>({
   studioId:'sound',schemaVersion:1,stash:lifecycleStash,
   capture:()=>[...sessions.values()].filter(s=>edited(s)&&fingerprints.has(s.name)).map(s=>({name:s.name,fingerprint:fingerprints.get(s.name)!,recipe:{settings:structuredClone(s.settings),selection:s.selection?{...s.selection}:null}})),
-  release:()=>{for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;},
+  release:()=>{for(const hook of suspendHooks)hook();for(const n of [...sessions.keys()])closeSound(n);engine?.dispose();engine=undefined;engineReady=undefined;},
   sanitize:sanitizeSoundRecipe,
   pinReasons:()=>{const r=new Set<string>();for(const s of sessions.values()){if(s.status==='loading'||s.status==='processing')r.add('audio-rendering');}for(const n of sessions.keys())if(timers.has(n))r.add('render-scheduled');return[...r];},
   resourceIds:()=>['studio:sound',...[...sessions.keys()].flatMap(n=>[`sound:session:${n}`,`sound.playback:${n}`])],
