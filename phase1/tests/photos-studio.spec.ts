@@ -1,10 +1,11 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openPhoto(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Photos'}).click();
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('photos-open').click();(await chooser).setFiles(asset('photo.jpg'));
  await expect(page.getByTestId('photos-workspace')).toBeVisible();
@@ -75,7 +76,7 @@ test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({p
 });
 test('Photos Studio: an unsupported file gets an honest rejection, not a fake develop',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Photos'}).click();
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('photos-open').click();(await chooser).setFiles(asset('photo.webp'));
  await expect(page.getByTestId('photos-unsupported')).toBeVisible();
@@ -95,10 +96,11 @@ test('Photos Studio: switching to Code keeps the photo session intact',async({pa
 for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
  const pill=page.locator('header [role="radiogroup"]');
- const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(studioCount);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(Math.min(5,studioCount));
+ const more=pill.locator('select.studio-pill-more');await expect(more.locator('option')).toHaveCount(Math.max(0,studioCount-5)+1);
  await expect(pill).not.toContainText('studio.photos');
- await expect(pill.getByRole('radio',{name:'Vibe Space',exact:true})).toBeVisible();
- await pill.getByRole('radio').nth(8).click();
+ await expect(more).not.toContainText('studio.photos');
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  await expect(page.getByTestId('photos-start')).not.toContainText('photos.');
 });

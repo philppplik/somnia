@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 import {readFileSync} from 'node:fs';
 const release=JSON.parse(readFileSync('package.json','utf8')).somniaRelease as string;
 const studios=[
@@ -18,15 +19,18 @@ for(const [label,id,hero] of studios){
  test(`release smoke: ${id} shell and empty-document hero gate`,async({page},info)=>{
   const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/');
-  const radio=page.getByRole('radio',{name:new RegExp(`^(Somnia )?${label}$`)});
-  await radio.click();await expect(radio).toHaveAttribute('aria-checked','true');
+  const displayName=['Slides','Design','Vibe Space'].includes(label)?label:`Somnia ${label}`;
+  await switchStudio(page,displayName);
+  const radio=page.getByRole('radio',{name:displayName,exact:true});
+  await expect(radio).toHaveAttribute('aria-checked','true');
   await expect(page.getByTestId('hero-action')).toHaveAttribute('data-hero-id',hero);
   const button=page.getByTestId('hero-action-main');await expect(button).toBeVisible();
   await expect(button).toHaveAccessibleName(/\S/);
   // No document, native service or selected space: a hero must not export/run empty work.
   await expect(button).toBeDisabled();
   await expect(page.locator('header').first()).toBeVisible();
-  await expect(page.getByRole('radiogroup',{name:'Studios',exact:true}).getByRole('radio')).toHaveCount(10);
+  const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});
+  await expect(page.getByRole('radiogroup',{name:'Studios',exact:true}).getByRole('radio')).toHaveCount(Math.min(5,studioCount));
   await page.evaluate(()=>document.fonts.ready);
   const screenshot=await page.screenshot({path:`test-results/release-shell-${id}.png`});
   await info.attach(`${id}-shell`,{body:screenshot,contentType:'image/png'});
@@ -55,7 +59,7 @@ test('release smoke: explicit studio choice routes only the active tab, and clos
   openFileTab('other.html');openFileTab('index.html');
  });
  await expect(page.getByRole('tab',{name:/^other\.html/})).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Vector',exact:true}).click();
+ await switchStudio(page,'Somnia Vector');
  // A manual visit to a Studio that cannot open a source file does not claim it (f0b52c48): the Code tabs stay with Code.
  await expect(tab).toHaveCount(0);await expect(page.getByRole('tab',{name:/^other\.html/})).toHaveCount(0);
  expect(await page.evaluate(async()=>{const {getState}=await import('/src/store/appStore.ts');return getState().studioByTab['index.html']??'code';})).toBe('code');

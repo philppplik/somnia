@@ -1,4 +1,4 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
@@ -13,7 +13,7 @@ test.beforeAll(async({browser})=>{
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
  await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));
@@ -69,7 +69,7 @@ test('Video Studio: H.264 MP4 shows an honest no-preview note but still probes a
 });
 test('Video Studio: a file that is not video is rejected with a notice, no tab opens',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
  await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset('fake.webm'));
  await expect(page.locator('footer [role="status"]')).toContainText('fake.webm is not a valid');
@@ -124,8 +124,8 @@ test('Video Studio: add a second source, split, ripple delete, reorder, mute, ex
 });
 for(const locale of ['de','es','fr','pt-BR'])test(`Video Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
- const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(studioCount);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(Math.min(5,studioCount));
  await expect(page.locator('header [role="radiogroup"]')).not.toContainText('studio.video');
- await page.locator('header [role="radiogroup"]').getByRole('radio').nth(5).click();
+ await switchStudio(page,'Somnia Video');
  await expect(page.getByTestId('video-start')).toBeVisible();await expect(page.getByTestId('video-start')).not.toContainText('video.');
 });

@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 import path from 'node:path';
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 /**
@@ -26,7 +27,7 @@ const FAKE_WORKER=`(()=>{
 async function openPhoto(page:any){
  await page.addInitScript(FAKE_WORKER);
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Photos'}).click();
+ await switchStudio(page,'Somnia Photos');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('photos-open').click();(await chooser).setFiles(asset('photo.jpg'));
  await expect(page.getByTestId('photos-workspace')).toBeVisible();
 }

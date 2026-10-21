@@ -1,4 +1,4 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 import {readFileSync} from 'node:fs';
@@ -12,7 +12,7 @@ test.setTimeout(120_000);
 const asset=(name:string)=>path.join(import.meta.dirname,'assets',name);
 async function openStudio(page:Page){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
  await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
 }

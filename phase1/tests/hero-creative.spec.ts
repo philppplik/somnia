@@ -1,5 +1,6 @@
 import {test} from './fixtures';
 import assert from 'node:assert/strict';
+import {switchStudio} from './helpers';
 test.use({sample:false});
 /** Photos uses a test engine, not a WASM pixel/encoder verification. Design/Vector exports are real. */
 for(const theme of ['light','dark'])test(`export heroes: ${theme}`,async({page})=>{
@@ -28,7 +29,7 @@ for(const theme of ['light','dark'])test(`export heroes: ${theme}`,async({page})
  await page.screenshot({path:`test-results/hero-vector-${theme}.png`});
  await page.getByTestId('vector-shell-export').getByRole('combobox',{name:'Format',exact:true}).selectOption('svg');d=page.waitForEvent('download');await page.getByTestId('vector-shell-export').getByRole('button',{name:'Export SVG',exact:true}).click();download=await d;console.log('VECTOR SVG',download.suggestedFilename());
  await command('vector.resizePage',{width:400,height:300});await page.getByTestId('vector-shell-export').getByRole('combobox',{name:'Format',exact:true}).selectOption('png');await page.getByTestId('vector-shell-export').getByRole('combobox',{name:'PNG scale',exact:true}).selectOption('2');d=page.waitForEvent('download');await page.getByTestId('vector-shell-export').getByRole('button',{name:'Export PNG',exact:true}).click();download=await d;assert.ok(download.suggestedFilename().endsWith('.png'));await download.saveAs(`test-results/vector-export-${theme}.png`);
- await page.getByRole('radio',{name:'Somnia Photos'}).click();assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);
+ await switchStudio(page,'Somnia Photos');assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);
  // Real session and host with a deterministic engine double: generated WASM is not present in this checkout.
  // AE1 decodes the engine PNG via createImageBitmap, so the stub must be a real decodable PNG (opaque 1x1 RGB), not just the magic bytes.
  const PHOTO_STUB_PNG=[137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82,0,0,0,1,0,0,0,1,8,2,0,0,0,144,119,83,222,0,0,0,12,73,68,65,84,120,156,99,104,80,80,0,0,1,228,0,193,234,91,25,23,0,0,0,0,73,69,78,68,174,66,96,130];

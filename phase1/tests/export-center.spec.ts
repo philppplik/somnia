@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 test.use({sample:true});
 test('advanced export center: grouped commands, dark theme, round trip through project export',async({page})=>{
  await page.addInitScript(()=>{try{localStorage.setItem('somnia.theme','dark');}catch{/* storage unavailable */}});
@@ -17,7 +18,7 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  // vector studio adds its format presets (rows may stay disabled without a document); reopen to pick up newly registered commands
  await page.keyboard.press('Escape');
  await expect(page.getByTestId('export-center')).toHaveCount(0);
- await page.getByRole('radio',{name:'Somnia Vector'}).click();
+ await switchStudio(page,'Somnia Vector');
  await expect(page.getByRole('radio',{name:'Somnia Vector'})).toHaveAttribute('aria-checked','true');
  await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');await m.executeCommand('project.export.advanced');});
  await page.getByTestId('export-center-presets-vector').waitFor({state:'visible'});

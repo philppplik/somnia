@@ -1,4 +1,4 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 import path from 'node:path';
@@ -6,7 +6,7 @@ test.use({sample:false});
 const asset=(name:string)=>path.join(import.meta.dirname,'assets/vector-studio',name);
 async function studio(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Vector'}).click();
+ await switchStudio(page,'Somnia Vector');
  await expect(page.getByTestId('vector-start')).toBeVisible();
  await showPanel(page,'Layers');await showPanel(page,'Vector inspector');
 }

@@ -1,10 +1,11 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 test.use({sample:false});
 test('empty studio sidebar follows studio and provides chat-only guidance without stale context',async({page})=>{
  await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
  let payload:Record<string,unknown>|undefined;
  await page.route('http://127.0.0.1:11434/api/chat',async r=>{payload=r.request().postDataJSON();await r.fulfill({contentType:'application/x-ndjson',body:JSON.stringify({message:{content:'Start with a short rough cut, then refine the pacing.'},done:true})+'\n'});});
- await page.goto('/');await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();await page.getByRole('button',{name:'Open Somnia Agent'}).click();
+ await page.goto('/');await switchStudio(page,'Somnia Video');await page.getByRole('button',{name:'Open Somnia Agent'}).click();
  const panel=page.getByRole('complementary',{name:'Somnia Agent'});
  await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Video');
  await panel.getByRole('button',{name:'Suggest a small improvement',exact:true}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Suggest a small improvement');

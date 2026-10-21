@@ -1,10 +1,10 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import {readFileSync} from 'node:fs';
 const SVG='<svg xmlns="http://www.w3.org/2000/svg" width="120" height="80" viewBox="0 0 120 80"><path d="M10 10L110 10L60 70Z" fill="#336699"/></svg>';
 async function openStudio(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Vector'}).click();
+ await switchStudio(page,'Somnia Vector');
  await expect(page.getByTestId('vector-start')).toBeVisible();
  await showPanel(page,'Layers');await showPanel(page,'Vector inspector');
 }

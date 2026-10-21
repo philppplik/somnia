@@ -1,11 +1,11 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
  await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));

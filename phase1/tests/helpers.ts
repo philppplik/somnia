@@ -30,3 +30,10 @@ export async function allowAgentDocumentInspection(page:Page){
  await expect(panel.getByRole('checkbox',{name:/Allow inspecting/})).toHaveCount(0);
  await settings.getByRole('button',{name:'Close settings',exact:true}).click();
 }
+
+/** Switches studios through the studio bar's real controls: the visible radio when the studio is in the bar, otherwise the More overflow (the bar caps at 5 visible studios). */
+export async function switchStudio(page:Page,name:string){
+ const radio=page.getByRole('radio',{name,exact:true});
+ if(await radio.count()){await radio.click();return;}
+ await page.locator('header select.studio-pill-more').selectOption({label:name});
+}

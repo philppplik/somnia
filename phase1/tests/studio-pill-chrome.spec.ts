@@ -1,4 +1,5 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 
 test('the active studio stays white on hover, in light and dark shells',async({page})=>{
  await page.goto('/');
@@ -19,10 +20,10 @@ test('the active studio stays white on hover, in light and dark shells',async({p
  }
 });
 
-test('every registered studio shows a compact name on hover without changing selection',async({page})=>{
+test('every visible studio shows a compact name on hover without changing selection',async({page})=>{
  await page.goto('/');
  const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sound'],['Somnia Video','Video'],['Design','Design'],['Somnia Vector','Vector'],['Somnia Photos','Photos'],['Vibe Space','Vibe Space']]){
+ for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sound']]){
   const button=pill.getByRole('radio',{name,exact:true});
   await button.hover();
   await expect(page.getByRole('tooltip')).toHaveText(short);
@@ -48,10 +49,10 @@ test('keyboard focus exposes short names and keeps roving studio selection',asyn
  await expect(page.getByRole('tooltip')).toHaveCount(0);
  await expect(docs).toBeFocused();
  await page.keyboard.press('End');
- const vibe=pill.getByRole('radio',{name:'Vibe Space',exact:true});
- await expect(vibe).toBeFocused();
- await expect(vibe).toHaveAttribute('aria-checked','true');
- await expect(vibe).toHaveAttribute('tabindex','0');
+ const sound=pill.getByRole('radio',{name:'Somnia Sound',exact:true});
+ await expect(sound).toBeFocused();
+ await expect(sound).toHaveAttribute('aria-checked','true');
+ await expect(sound).toHaveAttribute('tabindex','0');
  await page.keyboard.press('Home');
  await expect(pill.getByRole('radio',{name:'Somnia Code',exact:true})).toBeFocused();
 });
@@ -60,10 +61,10 @@ test('keyboard focus exposes short names and keeps roving studio selection',asyn
 test('all ten studio selections retain the global pill and show only short tab names',async({page})=>{
  await page.goto('/');
  const pill=page.getByRole('radiogroup',{name:'Studios',exact:true});
- const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(studioCount);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(Math.min(5,studioCount));
  for(const [name,short] of [['Somnia Code','Code'],['Somnia Documents','Docs'],['Somnia Sheets','Sheets'],['Slides','Slides'],['Somnia Sound','Sound'],['Somnia Video','Video'],['Design','Design'],['Somnia Vector','Vector'],['Somnia Photos','Photos'],['Vibe Space','Vibe Space']]){
+  await switchStudio(page,name);
   const button=pill.getByRole('radio',{name,exact:true});
-  await button.click();
   await expect(pill).toBeVisible();
   await expect(button).toHaveAttribute('aria-checked','true');
   await expect(button).toHaveText(short);
@@ -72,7 +73,7 @@ test('all ten studio selections retain the global pill and show only short tab n
  // It must never remove the global studio navigation, including the way back.
  await page.evaluate(()=>window.dispatchEvent(new Event('somnia:edit-image')));
  await expect(pill).toBeVisible();
- await pill.getByRole('radio',{name:'Somnia Vector',exact:true}).click();
+ await switchStudio(page,'Somnia Vector');
  await expect(pill).toBeVisible();
  await expect(pill.getByRole('radio',{name:'Somnia Vector',exact:true})).toHaveText('Vector');
  await pill.getByRole('radio',{name:'Somnia Code',exact:true}).click();

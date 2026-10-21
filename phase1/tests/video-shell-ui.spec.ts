@@ -1,9 +1,9 @@
-import {showPanel} from './helpers';
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 test('video shell panels, selection, typed edits and light/dark views',async({page})=>{
  await page.goto('/');
- await page.getByRole('radio',{name:'Somnia Video',exact:true}).click();
+ await switchStudio(page,'Somnia Video');
  await showPanel(page,'Sources');
  await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(path.join(import.meta.dirname,'assets','clip.webm'));
