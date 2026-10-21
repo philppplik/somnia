@@ -8,9 +8,9 @@ pub fn endpoint(provider: &str, url: &str, method: &str) -> Result<(), String> {
         ("openai-account", "POST") => url == "https://auth.openai.com/api/accounts/oauth/token",
         ("openai", "GET") => url == "https://api.openai.com/v1/models",
         // xAI, Meta Model API and DeepSeek: OpenAI-compatible Chat Completions plus the model list. Fixed routes, no query strings.
-        ("xai", "POST") => url == "https://api.x.ai/v1/chat/completions",
+        ("xai", "POST") => url == "https://api.x.ai/v1/chat/completions" || url == "https://api.x.ai/v1/responses",
         ("xai", "GET") => url == "https://api.x.ai/v1/models",
-        ("meta", "POST") => url == "https://api.meta.ai/v1/chat/completions",
+        ("meta", "POST") => url == "https://api.meta.ai/v1/chat/completions" || url == "https://api.meta.ai/v1/responses",
         ("meta", "GET") => url == "https://api.meta.ai/v1/models",
         ("deepseek", "POST") => url == "https://api.deepseek.com/chat/completions",
         ("deepseek", "GET") => url == "https://api.deepseek.com/models",
@@ -32,6 +32,14 @@ pub fn endpoint(provider: &str, url: &str, method: &str) -> Result<(), String> {
 }
 #[cfg(test)] mod tests {
  use super::*;
+ #[test] fn responses_stay_vendor_scoped() {
+  for (provider, host) in [("xai", "api.x.ai"), ("meta", "api.meta.ai")] {
+   assert!(endpoint(provider, &format!("https://{host}/v1/responses"), "POST").is_ok());
+   assert!(endpoint(provider, &format!("https://{host}/v1/responses"), "GET").is_err());
+   assert!(endpoint(provider, &format!("https://{host}/v1/responses?store=true"), "POST").is_err());
+   assert!(endpoint(provider, "https://api.openai.com/v1/responses", "POST").is_err());
+  }
+ }
  #[test] fn fixed_hosts_and_routes_only() {
   assert!(endpoint("claude","https://api.anthropic.com/v1/models?limit=100&after_id=model_123","GET").is_ok());
   for url in ["http://api.anthropic.com/v1/models","https://api.anthropic.com.evil/v1/models","https://user@api.anthropic.com/v1/models","https://api.anthropic.com/v1/models?other=x","https://api.anthropic.com/v1/models?limit=1&limit=2"] {assert!(endpoint("claude",url,"GET").is_err());}

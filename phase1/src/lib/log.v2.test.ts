@@ -11,9 +11,9 @@ const withClock=<T>(start:number,fn:(set:(t:number)=>void)=>T):T=>{
  try{return fn(n=>{t=n;});}finally{Date.now=real;}
 };
 
-test('registry: 76 active ids, value union, meta for each, deprecated/reserved/ci-only excluded',()=>{
+test('registry: 78 active ids, value union, meta for each, deprecated/reserved/ci-only excluded',()=>{
  const values=Object.values(ERROR_IDS);
- assert.equal(values.length,76);
+ assert.equal(values.length,78);
  for(const [k,v] of Object.entries(ERROR_IDS)){assert.equal(k,v.replace(/^SOM-/,'').replace(/-/g,'_'));assert.match(v,/^SOM-[A-Z]{2,4}-\d{3}$/);assert.ok(ERROR_META[v],v);assert.match(ERROR_META[v].messageKey,/^err\.[a-z]+\.\d{3}$/);}
  for(const r of RETIRED_ERROR_IDS)assert.ok(!values.includes(r as never),r);
  const fatal=values.filter(v=>ERROR_META[v].fatal).sort();

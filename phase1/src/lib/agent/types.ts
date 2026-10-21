@@ -1,4 +1,11 @@
 import type { AIProvenance } from './privacy';
+/** Provider-private protocol state, never UI text or tool authorization. */
+export interface ProviderReplay {
+  provider: 'deepseek' | 'xai' | 'meta';
+  model: string;
+  reasoningContent?: string;
+  output?: Record<string, unknown>[];
+}
 /** UI-free provider contract. Secrets and transports never enter session snapshots. */
 export interface AgentToolCall { id: string; name: string; arguments: string }
 export interface AgentImagePart {mime:'image/jpeg'|'image/png';base64:string;width:number;height:number;label:string}
@@ -10,6 +17,8 @@ export interface AgentMessage {
   toolCalls?: AgentToolCall[];
   toolCallId?: string;
   provenance?: AIProvenance;
+  /** Private protocol replay, scoped to the exact provider and model. */
+  providerReplay?: ProviderReplay;
 }
 export interface AgentToolDefinition {
   name: string;
@@ -34,6 +43,7 @@ export interface AgentProviderRequest {
 export type AgentProviderEvent =
   | { type: 'text'; text: string }
   | { type: 'tool-call'; index: number; id?: string; name?: string; arguments?: string }
+  | { type: 'provider-replay'; replay: ProviderReplay }
   | { type: 'usage'; usage: AgentUsage }
   | { type: 'finish'; reason: string };
 export interface AgentProvider {

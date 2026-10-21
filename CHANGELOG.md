@@ -211,6 +211,33 @@
 - Staging basics (P1 subset, three core only): insert cube, sphere, plane, cylinder, cone, torus, sun and point lights; numeric position, rotation and scale; PBR color, metalness and roughness; rename, duplicate, delete; undo and redo (one entry per edit); export marks the scene saved; replacing an unexported scene asks first; the scene survives switching studios.
 - Not in P0/P1 subset: Smart Open routing of .glb/.gltf, OBJ/STL/PLY, Draco, editing, path tracing, Babylon comparison and the 100k-triangle frame-rate gate (needs a real GPU run on Windows).
 
+# Unreleased: Per-studio layout restore
+
+- Studio sidebars restore their own visibility, active panel, stack and width. First visits keep the inspector open. Old Code inspector tabs and missing or obsolete saved stacks migrate without reopening panels the user explicitly closed.
+
+# Unreleased: Studio lifecycle core
+
+- Studios now move through active/warm/suspended/evicted states: the previous studio stays warm for 30 seconds, then checkpoints its session and releases workers and caches. Slides is the first studio with a verified suspend/resume checkpoint (edited decks and history included). New Settings > Advanced > Performance section with an opt-out and a resource profile (Automatic/Low/Standard/High). Local-only lifecycle telemetry.
+
+# Unreleased: Settings transfer
+
+- Settings > Modified > Import & export setup: versioned, classified setup file with category selection, Merge/Replace review, restore point with rollback and undo; secrets, servers, permissions and the preview-script switch are never exported. Docs: docs/SETTINGS-TRANSFER.md.
+
+# Unreleased: Provider reasoning replay
+
+- Somnia Agent uses stateless Responses for xAI and Meta, with encrypted reasoning and complete output-item replay across tool loops and later turns.
+- DeepSeek reasoning_content is kept separately from UI text and replayed unchanged in tool-enabled requests. Replay is private and scoped to the same provider and model.
+- Remote catalogs are validated, deduplicated and sorted without static model IDs. Native Vibe Space reasoning parity and live API tests remain outstanding.
+
+# Unreleased: Signed auto-update on alpha and beta channels
+
+- The update pill installs signed prerelease builds in-app. Per-channel manifests (`latest-beta.json`, `latest-alpha.json` on the `updater-channels` release), full SemVer comparison against `somniaRelease`, `make-latest-json.py --channels-dir`, new Tauri commands `check_channel_update` and `install_channel_update`. Docs: phase1/notes/UPDATER.md.
+
+## Unreleased - ARM64 release pipeline
+
+- Native Windows ARM64 NSIS/MSI and Linux ARM64 deb builds join full beta/stable CI from 12.2.0-beta.4; dev/alpha runs keep the small x64 matrix.
+- Native ARM64 CLI archives, architecture checks, same-SHA release asset assembly and checksums. Public-only standard runner guards prevent private-repo runner charges. Native packaging and real-device install checks remain CI/manual gates.
+
 # Unreleased: Studio shell regression fixes
 
 - Code Studio restores the inline SVG inspector inside the shared Design section, including paint, fill/stroke gradients, guides, grid and clip/mask controls.
@@ -266,6 +293,9 @@
 - Compare full release versions, including alpha/beta numbers, so beta.2 detects beta.3 and beta.3 detects beta.10 without offering equal versions or downgrades.
 - Changing the channel or automatic-check setting refreshes the pill immediately. Prerelease tags stay out of stable even if a release has the wrong GitHub flag.
 - Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.## Unreleased - Vibe Space model picker
+
+- Signed update manifests use the real artifact filenames, reject missing or ambiguous artifacts, and accept prerelease versions in the updater test harness.
+## Unreleased - Vibe Space model picker
 
 - Refresh configured models when opening a task form or saving the AI provider/model, without resetting the goal or substituting a removed selection.
 - Vibe Space now includes the saved Claude model and uses the existing Anthropic adapter; Ollama, OpenAI and OpenRouter use their matching native adapters. API keys stay in the OS credential store.

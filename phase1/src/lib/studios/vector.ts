@@ -1,5 +1,6 @@
 import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 export const VECTOR_TOOLS=['select','node','pen','rect','ellipse','line','polygon','star','text'] as const;
 const toolIcons=['MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar','Type'];

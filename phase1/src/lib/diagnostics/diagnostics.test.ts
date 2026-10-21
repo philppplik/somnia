@@ -105,7 +105,7 @@ test('retry requires executor/capability, consumes before await, expires, and ha
  attachRetryCapability(incident, { requestId: request, ordinal: 0, token: 'expired', expiresAt: '2000-01-01T00:00:00Z' }); assert.equal(canRetryNotice(incident), false); unregister();
 });
 test('five catalogues cover exact active title/hint manifest and have placeholder parity', () => {
- assert.equal(keys.length, 152);
+ assert.equal(keys.length, 156);
  const placeholders = (v: string) => [...v.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort();
  for (const [locale, cat] of Object.entries(DIAGNOSTIC_LOCALES)) {
   for (const key of keys) { assert.ok(cat[key]?.trim(), `${locale}:${key}`); assert.deepEqual(placeholders(cat[key]), placeholders(DIAGNOSTIC_LOCALES.en[key])); }

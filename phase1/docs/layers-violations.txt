@@ -4,19 +4,6 @@
       src/lib/video/timeline.ts
     No import cycles.
 
-  error no-circular: src/lib/studios/vector.ts → 
-      src/lib/studios/blank.ts →
-      src/store/appStore.ts →
-      src/lib/studios/index.ts →
-      src/lib/studios/vector.ts
-    No import cycles.
-
-  error no-circular: src/lib/studios/index.ts → 
-      src/lib/studios/vector.ts →
-      src/store/appStore.ts →
-      src/lib/studios/index.ts
-    No import cycles.
-
   error no-circular: src/lib/studios/blank.ts → 
       src/store/appStore.ts →
       src/lib/studios/index.ts →
@@ -134,10 +121,6 @@
     or main.
 
   error lib-not-up: src/lib/svgedit/controller.ts → src/store/appStore.ts
-    src/lib is non-UI logic: it must not import src/store, src/components, App
-    or main.
-
-  error lib-not-up: src/lib/studios/vector.ts → src/store/appStore.ts
     src/lib is non-UI logic: it must not import src/store, src/components, App
     or main.
 
@@ -386,13 +369,5 @@
     agent/studio libs.
 
 
-x 90 dependency violations (90 errors, 0 warnings). 1064 modules, 3333 dependencies cruised.
-
-‼ missing-typescript-transpiler: dependency-cruiser detected a TypeScript environment,
-    but not a compatible TypeScript compiler (typescript: >=2.0.0 <7.0.0). This means
-    it's likely to have missed TypeScript sources and dependencies.
-
-    Install typescript to get better results (e.g. npm i -D typescript@^6).
-
-    => Support for typescript@>=7 will follow when its API is published and stable.
+x 87 dependency violations (87 errors, 0 warnings). 1346 modules, 4555 dependencies cruised.
 

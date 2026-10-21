@@ -1,5 +1,6 @@
 import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import {registerStudio,type StudioDef} from './registry';
+import {getRegisteredLifecycleAdapter} from '../lifecycle/adapters';
 import type {StudioShellDef} from '../shell/types';
 /** Pure-data shell. Video panel hosts are registered by components/video/registerShell.ts. */
 export const videoShell:StudioShellDef={
@@ -33,6 +34,7 @@ export const videoShell:StudioShellDef={
  ],
 };
 export const videoStudio:StudioDef={
+ lifecycle:()=>getRegisteredLifecycleAdapter('video'),
  id:'video',label:'studio.video',icon:'Film',order:5,
  formats:['mp4','m4v','mov','webm','mkv'].map(ext=>({ext,priority:10})),
  shell:{leftRail:[{id:'files',label:'Files',icon:'Files',global:true}],rightRail:[],header:{menus:['Project','Edit','View','Tools','Help'],views:[],heroAction:{id:'video.export.open',labelKey:'video.hero.export',icon:'Film',variants:[{when:'services.exporting',id:'video.export.open',labelKey:'video.hero.exporting',icon:'Film'}]}},bottomBar:{slots:[],viewportPresets:[]},inspector:'video.inspector',tools:[]},

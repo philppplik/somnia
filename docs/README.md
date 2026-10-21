@@ -40,6 +40,7 @@ Change history: [Changelog](../CHANGELOG.md). Releases: <https://github.com/phil
 - [Inline terminal](TERMINAL.md): bottom-panel shells and run streams, PTY host, security model.
 - [Logging and error handling](LOGGING.md), [Window background](WINDOW-BACKGROUND.md), [Folder drop](FOLDER-DROP.md).
 - [Roadmap](ROADMAP.md), [Performance budgets](PERFORMANCE-BUDGETS.md), [Large projects](PERF-LARGE-PROJECTS.md).
+- [Studio lifecycle](studio-lifecycle.md): active/warm/suspended/evicted states, checkpoint suspension, resource budgets, pressure handling and local telemetry.
 - [LaTeX math (Stage 1)](features/latex-math.md): Markdown formulas, .tex math preview, errors, safety and settings.
 - Feature notes: [Markdown live preview](features/markdown-live-preview.md), [`features/`](features/), [`i18n/`](i18n/), [Collaboration share UI](collab-share-ui.md), [`fixes/`](fixes/).
 - Deploy: [SSH transport and server bootstrap](DEPLOY-SSH.md).

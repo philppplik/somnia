@@ -66,6 +66,7 @@ for (const [tag, extra] of Object.entries(SHEETS_RAIL_CATALOGUES)) Object.assign
 for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for(const [tag,extra] of Object.entries(WORKSPACE_CATALOGUES))Object.assign(CATALOGUES[tag],extra);
+for(const [tag,extra] of Object.entries(LIFECYCLE_CATALOGUES))Object.assign(CATALOGUES[tag],extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';

@@ -61,8 +61,6 @@ import { CloseDialog } from './components/CloseDialog';
 import { UpdatePill } from './components/UpdatePill';
 import { ShareDialog } from './components/ShareDialog';
 import { CollabStatus } from './components/CollabStatus';
-import { Inspector } from './components/Inspector';
-import { Canvas } from './components/Canvas';
 import { CommandPalette } from './components/CommandPalette';
 import { ResizeHandle } from './components/ResizeHandle';
 import { executeCommand,formatShortcut } from './lib/commands';

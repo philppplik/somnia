@@ -41,3 +41,27 @@ test('tab cycling stays inside the studio',()=>{
  assert.equal(cycleScoped(files,'a.html','code',by,-1),'x.html');
  assert.equal(cycleScoped(['b.svg'],'b.svg','vector',by,1),null);
 });
+
+test('release matrix: interleaved tabs retain owner order, neighbours and wrap in all ten studios',()=>{
+ const files=STUDIOS.flatMap(s=>[`${s}-a.txt`,`${s}-b.txt`,`${s}-c.txt`]);
+ const map=Object.fromEntries(STUDIOS.flatMap(s=>['a','b','c'].map(n=>[`${s}-${n}.txt`,s])));
+ // Deliberately interleave tabs instead of grouping them by owner.
+ const interleaved=['a','b','c'].flatMap(n=>STUDIOS.map(s=>`${s}-${n}.txt`));
+ for(const studio of STUDIOS){
+  const own=['a','b','c'].map(n=>`${studio}-${n}.txt`);
+  assert.deepEqual(scopedFiles(interleaved,studio,map),own);
+  assert.equal(neighbourAfterClose(interleaved,own[1],studio,map),own[0]);
+  assert.equal(neighbourAfterClose(interleaved,own[0],studio,map),own[1]);
+  assert.equal(cycleScoped(files,own[2],studio,map,1),own[0]);
+  assert.equal(cycleScoped(files,own[0],studio,map,-1),own[2]);
+  assert.equal(neighbourAfterClose(files.filter(f=>!own.slice(0,2).includes(f)),own[2],studio,map),null);
+ }
+});
+
+test('media ownership overrides kind-based fallback for every studio and does not call fallback',()=>{
+ for(const studio of STUDIOS){
+  let fallbackCalls=0;
+  assert.equal(mediaTabStudio('shared.pdf',{'media:shared.pdf':studio},()=>{fallbackCalls++;return 'code';}),studio);
+  assert.equal(fallbackCalls,0);
+ }
+});

@@ -113,6 +113,7 @@
     "allow-mark-crash-reports-reviewed",
     "allow-delete-crash-reports",
     "allow-record-frontend-fatal",
+    "allow-lifecycle-memory-sample",
     "allow-drain-open-requests",
     "allow-claim-open-request",
     "allow-read-by-grant",
@@ -266,6 +267,9 @@
     "allow-deploy-node-build-collect",
     "allow-preview-open",
     "allow-preview-close",
+    "allow-check-channel-update",
+    "allow-install-channel-update",
+
     "core:window:allow-set-always-on-top",
     "core:window:allow-set-decorations",
     "core:menu:default",

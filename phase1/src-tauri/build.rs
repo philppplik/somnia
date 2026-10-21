@@ -105,6 +105,7 @@ fn main() {
             "mark_crash_reports_reviewed",
             "delete_crash_reports",
             "record_frontend_fatal",
+            "lifecycle_memory_sample",
             "drain_open_requests",
             "claim_open_request",
             "read_by_grant",
@@ -262,6 +263,8 @@ fn main() {
             "terminal_kill",
             "preview_open",
             "preview_close",
+            "check_channel_update",
+            "install_channel_update",
 
         ]),
     ))
