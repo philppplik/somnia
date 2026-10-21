@@ -1074,37 +1074,6 @@
   },
   {
     "type": "cycle",
-    "from": "src/lib/agent/core.ts",
-    "to": "src/lib/agent/panelBridge.ts",
-    "unresolvedTo": "./panelBridge",
-    "dependencyTypes": [
-      "local",
-      "dynamic-import"
-    ],
-    "rule": {
-      "severity": "error",
-      "name": "no-circular"
-    },
-    "cycle": [
-      {
-        "name": "src/lib/agent/panelBridge.ts",
-        "dependencyTypes": [
-          "local",
-          "dynamic-import"
-        ]
-      },
-      {
-        "name": "src/lib/agent/core.ts",
-        "dependencyTypes": [
-          "local",
-          "type-only",
-          "import"
-        ]
-      }
-    ]
-  },
-  {
-    "type": "cycle",
     "from": "src/lib/agent/nativeProviderFetch.ts",
     "to": "src/lib/agent/providerAuth.ts",
     "unresolvedTo": "./providerAuth",
@@ -1142,7 +1111,6 @@
     "unresolvedTo": "./settings",
     "dependencyTypes": [
       "local",
-      "type-only",
       "import"
     ],
     "rule": {
@@ -1154,12 +1122,119 @@
         "name": "src/lib/agent/settings.ts",
         "dependencyTypes": [
           "local",
-          "type-only",
           "import"
         ]
       },
       {
         "name": "src/lib/agent/panelBridge.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/animation/interpolate.ts",
+    "to": "src/lib/animation/model.ts",
+    "unresolvedTo": "./model",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/animation/model.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/modifiers.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/interpolate.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/animation/model.ts",
+    "to": "src/lib/animation/modifiers.ts",
+    "unresolvedTo": "./modifiers",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/animation/modifiers.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/model.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/commandContracts.ts",
+    "to": "src/lib/terminal/nativeTerminal.ts",
+    "unresolvedTo": "./terminal/nativeTerminal",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/terminal/nativeTerminal.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/invokeCmd.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/commandContracts.ts",
         "dependencyTypes": [
           "local",
           "type-only",
@@ -1232,6 +1307,36 @@
           "local",
           "type-only",
           "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/documents/edit.ts",
+    "to": "src/lib/documents/protocol.ts",
+    "unresolvedTo": "./protocol",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/documents/protocol.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/documents/edit.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
         ]
       }
     ]
