@@ -1,5 +1,6 @@
 import {readFileSync} from 'node:fs';
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 /** A two-bone skinned box as GLB bytes, built with the real exporter (Node side, so the page test needs no fixture file). */
 async function skinnedGlb():Promise<Buffer>{
  const THREE=await import('three');const {GLTFExporter}=await import('three/examples/jsm/exporters/GLTFExporter.js');
@@ -87,7 +88,7 @@ function triangleGlb():Buffer{
 }
 test('3D studio opens a GLB, shows its stats and exports a still',async({page})=>{
  await page.goto('/');
- await page.getByRole('radio',{name:/3D/}).first().click();
+ await switchStudio(page,'Somnia 3D');
  await expect(page.getByTestId('3d-start')).toBeVisible();
  await openModel(page,{name:'tri.glb',mimeType:'model/gltf-binary',buffer:triangleGlb()});
  await expect(page.getByTestId('studio3d-model-section')).toContainText('GLB');
@@ -97,7 +98,7 @@ test('3D studio opens a GLB, shows its stats and exports a still',async({page})=
  expect(download.suggestedFilename()).toBe('tri-still.png');
 });
 test('3D studio refuses a file that is not glTF with a readable error',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:/3D/}).first().click();
+ await page.goto('/');await switchStudio(page,'Somnia 3D');
  await page.getByTestId('studio3d-file-input').setInputFiles({name:'bad.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('not a model')});
  await expect(page.getByRole('alert')).toContainText('bad.glb',{timeout:15000});
 });
@@ -110,7 +111,7 @@ const runValue=(page:P,id:string,params:unknown={})=>page.evaluate(async([i,p])=
 /** Refused commands surface as a polite status-bar notice (role=status); only hard open failures render as an assertive viewport alert. */
 const notice=(page:P,text:RegExp|string)=>page.getByRole('status').filter({hasText:text});
 const session=(page:P)=>page.evaluate(async()=>{const m=await import('/src/lib/studio3d/session.ts');const s=m.getStudio3DState();return {anim:s.anim,clips:s.clips,clipKeys:s.clipKeys,outline:s.outline,marked:s.marked,selected:s.selected,info:s.selectedInfo,dirty:s.dirty,notice:s.notice,status:s.status,name:s.name,blank:s.blank,bones:s.bones,weightPreview:s.weightPreview,stats:s.stats,exportClips:s.exportClips,poses:s.poses,ik:s.ik,fabrik:s.fabrik,motionPath:s.motionPath,onion:s.onion,bounds:s.bounds,boneLimits:s.boneLimits,views:s.views,materialPresets:s.materialPresets,env:s.env,edit:s.edit,sculpt:s.sculpt,uvChecker:s.uvChecker,snap:s.snap,pivot:s.pivot,cursor:s.cursor,measure:s.measure,viewKind:s.viewKind,viewFov:s.viewFov,history:s.history,turntable:s.turntable,shadows:s.shadows,lightHelpers:s.lightHelpers,ao:s.ao,perf:s.perf};});
-const open3d=async(page:P)=>{await page.goto('/',{waitUntil:'domcontentloaded',timeout:60_000});await page.getByRole('radio',{name:/3D/}).first().click();};
+const open3d=async(page:P)=>{await page.goto('/',{waitUntil:'domcontentloaded',timeout:60_000});await switchStudio(page,'Somnia 3D');};
 /** The viewport div renders before its WebGL setup and command controller are live; only this attribute says commands can run. */
 const viewportReady=async(page:P)=>{
  await expect(page.getByTestId('studio3d-viewport')).toBeVisible({timeout:60_000});

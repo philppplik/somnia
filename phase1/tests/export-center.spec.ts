@@ -6,7 +6,7 @@ test('advanced export center: grouped commands, dark theme, round trip through p
  await page.goto('/');
  await expect(page.getByRole('radio',{name:'Somnia Code',exact:true})).toBeVisible();
  // register a second studio's export commands so the dialog shows more than one group
- await page.getByRole('radio',{name:/^(Somnia )?Design$/}).click();
+ await switchStudio(page,'Design');
  await expect(page.getByRole('radio',{name:/^(Somnia )?Design$/})).toHaveAttribute('aria-checked','true');
  await page.evaluate(async()=>{const m=await import('/src/lib/commands.ts');await m.executeCommand('project.export.advanced');});
  const dialog=page.getByRole('dialog');

@@ -50,7 +50,7 @@ test('release smoke: explicit studio choice routes only the active tab, and clos
  await page.goto('/');await page.getByTestId('empty-state').getByRole('button',{name:'New blank page'}).click();
  await page.getByRole('button',{name:'View',exact:true}).click();
  await page.getByRole('menuitemradio',{name:/Code view/}).click();
- const tab=page.getByRole('tab',{name:/^index\.html(?: Close index\.html)?$/});await expect(tab).toBeVisible();
+ const tab=page.getByRole('tab',{name:/^index\.html(?: Unsaved source changes)?(?: Close index\.html)?$/});await expect(tab).toBeVisible();
  // Set up a real editor-core document, not an engine/UI double.
  await page.evaluate(async()=>{
   const {connectEditorProject,openFileTab}=await import('/src/store/appStore.ts');

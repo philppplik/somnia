@@ -10,7 +10,7 @@ for(const theme of ['light','dark'])test(`export heroes: ${theme}`,async({page})
  await page.goto('/');await page.locator('[data-storage]').waitFor();
  const command=async(id,payload)=>page.evaluate(async({id,payload})=>{const m=await import('/src/lib/commands.ts');return m.executeCommand(id,payload);},{id,payload});
  await command('theme.'+theme);
- await page.getByRole('radio',{name:/^(Somnia )?Design$/}).click();
+ await switchStudio(page,'Design');
  await page.getByTestId('hero-action-main').waitFor();assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);
  await page.getByTestId('design-create-blank').click();await page.getByTestId('hero-action-main').click();await page.getByTestId('design-export-popover').waitFor();
  assert.equal(await page.getByTestId('design-export-popover').locator('select').inputValue(),'current');
@@ -21,7 +21,7 @@ for(const theme of ['light','dark'])test(`export heroes: ${theme}`,async({page})
  await command('design.artboard.add',{});await page.getByTestId('hero-action-main').click();await page.getByTestId('design-export-popover').locator('select').selectOption('all');
  d=page.waitForEvent('download');await page.getByTestId('design-export-popover').getByRole('button',{name:'Export',exact:true}).click();download=await d;console.log('DESIGN ZIP',download.suggestedFilename());await download.saveAs(`test-results/design-${theme}.zip`);
  await page.keyboard.press('Escape');
- await page.getByRole('radio',{name:/^(Somnia )?Vector$/}).click();assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);
+ await switchStudio(page,'Somnia Vector');assert.equal(await page.getByTestId('hero-action-main').isDisabled(),true);
  await command('vector.createBlank',{width:3000,height:2500});await page.getByTestId('hero-action-main').click();await page.getByTestId('vector-shell-export').waitFor();
  await page.getByTestId('vector-shell-export').getByRole('combobox',{name:'Format',exact:true}).selectOption('png');await page.getByTestId('vector-shell-export').getByRole('combobox',{name:'PNG scale',exact:true}).selectOption('4');
  assert.equal(await page.getByTestId('vector-export-dimensions').innerText(),'8192 × 8192 px');

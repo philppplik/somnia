@@ -1,11 +1,12 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 import {mkdirSync} from 'node:fs';
 const shot=(n:string)=>{mkdirSync('test-results/shell-design',{recursive:true});return `test-results/shell-design/${n}.png`;};
 for(const theme of ['light','dark']){
  test(`${theme}: Design rails, panels, inspector sections, commands and rail customization`,async({page})=>{
   await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
   await page.evaluate(async t=>{const m=await import('/src/lib/commands.ts');await m.executeCommand('theme.'+t);},theme);
-  await page.getByRole('radio',{name:/^(Somnia )?Design$/}).click();
+  await switchStudio(page,'Design');
   const left=page.getByRole('toolbar',{name:'Sidebar panels'});
   // Without a design only the panel icons exist, no tools
   await expect(left.locator('[data-rail-item="layers"]')).toBeVisible();
