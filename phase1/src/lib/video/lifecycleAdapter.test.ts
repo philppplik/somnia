@@ -1,3 +1,14 @@
+/**
+ * Scenario mapping for the superseded beta4 lifecycle.test.ts (removed in ecc12be0):
+ * - timeline round trip on re-open -> 'timeline, format and undo history survive suspend and resume...' below
+ * - same-name different source (fingerprint isolation) -> src/lib/lifecycle/recipeKit.test.ts
+ *   ('stash hands a recipe back once, only for the same fingerprint') + photos adapter-level test
+ * - early re-open race (shell preview) -> 'an early re-open between suspend and resume...' below
+ * - tampered checkpoint -> 'checkpoint recipes are validated and corrupted checkpoints are refused'
+ *   + lifecycleSnapshot.test.ts
+ * Deliberate contract change vs beta4: snapshot() never returns null mid-work; suspension is
+ * gated by pinReasons() (export in flight) instead of a null-refusal snapshot.
+ */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {addBlankVideoProject,clearMedia,closeMedia,getMedia} from '../media';

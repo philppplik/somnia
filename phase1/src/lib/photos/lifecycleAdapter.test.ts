@@ -1,3 +1,16 @@
+/**
+ * Scenario mapping for the superseded beta4 lifecycle.test.ts (removed in ecc12be0):
+ * - recipe-only round trip (settings/history/dirty) -> 'suspend and resume keep develop settings...' below
+ * - same-name different source -> 'a different file under the same name does not inherit the old edit' below
+ * - unopened recipes merge into the next checkpoint -> src/lib/lifecycle/recipeKit.test.ts
+ *   ('stashed recipes survive repeated suspends'); the kit's merged() unions stash + capture
+ * - early re-open race (shell preview) -> 'an early re-open between suspend and resume...' below
+ * - tampered checkpoint -> 'tampered settings or history fail verification' + lifecycleSnapshot.test.ts
+ * Deliberate contract change vs beta4: snapshot() never returns null for a pending debounce.
+ * Capture is eager (settings live in the session, not the render) and closePhoto clears pending
+ * timers, so a suspend inside the debounce window loses nothing; pins cover real engine work
+ * (loading/processing/crop/gesture) via pinReasons().
+ */
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {closePhoto,commitPhotoSettings,dirtyPhoto,getPhotoSession,historyPhoto,openPhoto,pendingPhotoRecipes,sanitizePhotoRecipe,setPhotoEngineFactory,createPhotosLifecycleAdapter,beginPhotoGesture,endPhotoGesture,type PhotoEngineLike} from './studioSession';
