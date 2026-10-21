@@ -37,3 +37,7 @@ A passing test, a merged branch or a mock-server run does not move a feature to 
 ## Rules for writing docs
 
 See [DOCS-STYLE.md](../DOCS-STYLE.md). The short version: English, one home per topic, link instead of copy, state the status, no real keys, hosts or personal data in examples.
+
+## Latest stable
+
+[Somnia 12.2.0](https://github.com/philppplik/somnia/releases/tag/v12.2.0) is the first stable release of the 12.2 line. Built from the green full-matrix run on 81497996. The custom Windows setup stays an unsigned preview.
