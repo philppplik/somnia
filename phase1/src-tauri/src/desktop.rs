@@ -2933,7 +2933,8 @@ pub fn run() {
         .manage(crate::command_terminal::CommandTerminal::default())
         .invoke_handler(tauri::generate_handler![
             crate::update_channel::check_channel_update,
-            crate::update_channel::install_channel_update,            crate::studio_copy::studio_copy_open,
+            crate::update_channel::install_channel_update,
+            crate::studio_copy::studio_copy_open,
             crate::studio_copy::studio_copy_take,
             crate::studio_copy::studio_copy_export,            terminal_context, terminal_run, terminal_status, terminal_stop,            installer_handoff_take,
             runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
@@ -3101,7 +3102,6 @@ pub fn run() {
             crate::diagnostics_commands::mark_crash_reports_reviewed,
             crate::diagnostics_commands::delete_crash_reports,
             crate::diagnostics_commands::record_frontend_fatal,
-            crate::lifecycle_commands::lifecycle_memory_sample,
             drain_open_requests,
             claim_open_request,
             read_by_grant,
@@ -3113,10 +3113,7 @@ pub fn run() {
             open_dropped_project,
             read_dropped_files,
             is_store_package,
-            crate::update_channel::check_channel_update,
-            crate::update_channel::install_channel_update,
             list_files,
-            read_file,
             read_media,
             read_project_resource,
             image_pick,
