@@ -57,7 +57,7 @@
     "entities": "^8.1.0",
     "fflate": "^0.8.3",
     "imagetracerjs": "^1.2.6",
-    "katex": "^0.16.47",
+    "katex": "^0.18.2",
     "lib0": "^0.2.99",
     "lucide-react": "1.49.0",
     "mammoth": "^1.13.0",
