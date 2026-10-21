@@ -1,7 +1,6 @@
-import {lazyPanel} from '../../studios/lazyPanel';
 import {photosStudio} from '../../../lib/studios/photos';
 import {registerStudioPanels} from '../../studios/registerStudioPanels';
-const PHOTOS_PANEL_HOSTS={'photos.histogram':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.histogram'])),'photos.light':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.light'])),'photos.color':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.color'])),'photos.effects':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.effects'])),'photos.detail':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.detail'])),'photos.transform':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.transform'])),'photos.presets':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.presets'])),'photos.export':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.export'])),'photos.history':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.history'])),'photos.info':lazyPanel(()=>import('./hostMap').then(m=>m.PHOTOS_PANEL_HOSTS['photos.info']))};
+import {PHOTOS_PANEL_HOSTS} from './hostMap';
 /** Components half of the Photos manifest. Imported once by App.tsx, like documents/registerShell. */
 export const disposePhotosShell=registerStudioPanels(photosStudio,{panels:PHOTOS_PANEL_HOSTS});
 if(import.meta.hot)import.meta.hot.dispose(()=>disposePhotosShell());

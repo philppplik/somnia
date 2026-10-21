@@ -1,17 +1,8 @@
-import {lazyPanel} from '../studios/lazyPanel';
 import {vibespaceStudio} from '../../lib/studios/vibespace';
 import {registerStudioPanels} from '../studios/registerStudioPanels';
 import {registerRailIcons} from '../../lib/shell/railIcons';
 import {Bot,LayoutTemplate,AlertTriangle,Info,Lightbulb,Puzzle} from '../../lib/icons';
-const SpacesPanel=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.SpacesPanel));
-const RunsPanel=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.RunsPanel));
-const AttentionPanel=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.AttentionPanel));
-const MemoryShellPanel=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.MemoryShellPanel));
-const SkillsShellPanel=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.SkillsShellPanel));
-const SpaceSection=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.SpaceSection));
-const RunSection=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.RunSection));
-const UsageSection=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.UsageSection));
-const CheckpointsSection=lazyPanel(()=>import('./VibeSpacePanels').then(m=>m.CheckpointsSection));
+import {SpacesPanel,RunsPanel,AttentionPanel,MemoryShellPanel,SkillsShellPanel,SpaceSection,RunSection,UsageSection,CheckpointsSection} from './VibeSpacePanels';
 registerRailIcons({Bot,LayoutTemplate,AlertTriangle,Info,Lightbulb,Puzzle});
 export const disposeVibeSpaceShell=registerStudioPanels(vibespaceStudio,{panels:{'vibespace.memory':MemoryShellPanel,'vibespace.skills':SkillsShellPanel,'vibespace.spaces':SpacesPanel,'vibespace.runs':RunsPanel,'vibespace.attention':AttentionPanel},sections:{'vibespace.inspector.space':SpaceSection,'vibespace.inspector.run':RunSection,'vibespace.inspector.usage':UsageSection,'vibespace.inspector.checkpoints':CheckpointsSection}});
 if(import.meta.hot)import.meta.hot.dispose(disposeVibeSpaceShell);
