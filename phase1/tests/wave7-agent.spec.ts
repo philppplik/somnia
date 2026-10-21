@@ -14,7 +14,7 @@ test('empty studio sidebar follows studio and provides chat-only guidance withou
  await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByText('Start with a short rough cut, then refine the pacing.',{exact:false})).toBeVisible();
  expect((payload?.tools as unknown[]|undefined)??[]).toHaveLength(0);expect(JSON.stringify(payload)).not.toContain('Untrusted active document context');
  await expect(panel.locator('.ag-review')).toHaveCount(0);
- await panel.getByRole('button',{name:'New chat'}).click();await page.getByRole('radio',{name:'Somnia Sound',exact:true}).click();await expect(panel.getByRole('button',{name:'Explain audio settings',exact:true})).toBeVisible();await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Sounds');
+ await panel.getByRole('button',{name:'New chat'}).click();await switchStudio(page,'Somnia Sound');await expect(panel.getByRole('button',{name:'Explain audio settings',exact:true})).toBeVisible();await expect(panel.locator('.ag-context-chip')).toContainText('No document');await expect(panel.locator('.ag-empty')).toContainText('Sounds');
  await page.screenshot({path:'tests/artifacts/wave7-sound-sidebar.png'});
 });
 
