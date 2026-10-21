@@ -61,7 +61,7 @@
     "lib0": "^0.2.99",
     "lucide-react": "1.49.0",
     "mammoth": "^1.13.0",
-    "markdown-it": "^15.0.2",
+    "markdown-it": "^15.0.3",
     "markdown-it-footnote": "^4.0.0",
     "paper": "^0.12.18",
     "paperjs-offset": "^2.2.1",
