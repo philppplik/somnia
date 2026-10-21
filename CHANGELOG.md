@@ -1,3 +1,7 @@
+# Unreleased: Studio bar limit
+
+- The studio bar shows at most 5 studios at once (default 5) so the layout no longer breaks on small windows. New setting "Studios shown in the bar" (1 to 5) in Settings > Appearance. Extra studios move to a More menu; the active studio always stays visible. See `docs/STUDIO-BAR.md`.
+
 # Unreleased: Agent side panel
 
 - Animation studio: the agent side panel now drives the open animation through tools on a local Ollama run. The model can inspect the selected keyframe and stage a reviewed value change; accepting the preview commits exactly one native undo step through the animation session, and the panel offers Undo while that receipt is current. Pending reviews block new turns, cloud providers get no animation tools, and nothing is written to disk (docs/agent/ANIMATION-LIVE-REVIEW.md).

@@ -1749,6 +1749,28 @@ export function Settings() {
               </NativeSelect>
             </label>
             <label>
+              {t("redesign.maxStudios")}
+              <NativeSelect
+                aria-label={t("redesign.maxStudios")}
+                value={String(state.uiPrefs.maxStudios)}
+                onChange={(e) =>
+                  change({
+                    uiPrefs: {
+                      ...state.uiPrefs,
+                      maxStudios: Number(e.target.value),
+                    },
+                  })
+                }
+              >
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <option key={n} value={String(n)}>
+                    {n}
+                  </option>
+                ))}
+              </NativeSelect>
+            </label>
+            <p>{t("redesign.maxStudiosHint")}</p>
+            <label>
               {t("redesign.rememberPanels")}
               <NativeInput
                 type="checkbox"
