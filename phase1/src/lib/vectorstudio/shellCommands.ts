@@ -1,4 +1,5 @@
 import {GRID_LIMITS} from './grid';
+import {sameStyleIds,SAME_MODES,type SameMode} from './selectSame';
 import {alignTextToObject,alignTextToPage} from './textAlign';
 import {SHAPE_LIMITS} from './shapes';
 import {requestVectorExport} from './exportSetup';
@@ -77,6 +78,7 @@ export function vectorShellCommandSpecs(active:()=>boolean):CommandSpec<any,unkn
   {id:'vector.deleteText',title:'Delete a text object',category:'Edit',level:'ui',enabled:()=>ready()&&!!S.getVectorSession().textSel,params:{...empty,properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id']},run:(p:{id:string})=>{S.deleteText(p.id);}},
   {id:'vector.clearGuides',title:'Clear all ruler guides',category:'Edit',level:'ui',enabled:ready,params:empty,run:()=>{const s=S.getVectorSession();S.commit(clearGuides(s.doc));}},
   {id:'vector.makeClip',title:'Make clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(makeClip(s.doc,s.selection));}},
+  {id:'vector.selectSame',title:'Select objects with the same style',category:'Edit',level:'ui',enabled:selected,params:{...empty,properties:{mode:{type:'string',enum:[...SAME_MODES]}},required:['mode']},run:(p:{mode:SameMode})=>{const s=S.getVectorSession();S.select(sameStyleIds(s.doc,s.selection,p.mode));}},
   {id:'vector.copyStyle',title:'Copy vector style',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();copyStyle(s.doc,s.selection);}},
   {id:'vector.pasteStyle',title:'Paste vector style',category:'Edit',level:'ui',enabled:()=>selected()&&hasStyleBuffer(),params:empty,run:()=>{const b=bufferedStyle();if(b)S.setStyle(b);}},
   {id:'vector.releaseClip',title:'Release clipping mask',category:'Edit',level:'ui',enabled:selected,params:empty,run:()=>{const s=S.getVectorSession();S.commit(releaseClip(s.doc,s.selection));}},

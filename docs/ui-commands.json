@@ -13662,6 +13662,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.selectSame",
+      "title": "Select objects with the same style",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.selectText",
       "title": "Select a text object",
       "category": "Edit",

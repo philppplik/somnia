@@ -16,7 +16,7 @@ included; the `source` column names the owner. Dynamic sources that stay outside
 
 Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, fr, pt-BR); the gate enforces it.
 
-1151 commands. Categories: Edit, Help, Insert, Project, Tools, View.
+1165 commands. Categories: Edit, Help, Insert, Project, Tools, View.
 
 | id | title | category | source | shortcut |
 | --- | --- | --- | --- | --- |
@@ -554,11 +554,24 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `documents.zoomIn` | Zoom in on the document | View | documents |  |
 | `documents.zoomOut` | Zoom out of the document | View | documents |  |
 | `documents.zoomReset` | Reset document zoom to 100% | View | documents |  |
+| `edit.code.allOccurrences` | Select all occurrences of selection | Edit | core |  |
+| `edit.code.cursorAbove` | Add cursor above | Edit | core |  |
+| `edit.code.cursorBelow` | Add cursor below | Edit | core |  |
+| `edit.code.deleteLine` | Delete line | Edit | core |  |
+| `edit.code.nextOccurrence` | Add next occurrence to selection | Edit | core |  |
+| `edit.code.toggleComment` | Toggle comment | Edit | core |  |
 | `edit.decodeEntities` | Decode special characters (HTML entities) | Edit | core |  |
 | `edit.delete` | Delete selected element | Edit | core | `Delete` |
 | `edit.duplicate` | Duplicate selected element | Edit | core | `Mod+D` |
 | `edit.encodeEntities` | Encode special characters (HTML entities) | Edit | core |  |
 | `edit.format` | Apply formatting | Edit | core | `Alt+Shift+F` |
+| `edit.lines.join` | Join lines | Edit | core |  |
+| `edit.lines.lower` | Change selection to lowercase | Edit | core |  |
+| `edit.lines.sortAsc` | Sort lines ascending | Edit | core |  |
+| `edit.lines.sortDesc` | Sort lines descending | Edit | core |  |
+| `edit.lines.trim` | Trim trailing whitespace | Edit | core |  |
+| `edit.lines.unique` | Remove duplicate lines | Edit | core |  |
+| `edit.lines.upper` | Change selection to uppercase | Edit | core |  |
 | `edit.redo` | Redo | Edit | core | `Mod+Shift+Z` |
 | `edit.undo` | Undo | Edit | core | `Mod+Z` |
 | `edit.unwrap` | Unwrap selected element (keep content) | Edit | core |  |
@@ -1130,6 +1143,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.select` | Select vector paths | View | vector |  |
 | `vector.selectImage` | Select a placed image | Edit | vector |  |
 | `vector.selectNode` | Select vector node | View | vector |  |
+| `vector.selectSame` | Select objects with the same style | Edit | vector |  |
 | `vector.selectText` | Select a text object | Edit | vector |  |
 | `vector.setGradient` | Set vector gradient fill | Edit | vector |  |
 | `vector.setGrid` | Set the grid | View | vector |  |
