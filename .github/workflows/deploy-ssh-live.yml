@@ -46,6 +46,10 @@ jobs:
           ssh-keygen -t ed25519 -N '' -f "$W/host_ed25519" -q
           ssh-keygen -t ed25519 -N '' -f "$W/client_ed25519" -q -C somnia-live-test
           install -m 600 "$W/client_ed25519.pub" "$W/authorized_keys"
+          # Der Runner-Account runner ist per Shadow-Feld '!' gesperrt; sshd mit
+          # UsePAM no lehnt dann jede Authentifizierung ab (account locked).
+          # '*' erlaubt Pubkey-Auth, Passwort-Login bleibt ausgeschlossen.
+          sudo usermod -p '*' runner
           cat > "$W/sshd_config" <<CFG
           Port 2222
           ListenAddress 127.0.0.1
@@ -74,3 +78,6 @@ jobs:
           SOMNIA_SSH_LIVE_KEY: ${{ runner.temp }}/ssh-live/client_ed25519
           SOMNIA_SSH_LIVE_ROOT: ${{ runner.temp }}/ssh-live/root
         run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked deploy::ssh_live -- --ignored --nocapture
+      - name: sshd-Log bei Fehlschlag ausgeben
+        if: failure()
+        run: sudo cat "$RUNNER_TEMP/ssh-live/sshd.log" || true
