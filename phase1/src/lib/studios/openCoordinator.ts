@@ -97,7 +97,8 @@ export function createOpenCoordinator(deps:OpenDeps){
     if(!deps.openChoice){setSlot(index,{name:input.name,status:resolution.status,reason:resolution.reason});continue;}
     const suggested=resolution.status==='safe-text-offer'?resolution.handler.studioId:options.preferred;
     // Extensions join the pick list only on an ambiguous choice; a single built-in winner stays silent (B2).
-    const offers=resolution.status==='choose-handler'?deps.extensionOffers?.(resolution.kind)??[]:[];
+    // No dispatch, no offers: without runExtensionOffer an offer could never execute, so it is never shown as pickable.
+    const offers=resolution.status==='choose-handler'&&deps.runExtensionOffer?deps.extensionOffers?.(resolution.kind)??[]:[];
     let pick:OpenPick|null;
     try{pick=await deps.openChoice.askOpenStudio(input,resolution,suggested,offers);}
     catch{pick=null;} // A failed dialog must never turn into approval.
