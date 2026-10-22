@@ -21,6 +21,8 @@ pub mod ftp_engine;
 mod ftp_testkit;
 #[cfg(test)]
 mod ssh_testkit;
+#[cfg(test)]
+mod ssh_live;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum DeployError {

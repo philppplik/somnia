@@ -22,6 +22,15 @@ impl DeploymentKey {
     pub fn private_key(&self) -> &PrivateKey {
         &self.0
     }
+    /// Test-only: the live OpenSSH integration test reads a throwaway key from disk.
+    #[cfg(test)]
+    pub fn from_openssh_bytes(raw: &[u8]) -> Result<Self> {
+        let key = PrivateKey::from_openssh(raw).map_err(|_| DeployError::Keychain)?;
+        if key.algorithm() != Algorithm::Ed25519 || key.is_encrypted() {
+            return Err(DeployError::Keychain);
+        }
+        Ok(DeploymentKey(key))
+    }
 }
 fn slot(target: &str) -> Result<String> {
     if !valid_id(target) {
