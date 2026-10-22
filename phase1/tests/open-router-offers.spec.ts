@@ -29,7 +29,11 @@ test('wired dispatch makes the offer pickable and routes the pick (harness only)
  await expect(dialog).toBeVisible();
  const combo=dialog.getByRole('combobox',{name:'Studio',exact:true});
  await expect(combo.locator('option')).toHaveCount(3);
+ await expect(dialog).toContainText('MD Viewer');
  await combo.selectOption('offer:acme.md-viewer');
+ await expect(combo).toHaveValue('offer:acme.md-viewer');
+ await page.waitForTimeout(400);
+ await page.screenshot({path:'/downloads/open-router-dispatch-en-light.png'});
  await dialog.getByRole('button',{name:'Open file',exact:true}).click();
  await expect(page.locator('body')).toHaveAttribute('data-offer-run','acme.md-viewer:ambiguous.txt');
  await expect(page.locator('body')).toHaveAttribute('data-status','extension-opened');
