@@ -105,14 +105,31 @@ test('worker delivers command.run args to the registered handler',async()=>{
  const posted:any[]=[];const self={postMessage(m:unknown){posted.push(m);},onmessage:null as null|((e:{data:unknown})=>Promise<void>)};
  new Function('self',WORKER_SOURCE)(self);
  const drain=async()=>{for(let i=0;i<10;i++){const c=posted.find(m=>m.type==='api.call'&&!m.answered);if(!c)return;c.answered=true;await self.onmessage!({data:{type:'api.result',requestId:c.requestId,ok:true,value:null}});}};
- await self.onmessage!({data:{type:'activate',code:"somnia.commands.register('acme.demo.x',async args=>{await somnia.ui.notify(JSON.stringify(args));});"}});
- await drain();
+ const act=self.onmessage!({data:{type:'activate',code:"somnia.commands.register('acme.demo.x',async args=>{await somnia.ui.notify(JSON.stringify(args));});"}});
+ await drain();await act;
  const activated=posted.find(m=>m.type==='activated');
  assert.equal(activated.error,undefined);
- await self.onmessage!({data:{type:'command.run',id:'acme.demo.x',requestId:7,args:{file:'a.txt'}}});
- await drain();
+ const runp=self.onmessage!({data:{type:'command.run',id:'acme.demo.x',requestId:7,args:{file:'a.txt'}}});
+ await drain();await runp;
  const call=posted.find(m=>m.type==='api.call'&&m.method==='ui.notify');
  assert.equal(call.args[0],'{"file":"a.txt"}');
  const done=posted.find(m=>m.type==='command.done'&&m.requestId===7);
+ assert.equal(done.error,undefined);
+});
+
+test('worker handler can read the exact offered file through project.readOfferFile',async()=>{
+ const posted:any[]=[];const self={postMessage(m:unknown){posted.push(m);},onmessage:null as null|((e:{data:unknown})=>Promise<void>)};
+ new Function('self',WORKER_SOURCE)(self);
+ const file={name:'picked.md',bytes:new Uint8Array([104,105])};
+ const drain=async()=>{for(let i=0;i<10;i++){const c=posted.find(m=>m.type==='api.call'&&!m.answered);if(!c)return;c.answered=true;await self.onmessage!({data:{type:'api.result',requestId:c.requestId,ok:true,value:c.method==='project.readOfferFile'?file:null}});}};
+ const act=self.onmessage!({data:{type:'activate',code:"somnia.commands.register('acme.demo.x',async args=>{const f=await somnia.project.readOfferFile(args.token);await somnia.ui.notify(f.name+':'+f.bytes.length+':'+args.name);});"}});
+ await drain();await act;
+ const runp=self.onmessage!({data:{type:'command.run',id:'acme.demo.x',requestId:9,args:{name:'picked.md',token:'tok-1'}}});
+ await drain();await runp;
+ const call=posted.find(m=>m.type==='api.call'&&m.method==='project.readOfferFile');
+ assert.deepEqual(call.args,['tok-1']);
+ const notice=posted.find(m=>m.type==='api.call'&&m.method==='ui.notify');
+ assert.equal(notice.args[0],'picked.md:2:picked.md');
+ const done=posted.find(m=>m.type==='command.done'&&m.requestId===9);
  assert.equal(done.error,undefined);
 });

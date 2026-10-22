@@ -6,7 +6,7 @@ const post=m=>self.postMessage(m);let n=0;const pending=new Map();const handlers
 const call=(method,args)=>new Promise((resolve,reject)=>{const id=++n;pending.set(id,{resolve,reject});post({type:'api.call',requestId:id,method,args});});
 const somnia=Object.freeze({
  commands:Object.freeze({register:(id,fn)=>{if(typeof fn!=='function')throw new TypeError('handler must be a function');handlers.set(id,fn);return call('commands.register',[id]);}}),
- project:Object.freeze({listFiles:()=>call('project.listFiles',[]),readFile:p=>call('project.readFile',[p])}),
+ project:Object.freeze({listFiles:()=>call('project.listFiles',[]),readFile:p=>call('project.readFile',[p]),readOfferFile:t=>call('project.readOfferFile',[t])}),
  selection:Object.freeze({get:()=>call('selection.get',[])}),
  editor:Object.freeze({applyOperations:ops=>call('editor.applyOperations',[ops])}),
  storage:Object.freeze({get:k=>call('storage.get',[k]),set:(k,v)=>call('storage.set',[k,v])}),

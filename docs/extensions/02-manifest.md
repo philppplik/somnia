@@ -69,6 +69,18 @@ Each list may hold at most 200 items.
 - `id` lowercase letters, digits and dashes. `title` up to 40 characters. `html` up to 50000 characters.
 - See [Panels](05-panels.md).
 
+### `openOffers`
+
+`{ "id", "kinds", "command", "capability": "edit" | "preview", "priority", "title" }`
+
+- `id` must start with the extension id plus a dot.
+- `kinds` is a non-empty subset of the validated document kinds (`docx`, `xlsx`, `pptx`, `audio`, `video`, `image`, `pdf`, `psd`, `raster-preview`, `svg`, `text`, `model3d`). Bytes decide the kind at open time; an extension can never claim a kind the content did not validate to.
+- `command` must be a command declared by the same extension; it runs when the user picks the offer.
+- `capability` `preview` is reported read-only and never implies edit or round-trip saving.
+- `priority` is an integer capped at 49, strictly below every built-in default handler. Extension offers are never preselected and never marked default.
+- `title` up to 120 characters, shown in the choose-handler dialog.
+- The handler receives `{ "name", "token" }` and reads the exact picked file via `project.readOfferFile(token)`; the token is single-open scoped and expires when the command finishes. An offer whose dispatch cannot run is hidden, never shown as pickable.
+
 ## Validation behavior
 
 Unknown permissions, wrong types, oversized values, a command id outside the extension namespace and non-color theme values are errors. An invalid manifest is never installed. See [Troubleshooting](10-troubleshooting.md) for the messages.

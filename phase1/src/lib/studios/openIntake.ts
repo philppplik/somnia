@@ -1,7 +1,7 @@
 import {askOpenStudio,answerOpenChoice} from './openChoice';
 import {reportError} from '../log';
 import {readyHandlersFor} from './openHandlers';
-import {dispatchExtensionOpenOffer,extensionOffersFor,hasExtensionOpenOfferDispatch} from '../extensions/openRouter';
+import {dispatchExtensionOpenOffer,dropOfferFile,extensionOffersFor,hasExtensionOpenOfferDispatch,stashOfferFile} from '../extensions/openRouter';
 import type {OpenKind} from './openHandlers';
 import {prepareMediaFile} from '../media';
 import {commitTextFiles,installOpenIncoming,type IncomingFile} from '../projectActions';
@@ -63,8 +63,14 @@ export const appDeps:OpenDeps={
  // host never bound a dispatch stays unbound and is hidden by the coordinator gate; a binding that
  // vanished between pick and dispatch fails closed here instead of pretending an open.
  runExtensionOffer:async(offer,input)=>{
-  const ok=await dispatchExtensionOpenOffer(offer.id,{name:input.name});
-  if(!ok)throw new Error(`Extension open offer has no dispatch: ${offer.id}`);
+  // The handler must open THE picked file, not a lookalike name: intake stashes the exact bytes and
+  // passes an unguessable, single-open token. The handler reads them via project.readOfferFile(token);
+  // the token expires when the command ends, whatever the outcome.
+  const token=stashOfferFile({name:input.name,bytes:input.bytes});
+  try{
+   const ok=await dispatchExtensionOpenOffer(offer.id,{name:input.name,token});
+   if(!ok)throw new Error(`Extension open offer has no dispatch: ${offer.id}`);
+  }finally{dropOfferFile(token);}
  },
  async prepare(input,resolution):Promise<PreparedOpen>{
   const studioId=resolution.handler.studioId;

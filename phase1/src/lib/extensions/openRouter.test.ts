@@ -7,8 +7,11 @@ import {
   hasExtensionOpenOfferDispatch,
   setExtensionOpenOfferDispatch,
   mergeWithBuiltIns,
+  dropOfferFile,
+  readStashedOfferFile,
   registerExtensionOpenOffer,
   resetExtensionOpenOffers,
+  stashOfferFile,
   type CommandOwnership,
   type ExtensionOpenOffer,
 } from './openRouter';
@@ -92,5 +95,18 @@ test('dispatch binding runs the bound path and unregisters cleanly', async () =>
 });
 test('binding a dispatch to an unregistered offer is rejected', () => { resetExtensionOpenOffers();
   assert.throws(() => setExtensionOpenOfferDispatch('acme.md-viewer', async () => {}), /not registered/);
+  resetExtensionOpenOffers();
+});
+
+test('offer-file stash serves the exact file for one dispatch and expires afterwards', () => { resetExtensionOpenOffers();
+  const bytes = new Uint8Array([1, 2, 3]);
+  const token = stashOfferFile({name: 'a.md', bytes});
+  assert.equal(token.length, 32);
+  assert.notEqual(token, stashOfferFile({name: 'a.md', bytes}));
+  assert.equal(readStashedOfferFile(token)?.name, 'a.md');
+  assert.deepEqual([...(readStashedOfferFile(token)?.bytes ?? [])], [1, 2, 3]);
+  assert.equal(readStashedOfferFile('0'.repeat(32)), null);
+  dropOfferFile(token);
+  assert.equal(readStashedOfferFile(token), null);
   resetExtensionOpenOffers();
 });

@@ -127,5 +127,23 @@ export async function dispatchExtensionOpenOffer(offerId: string, args: unknown)
   return true;
 }
 
+/** The exact file picked for one extension open, stashed by intake for the lifetime of a single dispatch. */
+export interface OfferFile { readonly name: string; readonly bytes: Uint8Array }
+
+const offerFiles = new Map<string, OfferFile>();
+
+/** Stashes the picked file under an unguessable token. Intake passes the token to the handler and drops it when the command ends. */
+export function stashOfferFile(file: OfferFile): string {
+  const token = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
+  offerFiles.set(token, file);
+  return token;
+}
+
+/** The stashed file for a live token, null once the dispatch ended. */
+export function readStashedOfferFile(token: string): OfferFile | null { return offerFiles.get(token) ?? null; }
+
+/** Ends the token's lifetime; called by intake in a finally around the dispatch. */
+export function dropOfferFile(token: string): void { offerFiles.delete(token); }
+
 /** Test hook: forget every registered offer and dispatch binding. */
-export function resetExtensionOpenOffers(): void { offers.clear(); dispatchers.clear(); }
+export function resetExtensionOpenOffers(): void { offers.clear(); dispatchers.clear(); offerFiles.clear(); }
