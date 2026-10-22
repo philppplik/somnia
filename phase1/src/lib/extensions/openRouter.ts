@@ -130,17 +130,20 @@ export async function dispatchExtensionOpenOffer(offerId: string, args: unknown)
 /** The exact file picked for one extension open, stashed by intake for the lifetime of a single dispatch. */
 export interface OfferFile { readonly name: string; readonly bytes: Uint8Array }
 
-const offerFiles = new Map<string, OfferFile>();
+const offerFiles = new Map<string, OfferFile & { readonly extensionId: string }>();
 
-/** Stashes the picked file under an unguessable token. Intake passes the token to the handler and drops it when the command ends. */
-export function stashOfferFile(file: OfferFile): string {
+/** Stashes the picked file under an unguessable token bound to the offering extension. Intake passes the token to the handler and drops it when the command ends. */
+export function stashOfferFile(file: OfferFile, extensionId: string): string {
   const token = [...crypto.getRandomValues(new Uint8Array(16))].map(b => b.toString(16).padStart(2, '0')).join('');
-  offerFiles.set(token, file);
+  offerFiles.set(token, {...file, extensionId});
   return token;
 }
 
-/** The stashed file for a live token, null once the dispatch ended. */
-export function readStashedOfferFile(token: string): OfferFile | null { return offerFiles.get(token) ?? null; }
+/** The stashed file for a live token, only for the extension it was stashed for; null once the dispatch ended or for any other extension. */
+export function readStashedOfferFile(token: string, extensionId: string): OfferFile | null {
+  const f = offerFiles.get(token);
+  return f && f.extensionId === extensionId ? f : null;
+}
 
 /** Ends the token's lifetime; called by intake in a finally around the dispatch. */
 export function dropOfferFile(token: string): void { offerFiles.delete(token); }

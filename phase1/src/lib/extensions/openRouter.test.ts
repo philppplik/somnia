@@ -100,13 +100,19 @@ test('binding a dispatch to an unregistered offer is rejected', () => { resetExt
 
 test('offer-file stash serves the exact file for one dispatch and expires afterwards', () => { resetExtensionOpenOffers();
   const bytes = new Uint8Array([1, 2, 3]);
-  const token = stashOfferFile({name: 'a.md', bytes});
+  const token = stashOfferFile({name: 'a.md', bytes}, 'acme.viewer');
   assert.equal(token.length, 32);
-  assert.notEqual(token, stashOfferFile({name: 'a.md', bytes}));
-  assert.equal(readStashedOfferFile(token)?.name, 'a.md');
-  assert.deepEqual([...(readStashedOfferFile(token)?.bytes ?? [])], [1, 2, 3]);
-  assert.equal(readStashedOfferFile('0'.repeat(32)), null);
+  assert.notEqual(token, stashOfferFile({name: 'a.md', bytes}, 'acme.viewer'));
+  assert.equal(readStashedOfferFile(token, 'acme.viewer')?.name, 'a.md');
+  assert.deepEqual([...(readStashedOfferFile(token, 'acme.viewer')?.bytes ?? [])], [1, 2, 3]);
+  assert.equal(readStashedOfferFile('0'.repeat(32), 'acme.viewer'), null);
   dropOfferFile(token);
-  assert.equal(readStashedOfferFile(token), null);
+  assert.equal(readStashedOfferFile(token, 'acme.viewer'), null);
+  resetExtensionOpenOffers();
+});
+test('a live offer token is useless to any other extension', () => { resetExtensionOpenOffers();
+  const token = stashOfferFile({name: 'a.md', bytes: new Uint8Array([1])}, 'acme.viewer');
+  assert.equal(readStashedOfferFile(token, 'evil.other'), null);
+  assert.equal(readStashedOfferFile(token, 'acme.viewer')?.name, 'a.md');
   resetExtensionOpenOffers();
 });

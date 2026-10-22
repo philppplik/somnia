@@ -36,9 +36,11 @@ test('editor.applyOperations needs project.write, whitelists types and files',()
 
 test('project.readOfferFile returns the stashed file and fails closed for dead tokens',()=>{
  const bytes=new Uint8Array([7,8]);
- const d={...deps,readOfferFile:(t:string)=>t==='live'?{name:'a.md',bytes}:null};
+ const d={...deps,readOfferFile:(t:string,e:string)=>t==='live'&&e==='acme.hello'?{name:'a.md',bytes}:null};
  assert.throws(()=>callApi(m([]),'project.readOfferFile',['live'],d),/needs the "project.read"/);
  const f=callApi(m(['project.read']),'project.readOfferFile',['live'],d) as {name:string;bytes:Uint8Array};
  assert.equal(f.name,'a.md');assert.deepEqual([...f.bytes],[7,8]);
  assert.throws(()=>callApi(m(['project.read']),'project.readOfferFile',['dead'],d),/no longer available/);
+ const other=(permissions:ExtensionManifest['permissions']):ExtensionManifest=>({...m(permissions),id:'evil.other'});
+ assert.throws(()=>callApi(other(['project.read']),'project.readOfferFile',['live'],d),/no longer available/);
 });

@@ -66,7 +66,7 @@ export const appDeps:OpenDeps={
   // The handler must open THE picked file, not a lookalike name: intake stashes the exact bytes and
   // passes an unguessable, single-open token. The handler reads them via project.readOfferFile(token);
   // the token expires when the command ends, whatever the outcome.
-  const token=stashOfferFile({name:input.name,bytes:input.bytes});
+  const token=stashOfferFile({name:input.name,bytes:input.bytes},offer.extensionId);
   try{
    const ok=await dispatchExtensionOpenOffer(offer.id,{name:input.name,token});
    if(!ok)throw new Error(`Extension open offer has no dispatch: ${offer.id}`);
