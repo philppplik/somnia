@@ -17,16 +17,13 @@
  *   entry it created, mirroring registerOpenHandler.
  */
 import {ExtensionError} from './contracts/v2/api';
-import type {OpenKind} from '../studios/openHandlers';
+import {OPEN_KINDS,type OpenKind} from '../studios/openHandlers';
 
 /** Built-in handlers use 100 (primary), 50 (queued studios) and 0 (code fallback).
  * Extension offers must stay strictly below the built-in product defaults. */
 export const MAX_EXTENSION_OPEN_PRIORITY = 49;
 
-const VALID_KINDS: readonly OpenKind[] = [
-  'docx', 'xlsx', 'pptx', 'audio', 'video', 'image', 'pdf', 'psd',
-  'raster-preview', 'svg', 'text', 'model3d',
-];
+const VALID_KINDS: readonly OpenKind[] = OPEN_KINDS;
 
 export interface ExtensionOpenOffer {
   /** Handler id, namespaced as `<extensionId>.<localId>` by the host. */

@@ -1,4 +1,6 @@
-import {API_VERSION,PERMISSIONS,type ExtensionManifest,type ManifestResult,type Permission} from './types';
+import {API_VERSION,PERMISSIONS,type ExtensionManifest,type ManifestResult,type OpenOfferContribution,type Permission} from './types';
+import {OPEN_KINDS} from '../studios/openHandlers';
+import {MAX_EXTENSION_OPEN_PRIORITY} from './openRouter';
 const ID=/^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
 const SEMVER=/^\d+\.\d+\.\d+$/;
 const CATEGORIES=['Project','Edit','View','Insert','Tools','Help'];
@@ -28,6 +30,14 @@ export function validateManifest(input:unknown):ManifestResult{
   return[{id:x.id,label:x.label,light:hex('light'),dark:hex('dark')}];});
  const panels=list('panels').flatMap((x,i)=>{if(!obj(x)||typeof x.id!=='string'||!/^[a-z0-9-]+$/.test(x.id)||typeof x.title!=='string'||!x.title.trim()||x.title.length>40||!['left','right'].includes(String(x.side))||typeof x.html!=='string'||x.html.length>50000){errors.push(`contributes.panels[${i}] needs id (lowercase, dashes), title up to 40 characters, side left|right and html up to 50000 characters.`);return[];}return[{id:x.id,title:x.title,side:x.side as 'left'|'right',html:x.html}];});
  if((commands.length)&&!permissions.includes('commands'))errors.push('Commands need the "commands" permission.');
+ const openOffers=list('openOffers').flatMap((x,i)=>{
+  if(!obj(x)||typeof x.id!=='string'||!x.id.startsWith(id+'.')||typeof x.command!=='string'||typeof x.title!=='string'||!x.title.trim()||x.title.length>120){errors.push(`contributes.openOffers[${i}] needs an id inside the extension namespace, a command and a title up to 120 characters.`);return[];}
+  if(!commands.some(c=>c.id===(x.command as string))){errors.push(`contributes.openOffers[${i}].command must be a command declared by this extension.`);return[];}
+  if(x.capability!=='edit'&&x.capability!=='preview'){errors.push(`contributes.openOffers[${i}].capability must be "edit" or "preview".`);return[];}
+  if(x.priority!==undefined&&(typeof x.priority!=='number'||!Number.isInteger(x.priority)||x.priority>MAX_EXTENSION_OPEN_PRIORITY)){errors.push(`contributes.openOffers[${i}].priority must be an integer up to ${MAX_EXTENSION_OPEN_PRIORITY}.`);return[];}
+  if(!Array.isArray(x.kinds)||x.kinds.length===0||x.kinds.length>OPEN_KINDS.length||x.kinds.some(k=>!(OPEN_KINDS as readonly unknown[]).includes(k))){errors.push(`contributes.openOffers[${i}].kinds must be validated document kinds.`);return[];}
+  const kinds=[...new Set(x.kinds)] as OpenOfferContribution['kinds'];
+  return[{id:x.id,kinds,command:x.command,capability:x.capability,priority:typeof x.priority==='number'?x.priority:0,title:x.title}];});
  if(errors.length)return{ok:false,errors};
- return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes,accentPalettes,panels}}};
+ return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes,accentPalettes,panels,openOffers}}};
 }

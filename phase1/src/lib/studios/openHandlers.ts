@@ -6,6 +6,8 @@ import {hasStudio,type StudioId} from './registry';
  * advertised: until it registers, its rule is skipped and the next candidate wins.
  */
 export type OpenKind='docx'|'xlsx'|'pptx'|'audio'|'video'|'image'|'pdf'|'psd'|'raster-preview'|'svg'|'text'|'model3d';
+/** The closed set of validated document kinds, in canonical order. Bytes decide the kind (openIntake), never a handler or extension declaration. */
+export const OPEN_KINDS:readonly OpenKind[]=['docx','xlsx','pptx','audio','video','image','pdf','psd','raster-preview','svg','text','model3d'];
 export interface OpenHandler{
  id:string;studioId:StudioId;kinds:readonly OpenKind[];
  /** Higher wins. Equal priorities between ready handlers are never decided by registration order: the user is asked. */
