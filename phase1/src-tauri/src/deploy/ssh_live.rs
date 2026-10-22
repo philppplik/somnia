@@ -16,11 +16,15 @@ fn env(name: &str) -> String {
 }
 
 async fn connect() -> RusshTransport {
+    connect_with_root(env("SOMNIA_SSH_LIVE_ROOT")).await
+}
+
+async fn connect_with_root(root: String) -> RusshTransport {
     let addr = env("SOMNIA_SSH_LIVE_ADDR");
     let (host, port) = addr.rsplit_once(':').expect("SOMNIA_SSH_LIVE_ADDR is host:port");
     let target = SshTarget::new(host, port.parse().expect("port"), env("SOMNIA_SSH_LIVE_USER"));
     let opts = ConnectOptions {
-        root: env("SOMNIA_SSH_LIVE_ROOT"),
+        root,
         ..Default::default()
     };
     // Real discovery path: probe the untrusted host key first, then pin it.
@@ -85,5 +89,77 @@ async fn sftp_tree_ops_against_openssh() {
     assert!(entries.iter().any(|e| e.contains("file.txt")), "list: {entries:?}");
     t.remove_tree(&site).await.expect("remove_tree");
     assert!(!t.exists(&site).await.expect("exists after remove"));
+    t.close().await;
+}
+
+/// Full static-site deploy through the real ReleaseLayout pipeline against OpenSSH:
+/// hash-verified stage with hard-link reuse, atomic activate, retention prune.
+/// Root "/" confines to the throwaway server; the served-path check uses exec,
+/// because the SFTP path confinement deliberately rejects reading through the
+/// `current` symlink (symlink ancestors are rejected by design).
+#[tokio::test]
+#[ignore = "needs the OpenSSH target from the deploy-ssh-live workflow"]
+async fn full_static_deploy_against_openssh() {
+    use super::manifest::{sha256, DeployArtifactFile, DeployArtifactKind, DeployArtifactManifest};
+    use super::release::ReleaseLayout;
+    use std::collections::BTreeMap;
+
+    let artifact = |files: &[(&str, &[u8])], build: &str| {
+        let manifest = DeployArtifactManifest {
+            kind: DeployArtifactKind::Static,
+            files: files
+                .iter()
+                .map(|(p, b)| DeployArtifactFile {
+                    path: (*p).to_string(),
+                    sha256: sha256(b),
+                    size: b.len() as u64,
+                    mode: 0o644,
+                })
+                .collect(),
+            entry: None,
+            engines: None,
+            port: None,
+            build_id: build.into(),
+        };
+        let bytes: BTreeMap<String, Vec<u8>> =
+            files.iter().map(|(p, b)| ((*p).to_string(), b.to_vec())).collect();
+        (manifest, bytes)
+    };
+
+    // Root "/srv/somnia": the production ReleaseLayout prefix; the workflow
+    // prepares it as a runner-owned directory on the throwaway server.
+    let mut t = connect_with_root("/srv/somnia".to_string()).await;
+    let layout = ReleaseLayout::new("livecheck").expect("layout");
+    let root = layout.root().to_string();
+    let _ = t.remove_tree(&root).await;
+
+    // Release 1: stage two files, then activate atomically.
+    let (m1, f1) = artifact(&[("index.html", b"<h1>v1</h1>"), ("assets/app.css", b"body{v:1}")], "b1");
+    layout.stage(&mut t, "r-1", &m1, &f1).await.expect("stage r-1");
+    assert_eq!(layout.current_release(&mut t).await.expect("current before activate"), None);
+    assert_eq!(layout.activate(&mut t, "r-1").await.expect("activate r-1"), None);
+    assert_eq!(layout.current_release(&mut t).await.expect("current r-1").as_deref(), Some("r-1"));
+    let served = t.exec("cat /srv/somnia/livecheck/current/index.html", None).await.expect("exec cat v1");
+    assert_eq!(served.stdout, "<h1>v1</h1>");
+
+    // Release 2: index changed, css reused via hard link, activated over the old release.
+    let (m2, f2) = artifact(&[("index.html", b"<h1>v2</h1>"), ("assets/app.css", b"body{v:1}")], "b2");
+    let changes = layout.stage(&mut t, "r-2", &m2, &f2).await.expect("stage r-2");
+    assert_eq!(changes.unchanged.len(), 1, "unchanged css must be hard-linked, not re-uploaded");
+    assert_eq!(changes.changed.len(), 1, "index must count as changed");
+    assert_eq!(layout.activate(&mut t, "r-2").await.expect("activate r-2").as_deref(), Some("r-1"));
+    assert_eq!(layout.current_release(&mut t).await.expect("current r-2").as_deref(), Some("r-2"));
+    let served = t.exec("cat /srv/somnia/livecheck/current/index.html", None).await.expect("exec cat v2");
+    assert_eq!(served.stdout, "<h1>v2</h1>", "atomic switch must serve the new release");
+    let served = t.exec("cat /srv/somnia/livecheck/current/assets/app.css", None).await.expect("exec cat css");
+    assert_eq!(served.stdout, "body{v:1}");
+
+    // Retention: prune keeps the current release and removes the old one.
+    assert_eq!(layout.prune(&mut t, 1).await.expect("prune"), vec!["r-1".to_string()]);
+    assert!(!t.exists(&format!("{root}/releases/r-1")).await.expect("r-1 exists check"));
+    let served = t.exec("cat /srv/somnia/livecheck/current/index.html", None).await.expect("exec cat after prune");
+    assert_eq!(served.stdout, "<h1>v2</h1>", "current must keep serving after prune");
+
+    let _ = t.remove_tree(&root).await;
     t.close().await;
 }

@@ -68,6 +68,10 @@ jobs:
           Subsystem sftp internal-sftp
           CFG
           sudo mkdir -p /run/sshd
+          # Produktionsgleiches Release-Root fuer den Volldeploy-Test; gehoert dem
+          # Wegwerf-Runner-Nutzer, kein Eingriff in echte Server.
+          sudo mkdir -p /srv/somnia
+          sudo chown runner:runner /srv/somnia
           sudo /usr/sbin/sshd -f "$W/sshd_config" -E "$W/sshd.log"
           sleep 1
           ssh-keyscan -p 2222 127.0.0.1
