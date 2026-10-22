@@ -103,6 +103,7 @@
     "markdown-it": "^15.0.2",
     "markdown-it-footnote": "^4.0.0",
     "mediabunny": "^1.61.3",
+    "opentype.js": "^2.0.0",
     "paper": "^0.12.18",
     "paperjs-offset": "^2.2.1",
     "parse5": "8.0.0",

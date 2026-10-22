@@ -13760,6 +13760,13 @@
       "hasEnabled": true
     },
     {
+      "id": "vector.textToPath",
+      "title": "Convert text to vector paths",
+      "category": "Edit",
+      "source": "vector",
+      "hasEnabled": true
+    },
+    {
       "id": "vector.toggleClosed",
       "title": "Toggle closed vector path",
       "category": "Edit",

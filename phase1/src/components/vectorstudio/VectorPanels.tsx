@@ -27,6 +27,7 @@ import {SHAPE_LIMITS} from '../../lib/vectorstudio/shapes';
 import {Textarea} from '../ui/native-controls';
 import {TEXT_LIMITS,FONT_WEIGHTS,FONT_STYLES,TEXT_ANCHORS} from '../../lib/vectorio';
 import {fontOptions,loadSystemFonts,fontsAvailable,useSystemFonts} from '../../lib/vectorstudio/fonts';
+import {TextToPathError} from '../../lib/vectorstudio/textToPath';
 import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 
 /** First non-empty line of a text, shortened for the layers list. */
@@ -188,6 +189,7 @@ export function VectorImageSection(){const {t}=useT(),s=useVectorSession(),file=
  </div>;}
 export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useSystemFonts();const cur=(s.doc.texts??[]).find(x=>x.id===s.textSel);const alignTargets=(()=>{const seen=new Set<string>(),out:{id:string;label:string}[]=[];for(const p of s.doc.paths){const k=p.compound!==undefined?'c'+p.compound:p.group!==undefined?'g'+p.group:p.id;if(seen.has(k)||p.hidden)continue;seen.add(k);out.push({id:p.id,label:p.name??t('vector.path')});}for(const o of s.doc.texts??[])if(o.id!==cur?.id&&!o.hidden)out.push({id:o.id,label:textName(o)});return out.slice(0,8);})();
  const set=(patch:object)=>cur&&run('setText',{id:cur.id,patch});
+ const [converting,setConverting]=useState(false),[note,setNote]=useState('');
  if(!cur)return <p className="m-0 text-ink-3" data-testid="vector-shell-text">{t('vector.shell.textHint')}</p>;
  return <div className="grid gap-2" data-testid="vector-shell-text">
   <label className={row}>{t('vector.shell.textContent')}<Textarea className={field} key={cur.id+cur.text} rows={3} maxLength={TEXT_LIMITS.maxChars} defaultValue={cur.text} data-testid="vector-text-content" onBlur={e=>{if(e.target.value!==cur.text){if(e.target.value.trim())set({text:e.target.value});else e.target.value=cur.text;}}}/></label>
@@ -208,6 +210,8 @@ export function VectorTextSection(){const {t}=useT(),s=useVectorSession(),f=useS
    <MenuContent><MenuGroup><MenuGroupLabel>{t('vector.shell.align.page')}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} onClick={()=>run('alignText',{id:cur.id,mode})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup>
     {alignTargets.length>0&&<MenuGroup><MenuGroupLabel>{t('vector.shell.align.object')}</MenuGroupLabel>{alignTargets.map(o=><MenuGroup key={o.id}><MenuGroupLabel>{o.label}</MenuGroupLabel>{ALIGN_MODES.map(mode=><MenuItem key={mode} data-testid={'vector-text-align-to-'+mode} onClick={()=>run('alignText',{id:cur.id,mode,to:o.id})}>{t('vector.shell.align.'+mode)}</MenuItem>)}</MenuGroup>)}</MenuGroup>}</MenuContent></Menu>
   <Button size="compact" onClick={()=>run('duplicateText',{id:cur.id})} data-testid="vector-text-duplicate">{t('vector.shell.textDuplicate')}</Button>
+  <Button size="compact" disabled={converting} onClick={async()=>{setConverting(true);setNote('');try{await commandDispatcher.runCommand('vector.textToPath',{id:cur.id},{origin:'ui'});}catch(e){const c=e instanceof Error?e.cause:undefined,tpe=e instanceof TextToPathError?e:c instanceof TextToPathError?c:null;setNote(tpe?t('vector.shell.textToPathError.'+tpe.code,tpe.params):e instanceof Error?e.message:String(e));}finally{setConverting(false);}}} data-testid="vector-text-to-path">{t('vector.shell.textToPath')}</Button>
+  {note&&<p role="status" className="m-0 text-ink-3" data-testid="vector-text-note">{note}</p>}
   <Button size="compact" onClick={()=>run('deleteText',{id:cur.id})} data-testid="vector-text-delete">{t('vector.shell.textDelete')}</Button>
  </div>;}
 

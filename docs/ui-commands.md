@@ -1157,6 +1157,7 @@ Every command needs a title and a `cmd.<id>` key in all 5 locales (en, de, es, f
 | `vector.setView` | Set vector view | View | vector |  |
 | `vector.simplifyPath` | Simplify vector path | Edit | vector |  |
 | `vector.splitPath` | Split vector path at node | Edit | vector |  |
+| `vector.textToPath` | Convert text to vector paths | Edit | vector |  |
 | `vector.toggleClosed` | Toggle closed vector path | Edit | vector |  |
 | `vector.toggleHidden` | Toggle vector path visibility | Edit | vector |  |
 | `vector.toggleLocked` | Lock or unlock vector object | Edit | vector |  |
