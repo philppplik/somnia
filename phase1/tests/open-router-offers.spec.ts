@@ -38,3 +38,22 @@ test('wired dispatch makes the offer pickable and routes the pick (harness only)
  await expect(page.locator('body')).toHaveAttribute('data-offer-run','acme.md-viewer:ambiguous.txt');
  await expect(page.locator('body')).toHaveAttribute('data-status','extension-opened');
 });
+// Real package end-to-end: the example md-viewer is installed through manifest validation and the
+// production host; the pick runs its code in a real sandboxed worker, which reads the exact picked
+// file via project.readOfferFile(token).
+test('installed package offer runs through the real host and worker',async({page})=>{
+ await page.goto('/tests/fixtures/router-dialog.html?lang=en&theme=light&mode=choose&package=1');
+ await expect(page.locator('body')).toHaveAttribute('data-package-installed','somnia.md-viewer',{timeout:15000});
+ const dialog=page.getByRole('dialog',{name:'In which studio do you want to open this file?',exact:true});
+ await expect(dialog).toBeVisible();
+ const combo=dialog.getByRole('combobox',{name:'Studio',exact:true});
+ await expect(combo.locator('option')).toHaveCount(3);
+ await combo.selectOption('offer:somnia.md-viewer.markdown');
+ await expect(combo).toHaveValue('offer:somnia.md-viewer.markdown');
+ await page.waitForTimeout(400);
+ await page.screenshot({path:'/downloads/open-router-package-pick.png'});
+ await dialog.getByRole('button',{name:'Open file',exact:true}).click();
+ await expect(page.locator('body')).toHaveAttribute('data-status','extension-opened',{timeout:20000});
+ await expect(page.locator('body')).toHaveAttribute('data-ext-notice','MD Viewer: ambiguous.txt - 5 chars, 0 headings',{timeout:20000});
+ await expect(page.locator('body')).toHaveAttribute('data-notice','Opened ambiguous.txt with Markdown Viewer.');
+});
