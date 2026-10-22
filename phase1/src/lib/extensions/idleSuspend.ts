@@ -1,7 +1,7 @@
 import type {PressureLevel} from '../lifecycle/manager';
 
 /** The slice of ExtensionRuntime the suspender needs. */
-export interface SuspendableHost{runCommand(id:string):Promise<void>;dispose():void}
+export interface SuspendableHost{runCommand(id:string,args?:unknown):Promise<void>;dispose():void}
 export type IdleHostState='active'|'suspended';
 export interface IdleSuspendOptions<H extends SuspendableHost>{
  /** Starts a fresh host (worker plus activation) for an extension. Must be synchronous so resume cannot race. */
@@ -53,12 +53,12 @@ export class ExtensionIdleSuspender<H extends SuspendableHost>{
  /** Marks activity (panel interaction, api traffic) without running a command. Resumes a suspended host. */
  touch(extId:string):void{const e=this.entries.get(extId);if(!e)return;e.lastActive=this.now();if(!e.host)this.resume(extId,e,'touch');}
  /** Runs a command, resuming the host first when it was suspended. */
- async run(extId:string,commandId:string):Promise<void>{
+ async run(extId:string,commandId:string,args?:unknown):Promise<void>{
   const e=this.entries.get(extId);
   if(!e)throw new Error(`Unknown extension ${extId}.`);
   if(!e.host)this.resume(extId,e,'command');
   e.lastActive=this.now();e.inFlight++;
-  try{await e.host!.runCommand(commandId);}
+  try{await e.host!.runCommand(commandId,args);}
   finally{e.inFlight--;e.lastActive=this.now();}
  }
  private resume(extId:string,e:Entry<H>,reason:string){

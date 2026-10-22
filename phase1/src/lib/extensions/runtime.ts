@@ -92,9 +92,25 @@ export class ExtensionRuntime{
   this.suspendedState=null;
   return true;
  }
- runCommand(id:string){return new Promise<void>(async(resolve,reject)=>{if(this.failed){reject(new Error(`${this.manifest.name} is stopped.`));return;}
-  if(this.suspended){try{if(!await this.resume()){reject(new Error(`${this.manifest.name} could not be resumed.`));return;}}catch(e){reject(e instanceof Error?e:new Error(String(e)));return;}}const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);reject(new Error(`${this.manifest.name} did not finish in time.`));this.failHard(`command ${id} timed out`);},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId});});}
+ runCommand(id:string,args?:unknown){return new Promise<void>(async(resolve,reject)=>{if(this.failed){reject(new Error(`${this.manifest.name} is stopped.`));return;}
+  let payload:unknown;
+  if(args!==undefined){try{payload=jsonCopy(args,new Set());}catch{reject(new Error(`${this.manifest.name}: command arguments must be JSON-serializable.`));return;}}
+  if(this.suspended){try{if(!await this.resume()){reject(new Error(`${this.manifest.name} could not be resumed.`));return;}}catch(e){reject(e instanceof Error?e:new Error(String(e)));return;}}const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);reject(new Error(`${this.manifest.name} did not finish in time.`));this.failHard(`command ${id} timed out`);},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId,...(args!==undefined?{args:payload}:{})});});}
  dispose(){this.failed=true;if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}for(const r of this.runs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was disposed.`));}this.runs.clear();for(const r of this.lifecycleReqs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was disposed.`));}this.lifecycleReqs.clear();try{this.worker.terminate();}catch{/* suspended workers are already gone */}}
+}
+/** Deep-copies command arguments into plain JSON, rejecting functions, non-finite numbers, bigint and cycles. Handlers must never receive host object identities. */
+function jsonCopy(v:unknown,seen:Set<object>):unknown{
+ if(v===null)return null;
+ const t=typeof v;
+ if(t==='string'||t==='boolean')return v;
+ if(t==='number'){if(!Number.isFinite(v as number))throw new Error('non-finite number');return v;}
+ if(t!=='object')throw new Error(`not JSON: ${t}`);
+ if(seen.has(v as object))throw new Error('circular structure');
+ seen.add(v as object);
+ if(Array.isArray(v))return v.map(x=>jsonCopy(x,seen));
+ const out:Record<string,unknown>={};
+ for(const[k,x]of Object.entries(v as Record<string,unknown>))if(x!==undefined)out[k]=jsonCopy(x,seen);
+ return out;
 }
 /** URL contract with the Rust side: the worker bootstrap is a separate response with its own CSP (script-src 'unsafe-eval'; connect-src 'none'). Windows and Android WebViews expose custom schemes as http://<scheme>.localhost/. */
 export const WORKER_SCHEME='somnia-ext';
