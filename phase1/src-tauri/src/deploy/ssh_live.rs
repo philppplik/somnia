@@ -73,10 +73,13 @@ async fn sftp_tree_ops_against_openssh() {
     let hard = format!("{site}/a/hard.txt");
     t.hard_link(&file, &hard).await.expect("hard link");
     assert_eq!(t.read(&hard).await.expect("read hard link"), b"version-2");
-    // Symlink + read_link, relative target like a release layout.
+    // Symlink + read_link in the release layout the engine policy requires:
+    // targets must be releases/<id>; anything else must be rejected as InvalidInput.
+    t.mkdir(&format!("{site}/releases/r-1")).await.expect("mkdir releases");
     let link = format!("{site}/current");
-    t.symlink("a/file.txt", &link).await.expect("symlink");
-    assert_eq!(t.read_link(&link).await.expect("read_link").as_deref(), Some("a/file.txt"));
+    assert!(t.symlink("a/file.txt", &link).await.is_err(), "policy must reject non-release target");
+    t.symlink("releases/r-1", &link).await.expect("symlink");
+    assert_eq!(t.read_link(&link).await.expect("read_link").as_deref(), Some("releases/r-1"));
     assert!(t.exists(&file).await.expect("exists"));
     let entries = t.list(&format!("{site}/a")).await.expect("list");
     assert!(entries.iter().any(|e| e.contains("file.txt")), "list: {entries:?}");
