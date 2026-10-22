@@ -1,0 +1,16 @@
+{
+  "id": "somnia.md-viewer",
+  "name": "Markdown Viewer",
+  "version": "0.1.0",
+  "apiVersion": 1,
+  "main": "main.js",
+  "permissions": ["commands", "project.read", "ui.notify"],
+  "contributes": {
+    "commands": [
+      {"id": "somnia.md-viewer.open", "title": "Open Markdown file", "category": "Project"}
+    ],
+    "openOffers": [
+      {"id": "somnia.md-viewer.markdown", "kinds": ["text"], "command": "somnia.md-viewer.open", "capability": "preview", "priority": 10, "title": "Markdown Viewer"}
+    ]
+  }
+}
