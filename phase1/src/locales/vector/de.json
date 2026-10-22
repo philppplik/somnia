@@ -327,7 +327,7 @@
  "vector.shell.textToPathError.unknownText":"Unbekannter Text: {id}",
  "vector.shell.textToPathError.locked":"Text ist gesperrt",
  "vector.shell.textToPathError.invalidFamily":"Ungültige Schriftfamilie",
- "vector.shell.textToPathError.noApi":"Systemschriften sind in diesem Browser nicht zugänglich",
+ "vector.shell.textToPathError.noApi":"Systemschriften sind hier nicht zugänglich - dafür wird ein Chromium-Browser (Chrome/Edge) oder die Windows-App benötigt; die macOS- und Linux-App kann keine Systemschriften lesen",
  "vector.shell.textToPathError.denied":"Zugriff auf Schriften wurde verweigert",
  "vector.shell.textToPathError.noFamily":"Schrift \"{family}\" wurde auf diesem System nicht gefunden (generische Familien können nicht umgewandelt werden)",
  "vector.shell.textToPathError.noVariantBold":"Schrift \"{family}\" hat keine Fett-Variante installiert",

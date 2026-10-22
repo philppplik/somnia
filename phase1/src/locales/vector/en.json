@@ -327,7 +327,7 @@
  "vector.shell.textToPathError.unknownText":"Unknown text: {id}",
  "vector.shell.textToPathError.locked":"Text is locked",
  "vector.shell.textToPathError.invalidFamily":"Invalid font family",
- "vector.shell.textToPathError.noApi":"System fonts are not accessible from this browser",
+ "vector.shell.textToPathError.noApi":"System fonts are not accessible here - this needs a Chromium-based browser (Chrome/Edge) or the Windows app; the macOS and Linux app cannot read system fonts",
  "vector.shell.textToPathError.denied":"Font access was denied",
  "vector.shell.textToPathError.noFamily":"Font \"{family}\" was not found on this system (generic families cannot be converted)",
  "vector.shell.textToPathError.noVariantBold":"Font \"{family}\" has no bold variant installed",
