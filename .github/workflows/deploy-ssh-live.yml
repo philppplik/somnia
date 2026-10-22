@@ -3,6 +3,13 @@ name: deploy-ssh-live
 # OpenSSH server on the runner's loopback. Throwaway keys, no external target, no cost.
 on:
   workflow_dispatch:
+  push:
+    branches: [int/beta6]
+    paths:
+      - 'phase1/src-tauri/src/deploy/ssh_live.rs'
+      - 'phase1/src-tauri/src/deploy/keys.rs'
+      - 'phase1/src-tauri/src/deploy/mod.rs'
+      - '.github/workflows/deploy-ssh-live.yml'
 
 permissions: {}
 
