@@ -16,8 +16,11 @@ if(params.get('mode')==='choose'){
  registerOpenHandler({id:'fixture.code.text',studioId:'code',kinds:['text'],priority:200,capability:'edit'});
 }
 let asks=0,commits=0,approvals=0;
+const testOffer={id:'acme.md-viewer',extensionId:'acme.viewer',kinds:['text' as const],commandId:'acme.viewer.open',capability:'preview' as const,priority:10,effectivePriority:10,title:'MD Viewer (fixture)'};
 const coordinator=createOpenCoordinator({
- openChoice:{askOpenStudio:(input,resolution)=>{document.body.dataset.asks=String(++asks);return askOpenStudio(input,resolution,params.get('mode')==='choose'?'sound':'code');},cancelPending:()=>answerOpenChoice(null)},
+ openChoice:{askOpenStudio:(input,resolution,_suggested,offers)=>{document.body.dataset.asks=String(++asks);return askOpenStudio(input,resolution,params.get('mode')==='choose'?'sound':'code',offers);},cancelPending:()=>answerOpenChoice(null)},
+ ...(params.get('offers')==='1'?{extensionOffers:()=>[testOffer]}:{}),
+ ...(params.get('dispatch')==='1'?{runExtensionOffer:async(offer:typeof testOffer,input:{name:string})=>{document.body.dataset.offerRun=offer.id+':'+input.name;}}:{}),
  async prepare(input,resolution){return{name:input.name,studioId:resolution.studioId,affectedDocs:()=>[],commit(){document.body.dataset.commits=String(++commits);return{ok:true,key:input.name};},dispose(){},focus(){}};},
  async approve(){document.body.dataset.approvals=String(++approvals);return'approved';},revalidate:()=>true,
  switchStudio(studio){document.body.dataset.answer=studio;},notify(text){document.body.dataset.notice=text;}
