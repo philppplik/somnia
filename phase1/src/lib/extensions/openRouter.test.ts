@@ -2,7 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAX_EXTENSION_OPEN_PRIORITY,
+  dispatchExtensionOpenOffer,
   extensionOffersFor,
+  hasExtensionOpenOfferDispatch,
+  setExtensionOpenOfferDispatch,
   mergeWithBuiltIns,
   registerExtensionOpenOffer,
   resetExtensionOpenOffers,
@@ -72,3 +75,22 @@ test('validates id and title bounds', () => { resetExtensionOpenOffers();
     assert.throws(() => registerExtensionOpenOffer({...base, id: ''}, ownsAll),/id is invalid/);
     assert.throws(() => registerExtensionOpenOffer({...base, title: ''}, ownsAll),/display title/);
   });
+
+test('dispatch binding runs the bound path and unregisters cleanly', async () => { resetExtensionOpenOffers();
+  registerExtensionOpenOffer(base, ownsAll);
+  assert.equal(hasExtensionOpenOfferDispatch(base.id), false);
+  assert.equal(await dispatchExtensionOpenOffer(base.id, {name: 'a.md'}), false);
+  const seen: unknown[] = [];
+  const unbind = setExtensionOpenOfferDispatch(base.id, async args => { seen.push(args); });
+  assert.equal(hasExtensionOpenOfferDispatch(base.id), true);
+  assert.equal(await dispatchExtensionOpenOffer(base.id, {name: 'a.md'}), true);
+  assert.deepEqual(seen, [{name: 'a.md'}]);
+  unbind();
+  assert.equal(await dispatchExtensionOpenOffer(base.id, {name: 'b.md'}), false);
+  assert.equal(seen.length, 1);
+  resetExtensionOpenOffers();
+});
+test('binding a dispatch to an unregistered offer is rejected', () => { resetExtensionOpenOffers();
+  assert.throws(() => setExtensionOpenOfferDispatch('acme.md-viewer', async () => {}), /not registered/);
+  resetExtensionOpenOffers();
+});

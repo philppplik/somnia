@@ -1,7 +1,7 @@
 import {askOpenStudio,answerOpenChoice} from './openChoice';
 import {reportError} from '../log';
 import {readyHandlersFor} from './openHandlers';
-import {extensionOffersFor} from '../extensions/openRouter';
+import {dispatchExtensionOpenOffer,extensionOffersFor,hasExtensionOpenOfferDispatch} from '../extensions/openRouter';
 import type {OpenKind} from './openHandlers';
 import {prepareMediaFile} from '../media';
 import {commitTextFiles,installOpenIncoming,type IncomingFile} from '../projectActions';
@@ -56,9 +56,16 @@ const textEncoder=new TextEncoder();
 async function bytesOf(f:IncomingFile):Promise<Uint8Array>{return f.blob?new Uint8Array(await f.blob.arrayBuffer()):textEncoder.encode(f.text);}
 export const appDeps:OpenDeps={
  openChoice:{askOpenStudio,cancelPending:()=>answerOpenChoice(null)},
- extensionOffers:kind=>extensionOffersFor(kind),
- // runExtensionOffer is intentionally not wired: the v2 supervisor has no live dispatch surface in the app yet.
- // The coordinator fails an extension pick closed instead of pretending an open.
+ // Only offers with a bound execution path are shown: a registered offer whose host failed to bind
+ // a dispatch (e.g. code failed to load) is hidden, never pickable-then-failing.
+ extensionOffers:kind=>extensionOffersFor(kind).filter(o=>hasExtensionOpenOfferDispatch(o.id)),
+ // Dispatch goes through the v1 host binding (openRouter.dispatchExtensionOpenOffer). An offer whose
+ // host never bound a dispatch stays unbound and is hidden by the coordinator gate; a binding that
+ // vanished between pick and dispatch fails closed here instead of pretending an open.
+ runExtensionOffer:async(offer,input)=>{
+  const ok=await dispatchExtensionOpenOffer(offer.id,{name:input.name});
+  if(!ok)throw new Error(`Extension open offer has no dispatch: ${offer.id}`);
+ },
  async prepare(input,resolution):Promise<PreparedOpen>{
   const studioId=resolution.handler.studioId;
   if(TEXT_KINDS.has(resolution.kind)){

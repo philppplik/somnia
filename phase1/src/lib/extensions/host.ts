@@ -1,4 +1,5 @@
 import {registerCommandSpec} from '../commandBridge';
+import {registerExtensionOpenOffer,setExtensionOpenOfferDispatch} from './openRouter';
 import {extensionCommandId} from './commandIds';
 import {applyOperations,getState,patchState} from '../../store/appStore';
 import type {ExtensionManifest} from './types';
@@ -32,6 +33,12 @@ export function activateExtensions(list:ExtensionManifest[],idle?:ExtensionIdleO
   makers.set(ext.id,make);
   if(ext.code){try{migrateStorageKeys(ext.id,localStorage);if(suspender){suspender.register(ext.id);hosted=true;}else runtime=make();}catch(e){runtime=null;hosted=false;reportError('extensions.load',e,{message:`Extension ${ext.name} (${ext.id}) could not be loaded`,notify:`Extension ${ext.name} could not be loaded.`});}if(runtime){const rt=runtime;disposers.push(()=>rt.dispose());}}
   for(const c of ext.contributes.commands)disposers.push(registerCommandSpec({id:extensionCommandId(c.id),title:`${c.title} (${ext.name})`,category:c.category,level:'ui',params:NO_PARAMS,run:async()=>{if(hosted&&suspender){await suspender.run(ext.id,c.id);return;}if(!runtime){patchState({notice:`${c.title} has no code in this extension.`});return;}await runtime.runCommand(c.id);}}));
+  for(const o of ext.contributes.openOffers??[]){
+   try{
+    disposers.push(registerExtensionOpenOffer({id:o.id,extensionId:ext.id,kinds:o.kinds,commandId:o.command,capability:o.capability,priority:o.priority,title:o.title},(eid,cid)=>eid===ext.id&&ext.contributes.commands.some(c=>c.id===cid)));
+    disposers.push(setExtensionOpenOfferDispatch(o.id,async args=>{if(hosted&&suspender){await suspender.run(ext.id,o.command,args);return;}if(!runtime)throw new Error(`${o.title} has no code in this extension.`);await runtime.runCommand(o.command,args);}));
+   }catch(e){reportError('extensions.openOffer',e,{message:`Open offer ${o.id} (${ext.id}) could not be registered`,notify:`An open offer from ${ext.name} could not be registered.`});}
+  }
   ext.contributes.snippets.forEach((s,i)=>disposers.push(registerCommandSpec({id:extensionCommandId(`${ext.id}.snippet.${i}`),title:`Snippet: ${s.label} (${ext.name})`,category:'Insert',level:'ui',params:NO_PARAMS,run:async()=>{
    if(s.language==='html'){const parentId=getState().selectedElementId;if(!parentId)throw Error('Select a source container before inserting a snippet.');applyOperations([{type:'insertHTML',file:getState().designFile,parentId,html:`\n${s.body}\n`}]);patchState({notice:`Inserted snippet ${s.label}.`});}
    else{await navigator.clipboard.writeText(s.body);patchState({notice:`Copied ${s.language.toUpperCase()} snippet ${s.label} to the clipboard.`});}}})));

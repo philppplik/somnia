@@ -104,5 +104,28 @@ export function mergeWithBuiltIns<T>(builtInWinner: T | null, kind: OpenKind): {
   return {winner: builtInWinner, extensionCandidates: extensionOffersFor(kind)};
 }
 
-/** Test hook: forget every registered offer. */
-export function resetExtensionOpenOffers(): void { offers.clear(); }
+/** Execution path behind a registered offer, bound by the host that owns the extension runtime. */
+export type OpenOfferDispatch = (args: unknown) => Promise<void>;
+
+const dispatchers = new Map<string, OpenOfferDispatch>();
+
+/** Host wiring: binds the execution path for an already registered offer. The coordinator gate hides offers whose host never binds a dispatch ("no dispatch, no offers"). */
+export function setExtensionOpenOfferDispatch(offerId: string, dispatch: OpenOfferDispatch): () => void {
+  if (!offers.has(offerId)) throw new ExtensionError('E_INVALID_ARGUMENT', `Open offer is not registered: ${offerId}`);
+  dispatchers.set(offerId, dispatch);
+  return () => { if (dispatchers.get(offerId) === dispatch) dispatchers.delete(offerId); };
+}
+
+/** True when the offer has a bound execution path. */
+export function hasExtensionOpenOfferDispatch(offerId: string): boolean { return dispatchers.has(offerId); }
+
+/** Runs the command behind an offer. False when no dispatch is bound. */
+export async function dispatchExtensionOpenOffer(offerId: string, args: unknown): Promise<boolean> {
+  const dispatch = dispatchers.get(offerId);
+  if (!dispatch) return false;
+  await dispatch(args);
+  return true;
+}
+
+/** Test hook: forget every registered offer and dispatch binding. */
+export function resetExtensionOpenOffers(): void { offers.clear(); dispatchers.clear(); }
