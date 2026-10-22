@@ -23,3 +23,11 @@ test('ambiguous content exposes only resolver candidates and the suggested handl
  const p=askOpenStudio({name:'picture.docx',bytes},r,'code');assert.equal(getOpenChoice()?.mode,'choose-handler');assert.equal(getOpenChoice()?.suggested,'code');
  answerOpenChoice('code');assert.equal(await p,'code');
 });
+
+test('extension offers are exposed for picking; unknown offer ids are rejected',async()=>{
+ const extOpenOffer={id:'acme.md',extensionId:'acme.viewer',kinds:['text' as const],commandId:'acme.viewer.open',capability:'preview' as const,priority:10,effectivePriority:10,title:'MD Viewer'};
+ const pending=askOpenStudio({name:'notes.unknown',bytes},offer(),'code',[extOpenOffer]);
+ assert.equal(getOpenChoice()?.offers.length,1);
+ answerOpenChoice({extensionOffer:'nope.unknown'});assert.ok(getOpenChoice());
+ answerOpenChoice({extensionOffer:'acme.md'});assert.deepEqual(await pending,{extensionOffer:'acme.md'});assert.equal(getOpenChoice(),null);
+});

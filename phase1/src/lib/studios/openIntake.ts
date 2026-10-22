@@ -1,6 +1,7 @@
 import {askOpenStudio,answerOpenChoice} from './openChoice';
 import {reportError} from '../log';
 import {readyHandlersFor} from './openHandlers';
+import {extensionOffersFor} from '../extensions/openRouter';
 import type {OpenKind} from './openHandlers';
 import {prepareMediaFile} from '../media';
 import {commitTextFiles,installOpenIncoming,type IncomingFile} from '../projectActions';
@@ -55,6 +56,9 @@ const textEncoder=new TextEncoder();
 async function bytesOf(f:IncomingFile):Promise<Uint8Array>{return f.blob?new Uint8Array(await f.blob.arrayBuffer()):textEncoder.encode(f.text);}
 export const appDeps:OpenDeps={
  openChoice:{askOpenStudio,cancelPending:()=>answerOpenChoice(null)},
+ extensionOffers:kind=>extensionOffersFor(kind),
+ // runExtensionOffer is intentionally not wired: the v2 supervisor has no live dispatch surface in the app yet.
+ // The coordinator fails an extension pick closed instead of pretending an open.
  async prepare(input,resolution):Promise<PreparedOpen>{
   const studioId=resolution.handler.studioId;
   if(TEXT_KINDS.has(resolution.kind)){
