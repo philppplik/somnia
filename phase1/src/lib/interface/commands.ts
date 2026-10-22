@@ -4,9 +4,10 @@ import {getStudioContext} from '../shell/studioContext';
 import {registerCommandSpec} from '../commandBridge';
 import {addNode} from './model';
 import {interfaceSession,startInterface} from './session';
+import {setInterfaceExportAdvancedOpen} from './exportAdvancedState';
 import {saveInterfaceSnapshot} from './persistence';
 import type {CommandCategory} from '../commandSpec';
-export const INTERFACE_COMMANDS=['interface.new','interface.save','interface.undo','interface.redo','interface.addFrame','interface.addRectangle','interface.addText','interface.delete'] as const;
+export const INTERFACE_COMMANDS=['interface.new','interface.save','interface.export.advanced','interface.undo','interface.redo','interface.addFrame','interface.addRectangle','interface.addText','interface.delete'] as const;
 export function insertInterfaceNode(kind:'frame'|'rectangle'|'text'){
  const s=interfaceSession.get();if(!s.document||!s.pageId)return;let id='';
  const selected=s.document.nodes.find(n=>n.id===s.selection);const parent=kind!=='frame'&&selected?.kind==='frame'&&!selected.locked?selected.id:null;
@@ -17,6 +18,7 @@ export function registerInterfaceCommands(){
  const specs:[string,CommandCategory,()=>unknown,()=>boolean][]=[
  ['new','Project',startInterface,()=>true],['save','Project',saveInterfaceSnapshot,()=>!!state().document],
  ['undo','Edit',()=>interfaceSession.undo(),()=>!!state().past.length],['redo','Edit',()=>interfaceSession.redo(),()=>!!state().future.length],
+ ['export.advanced','Project',()=>setInterfaceExportAdvancedOpen(true),()=>!!state().document],
  ['addFrame','Insert',()=>insertInterfaceNode('frame'),()=>!!state().document],['addRectangle','Insert',()=>insertInterfaceNode('rectangle'),()=>!!state().document],['addText','Insert',()=>insertInterfaceNode('text'),()=>!!state().document],
  ['delete','Edit',()=>interfaceSession.transact(d=>{deleteSelection(d,state().selectedIds);}),()=>!!state().selectedIds.length&&!state().selectedIds.some(id=>state().document?.nodes.find(n=>n.id===id)?.locked)],
  ];

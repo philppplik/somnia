@@ -3347,6 +3347,7 @@
   "cmd.terminal.close": "Aktive Terminal-Sitzung schließen",
   "cmd.project.export.advanced": "Erweiterter Export...",
   "cmd.design.export.advanced": "Erweiterter Export...",
+  "cmd.interface.export.advanced": "Erweiterter Export...",
   "cmd.documents.export.advanced": "Erweiterter Export...",
   "cmd.sheets.export.advanced": "Erweiterter Export...",
   "cmd.slides.export.advanced": "Erweiterter Export...",
