@@ -141,7 +141,10 @@ test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo
  await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
  const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
  await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
- const boxes=page.getByTestId('documents-editor').getByRole('textbox');const n=await boxes.count();const old2=await boxes.nth(1).inputValue();
+ const boxes=page.getByTestId('documents-editor').getByRole('textbox');
+ // The page image can be complete before the paragraph textboxes are mounted: counting here must wait for the populated editor, otherwise n is a partial count (CI saw 0 with 8 boxes rendering a tick later).
+ let n=0;await expect(async()=>{n=await boxes.count();expect(n).toBeGreaterThan(1);}).toPass({timeout:15000});
+ const old2=await boxes.nth(1).inputValue();
  const b=(await pg.boundingBox())!;await page.mouse.click(b.x+b.width*0.2,b.y+b.height*0.127);
  await expect(page.getByTestId('documents-caret')).toBeVisible();
  await page.keyboard.press('Enter');
