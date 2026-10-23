@@ -10,7 +10,7 @@ test('choose dialog hides extension offers when no dispatch is wired',async({pag
  await expect(combo.locator('option')).toHaveCount(2);
  await expect(dialog).not.toContainText('MD Viewer');
  await page.waitForTimeout(400);
- await page.screenshot({path:'/downloads/open-router-gated-de-light.png'});
+ await page.screenshot({path:'test-results/screenshots/open-router-gated-de-light.png'});
 });
 test('choose dialog hides extension offers when no dispatch is wired (dark, en)',async({page})=>{
  await page.setViewportSize({width:1400,height:900});
@@ -20,7 +20,7 @@ test('choose dialog hides extension offers when no dispatch is wired (dark, en)'
  await expect(dialog.getByRole('combobox',{name:'Studio',exact:true}).locator('option')).toHaveCount(2);
  await expect(dialog).not.toContainText('MD Viewer');
  await page.waitForTimeout(400);
- await page.screenshot({path:'/downloads/open-router-gated-en-dark.png'});
+ await page.screenshot({path:'test-results/screenshots/open-router-gated-en-dark.png'});
 });
 // With a dispatch dep (fixture stub, NOT production), the offer is pickable and routes to it.
 test('wired dispatch makes the offer pickable and routes the pick (harness only)',async({page})=>{
@@ -33,7 +33,7 @@ test('wired dispatch makes the offer pickable and routes the pick (harness only)
  await combo.selectOption('offer:acme.md-viewer');
  await expect(combo).toHaveValue('offer:acme.md-viewer');
  await page.waitForTimeout(400);
- await page.screenshot({path:'/downloads/open-router-dispatch-en-light.png'});
+ await page.screenshot({path:'test-results/screenshots/open-router-dispatch-en-light.png'});
  await dialog.getByRole('button',{name:'Open file',exact:true}).click();
  await expect(page.locator('body')).toHaveAttribute('data-offer-run','acme.md-viewer:ambiguous.txt');
  await expect(page.locator('body')).toHaveAttribute('data-status','extension-opened');
@@ -51,7 +51,7 @@ test('installed package offer runs through the real host and worker',async({page
  await combo.selectOption('offer:somnia.md-viewer.markdown');
  await expect(combo).toHaveValue('offer:somnia.md-viewer.markdown');
  await page.waitForTimeout(400);
- await page.screenshot({path:'/downloads/open-router-package-pick.png'});
+ await page.screenshot({path:'test-results/screenshots/open-router-package-pick.png'});
  await dialog.getByRole('button',{name:'Open file',exact:true}).click();
  await expect(page.locator('body')).toHaveAttribute('data-status','extension-opened',{timeout:20000});
  await expect(page.locator('body')).toHaveAttribute('data-ext-notice','MD Viewer: ambiguous.txt - 5 chars, 0 headings',{timeout:20000});

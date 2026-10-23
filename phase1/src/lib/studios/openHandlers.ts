@@ -8,6 +8,10 @@ import {hasStudio,type StudioId} from './registry';
 export type OpenKind='docx'|'xlsx'|'pptx'|'audio'|'video'|'image'|'pdf'|'psd'|'raster-preview'|'svg'|'text'|'model3d';
 /** The closed set of validated document kinds, in canonical order. Bytes decide the kind (openIntake), never a handler or extension declaration. */
 export const OPEN_KINDS:readonly OpenKind[]=['docx','xlsx','pptx','audio','video','image','pdf','psd','raster-preview','svg','text','model3d'];
+/** One file offered to Smart Open: native picker, OS open, drop or explicit Open. Bytes are read once at intake. */
+export interface OpenInput{name:string;bytes:Uint8Array;/** Source identity for per-document preference; defaults to name. */key?:string;
+ /** Native intake correlation. Basenames are NOT identity; outcomes are keyed by position and, when present, these. */
+ requestId?:string;ordinal?:number;/** Opaque host file identity; a document already open under it is activated, not opened twice. */identityToken?:string}
 export interface OpenHandler{
  id:string;studioId:StudioId;kinds:readonly OpenKind[];
  /** Higher wins. Equal priorities between ready handlers are never decided by registration order: the user is asked. */

@@ -2,6 +2,8 @@ import {resolveOpen,type OpenResolution,type ResolveOptions} from './openResolve
 import type {OpenPick} from './openChoice';
 import type {RoutedOpenOffer} from '../extensions/openRouter';
 import type {OpenKind} from './openHandlers';
+import type {OpenInput} from './openHandlers';
+export type {OpenInput} from './openHandlers';
 import type {StudioId} from './registry';
 import {collectTokens,type RevisionToken} from './revisionTokens';
 export type {RevisionToken} from './revisionTokens';
@@ -15,9 +17,6 @@ export type {RevisionToken} from './revisionTokens';
 export type OpenIntent='open'|'restore'|'background';
 /** Only an explicit Open moves the shell. Import, attach/convert and create-blank are not Open and never come through here. */
 export const routesShell=(intent:OpenIntent)=>intent==='open';
-export interface OpenInput{name:string;bytes:Uint8Array;/** Source identity for per-document preference; defaults to name. */key?:string;
- /** Native intake correlation. Basenames are NOT identity; outcomes are keyed by position and, when present, these. */
- requestId?:string;ordinal?:number;/** Opaque host file identity; a document already open under it is activated, not opened twice. */identityToken?:string}
 /** A document the open would touch or replace. Captured at prepare time WITHOUT mutating the session. */
 export interface AffectedDoc{key:string;studioId:StudioId;dirty:boolean;token:RevisionToken}
 export interface PreparedOpen{

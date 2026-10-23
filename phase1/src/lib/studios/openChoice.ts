@@ -1,4 +1,4 @@
-import type {OpenInput} from './openCoordinator';
+import type {OpenInput} from './openHandlers';
 import type {OpenResolution} from './openResolver';
 import type {OpenHandler} from './openHandlers';
 import type {RoutedOpenOffer} from '../extensions/openRouter';
