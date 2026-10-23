@@ -1592,6 +1592,21 @@
       ]
     },
     {
+      "name": "local_voice_transcribe_segments",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm",
+        "language"
+      ],
+      "args": [
+        "pcm",
+        "language"
+      ]
+    },
+    {
       "name": "log_dir",
       "domain": "app",
       "status": "native",

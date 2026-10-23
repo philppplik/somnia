@@ -56,6 +56,47 @@ fn wav_with_limits(pcm:&[i16],limits:TranscriptionLimits)->Result<Vec<u8>,String
 pub fn transcribe(data:PathBuf,_resource:PathBuf,pcm:Vec<i16>,spoken_language:String)->Result<String,String>{transcribe_with_limits(data,pcm,spoken_language,PROMPT_LIMITS)}
 /// File transcription has its own bounded budget; never widens prompt input limits.
 pub fn transcribe_file(data:PathBuf,pcm:Vec<i16>,spoken_language:String)->Result<String,String>{transcribe_with_limits(data,pcm,spoken_language,FILE_LIMITS)}
+
+/// Sound Studio C3: segment transcription with the same pinned helper and model, JSON output for
+/// segment-level time marks only. Word-level timing is deliberately NOT requested: it would need the
+/// extra DTW model file (a new download), which is out of scope. Sessions are capped at 120 s, so the
+/// prompt budget applies; the file budget is never widened.
+pub fn transcribe_segments(data:PathBuf,pcm:Vec<i16>,spoken_language:String)->Result<String,String>{require_preview()?;require_owner()?;let lang=language(&spoken_language)?.to_string();let input=wav_with_limits(&pcm,PROMPT_LIMITS)?;let executable=optional_helper::lookup(&data)?;check_model(&data)?;let (id,cancel)=begin("transcribing",input.len() as u64)?;let key=id.clone();std::thread::spawn(move||{let result=run_segments(&data,&executable,&input,&key,&cancel,&lang);match result{Ok(text)=>{if cancel.load(Ordering::SeqCst){update(&key,"cancelled",0,None,None)}else{update(&key,"complete",input.len() as u64,Some(text),None)}},Err(e)=>update(&key,if cancel.load(Ordering::SeqCst){"cancelled"}else{"failed"},0,None,Some(e))}});Ok(id)}
+
+const SEGMENT_JSON_MAX_BYTES:usize=1_000_000;
+const SEGMENT_MAX_COUNT:usize=1000;
+const SEGMENT_MAX_CHARS:usize=12000;
+const SEGMENT_TEXT_MAX_CHARS:usize=500;
+
+#[derive(serde::Deserialize)]struct HelperJsonSegments{transcription:Vec<HelperJsonSegment>}
+#[derive(serde::Deserialize)]struct HelperJsonSegment{offsets:HelperJsonOffsets,text:String}
+#[derive(serde::Deserialize)]struct HelperJsonOffsets{from:i64,to:i64}
+#[derive(serde::Serialize)]struct SegmentOut{from_ms:i64,to_ms:i64,text:String}
+
+/// Parse and validate the pinned helper's -oj output into the normalized segment list the app consumes.
+/// Fail-closed on size, count, timing or text violations; empty segments are dropped. Unknown fields are ignored.
+fn segments_from_helper_json(bytes:&[u8])->Result<String,String>{
+ if bytes.is_empty()||bytes.len()>SEGMENT_JSON_MAX_BYTES{return Err("Voice segment output outside limits".into());}
+ let parsed:HelperJsonSegments=serde_json::from_slice(bytes).map_err(|_|"Voice segment output invalid")?;
+ if parsed.transcription.len()>SEGMENT_MAX_COUNT{return Err("Voice segment count outside limits".into());}
+ let mut out:Vec<SegmentOut>=Vec::with_capacity(parsed.transcription.len());
+ let mut total=0usize;
+ for seg in parsed.transcription{
+  let (from,to)=(seg.offsets.from,seg.offsets.to);
+  if from<0||to<from||to>(PROMPT_LIMITS.seconds as i64)*1000{return Err("Voice segment timing outside limits".into());}
+  let text=seg.text.trim();
+  if text.is_empty(){continue}
+  let chars=text.chars().count();
+  if chars>SEGMENT_TEXT_MAX_CHARS{return Err("Voice segment text outside limits".into());}
+  total+=chars;if total>SEGMENT_MAX_CHARS{return Err("Voice segment text outside limits".into());}
+  out.push(SegmentOut{from_ms:from,to_ms:to,text:text.to_string()});
+ }
+ if out.is_empty(){return Err("Voice segment output empty".into());}
+ serde_json::to_string(&out).map_err(|_|"Voice segment encoding failed".into())
+}
+
+/// Same hardened spawn as run(), different fixed flags: -oj writes <of>.json with segment offsets (ms).
+fn run_segments(data:&Path,executable:&Path,input:&[u8],id:&str,cancel:&AtomicBool,spoken_language:&str)->Result<String,String>{language(spoken_language)?;let voice=data.join("voice");secure_dir(&voice)?;let root=voice.join("jobs");secure_dir(&root)?;let dir=root.join(id);secure_dir(&dir)?;let result=(||{let path=dir.join("input.wav");let mut file=private_file(&path)?;file.write_all(input).map_err(|_|"Voice scratch write failed")?;drop(file);let output=dir.join("segments");let mut command=Command::new(executable);command.args(["-m"]).arg(model_path(data)).args(["-f"]).arg(&path).args(["-l",spoken_language,"-ng","-np","-oj","-of"]).arg(&output).current_dir(&dir).env_clear().stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).no_window();#[cfg(windows)]if let Some(root)=std::env::var_os("SystemRoot"){command.env("SystemRoot",root);}#[cfg(unix)]{use std::os::unix::process::CommandExt;command.process_group(0);}cancelled(cancel)?;configure_parent_death(&mut command);let mut child=command.spawn().map_err(|_|"Voice helper could not start")?;#[cfg(windows)]let _job=match VoiceWindowsJob::attach(&child){Ok(job)=>job,Err(e)=>{kill_tree(&mut child);return Err(e)}};let started=Instant::now();loop{if cancel.load(Ordering::SeqCst)||started.elapsed()>Duration::from_secs(PROMPT_LIMITS.timeout){kill_tree(&mut child);return Err("Voice transcription cancelled or timed out".into())}match child.try_wait(){Ok(Some(status))=>{if !status.success(){return Err("Voice helper failed".into())}break},Ok(None)=>std::thread::sleep(Duration::from_millis(50)),Err(_)=>{kill_tree(&mut child);return Err("Voice helper wait failed".into())}}}cancelled(cancel)?;let json_path=output.with_extension("json");let meta=fs::symlink_metadata(&json_path).map_err(|_|"Voice helper produced no segments")?;if !meta.is_file()||meta.file_type().is_symlink()||meta.len()>SEGMENT_JSON_MAX_BYTES as u64{return Err("Voice segment output exceeds limit".into())}let bytes=fs::read(json_path).map_err(|_|"Voice segment output unreadable")?;segments_from_helper_json(&bytes)})();let cleanup=fs::remove_dir_all(dir);if cleanup.is_err(){return Err("Voice scratch cleanup failed".into())}result}
 fn transcribe_with_limits(data:PathBuf,pcm:Vec<i16>,spoken_language:String,limits:TranscriptionLimits)->Result<String,String>{require_preview()?;require_owner()?;language(&spoken_language)?;let input=wav_with_limits(&pcm,limits)?;let executable=optional_helper::lookup(&data)?;check_model(&data)?;let (id,cancel)=begin("transcribing",input.len() as u64)?;let key=id.clone();std::thread::spawn(move||{let result=run(&data,&executable,&input,&key,&cancel,&spoken_language,limits);match result{Ok(text)=>{if cancel.load(Ordering::SeqCst){update(&key,"cancelled",0,None,None)}else{update(&key,"complete",input.len()as u64,Some(text),None)}},Err(e)=>update(&key,if cancel.load(Ordering::SeqCst){"cancelled"}else{"failed"},0,None,Some(e))}});Ok(id)}
 fn kill_tree(child:&mut std::process::Child){#[cfg(unix)]{unsafe{libc::kill(-(child.id() as i32),libc::SIGKILL);}}#[cfg(windows)]{let _=Command::new(PathBuf::from(std::env::var_os("SystemRoot").unwrap_or_else(||"C:\\Windows".into())).join("System32").join("taskkill.exe")).args(["/PID",&child.id().to_string(),"/T","/F"]).no_window().stdout(Stdio::null()).stderr(Stdio::null()).status();}let _=child.kill();let _=child.wait();}
 fn run(data:&Path,executable:&Path,input:&[u8],id:&str,cancel:&AtomicBool,spoken_language:&str,limits:TranscriptionLimits)->Result<String,String>{language(spoken_language)?;let voice=data.join("voice");secure_dir(&voice)?;let root=voice.join("jobs");secure_dir(&root)?;let dir=root.join(id);secure_dir(&dir)?;let result=(||{let path=dir.join("input.wav");let mut file=private_file(&path)?;file.write_all(input).map_err(|_|"Voice scratch write failed")?;drop(file);let output=dir.join("transcript");let mut command=Command::new(executable);command.args(["-m"]).arg(model_path(data)).args(["-f"]).arg(&path).args(["-l",spoken_language,"-ng","-np","-nt","-otxt","-of"]).arg(&output).current_dir(&dir).env_clear().stdin(Stdio::null()).stdout(Stdio::null()).stderr(Stdio::null()).no_window();#[cfg(windows)]if let Some(root)=std::env::var_os("SystemRoot"){command.env("SystemRoot",root);}#[cfg(unix)]{use std::os::unix::process::CommandExt;command.process_group(0);}cancelled(cancel)?;configure_parent_death(&mut command);
@@ -126,6 +167,9 @@ pub fn helper_storage_remove(data:&Path)->Result<(),String>{let status=helper_st
 fn transcript_valid(text:&str,limits:TranscriptionLimits)->bool{!text.trim().is_empty()&&text.chars().count()<=limits.characters&&!text.contains('\0')}
 #[cfg(test)]mod transcript_file_tests{
  use super::*;
+ #[test]fn segments_json_accepts_valid_and_ignores_unknown_fields(){let raw=br#"{"systeminfo":"x","transcription":[{"offsets":{"from":0,"to":1240},"timestamps":{"from":"00:00:00,000","to":"00:00:01,240"},"text":" Hallo Welt "},{"offsets":{"from":1240,"to":2000},"text":"  "},{"offsets":{"from":2000,"to":3120},"text":"zweiter Teil"}]}"#;let out=segments_from_helper_json(raw).unwrap();let parsed:serde_json::Value=serde_json::from_str(&out).unwrap();let arr=parsed.as_array().unwrap();assert_eq!(arr.len(),2);assert_eq!(arr[0]["from_ms"],0);assert_eq!(arr[0]["to_ms"],1240);assert_eq!(arr[0]["text"],"Hallo Welt");assert_eq!(arr[1]["from_ms"],2000);assert_eq!(arr[2-1]["text"],"zweiter Teil");}
+ #[test]fn segments_json_fails_closed(){assert!(segments_from_helper_json(b"").is_err());assert!(segments_from_helper_json(b"not json").is_err());assert!(segments_from_helper_json(br#"{"transcription":[{"offsets":{"from":-1,"to":5},"text":"a"}]}"#).is_err());assert!(segments_from_helper_json(br#"{"transcription":[{"offsets":{"from":9,"to":5},"text":"a"}]}"#).is_err());assert!(segments_from_helper_json(br#"{"transcription":[{"offsets":{"from":0,"to":120001},"text":"a"}]}"#).is_err());assert!(segments_from_helper_json(br#"{"transcription":[{"offsets":{"from":0,"to":5},"text":""}]}"#).is_err());assert!(segments_from_helper_json(br#"{"transcription":[{"text":"a"}]}"#).is_err());assert!(segments_from_helper_json(&vec![b' ';SEGMENT_JSON_MAX_BYTES+1]).is_err());}
+ #[test]fn segments_json_count_and_char_caps(){let many=format!(r#"{{"transcription":[{}]}}"#,vec![r#"{"offsets":{"from":0,"to":1},"text":"a"}"#;SEGMENT_MAX_COUNT+1].join(","));assert!(segments_from_helper_json(many.as_bytes()).is_err());let long=format!(r#"{{"transcription":[{{"offsets":{{"from":0,"to":1}},"text":"{}"}}]}}"#,"a".repeat(SEGMENT_TEXT_MAX_CHARS+1));assert!(segments_from_helper_json(long.as_bytes()).is_err());}
  #[test]fn budgets_are_separate(){assert!(wav(&vec![0;16000*121]).is_err());assert!(wav_with_limits(&vec![0;16000*121],FILE_LIMITS).is_ok());assert!(wav_with_limits(&vec![0;16000*600+1],FILE_LIMITS).is_err());assert!(wav_with_limits(&[],FILE_LIMITS).is_err());assert_eq!(PROMPT_LIMITS.timeout,180);assert_eq!(FILE_LIMITS.timeout,1800);}
  #[test]fn transcript_caps_and_invalid_text(){let long="a".repeat(12001);assert!(!transcript_valid(&long,PROMPT_LIMITS));assert!(transcript_valid(&long,FILE_LIMITS));assert!(transcript_valid(&"ü".repeat(120000),FILE_LIMITS));assert!(!transcript_valid(&"x".repeat(120001),FILE_LIMITS));for text in ["","  ","hello\0world"]{assert!(!transcript_valid(text,FILE_LIMITS));}}
 }
