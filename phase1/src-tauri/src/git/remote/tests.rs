@@ -865,7 +865,46 @@ fn interrupted_push_that_did_land_is_reconciled_as_published() {
     assert_eq!(res.job_outcome, JobOutcome::Success);
     assert_eq!(git(&f.bare, &["rev-parse", "main"]), sha);
     assert_eq!(res.remote_tip_after.as_deref(), Some(sha.as_str()));
-    assert_eq!(git(&f.b, &["rev-parse", "refs/remotes/origin/main"]), sha, "tracking ref refreshed after reconcile");
+    assert_eq!(git(&f.b, &["rev-parse", "refs/remotes/origin/main"]), sha, "tracking ref refreshed after reconcile (warnings: {:?})", res.warnings);
+}
+
+#[test]
+fn interrupted_push_with_blocked_refresh_warns_and_stays_published() {
+    // Deterministic fault injection, no timing or platform budget: a leftover lock
+    // file blocks the tracking-ref update, so local_followup must degrade to its
+    // documented warning while the verified publish stands. This is the contract
+    // the normal-path test above cannot distinguish from a hard failure.
+    let f = fx();
+    let mut t = T::new(&f.b);
+    let sha = commit_file(&f.b, "x.txt", "x\n", "x");
+    let marker = f.bare.join("push-received");
+    let hook = format!("#!/bin/sh\ntouch '{}'\nsleep 30\n", marker.display());
+    install_hook(&f.bare, "post-receive", &hook);
+    let lock = f.b.join(".git").join("refs").join("remotes").join("origin").join("main.lock");
+    std::fs::create_dir_all(lock.parent().unwrap()).unwrap();
+    std::fs::write(&lock, b"").unwrap();
+    let plan = push_plan(&t.env(), &push_req(&f.b, "main")).unwrap();
+    let net = NetCtx::new(None);
+    t.net = net.clone();
+    let h = std::thread::spawn(move || {
+        let deadline = Instant::now() + Duration::from_secs(20);
+        while !marker.exists() && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        net.cancel();
+    });
+    let res = push_apply(&t.env(), &push_apply_req(&f.b, "main", &plan.plan_id, human())).unwrap();
+    h.join().unwrap();
+    assert!(matches!(res.outcome, PushOutcome::Published { verified: true, reconciled: true }), "{:?}", res.outcome);
+    assert_eq!(res.job_outcome, JobOutcome::Success);
+    assert_eq!(git(&f.bare, &["rev-parse", "main"]), sha);
+    assert_eq!(res.remote_tip_after.as_deref(), Some(sha.as_str()));
+    assert!(
+        res.warnings.iter().any(|w| w == "Published, but the local record of GitHub could not be refreshed. Check for updates."),
+        "blocked refresh must surface the documented warning, got {:?}", res.warnings
+    );
+    assert_ne!(git(&f.b, &["rev-parse", "refs/remotes/origin/main"]), sha, "injected lock keeps the tracking ref stale");
+    std::fs::remove_file(&lock).ok();
 }
 
 #[test]

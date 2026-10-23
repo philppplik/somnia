@@ -499,12 +499,22 @@ pub fn push_apply(env: &RemoteEnv, req: &PushApplyRequest) -> RResult<PushResult
 }
 
 /// After a verified publish: refresh the remote-tracking ref and optionally set the upstream.
+/// Best effort by contract: the publish is already verified against the remote, so every
+/// refresh failure degrades to a warning instead of failing the result.
 fn local_followup(root: &Path, plan: &PushPlan, warnings: &mut Vec<String>) {
     let Some(short) = plan.target_ref.strip_prefix("refs/heads/") else { return };
     let want = format!("+refs/heads/*:refs/remotes/{}/*", plan.remote);
-    let covered = gr(root, &["config", "--local", "--get-all", &format!("remote.{}.fetch", plan.remote)])
-        .map(|o| String::from_utf8_lossy(&o.stdout).lines().any(|l| l.trim() == want))
-        .unwrap_or(false);
+    // `git config --get-all` exits 1 with empty stdout when the key is missing: a
+    // legitimate setup without the standard fetch refspec, not an error. Only a failed
+    // read (spawn/io/timeout or another exit code, e.g. a corrupt config) is warned about.
+    let covered = match gr(root, &["config", "--local", "--get-all", &format!("remote.{}.fetch", plan.remote)]) {
+        Ok(o) if o.code == Some(0) => String::from_utf8_lossy(&o.stdout).lines().any(|l| l.trim() == want),
+        Ok(o) if o.code == Some(1) => false,
+        Ok(_) | Err(_) => {
+            warnings.push("Published, but the local record of GitHub could not be refreshed. Check for updates.".into());
+            return;
+        }
+    };
     if !covered {
         return;
     }
