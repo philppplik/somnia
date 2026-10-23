@@ -83,6 +83,8 @@ jobs:
           cargo +1.95.0 test --locked --manifest-path cli/Cargo.toml
           cargo +1.95.0 test --locked --manifest-path crates/somnia-tui/Cargo.toml
       - run: npm run build && npm run test:core
+      - name: Release bundle has no v2 dev fixture
+        run: npm run check:no-dev-fixture
       - name: Release bundle has no web-control hook
         run: npm run check:no-control
       - name: Test performance-budget validation

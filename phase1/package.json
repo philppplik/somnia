@@ -64,7 +64,8 @@
     "layers:baseline": "node scripts/layers.mjs baseline",
     "test:jobs": "tsx --test src/lib/jobs/*.test.ts src/lib/sound/transport.test.ts",
     "test:layers": "node --test scripts/layers.test.mjs",
-    "layers:install": "npm ci --prefix tools/layers --ignore-scripts"
+    "layers:install": "npm ci --prefix tools/layers --ignore-scripts",
+    "check:no-dev-fixture": "node scripts/assert-no-dev-fixture.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

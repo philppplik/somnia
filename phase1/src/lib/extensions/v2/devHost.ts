@@ -9,11 +9,14 @@ import {getState,patchState,subscribe} from '../../../store/appStore';
 import {modeFor} from '../../languages';
 import {reportError} from '../../log';
 import manifestJson from '../contracts/v2/example.json';
-// The authored guest bytes, bundled verbatim by vite (?raw). Their SHA-256 is the
-// session digest: install(), the entry resolver and the supervisor all bind to the
-// exact guest source actually loaded, not to a manifest-supplied or hand-pinned value.
-// Authenticity of those bytes comes from the app bundle itself (the signed build);
-// this digest protects binding (no resolver/host confusion, no swap to another file).
+// The authored guest source, bundled verbatim by vite (?raw). Its SHA-256 is the
+// session digest threaded through install() and the resolver. Scope of this claim:
+// it hashes the AUTHORED source, not the transformed module bytes the worker finally
+// executes, so it is NOT a byte-level verification of the loaded module and NOT a
+// general package-integrity or sandbox property. It is a binding guard for one
+// bundled, already-trusted dev fixture: no manifest-supplied value, no resolver/host
+// confusion, no silent swap to another file. The dev vite CSP is loose; the hard
+// worker CSP only applies on the real package path (ext_scheme.rs, unchanged).
 import guestSource from '../contracts/v2/exampleGuest.ts?raw';
 
 /**
