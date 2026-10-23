@@ -39,3 +39,14 @@ test('boundary: compact below 1080, full bar from 1080 up, no overflow anywhere'
   await expect(page.getByRole('button',{name:'Project',exact:true})).toBeVisible({visible:w>=1080});
  }
 });
+
+test('960px with Sound studio active: header stays clean, compact menu present',async({page})=>{
+ await page.setViewportSize({width:960,height:900});
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ // the left rail hides studio radios below 1340px; switch via the store like the app itself would
+ await page.evaluate(async()=>{const s:any=await import('/src/store/appStore.ts');s.requestStudio('sound','automatic');});
+ await expect(page.locator('[data-testid=sound-start],[data-testid=sound-workspace]').first()).toBeVisible();
+ await expect.poll(()=>page.evaluate(()=>{const h=document.querySelector('header')!;return h.scrollWidth-h.clientWidth;})).toBe(0);
+ await expect(page.getByRole('button',{name:'Menu'})).toBeVisible();
+ await page.screenshot({path:'test-results/shell/header-960-sound.png',clip:{x:0,y:0,width:960,height:120}});
+});
