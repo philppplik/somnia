@@ -70,7 +70,17 @@ test('Sound Stage A: two-track mixer, save roundtrip and mix export are function
   const mixer=await page.getByTestId('arrange-mixer-track').nth(i).boundingBox();
   const lane=await page.locator('[data-track-id]').nth(i).boundingBox();
   expect(Math.abs(mixer!.y-lane!.y)).toBeLessThanOrEqual(1);expect(mixer!.height).toBe(lane!.height);
+  // every control inside the mixer card must fit the card bounds (equal card heights alone prove nothing)
+  const overflow=await page.getByTestId('arrange-mixer-track').nth(i).evaluate(card=>{
+   const cb=card.getBoundingClientRect();const bad:string[]=[];
+   card.querySelectorAll('button,input,select').forEach(el=>{const b=el.getBoundingClientRect();if(b.bottom>cb.bottom+1||b.right>cb.right+1)bad.push(`${el.tagName}:${el.getAttribute('aria-label')??el.textContent} bottom=${b.bottom.toFixed(0)} right=${b.right.toFixed(0)} card bottom=${cb.bottom.toFixed(0)} right=${cb.right.toFixed(0)}`);});
+   if(card.scrollHeight>card.clientHeight+1)bad.push(`scrollHeight ${card.scrollHeight} > clientHeight ${card.clientHeight}`);
+   return bad;
+  });
+  expect(overflow).toEqual([]);
  }
+ await page.getByTestId('arrange-mixer-track').nth(1).scrollIntoViewIfNeeded();
+ await page.screenshot({path:'test-results/screenshots/sound-stage-a-two-track-mixer.png'});
  const r=await page.evaluate(async()=>{
   const arr:any=await import('/src/lib/sound/arrangement.ts');
   const rr:any=await import('/src/lib/sound/rackRender.ts');
