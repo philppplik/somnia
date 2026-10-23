@@ -1,14 +1,14 @@
-import {ExtensionError,SDK_VERSION} from '../contracts/v2/api';
-import type {ManifestV2} from '../manifestV2';
-import {validateManifestV2} from '../manifestV2';
-import type {ActivationContext} from '../activation';
-import {createV2ReadOnlyHost,type V2ReadOnlyHost} from './host';
-import {sha256Hex} from './hostServices';
-import {browserJsFactory} from './browserJsTransport';
-import {getState,patchState,subscribe} from '../../../store/appStore';
-import {modeFor} from '../../languages';
-import {reportError} from '../../log';
-import manifestJson from '../contracts/v2/example.json';
+import {ExtensionError,SDK_VERSION} from '../lib/extensions/contracts/v2/api';
+import type {ManifestV2} from '../lib/extensions/manifestV2';
+import {validateManifestV2} from '../lib/extensions/manifestV2';
+import type {ActivationContext} from '../lib/extensions/activation';
+import {createV2ReadOnlyHost,type V2ReadOnlyHost} from '../lib/extensions/v2/host';
+import {sha256Hex} from '../lib/extensions/v2/hostServices';
+import {browserJsFactory} from '../lib/extensions/v2/browserJsTransport';
+import {getState,patchState,subscribe} from '../store/appStore';
+import {modeFor} from '../lib/languages';
+import {reportError} from '../lib/log';
+import manifestJson from '../lib/extensions/contracts/v2/example.json';
 // The authored guest source, bundled verbatim by vite (?raw). Its SHA-256 is the
 // session digest threaded through install() and the resolver. Scope of this claim:
 // it hashes the AUTHORED source, not the transformed module bytes the worker finally
@@ -17,7 +17,7 @@ import manifestJson from '../contracts/v2/example.json';
 // bundled, already-trusted dev fixture: no manifest-supplied value, no resolver/host
 // confusion, no silent swap to another file. The dev vite CSP is loose; the hard
 // worker CSP only applies on the real package path (ext_scheme.rs, unchanged).
-import guestSource from '../contracts/v2/exampleGuest.ts?raw';
+import guestSource from '../lib/extensions/contracts/v2/exampleGuest.ts?raw';
 
 /**
  * DEV-gated v2 fixture host (v2 SDK slice 2): runs the bundled acme.word-count
@@ -33,7 +33,7 @@ export const V2_DEV_FLAG='somnia.extensions.v2dev';
 export const V2_DEV_EXTENSION_ID='acme.word-count';
 
 /** The bundled module that plays the role of the fixture's declared package entry. */
-const GUEST_URL=new URL('../contracts/v2/exampleGuest.ts',import.meta.url).href;
+const GUEST_URL=new URL('../lib/extensions/contracts/v2/exampleGuest.ts',import.meta.url).href;
 // The product version is the release string (package.json somniaRelease); __APP_VERSION__ is the package version (0.1.0).
 const APP_VERSION=typeof __APP_RELEASE__!=='undefined'?__APP_RELEASE__:'dev';
 
