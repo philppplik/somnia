@@ -64,6 +64,13 @@ test('Sound Stage A: two-track mixer, save roundtrip and mix export are function
  });
  await expect(page.getByTestId('arrange-clip')).toHaveCount(2);
  await expect(page.getByTestId('sound-arrange-track-curve-toggle')).toHaveCount(2);
+ await expect(page.getByTestId('arrange-mixer-track')).toHaveCount(2);
+ // mixer cards and lane rows must stay aligned per track (no controls spilling into the next track)
+ for(let i=0;i<2;i++){
+  const mixer=await page.getByTestId('arrange-mixer-track').nth(i).boundingBox();
+  const lane=await page.locator('[data-track-id]').nth(i).boundingBox();
+  expect(Math.abs(mixer!.y-lane!.y)).toBeLessThanOrEqual(1);expect(mixer!.height).toBe(lane!.height);
+ }
  const r=await page.evaluate(async()=>{
   const arr:any=await import('/src/lib/sound/arrangement.ts');
   const rr:any=await import('/src/lib/sound/rackRender.ts');
