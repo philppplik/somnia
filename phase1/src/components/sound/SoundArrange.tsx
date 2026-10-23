@@ -62,23 +62,30 @@ export function SoundArrange(){
   };
   try{r.rec.stop();}catch{r.stream.getTracks().forEach(track=>track.stop());}
  };
+ const takePending=useRef(false),takeGen=useRef(0);
  const toggleTake=async()=>{
   if(take.current){stopTake();return;}
+  if(takePending.current)return;
   setTakeError('');setNotice('');
-  try{
-   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
-   const mime=pickTakeMime(type=>MediaRecorder.isTypeSupported(type));
-   const rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-   const chunks:Blob[]=[];
-   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
-   const started=Date.now();
-   const timer=window.setInterval(()=>{const elapsed=(Date.now()-started)/1000;setTakeSeconds(elapsed);if(elapsed>=TAKE_MAX_SECONDS)stopTake();},250);
-   take.current={rec,stream,chunks,startFrame:frame,timer};
-   rec.start(1000);setRecording(true);
-  }catch{setTakeError(t('sound.arrange.takeMicError'));}
+  const gen=takeGen.current;
+  takePending.current=true;
+  let stream:MediaStream;
+  try{stream=await navigator.mediaDevices.getUserMedia({audio:true});}
+  catch{takePending.current=false;setTakeError(t('sound.arrange.takeMicError'));return;}
+  takePending.current=false;
+  // The view may have unmounted while the permission prompt was open: a late-delivered stream is closed immediately, never recorded.
+  if(gen!==takeGen.current){stream.getTracks().forEach(track=>track.stop());return;}
+  const mime=pickTakeMime(type=>MediaRecorder.isTypeSupported(type));
+  const rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+  const chunks:Blob[]=[];
+  rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+  const started=Date.now();
+  const timer=window.setInterval(()=>{const elapsed=(Date.now()-started)/1000;setTakeSeconds(elapsed);if(elapsed>=TAKE_MAX_SECONDS)stopTake();},250);
+  take.current={rec,stream,chunks,startFrame:frame,timer};
+  rec.start(1000);setRecording(true);
  };
- // A closing view must not leave the microphone open.
- useEffect(()=>()=>{const r=take.current;if(r){take.current=null;window.clearInterval(r.timer);try{r.rec.stop();}catch{/* already stopped */}r.stream.getTracks().forEach(track=>track.stop());}},[]);
+ // A closing view must not leave the microphone open, including a stream still waiting on the permission prompt.
+ useEffect(()=>()=>{takeGen.current++;takePending.current=false;const r=take.current;if(r){take.current=null;window.clearInterval(r.timer);try{r.rec.stop();}catch{/* already stopped */}r.stream.getTracks().forEach(track=>track.stop());}},[]);
  const importAudio=async(relinkId?:string)=>{setImporting(true);setError('');try{await addArrangementMedia(sourceName||media.items.find(m=>m.kind==='audio')?.name||'',relinkId);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setImporting(false);}};
  const sortedMarkers=[...s.markers].sort((a,b)=>a.frame-b.frame);
  const rangePairs=sortedMarkers.slice(0,-1).map((m,i)=>({from:m,to:sortedMarkers[i+1]})).filter(p=>p.to.frame>p.from.frame);
@@ -95,7 +102,7 @@ export function SoundArrange(){
   </div>
   <div className="flex flex-wrap items-center gap-2 border-b border-subtle p-3">
    <Button size="compact" onClick={()=>void openAudioDialog()}>{t('sound.arrange.openAudio')}</Button><NativeSelect aria-label={t('sound.arrange.source')} className="max-w-[220px] rounded border border-subtle bg-panel px-2 py-1 text-xs" value={sourceName||media.items.find(m=>m.kind==='audio')?.name||''} onChange={e=>setSourceName(e.target.value)}>{media.items.filter(m=>m.kind==='audio').map(m=><option key={m.name}>{m.name}</option>)}</NativeSelect>
-   <Button size="compact" data-testid="sound-arrange-add-source" disabled={importing||state.busy||!media.items.some(m=>m.kind==='audio')} onClick={()=>void importAudio()}>{importing?t('sound.arrange.importing'):t('sound.arrange.addSource')}</Button><Button size="compact" disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void run('track.add')}>{t('sound.arrange.addTrack')}</Button><Button size="compact" aria-label={t(recording?'sound.arrange.takeStop':'sound.arrange.takeRecord')} aria-pressed={recording} disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void toggleTake()} data-testid="sound-arrange-record">{recording&&<span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"/>}{recording?`${Math.floor(takeSeconds/60)}:${String(Math.floor(takeSeconds%60)).padStart(2,'0')}`:t('sound.arrange.takeRecord')}</Button>{takeError&&<span className="text-red-500" data-testid="sound-arrange-take-error">{takeError}</span>}
+   <Button size="compact" data-testid="sound-arrange-add-source" disabled={importing||state.busy||!media.items.some(m=>m.kind==='audio')} onClick={()=>void importAudio()}>{importing?t('sound.arrange.importing'):t('sound.arrange.addSource')}</Button><Button size="compact" disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void run('track.add')}>{t('sound.arrange.addTrack')}</Button><Button size="compact" aria-label={t(recording?'sound.arrange.takeStop':'sound.arrange.takeRecord')} aria-pressed={recording} disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void toggleTake()} data-testid="sound-arrange-record">{recording&&<span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"/>}{recording?`${t('sound.arrange.takeStop')} ${Math.floor(takeSeconds/60)}:${String(Math.floor(takeSeconds%60)).padStart(2,'0')}`:t('sound.arrange.takeRecord')}</Button>{takeError&&<span className="text-red-500" data-testid="sound-arrange-take-error">{takeError}</span>}
    <label className="flex items-center gap-1 text-xs" title={t('sound.arrange.snapHint')}><NativeInput type="checkbox" checked={snap} onChange={e=>setSnap(e.target.checked)}/>{t('sound.arrange.snap')}</label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.grid')}<NativeSelect aria-label={t('sound.arrange.grid')} className="rounded border border-subtle bg-canvas px-1 py-0.5 text-ink" value={gridMode} onChange={e=>setGridMode(e.target.value as 's01'|'beat'|'bar')}><option value="s01">{t('sound.arrange.gridSeconds')}</option><option value="beat">{t('sound.arrange.gridBeat')}</option><option value="bar">{t('sound.arrange.gridBar')}</option></NativeSelect></label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.bpm')}<NativeInput aria-label={t('sound.arrange.bpm')} className="w-16 rounded border border-subtle bg-canvas px-1 py-0.5 text-ink" type="number" min="20" max="300" step="1" value={s.bpm} onChange={e=>void run('session.setBpm',{bpm:Number(e.target.value)})}/></label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.zoom')}<NativeInput aria-label={t('sound.arrange.zoom')} className="w-20" type="range" min="1" max="5" step="0.5" value={zoom} onChange={e=>setZoom(Number(e.target.value))}/></label><Button size="compact" disabled={zoom===1} title={t('sound.arrange.fitHint')} onClick={()=>{setZoom(1);if(lanes.current)lanes.current.scrollLeft=0;}}>{t('sound.arrange.fit')}</Button>
   </div>
   {state.missing.length>0&&<div role="alert" className="flex flex-wrap gap-2 border-b border-subtle p-3 text-xs"><span>{t('sound.arrange.missing')}</span>{s.sources.filter(source=>state.missing.includes(source.id)).map(source=><Button key={source.id} size="compact" disabled={importing} onClick={()=>void importAudio(source.id)}>{t('sound.arrange.relink')} {source.name}</Button>)}</div>}
