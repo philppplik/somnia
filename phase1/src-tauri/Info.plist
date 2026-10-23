@@ -3,6 +3,6 @@
 <plist version="1.0">
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Somnia needs microphone access to record voiceovers in the video studio.</string>
+	<string>Somnia needs microphone access to record voiceovers in the video studio and audio takes in the sound studio.</string>
 </dict>
 </plist>

@@ -4,13 +4,14 @@ import {SoundPauses} from './SoundPauses';
 import {SoundLiveMeter} from './SoundLiveMeter';
 import {SoundRack} from './SoundRack';
 import {useEffect,useRef,useState} from 'react';
-import {useMedia} from '../../lib/media';
+import {getMedia,useMedia} from '../../lib/media';
 import {openAudioDialog} from '../../lib/sound/open';
 import {useT} from '../../lib/useT';
 import {commandDispatcher} from '../../lib/commandDispatcher';
 import {blockSoundClipCommands} from '../../lib/sound/commands';
 import {hasClipClipboard,registerArrangeCommands} from '../../lib/sound/arrangeCommands';
-import {useArrangement,addArrangementMedia,loadArrangement,resetArrangement,reverseClipToMedia,bounceRenderToTrack,freezeTrackToMedia,exportStems,glueClipsToMedia} from '../../lib/sound/arrangeStore';
+import {useArrangement,addArrangementMedia,importRecordedTake,loadArrangement,resetArrangement,reverseClipToMedia,bounceRenderToTrack,freezeTrackToMedia,exportStems,glueClipsToMedia} from '../../lib/sound/arrangeStore';
+import {pickTakeMime,takeFileName,decodeTakeToSessionWav,TAKE_MAX_SECONDS} from '../../lib/sound/recording';
 import {type CurveShape,arrangementEnd,ARRANGE_LIMITS,curveDbAt,curvePanAt,findCrossfadePair,gainCurveAt,loopToggle,markerJump,serializeArrangement,retimeCurvePoint,trimEndPatch,trimStartPatch} from '../../lib/sound/arrangement';
 import {snapFrame,snapPoints} from '../../lib/sound/snap';
 import {Button} from '../ui/button';
@@ -19,7 +20,7 @@ const seconds=(n:number)=>(n/48000).toFixed(3);
 /** A session is separate from the original clip inspector. Playback and export share one worker-rendered WAV. */
 const trackRowClass='h-[180px]';// mixer card and lane row MUST share one height or tracks drift out of alignment
 export function SoundArrange(){
- const {t}=useT(),state=useArrangement(),media=useMedia();const s=state.document;const [selected,setSelected]=useState<string[]>([]),[frame,setFrame]=useState(0),[snap,setSnap]=useState(true),[zoom,setZoom]=useState(1),[gridMode,setGridMode]=useState<'s01'|'beat'|'bar'>('s01'),[copied,setCopied]=useState(false),[sourceName,setSourceName]=useState(''),[importing,setImporting]=useState(false),[reversing,setReversing]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[autoTrack,setAutoTrack]=useState<string|null>(null),[autoMode,setAutoMode]=useState<'gain'|'pan'>('gain'),[clipCurveMode,setClipCurveMode]=useState<'gain'|'pan'>('gain'),[masterAuto,setMasterAuto]=useState(false);
+ const {t}=useT(),state=useArrangement(),media=useMedia();const s=state.document;const [recording,setRecording]=useState(false),[takeError,setTakeError]=useState(''),[takeSeconds,setTakeSeconds]=useState(0);const [selected,setSelected]=useState<string[]>([]),[frame,setFrame]=useState(0),[snap,setSnap]=useState(true),[zoom,setZoom]=useState(1),[gridMode,setGridMode]=useState<'s01'|'beat'|'bar'>('s01'),[copied,setCopied]=useState(false),[sourceName,setSourceName]=useState(''),[importing,setImporting]=useState(false),[reversing,setReversing]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState(''),[autoTrack,setAutoTrack]=useState<string|null>(null),[autoMode,setAutoMode]=useState<'gain'|'pan'>('gain'),[clipCurveMode,setClipCurveMode]=useState<'gain'|'pan'>('gain'),[masterAuto,setMasterAuto]=useState(false);
  const audio=useRef<HTMLAudioElement>(null),file=useRef<HTMLInputElement>(null),lanes=useRef<HTMLDivElement>(null);const fadeDrag=useRef<{id:string;key:'fadeIn'|'fadeOut';x:number;value:number;width:number;length:number}|null>(null);const drag=useRef<{id:string;x:number;start:number;offset:number;mode:'move'|'slip';group:Record<string,number>|null;laneWidth:number;trackId:string}|null>(null);
  useEffect(()=>{const commands=registerArrangeCommands(),block=blockSoundClipCommands();return()=>{commands();block();};},[]);
  // Space toggles the preview, but never steals the key from form controls or buttons.
@@ -49,6 +50,35 @@ export function SoundArrange(){
  const glueSelection=async()=>{setError('');try{if(glueTrack)await glueClipsToMedia(glueTrack.id,selected);}catch(e){setError(e instanceof Error?e.message:String(e));}};
  const stemsExport=async()=>{setError('');setNotice('');try{const result=await exportStems();setNotice(t(result==='saved'?'sound.arrange.saved':result==='cancelled'?'sound.arrange.cancelled':'sound.arrange.downloaded'));}catch(e){setError(e instanceof Error?e.message:String(e));}};
  const reverseClip=async(id:string)=>{setReversing(true);setError('');try{await reverseClipToMedia(id);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setReversing(false);}};
+ const take=useRef<{rec:MediaRecorder;stream:MediaStream;chunks:Blob[];startFrame:number;timer:number}|null>(null);
+ // Take recording: only ever starts from this explicit button. The microphone is released on stop, on error and when the view unmounts; there is no background or pre-roll capture.
+ const stopTake=()=>{
+  const r=take.current;if(!r)return;
+  take.current=null;window.clearInterval(r.timer);setRecording(false);setTakeSeconds(0);
+  r.rec.onstop=()=>{
+   r.stream.getTracks().forEach(track=>track.stop());
+   const blob=new Blob(r.chunks,{type:r.rec.mimeType||'audio/webm'});
+   void (async()=>{try{const wav=await decodeTakeToSessionWav(blob);await importRecordedTake(takeFileName(getMedia().items.map(i=>i.name)),wav,r.startFrame);setNotice(t('sound.arrange.takeAdded'));}catch(e){setTakeError(e instanceof Error?e.message:String(e));}})();
+  };
+  try{r.rec.stop();}catch{r.stream.getTracks().forEach(track=>track.stop());}
+ };
+ const toggleTake=async()=>{
+  if(take.current){stopTake();return;}
+  setTakeError('');setNotice('');
+  try{
+   const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+   const mime=pickTakeMime(type=>MediaRecorder.isTypeSupported(type));
+   const rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+   const chunks:Blob[]=[];
+   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
+   const started=Date.now();
+   const timer=window.setInterval(()=>{const elapsed=(Date.now()-started)/1000;setTakeSeconds(elapsed);if(elapsed>=TAKE_MAX_SECONDS)stopTake();},250);
+   take.current={rec,stream,chunks,startFrame:frame,timer};
+   rec.start(1000);setRecording(true);
+  }catch{setTakeError(t('sound.arrange.takeMicError'));}
+ };
+ // A closing view must not leave the microphone open.
+ useEffect(()=>()=>{const r=take.current;if(r){take.current=null;window.clearInterval(r.timer);try{r.rec.stop();}catch{/* already stopped */}r.stream.getTracks().forEach(track=>track.stop());}},[]);
  const importAudio=async(relinkId?:string)=>{setImporting(true);setError('');try{await addArrangementMedia(sourceName||media.items.find(m=>m.kind==='audio')?.name||'',relinkId);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setImporting(false);}};
  const sortedMarkers=[...s.markers].sort((a,b)=>a.frame-b.frame);
  const rangePairs=sortedMarkers.slice(0,-1).map((m,i)=>({from:m,to:sortedMarkers[i+1]})).filter(p=>p.to.frame>p.from.frame);
@@ -65,7 +95,7 @@ export function SoundArrange(){
   </div>
   <div className="flex flex-wrap items-center gap-2 border-b border-subtle p-3">
    <Button size="compact" onClick={()=>void openAudioDialog()}>{t('sound.arrange.openAudio')}</Button><NativeSelect aria-label={t('sound.arrange.source')} className="max-w-[220px] rounded border border-subtle bg-panel px-2 py-1 text-xs" value={sourceName||media.items.find(m=>m.kind==='audio')?.name||''} onChange={e=>setSourceName(e.target.value)}>{media.items.filter(m=>m.kind==='audio').map(m=><option key={m.name}>{m.name}</option>)}</NativeSelect>
-   <Button size="compact" data-testid="sound-arrange-add-source" disabled={importing||state.busy||!media.items.some(m=>m.kind==='audio')} onClick={()=>void importAudio()}>{importing?t('sound.arrange.importing'):t('sound.arrange.addSource')}</Button><Button size="compact" disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void run('track.add')}>{t('sound.arrange.addTrack')}</Button>
+   <Button size="compact" data-testid="sound-arrange-add-source" disabled={importing||state.busy||!media.items.some(m=>m.kind==='audio')} onClick={()=>void importAudio()}>{importing?t('sound.arrange.importing'):t('sound.arrange.addSource')}</Button><Button size="compact" disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void run('track.add')}>{t('sound.arrange.addTrack')}</Button><Button size="compact" aria-label={t(recording?'sound.arrange.takeStop':'sound.arrange.takeRecord')} aria-pressed={recording} disabled={state.busy||s.tracks.length>=ARRANGE_LIMITS.tracks} onClick={()=>void toggleTake()} data-testid="sound-arrange-record">{recording&&<span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-red-500" aria-hidden="true"/>}{recording?`${Math.floor(takeSeconds/60)}:${String(Math.floor(takeSeconds%60)).padStart(2,'0')}`:t('sound.arrange.takeRecord')}</Button>{takeError&&<span className="text-red-500" data-testid="sound-arrange-take-error">{takeError}</span>}
    <label className="flex items-center gap-1 text-xs" title={t('sound.arrange.snapHint')}><NativeInput type="checkbox" checked={snap} onChange={e=>setSnap(e.target.checked)}/>{t('sound.arrange.snap')}</label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.grid')}<NativeSelect aria-label={t('sound.arrange.grid')} className="rounded border border-subtle bg-canvas px-1 py-0.5 text-ink" value={gridMode} onChange={e=>setGridMode(e.target.value as 's01'|'beat'|'bar')}><option value="s01">{t('sound.arrange.gridSeconds')}</option><option value="beat">{t('sound.arrange.gridBeat')}</option><option value="bar">{t('sound.arrange.gridBar')}</option></NativeSelect></label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.bpm')}<NativeInput aria-label={t('sound.arrange.bpm')} className="w-16 rounded border border-subtle bg-canvas px-1 py-0.5 text-ink" type="number" min="20" max="300" step="1" value={s.bpm} onChange={e=>void run('session.setBpm',{bpm:Number(e.target.value)})}/></label><label className="flex items-center gap-1 text-xs">{t('sound.arrange.zoom')}<NativeInput aria-label={t('sound.arrange.zoom')} className="w-20" type="range" min="1" max="5" step="0.5" value={zoom} onChange={e=>setZoom(Number(e.target.value))}/></label><Button size="compact" disabled={zoom===1} title={t('sound.arrange.fitHint')} onClick={()=>{setZoom(1);if(lanes.current)lanes.current.scrollLeft=0;}}>{t('sound.arrange.fit')}</Button>
   </div>
   {state.missing.length>0&&<div role="alert" className="flex flex-wrap gap-2 border-b border-subtle p-3 text-xs"><span>{t('sound.arrange.missing')}</span>{s.sources.filter(source=>state.missing.includes(source.id)).map(source=><Button key={source.id} size="compact" disabled={importing} onClick={()=>void importAudio(source.id)}>{t('sound.arrange.relink')} {source.name}</Button>)}</div>}

@@ -83,6 +83,20 @@ export async function bounceRenderToTrack(){
  history.change(s=>{if(s.tracks.length>=ARRANGE_LIMITS.tracks)throw Error('Track limit');s.sources.push(ref);const track=newTrack(uid(),added.name);track.clips.push(newClip(uid(),ref,state.rangeSelection?.start??0));s.tracks.push(track);});invalidate();
 }
 /** Freezes a track: renders its clips through its own rack (level and pan stay live, so the frozen track sounds identical) into "<track>-freeze.wav" in the media library, replaces the clips with the frozen audio placed at session frame 0 and bypasses the rack. One undoable arrangement edit - undo is the unfreeze. The media item stays in the library like any import. */
+/** Imports a finished microphone take (already decoded/resampled to a session WAV by decodeTakeToSessionWav) as a new track, placed at the frame where recording started. One undoable arrangement edit; the take stays in the media library like any import. */
+export async function importRecordedTake(name:string,wav:ArrayBuffer,startFrame:number){
+ const token=generation;
+ const added=await addMediaFile(new Blob([wav],{type:'audio/wav'}),name,undefined,{activate:false});if('error' in added)throw Error(added.error);
+ const item=getMedia().items.find(m=>m.name===added.name&&m.kind==='audio');if(!item)throw Error('Recorded take was not registered');
+ await openSound(item);const session=getSoundSession(added.name);if(!session?.original)throw Error('Recorded take is not ready');
+ if(token!==generation)throw Error('Session changed while importing the take');
+ const report=session.original.report.output,id=uid();
+ const ref:AudioSourceRef={id,name:added.name,frames:report.frames,sampleRate:report.sample_rate,channels:report.channels as 1|2};
+ const upload=await session.original.blob.arrayBuffer();if(token!==generation)throw Error('Session changed while importing the take');
+ await request({kind:'source',sourceId:id,wav:upload},[upload]);if(token!==generation)throw Error('Session changed while importing the take');
+ available.add(id);emit({sourcePeaks:{...state.sourcePeaks,[id]:session.original.peaks}});
+ history.change(s=>{if(s.tracks.length>=ARRANGE_LIMITS.tracks)throw Error('Track limit');s.sources.push(ref);const track=newTrack(uid(),added.name);track.clips.push(newClip(uid(),ref,Math.max(0,Math.round(startFrame))));s.tracks.push(track);});invalidate();
+}
 export async function freezeTrackToMedia(trackId:string){
  if(state.busy)throw Error('Sound is busy');const token=generation;const doc=history.snapshot;const track=doc.tracks.find(t=>t.id===trackId);if(!track)throw Error('Track no longer exists');if(!track.clips.length)throw Error('Track has no clips to freeze');
  emit({busy:true,error:''});
