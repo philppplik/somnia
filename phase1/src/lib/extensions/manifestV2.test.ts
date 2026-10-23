@@ -6,10 +6,10 @@ import {isSafePackagePath,isValidWhen,parseManifestV2,validateManifestV2} from '
 const fresh=()=>structuredClone(example);
 const invalid=(m:unknown,path:string,options={})=>{const r=validateManifestV2(m,options); assert.equal(r.ok,false); if(!r.ok) assert(r.errors.some(e=>e.path===path),JSON.stringify(r.errors));};
 test('reference manifest validates as TOML with explicit engine negotiation',()=>{
- const r=parseManifestV2(stringify(fresh()),{somniaVersion:'11.3.0',apiVersion:'2.0.0'});
+ const r=parseManifestV2(stringify(fresh()),{somniaVersion:'12.3.0',apiVersion:'2.0.0'});
  assert.equal(r.ok,true); if(r.ok) assert.deepEqual(JSON.parse(JSON.stringify(r.manifest)),example);
  invalid(fresh(),'/engines/api',{apiVersion:'1.0.0'});
- invalid(fresh(),'/engines/somnia',{somniaVersion:'12.0.0'});
+ invalid(fresh(),'/engines/somnia',{somniaVersion:'13.0.0'});
 });
 test('TOML rejects duplicate keys, invalid UTF8, JSON, and byte budget',()=>{
  for(const value of ['id="a"\nid="b"',JSON.stringify(example),new Uint8Array([0xff]),'x'.repeat(262145)]) {

@@ -70,7 +70,7 @@ test('store adapter lists catalog entries without claiming verification or evide
  const {publishers,extensions}=listingsFromEntries([entry]);
  assert.equal(publishers[0].domain,undefined);assert.equal(publishers[0].official,false);assert.equal(publishers[0].declaredGithub2FA as unknown,false);
  assert.equal(extensions[0].releases[0].artifact.sha256,entry.sha256);
- const host=createCatalogStoreHost({fetchCatalog:async()=>[entry],installed:()=>[],somniaVersion:'11.3.0'});
+ const host=createCatalogStoreHost({fetchCatalog:async()=>[entry],installed:()=>[],somniaVersion:'12.3.0-beta.1'});
  const l=await host.load();assert.equal(l.status,'ready');assert.equal(await host.evidence('acme.hello','1.2.0'),null);
  const off=createCatalogStoreHost({fetchCatalog:async()=>{throw new Error('x');}});assert.equal((await off.load()).status,'unavailable');
  const blocked=listingsFromEntries([entry],()=>true);assert.equal(blocked.extensions[0].releases[0].state,'security-blocked');
