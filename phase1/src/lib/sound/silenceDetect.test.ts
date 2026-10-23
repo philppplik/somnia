@@ -75,3 +75,56 @@ test('invalid channels throw',()=>{
  assert.throws(()=>detectSilenceCuts([new Float32Array(10),new Float32Array(5)]));
  assert.throws(()=>detectSilenceCuts(stereo(new Float32Array(0))));
 });
+
+import {emptyArrangement,newClip,newTrack,arrangementEnd,ArrangementHistory,serializeArrangement} from './arrangement';
+import {applySilenceCuts} from './silenceDetect';
+
+let n=0;const id=()=>`cut-${++n}`;
+const speechArrangement=()=>{const s=emptyArrangement();const source={id:'src',name:'voice.wav',frames:3*SR,sampleRate:48000,channels:2 as const};s.sources.push(source);const track=newTrack('t1','Voice');track.clips.push(newClip('c1',source,0));s.tracks.push(track);return s;};
+
+test('applySilenceCuts removes the pause and closes the gap',()=>{
+ const s=speechArrangement();
+ const pcm=concat(tone(SR),quiet(SR),tone(SR));
+ const cuts=detectSilenceCuts(stereo(pcm));
+ const removed=applySilenceCuts(s,cuts,id);
+ assert.equal(removed,cuts[0].cutEnd-cuts[0].cutStart);
+ assert.equal(arrangementEnd(s),3*SR-removed,'session shortened by the cut');
+ const clips=s.tracks[0].clips;
+ assert.equal(clips.length,2,'middle removed, two speech clips remain');
+ assert.equal(clips[1].start,clips[0].start+clips[0].length,'second clip closes the gap');
+});
+
+test('two pauses cut back-to-front keep earlier coordinates valid',()=>{
+ const s=emptyArrangement();const source={id:'src',name:'v.wav',frames:5*SR,sampleRate:48000,channels:2 as const};s.sources.push(source);const track=newTrack('t1','V');track.clips.push(newClip('c1',source,0));s.tracks.push(track);
+ const pcm=concat(tone(SR/2),quiet(SR),tone(SR/2),quiet(SR),tone(SR/2));
+ const cuts=detectSilenceCuts(stereo(pcm));
+ assert.equal(cuts.length,2);
+ const removed=applySilenceCuts(s,cuts,id);
+ assert.equal(arrangementEnd(s),5*SR-removed);
+ assert.equal(s.tracks[0].clips.length,3,'three speech islands remain');
+});
+
+test('the whole cleanup is exactly one undo step',()=>{
+ const history=new ArrangementHistory(speechArrangement());
+ const before=serializeArrangement(history.snapshot);
+ const cuts=detectSilenceCuts(stereo(concat(tone(SR),quiet(SR),tone(SR))));
+ history.change(s=>{applySilenceCuts(s,cuts,id);});
+ assert.notEqual(serializeArrangement(history.snapshot),before);
+ assert.ok(history.canUndo);
+ history.undo();
+ assert.equal(serializeArrangement(history.snapshot),before,'one undo restores the session');
+ assert.ok(!history.canUndo,'no second undo step was created');
+});
+
+test('overlapping or unsorted cuts are rejected before anything changes',()=>{
+ const s=speechArrangement();
+ const bad=[{silenceStart:0,silenceEnd:2000,cutStart:1000,cutEnd:2000,durationFrames:2000},{silenceStart:0,silenceEnd:3000,cutStart:1500,cutEnd:3000,durationFrames:3000}];
+ assert.throws(()=>applySilenceCuts(s,bad,id));
+ assert.equal(arrangementEnd(s),3*SR,'session untouched');
+});
+
+test('empty cut list is a no-op',()=>{
+ const s=speechArrangement();
+ assert.equal(applySilenceCuts(s,[],id),0);
+ assert.equal(arrangementEnd(s),3*SR);
+});

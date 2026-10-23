@@ -77,3 +77,22 @@ export function detectSilenceCuts(channels:readonly[Float32Array,Float32Array],o
  }
  return cuts;
 }
+
+import {cutSessionRange,type Arrangement} from './arrangement';
+
+/**
+ * Apply accepted pause cuts as one arrangement mutation. Cuts must be ascending and non-overlapping (the shape
+ * detectSilenceCuts returns); they are applied back-to-front so earlier cuts never shift later coordinates.
+ * The caller wraps this in ONE history change, so the whole cleanup is a single undo step.
+ * Returns the total frames removed.
+ */
+export function applySilenceCuts(s:Arrangement,cuts:readonly SilenceCut[],nextId:()=>string):number{
+ for(let i=0;i<cuts.length;i++){
+  const c=cuts[i];
+  if(!Number.isSafeInteger(c.cutStart)||!Number.isSafeInteger(c.cutEnd)||c.cutStart<0||c.cutEnd<=c.cutStart)throw Error('Invalid silence cut');
+  if(i>0&&c.cutStart<cuts[i-1].cutEnd)throw Error('Overlapping silence cuts');
+ }
+ let removed=0;
+ for(let i=cuts.length-1;i>=0;i--){cutSessionRange(s,cuts[i].cutStart,cuts[i].cutEnd,nextId);removed+=cuts[i].cutEnd-cuts[i].cutStart;}
+ return removed;
+}
