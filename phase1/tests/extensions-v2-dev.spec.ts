@@ -10,7 +10,7 @@ test.beforeEach(async({page})=>{
  await page.addInitScript(()=>{try{localStorage.setItem('somnia.extensions.v2dev','1');}catch{/* storage unavailable */}});
 });
 
-test('v2 dev host: command roundtrip, live events, revocation and disposal', async({page})=>{
+test('v2 dev host: command roundtrip, live events, revocation and disposal', async({page},testInfo)=>{
  const consoleErrors:string[]=[];
  page.on('pageerror',e=>consoleErrors.push(String(e)));
  await page.goto('/');
@@ -28,12 +28,12 @@ test('v2 dev host: command roundtrip, live events, revocation and disposal', asy
  expect(result.result).toBeNull();
  expect(result.state).toBe('active');
  await expect(page.getByText(/Word count: \d+ words in \d+ file\(s\)\./)).toBeVisible();
- await page.screenshot({path:'/downloads/v2-dev-1-command.png'});
+ await page.screenshot({path:testInfo.outputPath('v2-dev-1-command.png')});
 
  // 2) Live event: a real store write reaches the guest as project.onDidChange.
  await page.evaluate(()=>{(window as never as {__somnia:{setSource(f:string,t:string):void}}).__somnia.setSource('index.html','<!doctype html><html><body><p>changed by v2 e2e</p></body></html>');});
  await expect(page.getByText(/v2 live event: \d+ file\(s\) changed\./)).toBeVisible();
- await page.screenshot({path:'/downloads/v2-dev-2-event.png'});
+ await page.screenshot({path:testInfo.outputPath('v2-dev-2-event.png')});
 
  // 3) Revocation: disable revokes capabilities before terminating; commands and events stop.
  const afterDisable=await page.evaluate(async()=>{
@@ -63,7 +63,7 @@ test('v2 dev host: command roundtrip, live events, revocation and disposal', asy
  });
  expect(afterDispose.state).toBe('disabled');
  expect(afterDispose.commandError).toBe('Extension is not active.');
- await page.screenshot({path:'/downloads/v2-dev-3-disposed.png'});
+ await page.screenshot({path:testInfo.outputPath('v2-dev-3-disposed.png')});
 
  expect(consoleErrors.filter(e=>!/favicon|DevTools/.test(e))).toEqual([]);
 });
