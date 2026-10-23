@@ -243,7 +243,6 @@
   "sound.arrange.cancelled": "Enregistrement annulé",
   "sound.arrange.downloaded": "Téléchargement lancé",
   "sound.arrange.openAudio": "Ouvrir un audio…",
-  "sound.arrange.mute": "Muet",
   "sound.arrange.solo": "Solo",
   "sound.arrange.command.rename": "Arrangement et mixage: Nom de session",
   "sound.arrange.command.track.add": "Arrangement et mixage: Ajouter une piste",
@@ -401,5 +400,16 @@
   "sound.arrange.command.master.accept": "Accepter pour écoute/export",
   "cmd.sound.arrange.master.accept": "Accepter pour écoute/export",
   "sound.arrange.command.master.cancel": "Abandonner l’aperçu",
-  "cmd.sound.arrange.master.cancel": "Abandonner l’aperçu"
+  "cmd.sound.arrange.master.cancel": "Abandonner l’aperçu",
+  "sound.pauses.title": "Montage vocal (silences)",
+  "sound.pauses.source": "Source",
+  "sound.pauses.detect": "Détecter les silences",
+  "sound.pauses.busy": "Détection des silences…",
+  "sound.pauses.none": "Aucun silence à couper trouvé.",
+  "sound.pauses.pause": "Silence",
+  "sound.pauses.duration": "Silence de {seconds} s",
+  "sound.pauses.cutAll": "Tout couper ({count})",
+  "sound.pauses.cutSelected": "Couper la sélection ({count})",
+  "sound.pauses.dismiss": "Ignorer",
+  "sound.pauses.stale": "La détection est obsolète. Relancez-la."
 }

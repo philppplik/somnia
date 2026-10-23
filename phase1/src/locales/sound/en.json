@@ -243,7 +243,6 @@
   "sound.arrange.cancelled": "Save cancelled",
   "sound.arrange.downloaded": "Download started",
   "sound.arrange.openAudio": "Open audio…",
-  "sound.arrange.mute": "Mute",
   "sound.arrange.solo": "Solo",
   "sound.arrange.command.rename": "Arrange & Mix: Session name",
   "sound.arrange.command.track.add": "Arrange & Mix: Add track",
@@ -401,5 +400,16 @@
   "sound.arrange.command.master.accept": "Accept for audition/export",
   "cmd.sound.arrange.master.accept": "Accept for audition/export",
   "sound.arrange.command.master.cancel": "Discard preview",
-  "cmd.sound.arrange.master.cancel": "Discard preview"
+  "cmd.sound.arrange.master.cancel": "Discard preview",
+  "sound.pauses.title": "Speech editing (pauses)",
+  "sound.pauses.source": "Source",
+  "sound.pauses.detect": "Detect pauses",
+  "sound.pauses.busy": "Detecting pauses…",
+  "sound.pauses.none": "No cuttable pauses found.",
+  "sound.pauses.pause": "Pause",
+  "sound.pauses.duration": "Pause of {seconds} s",
+  "sound.pauses.cutAll": "Cut all ({count})",
+  "sound.pauses.cutSelected": "Cut selected ({count})",
+  "sound.pauses.dismiss": "Dismiss",
+  "sound.pauses.stale": "The scan is out of date. Run detection again."
 }

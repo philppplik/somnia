@@ -243,7 +243,6 @@
   "sound.arrange.cancelled": "Guardado cancelado",
   "sound.arrange.downloaded": "Descarga iniciada",
   "sound.arrange.openAudio": "Abrir audio…",
-  "sound.arrange.mute": "Silenciar",
   "sound.arrange.solo": "Solo",
   "sound.arrange.command.rename": "Organizar y mezclar: Nombre de sesión",
   "sound.arrange.command.track.add": "Organizar y mezclar: Añadir pista",
@@ -401,5 +400,16 @@
   "sound.arrange.command.master.accept": "Aceptar para escuchar/exportar",
   "cmd.sound.arrange.master.accept": "Aceptar para escuchar/exportar",
   "sound.arrange.command.master.cancel": "Descartar vista previa",
-  "cmd.sound.arrange.master.cancel": "Descartar vista previa"
+  "cmd.sound.arrange.master.cancel": "Descartar vista previa",
+  "sound.pauses.title": "Edición de voz (pausas)",
+  "sound.pauses.source": "Fuente",
+  "sound.pauses.detect": "Detectar pausas",
+  "sound.pauses.busy": "Detectando pausas…",
+  "sound.pauses.none": "No se encontraron pausas recortables.",
+  "sound.pauses.pause": "Pausa",
+  "sound.pauses.duration": "Pausa de {seconds} s",
+  "sound.pauses.cutAll": "Cortar todas ({count})",
+  "sound.pauses.cutSelected": "Cortar selección ({count})",
+  "sound.pauses.dismiss": "Descartar",
+  "sound.pauses.stale": "La detección está desactualizada. Ejecuta la detección de nuevo."
 }
