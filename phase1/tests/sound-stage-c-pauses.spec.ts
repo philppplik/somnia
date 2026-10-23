@@ -6,6 +6,8 @@ import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 // mix after the cut matches the shortened session exactly (preview/export parity).
 // The WASM engine is substituted by the supported setSoundEngineFactory hook, as in the
 // Stage A UI-flow test; the detection math itself is engine-free.
+// NOTE: run against a FRESH vite dev server. After HMR edits vite serves store modules with
+// ?t= URLs, so the page and the in-test dynamic imports would get separate singletons.
 
 const SR=48000,TONE=Math.floor(0.6*SR),GAP=Math.floor(0.6*SR);
 const FRAMES=2*TONE+GAP; // tone - pause - tone
@@ -62,6 +64,9 @@ test('Sound Stage C2: pause panel detects, rejects stale, cuts as one undo and k
  await page.getByTestId('sound-pauses-detect').click();
  await expect(page.getByTestId('sound-pauses-list')).toBeVisible({timeout:15000});
  await expect(page.getByTestId('sound-pauses-list').locator('li')).toHaveCount(1);
+  const pauseRow=page.getByTestId('sound-pauses-list').locator('li').first();
+  await expect(pauseRow).toContainText('0:00.60 - 0:01.20 (0.60 s)');
+  await expect(pauseRow).toContainText('0:00.72 - 0:01.08');
  // a session edit after the scan must reject the cut as stale
  const staleError=await page.evaluate(async()=>{
   const store:any=await import('/src/lib/sound/arrangeStore.ts');
