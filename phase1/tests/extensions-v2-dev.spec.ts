@@ -67,3 +67,13 @@ test('v2 dev host: command roundtrip, live events, revocation and disposal', asy
 
  expect(consoleErrors.filter(e=>!/favicon|DevTools/.test(e))).toEqual([]);
 });
+
+test('dev gate stays closed without the flag', async({page})=>{
+ // The beforeEach flag script runs first; this one removes it again before app scripts run.
+ await page.addInitScript(()=>{try{localStorage.removeItem('somnia.extensions.v2dev');}catch{/* storage unavailable */}});
+ await page.goto('/');
+ await page.waitForFunction(()=>!!(window as unknown as {__somnia?:unknown}).__somnia,undefined,{timeout:20000});
+ await page.waitForTimeout(3000);
+ const has=await page.evaluate(()=>!!(window as unknown as {__somnia?:{v2dev?:unknown}}).__somnia?.v2dev);
+ expect(has).toBe(false);
+});

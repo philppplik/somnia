@@ -23,6 +23,9 @@ export type JsWorkerSpawner=()=>JsWorkerLike;
 export function assertBundledGuestUrl(entryUrl:string,origin:string):void {
  let url:URL;
  try{url=new URL(entryUrl);}catch{throw new ExtensionError('E_INVALID_ARGUMENT','Guest entry URL is invalid.');}
+ // http(s) only: blob: inherits the creator origin and would smuggle runtime-generated
+ // code past the origin check; data: and file: carry their own payloads or privileges.
+ if(url.protocol!=='https:'&&url.protocol!=='http:')throw new ExtensionError('E_PERMISSION_DENIED','Guest entry must be a same-origin bundled module.');
  if(!origin||url.origin!==origin)throw new ExtensionError('E_PERMISSION_DENIED','Guest entry must be a same-origin bundled module.');
 }
 

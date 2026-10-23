@@ -20,7 +20,8 @@ export interface HostEventSink {deliver(callbackId:number,value:Json,kind:'proje
  * updates replace changed strings, so reference equality is a valid freshness check.
  */
 const enc=new TextEncoder();
-async function sha256Hex(text:string):Promise<string>{
+/** Full lowercase SHA-256 hex of a UTF-8 string - also the package-digest primitive for bundled fixtures. */
+export async function sha256Hex(text:string):Promise<string>{
  const digest=await crypto.subtle.digest('SHA-256',enc.encode(text));
  return Array.from(new Uint8Array(digest),b=>b.toString(16).padStart(2,'0')).join('');
 }

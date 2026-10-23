@@ -46,6 +46,9 @@ test('assertBundledGuestUrl accepts same-origin and refuses invalid or foreign U
  assert.throws(()=>assertBundledGuestUrl('not a url','http://localhost:1420'),(e:unknown)=>e instanceof ExtensionError&&e.code==='E_INVALID_ARGUMENT');
  assert.throws(()=>assertBundledGuestUrl('https://other.example/g.js','http://localhost:1420'),(e:unknown)=>e instanceof ExtensionError&&e.code==='E_PERMISSION_DENIED');
  assert.throws(()=>assertBundledGuestUrl('http://localhost:1420/src/g.ts',''),(e:unknown)=>e instanceof ExtensionError&&e.code==='E_PERMISSION_DENIED');
+ // blob: inherits the creator origin - it must still be refused, or runtime-generated code bypasses the bundled-module rule.
+ assert.throws(()=>assertBundledGuestUrl('blob:http://localhost:1420/9c8f','http://localhost:1420'),(e:unknown)=>e instanceof ExtensionError&&e.code==='E_PERMISSION_DENIED');
+ assert.throws(()=>assertBundledGuestUrl('data:text/javascript,export {}','http://localhost:1420'),(e:unknown)=>e instanceof ExtensionError&&e.code==='E_PERMISSION_DENIED');
 });
 
 test('loads the worker with entry URL and generation, forwards host frames',async()=>{
