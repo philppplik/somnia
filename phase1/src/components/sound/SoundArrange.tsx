@@ -11,7 +11,7 @@ import {commandDispatcher} from '../../lib/commandDispatcher';
 import {blockSoundClipCommands} from '../../lib/sound/commands';
 import {hasClipClipboard,registerArrangeCommands} from '../../lib/sound/arrangeCommands';
 import {useArrangement,addArrangementMedia,importRecordedTake,loadArrangement,resetArrangement,reverseClipToMedia,bounceRenderToTrack,freezeTrackToMedia,exportStems,glueClipsToMedia} from '../../lib/sound/arrangeStore';
-import {pickTakeMime,takeFileName,decodeTakeToSessionWav,TAKE_MAX_SECONDS} from '../../lib/sound/recording';
+import {pickTakeMime,takeFileName,decodeTakeToSessionWav,remainingTakeFrames,TAKE_MAX_SECONDS,TAKE_MIN_SECONDS} from '../../lib/sound/recording';
 import {type CurveShape,arrangementEnd,ARRANGE_LIMITS,curveDbAt,curvePanAt,findCrossfadePair,gainCurveAt,loopToggle,markerJump,serializeArrangement,retimeCurvePoint,trimEndPatch,trimStartPatch} from '../../lib/sound/arrangement';
 import {snapFrame,snapPoints} from '../../lib/sound/snap';
 import {Button} from '../ui/button';
@@ -50,7 +50,7 @@ export function SoundArrange(){
  const glueSelection=async()=>{setError('');try{if(glueTrack)await glueClipsToMedia(glueTrack.id,selected);}catch(e){setError(e instanceof Error?e.message:String(e));}};
  const stemsExport=async()=>{setError('');setNotice('');try{const result=await exportStems();setNotice(t(result==='saved'?'sound.arrange.saved':result==='cancelled'?'sound.arrange.cancelled':'sound.arrange.downloaded'));}catch(e){setError(e instanceof Error?e.message:String(e));}};
  const reverseClip=async(id:string)=>{setReversing(true);setError('');try{await reverseClipToMedia(id);}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setReversing(false);}};
- const take=useRef<{rec:MediaRecorder;stream:MediaStream;chunks:Blob[];startFrame:number;timer:number}|null>(null);
+ const take=useRef<{rec:MediaRecorder;stream:MediaStream;chunks:Blob[];startFrame:number;roomFrames:number;timer:number}|null>(null);
  // Take recording: only ever starts from this explicit button. The microphone is released on stop, on error and when the view unmounts; there is no background or pre-roll capture.
  const stopTake=()=>{
   const r=take.current;if(!r)return;
@@ -58,7 +58,7 @@ export function SoundArrange(){
   r.rec.onstop=()=>{
    r.stream.getTracks().forEach(track=>track.stop());
    const blob=new Blob(r.chunks,{type:r.rec.mimeType||'audio/webm'});
-   void (async()=>{try{const wav=await decodeTakeToSessionWav(blob);await importRecordedTake(takeFileName(getMedia().items.map(i=>i.name)),wav,r.startFrame);setNotice(t('sound.arrange.takeAdded'));}catch(e){setTakeError(e instanceof Error?e.message:String(e));}})();
+   void (async()=>{try{const wav=await decodeTakeToSessionWav(blob,r.roomFrames);await importRecordedTake(takeFileName(getMedia().items.map(i=>i.name)),wav,r.startFrame);setNotice(t('sound.arrange.takeAdded'));}catch(e){setTakeError(e instanceof Error?e.message:String(e));}})();
   };
   try{r.rec.stop();}catch{r.stream.getTracks().forEach(track=>track.stop());}
  };
@@ -67,6 +67,8 @@ export function SoundArrange(){
   if(take.current){stopTake();return;}
   if(takePending.current)return;
   setTakeError('');setNotice('');
+  // Blocked up front, before the microphone is even asked: not enough room left for a usable take.
+  if(remainingTakeFrames(frame)<TAKE_MIN_SECONDS*48000){setTakeError(t('sound.arrange.takeNoRoom'));return;}
   const gen=takeGen.current;
   takePending.current=true;
   let stream:MediaStream;
@@ -75,13 +77,16 @@ export function SoundArrange(){
   takePending.current=false;
   // The view may have unmounted while the permission prompt was open: a late-delivered stream is closed immediately, never recorded.
   if(gen!==takeGen.current){stream.getTracks().forEach(track=>track.stop());return;}
+  // Recording time is bound to the room left in the session: the take keeps the valid part instead of being discarded after the fact.
+  const roomFrames=remainingTakeFrames(frame);
+  const capSeconds=Math.min(TAKE_MAX_SECONDS,roomFrames/48000);
   const mime=pickTakeMime(type=>MediaRecorder.isTypeSupported(type));
   const rec=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
   const chunks:Blob[]=[];
   rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
   const started=Date.now();
-  const timer=window.setInterval(()=>{const elapsed=(Date.now()-started)/1000;setTakeSeconds(elapsed);if(elapsed>=TAKE_MAX_SECONDS)stopTake();},250);
-  take.current={rec,stream,chunks,startFrame:frame,timer};
+  const timer=window.setInterval(()=>{const elapsed=(Date.now()-started)/1000;setTakeSeconds(elapsed);if(elapsed>=capSeconds)stopTake();},250);
+  take.current={rec,stream,chunks,startFrame:frame,roomFrames,timer};
   rec.start(1000);setRecording(true);
  };
  // A closing view must not leave the microphone open, including a stream still waiting on the permission prompt.

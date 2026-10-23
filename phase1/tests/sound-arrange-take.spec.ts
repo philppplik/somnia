@@ -51,6 +51,9 @@ async function stubMic(page:Page){
 }
 
 async function bootIntoArrange(page:Page,wavPath:string){
+ // The app's release check calls the GitHub API; unauthenticated rate limits make it 403 in CI-like
+ // environments and would trip the console-error assertion. Stub it: the releases feed is not under test.
+ await page.route('https://api.github.com/**',route=>route.fulfill({status:200,contentType:'application/json',body:'[]'}));
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await page.getByRole('radio',{name:'Somnia Sound'}).click();
  await expect(page.getByTestId('sound-start')).toBeVisible();
@@ -149,24 +152,43 @@ test('C1: the record button is disabled when the session already has 8 tracks',a
  await expect(page.getByTestId('sound-arrange-record')).toBeDisabled();
 });
 
-test('C1: a take that would cross the 120 s session limit fails cleanly and keeps the arrangement',async({page})=>{
+test('C1: a take started near the session end keeps the valid part and fits the timeline',async({page})=>{
  const wavPath='test-results/stage-c1-long.wav';floatWav(wavPath,119.3,1,110,8000);
  await stubMic(page);await bootIntoArrange(page,wavPath);
  await page.getByTestId('sound-arrange-add-source').click();
  await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(1,{timeout:30000});
- // Move the playhead to the session end via the ruler's End key (119.3 s).
+ // Move the playhead to the session end via the ruler's End key (119.3 s): 0.7 s of room remain.
  await page.getByRole('slider',{name:'Session playhead'}).focus();
  await page.keyboard.press('End');
  await expect(page.getByText(/119\.3\d{2} s \/ 119\.300 s/)).toBeVisible();
  await page.getByTestId('sound-arrange-record').click();
- await expect(page.getByTestId('sound-arrange-record')).toHaveAttribute('aria-pressed','true');
- await page.waitForTimeout(1200);
- await page.getByTestId('sound-arrange-record').click();
- // The take decodes but cannot be placed past the session end: error shown, arrangement untouched.
- await expect(page.getByTestId('sound-arrange-take-error')).toBeVisible({timeout:15000});
- await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(1);
- await expect(page.locator('[data-testid=arrange-mixer-track]')).toHaveCount(1);
+ // The recording stops itself at the remaining room (~0.7 s, checked every 250 ms); the whole record-stop-decode
+ // cycle fits in about a second, so the assertions go straight to the outcome instead of racing the armed state.
+ await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(2,{timeout:15000});
+ // The valid part is kept: the take lands clamped to the room, ending exactly at the 120 s limit.
+ await expect(page.getByText(/119\.300 s \/ 120\.000 s/)).toBeVisible();
+ await expect(page.locator('[data-testid=arrange-mixer-track]')).toHaveCount(2);
+ await expect(page.getByTestId('sound-arrange-take-error')).toHaveCount(0);
+ await expect(page.getByTestId('sound-arrange-record')).toHaveAttribute('aria-pressed','false');
  expect(await mic(page,'__micLive')).toBe(0);
+});
+test('C1: starting a take with no sensible room left is blocked before the microphone is touched',async({page})=>{
+ const wavPath='test-results/stage-c1-noroom.wav';floatWav(wavPath,119.3,1,110,8000);
+ await stubMic(page);await bootIntoArrange(page,wavPath);
+ await page.getByTestId('sound-arrange-add-source').click();
+ await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(1,{timeout:30000});
+ // Playhead to 119.8 s via keyboard (deterministic, no snap quantization): End = arrangement end, then 5 x ArrowRight (+0.1 s each).
+ await page.getByRole('slider',{name:'Session playhead'}).focus();
+ await page.keyboard.press('End');
+ for(let i=0;i<5;i++)await page.keyboard.press('ArrowRight');
+ await expect(page.getByText(/119\.800 s \/ 119\.300 s/)).toBeVisible();
+ await page.getByTestId('sound-arrange-record').click();
+ // Clear message, no recording starts, and the microphone was never even requested.
+ await expect(page.getByTestId('sound-arrange-take-error')).toHaveText(/No room left at the playhead/,{timeout:5000});
+ await expect(page.getByTestId('sound-arrange-record')).toHaveAttribute('aria-pressed','false');
+ await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(1);
+ expect(await mic(page,'__micLive')).toBe(0);
+ expect(await mic(page,'__micCalls')).toBe(0);
 });
 
 test('C1: recording auto-stops at the 120 s session limit without a second click',async({page})=>{

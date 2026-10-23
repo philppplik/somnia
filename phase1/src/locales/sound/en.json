@@ -155,6 +155,7 @@
   "sound.arrange.snapHint": "Magnetic to clip edges, markers and the 0.1 s grid",
   "sound.arrange.takeAdded": "Take added to the session",
   "sound.arrange.takeMicError": "Microphone unavailable or permission denied.",
+  "sound.arrange.takeNoRoom": "No room left at the playhead: the session ends at 120 s.",
   "sound.arrange.takeRecord": "Record take",
   "sound.arrange.takeStop": "Stop take",
   "sound.arrange.zoom": "Zoom",

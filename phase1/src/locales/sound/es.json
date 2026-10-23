@@ -155,6 +155,7 @@
   "sound.arrange.snapHint": "Magnético a bordes de clip, marcadores y rejilla de 0,1 s",
   "sound.arrange.takeAdded": "Toma añadida a la sesión",
   "sound.arrange.takeMicError": "Micrófono no disponible o permiso denegado.",
+  "sound.arrange.takeNoRoom": "Sin espacio en el cursor: la sesión termina a los 120 s.",
   "sound.arrange.takeRecord": "Grabar toma",
   "sound.arrange.takeStop": "Detener toma",
   "sound.arrange.zoom": "Zoom",

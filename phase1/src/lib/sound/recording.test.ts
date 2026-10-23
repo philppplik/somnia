@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {pickTakeMime,takeFileName,TAKE_MAX_SECONDS,TAKE_MIME_CANDIDATES} from './recording';
+import {pickTakeMime,takeFileName,remainingTakeFrames,TAKE_MAX_SECONDS,TAKE_MIN_SECONDS,TAKE_MIME_CANDIDATES} from './recording';
 import {ARRANGE_LIMITS} from './arrangement';
 
 test('pickTakeMime prefers opus webm, then plain webm, then mp4, then aac',()=>{
@@ -30,4 +30,17 @@ test('the take cap matches the arrangement length limit and the source memory bu
 test('mime candidate list stays non-empty and unique',()=>{
  assert.ok(TAKE_MIME_CANDIDATES.length>=2);
  assert.equal(new Set(TAKE_MIME_CANDIDATES).size,TAKE_MIME_CANDIDATES.length);
+});
+
+test('remainingTakeFrames measures the room left for a take',()=>{
+ const limit=TAKE_MAX_SECONDS*48000;
+ assert.equal(remainingTakeFrames(0),limit);
+ assert.equal(remainingTakeFrames(48000),limit-48000);
+ assert.equal(remainingTakeFrames(limit),0);
+ assert.equal(remainingTakeFrames(limit+1),0);
+ assert.equal(remainingTakeFrames(-100),limit);
+});
+
+test('the minimum sensible take is shorter than any snap step of the limit check',()=>{
+ assert.ok(TAKE_MIN_SECONDS>0&&TAKE_MIN_SECONDS<TAKE_MAX_SECONDS);
 });

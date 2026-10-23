@@ -19,6 +19,13 @@ export const pickTakeMime=(isSupported:(mimeType:string)=>boolean):string=>TAKE_
  */
 export const TAKE_MAX_SECONDS=ARRANGE_LIMITS.seconds;
 
+/** Below this remaining session time the Record button refuses to start: not enough room for a usable take. */
+export const TAKE_MIN_SECONDS=0.5;
+
+/** Session frames left for a take starting at startFrame. The recording cap and the decode clamp both use it. */
+export const remainingTakeFrames=(startFrame:number,sessionFrames=TAKE_MAX_SECONDS*48000):number=>
+ Math.max(0,sessionFrames-Math.max(0,Math.round(startFrame)));
+
 /** A free take file name: take.wav, take-2.wav, take-3.wav, ... The stored file is always a session WAV. */
 export const takeFileName=(existing:readonly string[]):string=>{
  const taken=new Set(existing.map(n=>n.toLowerCase()));
@@ -33,12 +40,12 @@ export const takeFileName=(existing:readonly string[]):string=>{
  * Decodes a recorded take (webm/mp4/aac from MediaRecorder) and resamples it into the 48 kHz stereo
  * session WAV format. Browser-only: needs AudioContext/OfflineAudioContext, covered by e2e, not unit tests.
  */
-export async function decodeTakeToSessionWav(blob:Blob):Promise<ArrayBuffer>{
+export async function decodeTakeToSessionWav(blob:Blob,maxFrames=TAKE_MAX_SECONDS*48000):Promise<ArrayBuffer>{
  const bytes=await blob.arrayBuffer();
  const ctx=new AudioContext();
  try{
   const buf=await ctx.decodeAudioData(bytes);
-  const frames=Math.max(1,Math.min(Math.ceil(buf.duration*48000),TAKE_MAX_SECONDS*48000));
+  const frames=Math.max(1,Math.min(Math.ceil(buf.duration*48000),Math.max(1,Math.round(maxFrames))));
   const off=new OfflineAudioContext(2,frames,48000);
   const src=off.createBufferSource();src.buffer=buf;src.connect(off.destination);src.start(0);
   const rendered=await off.startRendering();
