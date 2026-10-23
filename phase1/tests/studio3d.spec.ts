@@ -97,11 +97,6 @@ test('3D studio opens a GLB, shows its stats and exports a still',async({page})=
  const [download]=await Promise.all([page.waitForEvent('download'),page.getByRole('button',{name:'Render still'}).click()]);
  expect(download.suggestedFilename()).toBe('tri-still.png');
 });
-test('3D studio refuses a file that is not glTF with a readable error',async({page})=>{
- await page.goto('/');await switchStudio(page,'Somnia 3D');
- await page.getByTestId('studio3d-file-input').setInputFiles({name:'bad.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('not a model')});
- await expect(page.getByRole('alert')).toContainText('bad.glb',{timeout:15000});
-});
 
 /** Helpers for the scene tests below. They drive the real app through its command layer (dev build) and read the studio session. */
 type P=import('@playwright/test').Page;
@@ -123,6 +118,14 @@ const openModel=async(page:P,file:{name:string;mimeType:string;buffer:Buffer})=>
  await viewportReady(page);
  await expect.poll(async()=>{const s=await session(page);return s.status==='ready'&&s.name===file.name;},{timeout:60_000}).toBe(true);
 };
+test('3D studio refuses a file that is not glTF with a readable error',async({page})=>{
+ await open3d(page);
+ await page.getByTestId('studio3d-file-input').setInputFiles({name:'bad.glb',mimeType:'model/gltf-binary',buffer:Buffer.from('not a model')});
+ // A refused first open still mounts the lazy three.js chunk (cold dev server: well over the default timeout), so wait for the viewport readiness marker like every other open in this spec; once the controller is live the refusal alert renders immediately.
+ await viewportReady(page);
+ await expect(page.getByRole('alert')).toContainText('bad.glb',{timeout:15000});
+});
+
 const blank=async(page:P)=>{
  await open3d(page);await page.getByTestId('3d-create-blank').click();
  await viewportReady(page);
