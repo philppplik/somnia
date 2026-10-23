@@ -296,7 +296,7 @@ export function Account() {
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        <span className="account-greeting">
+        <span className="account-greeting max-[1100px]:hidden">
           {profile.nickname.trim()
             ? t("account.hey", { name: profile.nickname.trim() })
             : t("account.title")}

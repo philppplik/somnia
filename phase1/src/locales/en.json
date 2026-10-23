@@ -4306,5 +4306,6 @@
   "transcript.export": "Export TXT",
   "transcript.clear": "Clear",
   "transcript.ephemeral": "Text stays here until you close the Hub. Export to keep it.",
-  "cmd.transcript.open": "Transcript Hub"
+  "cmd.transcript.open": "Transcript Hub",
+  "menu.appMenu": "Menu"
 }

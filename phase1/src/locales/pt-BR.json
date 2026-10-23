@@ -4306,5 +4306,6 @@
   "transcript.export": "Exportar TXT",
   "transcript.clear": "Limpar",
   "transcript.ephemeral": "O texto desaparece ao fechar. Exporte para guardar.",
-  "cmd.transcript.open": "Central de transcrição"
+  "cmd.transcript.open": "Central de transcrição",
+  "menu.appMenu": "Menu"
 }

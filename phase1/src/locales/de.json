@@ -4306,5 +4306,6 @@
   "transcript.export": "TXT exportieren",
   "transcript.clear": "Leeren",
   "transcript.ephemeral": "Text bleibt bis zum Schließen hier. Zum Aufbewahren exportieren.",
-  "cmd.transcript.open": "Transkript-Hub"
+  "cmd.transcript.open": "Transkript-Hub",
+  "menu.appMenu": "Menü"
 }
