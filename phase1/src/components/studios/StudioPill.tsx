@@ -1,4 +1,4 @@
-import {useId} from 'react';
+import {useId,useSyncExternalStore} from 'react';
 import {StudioTooltip as Tooltip} from '../ui/tooltip';
 import {StudioGlyph} from './StudioGlyph';
 import {studioShortName} from './studioShortName';
@@ -11,7 +11,13 @@ import {useT} from '../../lib/useT';
 import './studio-pill.css';
 /** Only registered, runtime-ready Studios appear. This is not the document tablist. */
 export function StudioPill(){
- const s=useAppStore();const {t}=useT();const all=listStudios();const {visible:studios,hidden}=splitStudios(all,s.activeStudio,s.uiPrefs.maxStudios);const tooltipPrefix=useId();
+ const s=useAppStore();const {t}=useT();const all=listStudios();
+ // narrow headers keep two fewer tabs; the rest stays reachable via the More select
+ const mq=(q:string,cb:()=>void)=>{const m=matchMedia(q);m.addEventListener('change',cb);return()=>m.removeEventListener('change',cb);};
+ const narrow=useSyncExternalStore(cb=>mq('(max-width: 1340px)',cb),()=>matchMedia('(max-width: 1340px)').matches);
+ const tight=useSyncExternalStore(cb=>mq('(max-width: 1150px)',cb),()=>matchMedia('(max-width: 1150px)').matches);
+ const pref=typeof s.uiPrefs.maxStudios==='number'?s.uiPrefs.maxStudios-(tight?3:narrow?2:0):s.uiPrefs.maxStudios;
+ const {visible:studios,hidden}=splitStudios(all,s.activeStudio,pref);const tooltipPrefix=useId();
  return <Tooltip.Provider delay={250}><div role="radiogroup" aria-label={t('studio.switcher')} className="studio-pill relative flex shrink-0 gap-1 rounded-[var(--r-control)] bg-hover p-1" onKeyDown={e=>{
   const index=studios.findIndex(x=>x.id===s.activeStudio);
   const next=e.key==='Home'?0:e.key==='End'?studios.length-1:e.key==='ArrowRight'||e.key==='ArrowDown'?(index+1)%studios.length:e.key==='ArrowLeft'||e.key==='ArrowUp'?(index+studios.length-1)%studios.length:-1;
