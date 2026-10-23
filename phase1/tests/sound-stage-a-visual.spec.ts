@@ -172,3 +172,52 @@ test('Sound Stage A: UI flow imports audio, renders the mix, saves session JSON 
  // browser context: the download notice proves the non-desktop (no Tauri save port) path
  await expect(page.getByText(/Download started|Download gestartet/)).toBeVisible();
 });
+
+// Desktop save port wiring: with a mocked Tauri IPC bridge the export flow must call
+// audio_save_pick, then write the rendered WAV via audio_save_write with the single-use
+// token in the x-somnia-token header. This proves the JS<->invoke contract incl. token
+// binding; the real OS dialog and the Rust side are covered separately (Rust unit tests
+// in audio_io.rs run in CI), not here.
+test('Sound Stage A: desktop export writes the mix through the save port with its grant token',async({page})=>{
+ const wavPath='test-results/stage-a-tone.wav';toneWav(wavPath);
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await page.getByRole('radio',{name:'Somnia Sound'}).click();
+ await expect(page.getByTestId('sound-start')).toBeVisible();
+ await page.evaluate(async()=>{
+  const session:any=await import('/src/lib/sound/session.ts');
+  const sw:any=await import('/src/lib/sound/sessionWav.ts');
+  session.setSoundEngineFactory(()=>({
+   init:async()=>[],
+   process:async(bytes:ArrayBuffer,ext:string)=>{
+    const src=sw.decodeSessionWav('engine-input',bytes.slice(0));
+    const frames=src.channels[0].length,peaks=new Float32Array(800);
+    const stats={frames,sample_rate:src.sampleRate,channels:src.channels.length,duration_s:frames/src.sampleRate,peak_db:-3,rms_db:-18};
+    return{wav:bytes,peaks,report:{format:ext,input:stats,output:stats,trimmed_range:null,steps:[],wav_bytes:bytes.byteLength},ms:1};
+   },
+   dispose(){},
+  }));
+  const calls:{cmd:string,args:any,bytes?:number,token?:string}[]=[];
+  (window as any).isTauri=true;(window as any).__TAURI_INTERNALS__={invoke:async(cmd:string,args?:any,options?:any)=>{
+   if(cmd==='audio_save_pick'){calls.push({cmd,args});return{token:'grant-token-1'};}
+   if(cmd==='audio_save_write'){calls.push({cmd,args:'(raw body)',bytes:(args as ArrayBuffer)?.byteLength??(args as Uint8Array)?.byteLength,token:(options?.headers as Record<string,string>|undefined)?.['x-somnia-token']});return;}
+   throw new Error('unexpected invoke '+cmd);
+  }};
+  (window as any).__TAURI_CALLS__=calls;
+ });
+ const chooser=page.waitForEvent('filechooser');
+ await page.getByTestId('sound-open').click();
+ (await chooser).setFiles(wavPath);
+ await expect(page.getByTestId('sound-workspace')).toBeVisible();
+ await page.getByRole('button',{name:/Arrange & Mix|Arrangement & Mix/}).click();
+ await page.getByTestId('sound-arrange-add-source').click();
+ await expect(page.locator('[data-testid=arrange-clip]')).toHaveCount(1);
+ await page.getByTestId('sound-arrange-render').click();
+ await expect(page.getByTestId('sound-arrange-export')).toBeEnabled({timeout:15000});
+ await page.getByTestId('sound-arrange-export').click();
+ await expect(page.getByText(/Mix saved|Mix gespeichert/)).toBeVisible();
+ const calls=await page.evaluate(()=>(window as any).__TAURI_CALLS__);
+ expect(calls.map(c=>c.cmd)).toEqual(['audio_save_pick','audio_save_write']);
+ expect(calls[0].args).toMatchObject({suggestedName:expect.stringMatching(/-mix\.wav$/)});
+ expect(calls[1].token).toBe('grant-token-1');
+ expect(calls[1].bytes).toBe(44+FRAMES*8);
+});
