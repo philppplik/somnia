@@ -37,7 +37,7 @@ export function validateManifest(input:unknown):ManifestResult{
   if(x.priority!==undefined&&(typeof x.priority!=='number'||!Number.isInteger(x.priority)||x.priority>MAX_EXTENSION_OPEN_PRIORITY)){errors.push(`contributes.openOffers[${i}].priority must be an integer up to ${MAX_EXTENSION_OPEN_PRIORITY}.`);return[];}
   if(!Array.isArray(x.kinds)||x.kinds.length===0||x.kinds.length>OPEN_KINDS.length||x.kinds.some(k=>!(OPEN_KINDS as readonly unknown[]).includes(k))){errors.push(`contributes.openOffers[${i}].kinds must be validated document kinds.`);return[];}
   const kinds=[...new Set(x.kinds)] as OpenOfferContribution['kinds'];
-  return[{id:x.id,kinds,command:x.command,capability:x.capability,priority:typeof x.priority==='number'?x.priority:0,title:x.title}];});
+  return[{id:x.id as string,kinds,command:x.command as string,capability:x.capability as 'edit'|'preview',priority:typeof x.priority==='number'?x.priority:0,title:x.title as string}];});
  if(errors.length)return{ok:false,errors};
  return{ok:true,manifest:{id,name,version,apiVersion:API_VERSION,...(main?{main}:{}),...(code?{code}:{}),permissions,contributes:{commands,snippets,codeThemes,accentPalettes,panels,openOffers}}};
 }
