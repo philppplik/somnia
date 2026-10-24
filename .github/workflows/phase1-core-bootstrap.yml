@@ -373,7 +373,7 @@ jobs:
         shell: bash
         run: |
           node -e "if(process.arch !== 'arm64') throw Error('Node is not native ARM64')"
-          rustc -vV | grep -q 'host: aarch64-pc-windows-msvc'
+          rustc -vV | grep 'host: aarch64-pc-windows-msvc'
       - name: Install isolated PhotoCraft WASM toolchain
         run: |
           rustup toolchain install 1.95.0 --profile minimal
@@ -437,7 +437,7 @@ jobs:
         shell: bash
         run: |
           node -e "if(process.arch !== 'arm64') throw Error('Node is not native ARM64')"
-          rustc -vV | grep -q 'host: aarch64-unknown-linux-gnu'
+          rustc -vV | grep 'host: aarch64-unknown-linux-gnu'
       - name: Install isolated PhotoCraft WASM toolchain
         run: |
           rustup toolchain install 1.95.0 --profile minimal
