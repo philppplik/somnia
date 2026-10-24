@@ -105,7 +105,16 @@
       }
     ],
     "themes": [],
-    "snippets": []
+    "snippets": [
+      {
+        "id": "wordlist-snippets",
+        "label": "Word list snippets",
+        "language": "wordlist",
+        "path": "snippets/wordlist.json",
+        "prefix": "wl",
+        "description": "Scaffolding for word-list documents."
+      }
+    ]
   },
   "dependencies": []
 }
