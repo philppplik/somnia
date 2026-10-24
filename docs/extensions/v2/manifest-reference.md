@@ -258,6 +258,7 @@ Everything the extension adds to Somnia. Declarative first: the host registers t
 | `commands` | array | no | 0–200 items |
 | `menus` | array | no | 0–200 items |
 | `keybindings` | array | no | 0–200 items |
+| `settings` | array | no | 0–200 items |
 | `panels` | array | no | 0–200 items |
 | `themes` | array | no | 0–200 items |
 | `snippets` | array | no | 0–200 items |
@@ -327,6 +328,30 @@ Keybindings for own commands. Pure metadata: registration, conflict handling and
 - **`key`** — Shortcut like `Ctrl+Shift+F7`. At least one modifier; `Mod` means Ctrl on Windows/Linux and Cmd on macOS.
 - **`mac`** — Optional macOS-specific replacement for `key`.
 - **`when`** — Context expression gating the binding, same grammar as commands.
+
+### `settings`
+
+array · optional · 0–200 items
+
+Typed user settings. Pure metadata: the host renders the editors and owns storage; the extension reads values through the configuration API, never through the file system.
+
+#### Item fields
+
+| Field | Type | Required | Limits |
+| ----- | ---- | -------- | ------ |
+| `id` | string | **yes** | ≤ 150 chars; pattern `^[a-z0-9][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$` |
+| `type` | `"string"` \| `"number"` \| `"boolean"` \| `"enum"` | **yes** |  |
+| `title` | string | **yes** | 1–120 chars |
+| `description` | string | no | ≤ 500 chars |
+| `default` | string | **yes** |  |
+| `enum` | array | no | 1–100 items |
+
+- **`id`** — Full setting ID, namespaced under the extension ID, e.g. `acme.word-count.includeFootnotes`.
+- **`type`** — Value type: `string`, `number`, `boolean` or `enum`. Decides which editor the host renders.
+- **`title`** — User-visible setting name.
+- **`description`** — User-visible explanation shown next to the editor.
+- **`default`** — Default value; must match the declared type, and for `enum` one of the listed values.
+- **`enum`** — Allowed values. Required with type `enum`, forbidden otherwise.
 
 ### `panels`
 

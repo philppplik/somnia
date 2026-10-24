@@ -15,7 +15,7 @@ export function evaluateWhen(source:string|undefined,context:ContributionContext
  const and=():boolean=>{let v=atom();while(tokens[i]==='&&'){i++;const rhs=atom();v=v&&rhs;}return v;};
  const or=():boolean=>{let v=and();while(tokens[i]==='||'){i++;const rhs=and();v=v||rhs;}return v;};return or();
 }
-export interface PreparedContribution {family:'commands'|'menus'|'keybindings'|'panels'|'themes'|'snippets';fullId:string;metadata:ContributionV2;asset?:Uint8Array}
+export interface PreparedContribution {family:'commands'|'menus'|'keybindings'|'settings'|'panels'|'themes'|'snippets';fullId:string;metadata:ContributionV2;asset?:Uint8Array}
 export interface ContributionTransaction {
  stage(contribution:PreparedContribution):void;
  /** Publish all staged values together or throw without publishing. */
@@ -34,10 +34,10 @@ export class ContributionRegistry {
  register(manifest:ManifestV2,files:Readonly<Record<string,Uint8Array>>):void {
   if(this.owners.has(manifest.id))throw new ExtensionError('E_INVALID_ARGUMENT','Remove existing contributions before replacement.');
   const prepared:PreparedContribution[]=[];
-  for(const family of ['commands','menus','keybindings','panels','themes','snippets'] as const)for(const metadata of (manifest.contributes[family]??[]) as ContributionV2[]){
-   // Menus/keybindings carry no id: menus identify as menu:command, keybindings as command.
+  for(const family of ['commands','menus','keybindings','settings','panels','themes','snippets'] as const)for(const metadata of (manifest.contributes[family]??[]) as ContributionV2[]){
+   // Menus/keybindings carry no id: menus identify as menu:command, keybindings as command. Settings carry full namespaced ids like commands.
    const localId=metadata.id??(family==='menus'?`${metadata.menu}:${metadata.command}`:family==='keybindings'?`${metadata.command}`:'');
-   const fullId=family==='commands'?metadata.id:`${manifest.id}.${localId}`;const namespace=`${family}:${fullId}`;
+   const fullId=family==='commands'||family==='settings'?metadata.id:`${manifest.id}.${localId}`;const namespace=`${family}:${fullId}`;
    if(this.ids.has(namespace)||prepared.some(c=>`${c.family}:${c.fullId}`===namespace))throw new ExtensionError('E_INVALID_ARGUMENT','Contribution ID is already registered.');
    let asset:Uint8Array|undefined;if(metadata.path){if(!Object.hasOwn(files,metadata.path))throw new ExtensionError('E_INVALID_ARGUMENT','Contribution asset is missing.');asset=files[metadata.path].slice();}
    const contribution={family,fullId,metadata:structuredClone(metadata),asset};this.sink.validateAsset(contribution);prepared.push(contribution);
@@ -56,7 +56,7 @@ export class NativeContributionStore implements ContributionSink {
  snapshot():NativeContributionSnapshot{return {items:new Map(this.items)};}
  validateAsset(c:PreparedContribution):void {
   // Menus and keybindings are pure metadata placements of an own command, like commands: no asset.
-  if(c.family==='commands'||c.family==='menus'||c.family==='keybindings')return;
+  if(c.family==='commands'||c.family==='menus'||c.family==='keybindings'||c.family==='settings')return;
   if(!c.asset)throw new ExtensionError('E_INVALID_ARGUMENT','Static contribution requires an asset.');
   const max=c.family==='panels'?256*1024:c.family==='themes'?64*1024:32*1024;if(c.asset.length>max)throw new ExtensionError('E_RESOURCE_LIMIT','Contribution asset exceeds budget.');
   const text=new TextDecoder('utf-8',{fatal:true}).decode(c.asset);
