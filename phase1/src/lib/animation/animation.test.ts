@@ -232,7 +232,7 @@ test('all command and shell titles have five-locale keys',()=>{
  for(const tag of ['de','es','fr','pt-BR'])assert.deepEqual(Object.keys(ANIMATION_CATALOGUES[tag]).sort(),en);
  for(const id of ANIMATION_COMMANDS)for(const c of Object.values(ANIMATION_CATALOGUES))assert.ok(c['cmd.'+id],id);
  for(const key of ['studio.animation','cmd.studio.animation','animation.hero.render'])for(const c of Object.values(ANIMATION_CATALOGUES))assert.ok(c[key]);
- const keys=[...animationShell.panels!.map(p=>p.titleKey),...animationShell.leftRail!.map(r=>r.labelKey),...animationShell.rightRail!.map(r=>r.labelKey),...animationShell.inspector!.sections.map(s=>s.titleKey)];
+ const keys=[...animationShell.panels!.map(p=>p.titleKey),...animationShell.leftRail!.map(r=>r.labelKey),...animationShell.rightRail!.map(r=>r.labelKey),...animationShell.inspector!.sections.map(s=>s.titleKey)].filter((k):k is string=>k!==undefined);
  if(animationShell.inspector!.emptyKey)keys.push(animationShell.inspector!.emptyKey);
  for(const k of keys)for(const c of Object.values(ANIMATION_CATALOGUES))assert.ok(c[k],k);
 });
