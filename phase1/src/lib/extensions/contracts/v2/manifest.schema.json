@@ -368,7 +368,7 @@
                 "type": "string",
                 "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$",
                 "maxLength": 150,
-                "description": "Full setting ID, namespaced under the extension ID, e.g. acme.word-count.includeFootnotes."
+                "description": "Full setting ID, namespaced under the extension ID as lowercase dotted segments."
               },
               "type": {
                 "enum": [
