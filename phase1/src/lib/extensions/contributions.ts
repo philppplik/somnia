@@ -52,7 +52,11 @@ export interface NativeContributionSnapshot {readonly items:ReadonlyMap<string,P
 /** Concrete atomic data sink for native UI adapters. It stores no scripts, DOM or external URLs. */
 export class NativeContributionStore implements ContributionSink {
  private items=new Map<string,PreparedContribution>();
- constructor(private readonly changed:(snapshot:NativeContributionSnapshot)=>void=()=>{},private readonly themeValidator:(tokens:Record<string,string>)=>boolean=defaultThemeValidator){}
+ constructor(
+  private readonly changed:(snapshot:NativeContributionSnapshot)=>void=()=>{},
+  private readonly themeValidator:(tokens:Record<string,string>)=>boolean=defaultThemeValidator,
+  private readonly uiThemeValidator:(tokens:Record<string,string>)=>boolean=nativeUiThemeValidator,
+ ){}
  snapshot():NativeContributionSnapshot{return {items:new Map(this.items)};}
  validateAsset(c:PreparedContribution):void {
   // Menus and keybindings are pure metadata placements of an own command, like commands: no asset.
@@ -62,10 +66,11 @@ export class NativeContributionStore implements ContributionSink {
   const max=c.family==='panels'?256*1024:c.family==='languages'?256*1024:c.family==='themes'?64*1024:32*1024;if(c.asset.length>max)throw new ExtensionError('E_RESOURCE_LIMIT','Contribution asset exceeds budget.');
   const text=new TextDecoder('utf-8',{fatal:true}).decode(c.asset);
   if(c.family==='panels'&&c.metadata.kind==='webview')return; // Render ONLY through the isolated panel bridge, never innerHTML in Somnia.
-  const parsed=parseStrictJson(text);if(c.family==='themes'&&c.metadata.kind==='ui'&&this.themeValidator===defaultThemeValidator)throw new ExtensionError('E_INVALID_ARGUMENT','UI themes need the native token and contrast validator.');
+  const parsed=parseStrictJson(text);
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid contribution data.');
   if(c.family==='themes'){
-   if(!this.themeValidator(parsed as Record<string,string>))throw new ExtensionError('E_INVALID_ARGUMENT','Theme tokens or contrast checks failed.');
+   const validator=c.metadata.kind==='ui'?this.uiThemeValidator:this.themeValidator;
+   if(!validator(parsed as Record<string,string>))throw new ExtensionError('E_INVALID_ARGUMENT','Theme tokens or contrast checks failed.');
   }else if(c.family==='snippets'){
    if(typeof parsed.body!=='string'||Object.keys(parsed).some(k=>!['body','description'].includes(k))||('description'in parsed&&typeof parsed.description!=='string'))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid snippet data.');
    snippet(parsed.body); // Uses Somnia's actual CodeMirror snippet parser, not shell/template evaluation.
@@ -84,6 +89,7 @@ export class NativeContributionStore implements ContributionSink {
  }
 }
 import {snippet} from '@codemirror/autocomplete';
+import {nativeUiThemeValidator} from './themeTokensV2';
 import {parseStrictJson} from './v2/rpc';
 function defaultThemeValidator(tokens:Record<string,string>):boolean {
  const allowed=new Set(['--syntax-tag','--syntax-keyword','--syntax-string','--syntax-number','--syntax-comment','--syntax-property','--syntax-variable','--syntax-operator','--syntax-function']);

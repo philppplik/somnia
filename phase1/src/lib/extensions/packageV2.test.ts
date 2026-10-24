@@ -4,7 +4,8 @@ import {zipSync,strToU8} from 'fflate';
 import {stringify} from 'smol-toml';
 import example from './contracts/v2/example.json';
 import {parsePackageFilesV2,parsePackageZipV2} from './packageV2';
-const files=():Record<string,Uint8Array>=>({'somnia-extension.toml':strToU8(stringify(example)),'dist/extension.js':strToU8('export function activate() {}'),'panels/summary.json':strToU8('{"type":"text","text":"Summary"}')});
+const UI=Object.fromEntries(['--bg-base','--bg-panel','--bg-elevated','--bg-surface','--bg-hover','--border-subtle','--border-default','--text-primary','--text-secondary','--text-tertiary','--accent','--accent-fill','--warning','--danger','--canvas-bg','--shell-bg'].map((t,i)=>[t,['#fafafa','#ffffff','#f7f7f9','#f0f0f4','#e5e5eb','#e1e1e7','#cccdd7','#18181b','#52525a','#62626d','#4e45e2','#4f46e5','#8c5300','#b91c1c','#e6e6eb','#f8f9fb'][i]]));
+const files=():Record<string,Uint8Array>=>({'somnia-extension.toml':strToU8(stringify(example)),'dist/extension.js':strToU8('export function activate() {}'),'panels/summary.json':strToU8('{"type":"text","text":"Summary"}'),'snippets/wordlist.json':strToU8('{"body":"word ${1:list}","description":"Word list starter"}'),'themes/code-dark.json':strToU8('{"--syntax-tag":"#7ee787","--syntax-keyword":"#ff7b72"}'),'themes/ui-light.json':strToU8(JSON.stringify(UI))});
 const reject=(f:Record<string,Uint8Array>,code:string)=>{const r=parsePackageFilesV2(f); assert.equal(r.ok,false); if(!r.ok) assert(r.errors.some(e=>e.code===code),JSON.stringify(r.errors));};
 test('root TOML .somniax archive and verified inventory validate',()=>{
  const r=parsePackageZipV2(zipSync(files())); assert.equal(r.ok,true); if(r.ok) assert.equal(r.package.manifest.id,example.id);
