@@ -3,8 +3,9 @@
 $ErrorActionPreference = 'Stop'
 $pkg = Get-Content package.json -Raw | ConvertFrom-Json
 $v = [string]$pkg.somniaRelease
-# Store identity version: monotonic x.y.z.rev from scripts/msix-version.mjs (betas sort
-# above older packages and below their own stable, so the beta -> stable upgrade path holds).
+# Store identity version from scripts/msix-version.mjs: x.y.z.0 (fourth section is
+# Store-reserved and must stay 0; prerelease suffixes are stripped). MSIX_VERSION env
+# overrides the mapping when a stable release would collide with a beta already in the Store.
 $version = (node scripts/msix-version.mjs).Trim()
 if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw "msix-version.mjs returned '$version'." }
 $identity = if ($env:MSIX_IDENTITY_NAME) { $env:MSIX_IDENTITY_NAME } else { 'PhilippPaulik.SomniaEditor' }
