@@ -41,6 +41,22 @@
         "when": "hasProject && studio == \"code\""
       }
     ],
+    "menus": [
+      {
+        "menu": "Tools",
+        "command": "acme.word-count.count",
+        "when": "hasProject && studio == \"code\"",
+        "group": "insights"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "acme.word-count.count",
+        "key": "Ctrl+Shift+F7",
+        "mac": "Mod+Shift+F7",
+        "when": "hasProject && studio == \"code\""
+      }
+    ],
     "panels": [
       {
         "id": "summary",

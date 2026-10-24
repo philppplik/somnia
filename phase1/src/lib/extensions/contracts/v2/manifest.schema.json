@@ -279,6 +279,84 @@
           },
           "maxItems": 200
         },
+        "menus": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "menu": {
+                "enum": [
+                  "Project",
+                  "Edit",
+                  "View",
+                  "Insert",
+                  "Tools",
+                  "Help"
+                ],
+                "description": "Host menu group the command is placed under. Matches the command categories."
+              },
+              "command": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$",
+                "maxLength": 150,
+                "description": "ID of a command contributed by the same extension."
+              },
+              "when": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              },
+              "group": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$",
+                "description": "Optional subgroup inside the menu; lexical order decides placement."
+              }
+            },
+            "required": [
+              "menu",
+              "command"
+            ]
+          }
+        },
+        "keybindings": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "command": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*\\.[a-z0-9][a-z0-9-]*$",
+                "maxLength": 150,
+                "description": "ID of a command contributed by the same extension."
+              },
+              "key": {
+                "type": "string",
+                "maxLength": 60,
+                "pattern": "^(Ctrl|Alt|Shift|Mod)(\\+(Ctrl|Alt|Shift|Mod)){0,2}\\+(F([1-9]|1[0-2])|[A-Z0-9])$",
+                "description": "Shortcut like Ctrl+Shift+F5 or Mod+K. At least one modifier; Mod means Ctrl on Windows/Linux and Cmd on macOS."
+              },
+              "mac": {
+                "type": "string",
+                "maxLength": 60,
+                "pattern": "^(Ctrl|Alt|Shift|Mod)(\\+(Ctrl|Alt|Shift|Mod)){0,2}\\+(F([1-9]|1[0-2])|[A-Z0-9])$",
+                "description": "Optional macOS-specific replacement for key."
+              },
+              "when": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 256
+              }
+            },
+            "required": [
+              "command",
+              "key"
+            ]
+          }
+        },
         "panels": {
           "type": "array",
           "items": {
