@@ -57,7 +57,7 @@ tauri-plugin-single-instance = { version = "=2.5.0", optional = true }
 
 reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls", "stream", "json", "blocking"] }
 keyring = { version = "=3.6.3", optional = true, features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
-jsonwebtoken = { version = "=9.3.1", default-features = false }
+jsonwebtoken = { version = "=10.3.0", default-features = false }
 # No `transport-child-process`: MCP servers are only started through the broker (mcp_broker.rs), never spawned directly.
 rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-async-rw"] }
 
