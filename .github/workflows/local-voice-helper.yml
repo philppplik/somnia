@@ -126,7 +126,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: whisper-helper-review-linux-x86_64
           path: phase1/dist-voice/helper
@@ -152,7 +152,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: whisper-helper-review-windows-x86_64
           path: phase1/dist-voice/helper
