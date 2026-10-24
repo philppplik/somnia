@@ -410,7 +410,7 @@ Side-rail panels. `declarative` panels are native view trees; `webview` panels r
 
 array · optional · 0–200 items
 
-Syntax (`code`) or interface (`ui`) themes. Theme assets are limited to 64 KiB.
+Syntax (`code`) or interface (`ui`) themes. Theme assets are limited to 64 KiB. Interface themes must define the complete UI color token set as hex colors; the host rejects unknown tokens, `var()`/`url()` values and any text/surface pair below its WCAG contrast floor.
 
 #### Item fields
 

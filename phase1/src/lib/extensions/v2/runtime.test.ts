@@ -138,7 +138,7 @@ import type {Json} from '../contracts/v2/api';
 test('native contribution store validates data, commits atomically and removes only its owner',()=>{
  const store=new NativeContributionStore();const registry=new ContributionRegistry(store);const m={...manifest(),runtime:{type:'declarative' as const},activationEvents:[],contributes:{snippets:[{id:'static',label:'Static',language:'html',path:'snippet.json'}]}};
  registry.register(m,{'snippet.json':new TextEncoder().encode('{"body":"<h1>${1:title}</h1>"}')});assert.equal(store.snapshot().items.size,1);
- const invalid={...m,id:'acme.invalid',contributes:{themes:[{id:'bad',label:'Bad',kind:'code',mode:'light',path:'theme.json'}]}};
+ const invalid={...m,id:'acme.invalid',contributes:{themes:[{id:'bad',label:'Bad',kind:'code' as const,mode:'light' as const,path:'theme.json'}]}};
  assert.throws(()=>registry.register(invalid,{'theme.json':new TextEncoder().encode('{"background":"url(https://evil.test)"}')}));assert.equal(store.snapshot().items.size,1);registry.remove(m.id);assert.equal(store.snapshot().items.size,0);
 });
 test('guest SDK serializes local callbacks, awaits typed read result and disposes outstanding calls',async()=>{
