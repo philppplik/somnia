@@ -18,12 +18,14 @@ export interface MenuContributionV2 {menu:'Project'|'Edit'|'View'|'Insert'|'Tool
 export interface KeybindingContributionV2 {command:string; key:string; mac?:string; when?:string}
 /** Declarative typed setting. Pure metadata: the host renders the editor and owns storage; no asset, no script. */
 export interface SettingContributionV2 {id:string; type:'string'|'number'|'boolean'|'enum'; title:string; description?:string; default:unknown; enum?:string[]}
+/** Declarative language registration. Ids are global (like 'html'), never extension-namespaced; the optional path carries a TextMate grammar JSON. */
+export interface LanguageContributionV2 {id:string; aliases:string[]; extensions?:string[]; filenames?:string[]; path?:string}
 export interface ManifestV2 {
   security?:ExtensionSecurity; manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
   engines:{somnia:string; api:string}; runtime:{type:'declarative'|'js'|'wasm'; entry?:string; abi?:string};
   activationEvents:string[]; permissions:string[];
   capabilities:{untrustedWorkspaces:{supported:'supported'|'unsupported'|'limited'; description?:string; allowedPermissions?:string[]}; virtualWorkspaces:{supported:boolean}};
-  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; settings?:SettingContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
+  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; settings?:SettingContributionV2[]; languages?:LanguageContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
   dependencies:{ecosystem:string; name:string; version:string; license:string; sourceIntegrity:string}[];
   proposedApis?:{id:string; revision:number}[]; icon?:string; repository?:string; homepage?:string; $schema?:string;
 }

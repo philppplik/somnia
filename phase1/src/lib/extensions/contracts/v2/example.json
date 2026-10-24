@@ -78,6 +78,20 @@
         ]
       }
     ],
+    "languages": [
+      {
+        "id": "wordlist",
+        "aliases": [
+          "Word list"
+        ],
+        "extensions": [
+          ".wl"
+        ],
+        "filenames": [
+          "WORDS"
+        ]
+      }
+    ],
     "panels": [
       {
         "id": "summary",

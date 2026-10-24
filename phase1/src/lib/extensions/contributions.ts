@@ -15,7 +15,7 @@ export function evaluateWhen(source:string|undefined,context:ContributionContext
  const and=():boolean=>{let v=atom();while(tokens[i]==='&&'){i++;const rhs=atom();v=v&&rhs;}return v;};
  const or=():boolean=>{let v=and();while(tokens[i]==='||'){i++;const rhs=and();v=v||rhs;}return v;};return or();
 }
-export interface PreparedContribution {family:'commands'|'menus'|'keybindings'|'settings'|'panels'|'themes'|'snippets';fullId:string;metadata:ContributionV2;asset?:Uint8Array}
+export interface PreparedContribution {family:'commands'|'menus'|'keybindings'|'settings'|'languages'|'panels'|'themes'|'snippets';fullId:string;metadata:ContributionV2;asset?:Uint8Array}
 export interface ContributionTransaction {
  stage(contribution:PreparedContribution):void;
  /** Publish all staged values together or throw without publishing. */
@@ -34,7 +34,7 @@ export class ContributionRegistry {
  register(manifest:ManifestV2,files:Readonly<Record<string,Uint8Array>>):void {
   if(this.owners.has(manifest.id))throw new ExtensionError('E_INVALID_ARGUMENT','Remove existing contributions before replacement.');
   const prepared:PreparedContribution[]=[];
-  for(const family of ['commands','menus','keybindings','settings','panels','themes','snippets'] as const)for(const metadata of (manifest.contributes[family]??[]) as ContributionV2[]){
+  for(const family of ['commands','menus','keybindings','settings','languages','panels','themes','snippets'] as const)for(const metadata of (manifest.contributes[family]??[]) as ContributionV2[]){
    // Menus/keybindings carry no id: menus identify as menu:command, keybindings as command. Settings carry full namespaced ids like commands.
    const localId=metadata.id??(family==='menus'?`${metadata.menu}:${metadata.command}`:family==='keybindings'?`${metadata.command}`:'');
    const fullId=family==='commands'||family==='settings'?metadata.id:`${manifest.id}.${localId}`;const namespace=`${family}:${fullId}`;
@@ -57,8 +57,9 @@ export class NativeContributionStore implements ContributionSink {
  validateAsset(c:PreparedContribution):void {
   // Menus and keybindings are pure metadata placements of an own command, like commands: no asset.
   if(c.family==='commands'||c.family==='menus'||c.family==='keybindings'||c.family==='settings')return;
+  if(c.family==='languages'&&!c.asset)return; // Grammar-less language registrations are pure metadata.
   if(!c.asset)throw new ExtensionError('E_INVALID_ARGUMENT','Static contribution requires an asset.');
-  const max=c.family==='panels'?256*1024:c.family==='themes'?64*1024:32*1024;if(c.asset.length>max)throw new ExtensionError('E_RESOURCE_LIMIT','Contribution asset exceeds budget.');
+  const max=c.family==='panels'?256*1024:c.family==='languages'?256*1024:c.family==='themes'?64*1024:32*1024;if(c.asset.length>max)throw new ExtensionError('E_RESOURCE_LIMIT','Contribution asset exceeds budget.');
   const text=new TextDecoder('utf-8',{fatal:true}).decode(c.asset);
   if(c.family==='panels'&&c.metadata.kind==='webview')return; // Render ONLY through the isolated panel bridge, never innerHTML in Somnia.
   const parsed=parseStrictJson(text);if(c.family==='themes'&&c.metadata.kind==='ui'&&this.themeValidator===defaultThemeValidator)throw new ExtensionError('E_INVALID_ARGUMENT','UI themes need the native token and contrast validator.');
@@ -68,6 +69,9 @@ export class NativeContributionStore implements ContributionSink {
   }else if(c.family==='snippets'){
    if(typeof parsed.body!=='string'||Object.keys(parsed).some(k=>!['body','description'].includes(k))||('description'in parsed&&typeof parsed.description!=='string'))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid snippet data.');
    snippet(parsed.body); // Uses Somnia's actual CodeMirror snippet parser, not shell/template evaluation.
+  }else if(c.family==='languages'){
+   const g=parsed as {scopeName?:unknown;patterns?:unknown};
+   if(typeof g.scopeName!=='string'||!g.scopeName||!Array.isArray(g.patterns))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid TextMate grammar: needs scopeName and a patterns array.');
   }else validateView(parsed,c,0);
  }
  begin(_extensionId:string):ContributionTransaction {

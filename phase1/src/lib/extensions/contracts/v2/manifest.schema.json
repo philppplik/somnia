@@ -412,6 +412,61 @@
             ]
           }
         },
+        "languages": {
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]{0,39}$",
+                "description": "Lowercase language identifier used by onLanguage activation and the language context key. Global, not extension-namespaced."
+              },
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 60
+                },
+                "minItems": 1,
+                "maxItems": 10,
+                "description": "User-visible names; the first is the display name."
+              },
+              "extensions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^\\.[A-Za-z0-9][A-Za-z0-9.-]{0,29}$"
+                },
+                "maxItems": 50,
+                "description": "File extensions including the leading dot."
+              },
+              "filenames": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 120,
+                  "pattern": "^[^/\\\\:*?\"<>|]+$"
+                },
+                "maxItems": 50,
+                "description": "Exact file names matched when no extension matches."
+              },
+              "path": {
+                "type": "string",
+                "maxLength": 180,
+                "description": "Optional package path to a TextMate grammar JSON used for tokenization."
+              }
+            },
+            "required": [
+              "id",
+              "aliases"
+            ]
+          }
+        },
         "panels": {
           "type": "array",
           "items": {

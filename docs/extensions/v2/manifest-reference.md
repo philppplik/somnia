@@ -259,6 +259,7 @@ Everything the extension adds to Somnia. Declarative first: the host registers t
 | `menus` | array | no | 0–200 items |
 | `keybindings` | array | no | 0–200 items |
 | `settings` | array | no | 0–200 items |
+| `languages` | array | no | 0–100 items |
 | `panels` | array | no | 0–200 items |
 | `themes` | array | no | 0–200 items |
 | `snippets` | array | no | 0–200 items |
@@ -352,6 +353,28 @@ Typed user settings. Pure metadata: the host renders the editors and owns storag
 - **`description`** — User-visible explanation shown next to the editor.
 - **`default`** — Default value; must match the declared type, and for `enum` one of the listed values.
 - **`enum`** — Allowed values. Required with type `enum`, forbidden otherwise.
+
+### `languages`
+
+array · optional · 0–100 items
+
+Language registrations. Declaring a language makes its id usable in `onLanguage:` activation and the `language` context key; matching, highlighting and tokenization stay host-side.
+
+#### Item fields
+
+| Field | Type | Required | Limits |
+| ----- | ---- | -------- | ------ |
+| `id` | string | **yes** | pattern `^[a-z][a-z0-9-]{0,39}$` |
+| `aliases` | array | **yes** | 1–10 items |
+| `extensions` | array | no | 0–50 items |
+| `filenames` | array | no | 0–50 items |
+| `path` | string | no | ≤ 180 chars |
+
+- **`id`** — Lowercase language identifier (e.g. `wordlist`). Global like `html`, never extension-namespaced.
+- **`aliases`** — User-visible names; the first is the display name.
+- **`extensions`** — File extensions including the leading dot.
+- **`filenames`** — Exact file names matched when no extension matches.
+- **`path`** — Optional package path to a TextMate grammar JSON (`scopeName` plus a `patterns` array) used for tokenization.
 
 ### `panels`
 
