@@ -68,7 +68,7 @@ test('edit ops carry the colors: move keeps them, subdivide interpolates them',(
  assert.ok(c,'the attribute survives subdivision');
  assert.equal(c!.count,mesh.geometry.getAttribute('position').count);
  let mid=false;
- for(let v=0;v<c!.count;v++){const r=c!.getX(v);assert.ok(r>=-1e-6&&r<=1+1e-6);if(r>1e-6&&r<1-1e-6)mid=true;}
+ for(let v=0;v<c!.count;v++){const r:number=c!.getX(v);assert.ok(r>=-1e-6&&r<=1+1e-6);if(r>1e-6&&r<1-1e-6)mid=true;}
  assert.ok(mid,'new vertices carry interpolated colors');
  assert.equal((mesh.material as THREE.MeshStandardMaterial).vertexColors,true,'the flag stays on');
 });
