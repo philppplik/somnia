@@ -20,12 +20,16 @@ export interface KeybindingContributionV2 {command:string; key:string; mac?:stri
 export interface SettingContributionV2 {id:string; type:'string'|'number'|'boolean'|'enum'; title:string; description?:string; default:unknown; enum?:string[]}
 /** Declarative language registration. Ids are global (like 'html'), never extension-namespaced; the optional path carries a TextMate grammar JSON. */
 export interface LanguageContributionV2 {id:string; aliases:string[]; extensions?:string[]; filenames?:string[]; path?:string}
+/** Declarative snippet set for one language. The path carries a snippet JSON asset ({body, description?}); insertion uses the host CodeMirror parser, never template evaluation. */
+export interface SnippetContributionV2 {id:string; label:string; language:string; path:string; prefix?:string; description?:string; studios?:string[]}
+/** Declarative theme. kind 'code' recolors editor syntax (--syntax-* tokens); kind 'ui' recolors the interface and must define the complete UI color token set with WCAG-checked contrast. */
+export interface ThemeContributionV2 {id:string; label:string; kind:'code'|'ui'; mode:'light'|'dark'; path:string}
 export interface ManifestV2 {
   security?:ExtensionSecurity; manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
   engines:{somnia:string; api:string}; runtime:{type:'declarative'|'js'|'wasm'; entry?:string; abi?:string};
   activationEvents:string[]; permissions:string[];
   capabilities:{untrustedWorkspaces:{supported:'supported'|'unsupported'|'limited'; description?:string; allowedPermissions?:string[]}; virtualWorkspaces:{supported:boolean}};
-  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; settings?:SettingContributionV2[]; languages?:LanguageContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
+  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; settings?:SettingContributionV2[]; languages?:LanguageContributionV2[]; panels?:ContributionV2[]; themes?:ThemeContributionV2[]; snippets?:SnippetContributionV2[]};
   dependencies:{ecosystem:string; name:string; version:string; license:string; sourceIntegrity:string}[];
   proposedApis?:{id:string; revision:number}[]; icon?:string; repository?:string; homepage?:string; $schema?:string;
 }

@@ -84,7 +84,7 @@ const DOCS = {
   'contributes.panels[].when': 'Context expression gating visibility, same grammar as commands.',
   'contributes.panels[].studios': 'Studios the panel appears in. Omit to show in every studio.',
   'contributes.panels[].scripts': 'Webview panels only: whether the page may run its own scripts. Declarative panels must keep this `false`.',
-  'contributes.themes': 'Syntax (`code`) or interface (`ui`) themes. Theme assets are limited to 64 KiB.',
+  'contributes.themes': 'Syntax (`code`) or interface (`ui`) themes. Theme assets are limited to 64 KiB. Interface themes must define the complete UI color token set as hex colors; the host rejects unknown tokens, `var()`/`url()` values and any text/surface pair below its WCAG contrast floor.',
   'contributes.themes[].id': 'Theme ID, unique inside the extension.',
   'contributes.themes[].label': 'Name shown in the theme picker.',
   'contributes.themes[].kind': '`code` for editor syntax colours, `ui` for the interface.',

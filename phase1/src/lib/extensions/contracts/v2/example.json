@@ -104,8 +104,32 @@
         ]
       }
     ],
-    "themes": [],
-    "snippets": []
+    "themes": [
+      {
+        "id": "word-count-code-dark",
+        "label": "Word Count Code Dark",
+        "kind": "code",
+        "mode": "dark",
+        "path": "themes/code-dark.json"
+      },
+      {
+        "id": "word-count-paper",
+        "label": "Word Count Paper",
+        "kind": "ui",
+        "mode": "light",
+        "path": "themes/ui-light.json"
+      }
+    ],
+    "snippets": [
+      {
+        "id": "wordlist-snippets",
+        "label": "Word list snippets",
+        "language": "wordlist",
+        "path": "snippets/wordlist.json",
+        "prefix": "wl",
+        "description": "Scaffolding for word-list documents."
+      }
+    ]
   },
   "dependencies": []
 }
