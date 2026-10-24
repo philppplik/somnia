@@ -2,8 +2,12 @@
 # Env: MSIX_IDENTITY_NAME, MSIX_PUBLISHER, MSIX_PUBLISHER_DISPLAY_NAME (from Partner Center; defaults are the Somnia Editor Partner Center values (PFN PhilippPaulik.SomniaEditor_5r0205h9k3wrt).
 $ErrorActionPreference = 'Stop'
 $pkg = Get-Content package.json -Raw | ConvertFrom-Json
-$v = [string]$pkg.somniaRelease; if ($v -notmatch '^\d+\.\d+\.\d+$') { $v = '0.1.0' }
-$version = "$v.0"
+$v = [string]$pkg.somniaRelease
+# Store identity version from scripts/msix-version.mjs: x.y.z.0 (fourth section is
+# Store-reserved and must stay 0; prerelease suffixes are stripped). MSIX_VERSION env
+# overrides the mapping when a stable release would collide with a beta already in the Store.
+$version = (node scripts/msix-version.mjs).Trim()
+if ($version -notmatch '^\d+\.\d+\.\d+\.\d+$') { throw "msix-version.mjs returned '$version'." }
 $identity = if ($env:MSIX_IDENTITY_NAME) { $env:MSIX_IDENTITY_NAME } else { 'PhilippPaulik.SomniaEditor' }
 $publisher = if ($env:MSIX_PUBLISHER) { $env:MSIX_PUBLISHER } else { 'CN=F8533395-4C90-4374-9DA3-5FB3D3AE436E' }
 $pubName = if ($env:MSIX_PUBLISHER_DISPLAY_NAME) { $env:MSIX_PUBLISHER_DISPLAY_NAME } else { 'Philipp Paulik' }
