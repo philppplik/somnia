@@ -5,6 +5,7 @@ import {X} from '../lib/icons';
 import {convertImage,downloadConvertedImage,loadConversionImage,IMAGE_CONVERSION_ACCEPT} from '../lib/imageConversion';
 import type {ConvertedImage,ImageFormat,ImageSize} from '../lib/imageConversion';
 import '../styles/image-conversion.css';
+import {NativeButton,NativeInput,NativeSelect} from './ui/native-controls';
 /** Independent utility: conversion does not mutate the current project or overwrite its source. */
 export function ImageConversionDialog(){
  const [open,setOpen]=useState(false),[file,setFile]=useState<File|null>(null),[size,setSize]=useState<ImageSize|null>(null);
@@ -19,16 +20,16 @@ export function ImageConversionDialog(){
  const run=async()=>{if(!file)return;resetResult();setBusy(true);try{setResult(await convertImage(file,file.name,{format,width:Number(width),height:Number(height),quality:quality/100,background}));}catch(e){setError(e instanceof Error?e.message:String(e));}finally{setBusy(false);}};
  const close=()=>{if(busy)return;generation.current++;setOpen(false);setFile(null);setSize(null);resetResult();};
  return <Dialog open={open} onOpenChange={v=>{if(!v)close();}}><DialogContent className="export-popup image-conversion" aria-label="Convert image">
-  <header className="export-head"><DialogTitle>Convert image</DialogTitle><DialogDescription>Raster formats and standalone SVG to PNG, JPEG or WebP. AVIF depends on this WebView. All processing stays on this device.</DialogDescription><button className="export-close" aria-label="Close image conversion" disabled={busy} onClick={close}><X size={16}/></button></header>
+  <header className="export-head"><DialogTitle>Convert image</DialogTitle><DialogDescription>Raster formats and standalone SVG to PNG, JPEG or WebP. AVIF depends on this WebView. All processing stays on this device.</DialogDescription><NativeButton className="export-close" aria-label="Close image conversion" disabled={busy} onClick={close}><X size={16}/></NativeButton></header>
   <div className="export-body">
-   <label className="image-conversion-file">Source image<input type="file" accept={IMAGE_CONVERSION_ACCEPT} disabled={busy} onChange={e=>void choose(e.target.files?.[0])}/></label>
+   <label className="image-conversion-file">Source image<NativeInput type="file" accept={IMAGE_CONVERSION_ACCEPT} disabled={busy} onChange={e=>void choose(e.target.files?.[0])}/></label>
    {size&&<p className="image-conversion-note">Original: {size.width} x {size.height} px. The source file stays unchanged.</p>}
    <fieldset disabled={busy||!size} className="image-conversion-fields"><legend className="sr-only">Conversion options</legend>
-    <label>Output format<select value={format} onChange={e=>{setFormat(e.target.value as ImageFormat);resetResult();}}><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></label>
-    <div className="image-conversion-size"><label>Width (px)<input type="number" min="1" max="8192" step="1" value={width} onChange={e=>dimension('width',e.target.value)}/></label><label>Height (px)<input type="number" min="1" max="8192" step="1" value={height} onChange={e=>dimension('height',e.target.value)}/></label></div>
-    <label className="image-conversion-lock"><input type="checkbox" checked={lock} onChange={e=>{setLock(e.target.checked);resetResult();if(e.target.checked&&size&&Number(width)>0)setHeight(String(Math.max(1,Math.round(Number(width)*size.height/size.width))));}}/>Keep original proportions</label>
-    {format!=='png'&&<label>Quality ({quality}%)<input type="range" min="1" max="100" value={quality} onChange={e=>{setQuality(Number(e.target.value));resetResult();}}/></label>}
-    {format==='jpeg'&&<label>Background for transparency<input type="color" value={background} onChange={e=>{setBackground(e.target.value);resetResult();}}/></label>}
+    <label>Output format<NativeSelect value={format} onChange={e=>{setFormat(e.target.value as ImageFormat);resetResult();}}><option value="png">PNG</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></NativeSelect></label>
+    <div className="image-conversion-size"><label>Width (px)<NativeInput type="number" min="1" max="8192" step="1" value={width} onChange={e=>dimension('width',e.target.value)}/></label><label>Height (px)<NativeInput type="number" min="1" max="8192" step="1" value={height} onChange={e=>dimension('height',e.target.value)}/></label></div>
+    <label className="image-conversion-lock"><NativeInput type="checkbox" checked={lock} onChange={e=>{setLock(e.target.checked);resetResult();if(e.target.checked&&size&&Number(width)>0)setHeight(String(Math.max(1,Math.round(Number(width)*size.height/size.width))));}}/>Keep original proportions</label>
+    {format!=='png'&&<label>Quality ({quality}%)<NativeInput type="range" min="1" max="100" value={quality} onChange={e=>{setQuality(Number(e.target.value));resetResult();}}/></label>}
+    {format==='jpeg'&&<label>Background for transparency<NativeInput type="color" value={background} onChange={e=>{setBackground(e.target.value);resetResult();}}/></label>}
    </fieldset>
    <p className="image-conversion-note">25 MB source limit. Up to 8192 px per side and 32 million pixels. SVG external resources, embedded images and animation are not supported. Animated raster images become a single frame; metadata is not retained.</p>
    {error&&<p role="alert" className="export-error">{error}</p>}

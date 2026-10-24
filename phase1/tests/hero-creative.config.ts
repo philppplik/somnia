@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'.',testMatch:'hero-creative.spec.ts',workers:1,use:{baseURL:'http://127.0.0.1:1420',viewport:{width:1440,height:900},launchOptions:{executablePath:process.env.CHROME_PATH||'/usr/bin/google-chrome',args:['--no-sandbox']}},webServer:{command:'npx vite --host 127.0.0.1',url:'http://127.0.0.1:1420',reuseExistingServer:true},reporter:'list'});

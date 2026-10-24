@@ -1,0 +1,19 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": {
+      "/src/*": ["../src/*"],
+      "/packages/*": ["../packages/*"]
+    }
+  },
+  "include": [
+    "../src/components/agent/AgentSettings.tsx",
+    "../src/vite-env.d.ts",
+    "../tests/agent-panel.spec.ts",
+    "../tests/ai-core.spec.ts",
+    "../tests/ai-photo.spec.ts",
+    "../tests/agent-settings-save-status.spec.ts",
+    "./agent-settings-beta5-playwright.config.ts"
+  ]
+}

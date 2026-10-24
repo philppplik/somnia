@@ -1,10 +1,11 @@
 import {test,expect} from './fixtures';
+import {switchStudio} from './helpers';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openPhoto(page:any){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Photos'}).click();
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('photos-open').click();(await chooser).setFiles(asset('photo.jpg'));
  await expect(page.getByTestId('photos-workspace')).toBeVisible();
@@ -14,7 +15,7 @@ async function openPhoto(page:any){
 test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({page})=>{
  await openPhoto(page);
  await expect(page.getByRole('radio',{name:'Somnia Photos'})).toHaveAttribute('aria-checked','true');
- await expect(page.getByTestId('photos-inspector')).toBeVisible();
+ await expect(page.getByTestId('photos-light-panel')).toBeVisible();
  await expect(page.getByTestId('photos-undo')).toBeDisabled();
  await page.screenshot({path:'test-results/photos-open.png'});
  // one slider gesture is one undo step
@@ -32,7 +33,8 @@ test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({p
  await expect(page.getByTestId('photos-value-exposure')).toContainText('0');
  await page.getByTestId('photos-redo').click();await page.getByTestId('photos-redo').click();
  await expect(page.getByTestId('photos-value-contrast')).toContainText('25');
- // rotate and flip
+ // rotate and flip live in the Transform panel (rail item)
+ await page.locator('[data-rail-item="transform"]').click();
  await page.getByTestId('photos-rotate-right').click();
  await expect(page.getByTestId('photos-undo')).toBeEnabled();
  await page.getByTestId('photos-rotate-left').click();
@@ -74,7 +76,7 @@ test('Photos Studio: open a JPEG, develop it, crop, rotate, export PNG',async({p
 });
 test('Photos Studio: an unsupported file gets an honest rejection, not a fake develop',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Photos'}).click();
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('photos-open').click();(await chooser).setFiles(asset('photo.webp'));
  await expect(page.getByTestId('photos-unsupported')).toBeVisible();
@@ -94,9 +96,32 @@ test('Photos Studio: switching to Code keeps the photo session intact',async({pa
 for(const locale of ['de','es','fr','pt-BR'])test(`Photos Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
  const pill=page.locator('header [role="radiogroup"]');
- await expect(pill.getByRole('radio')).toHaveCount(9);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(pill.getByRole('radio')).toHaveCount(Math.min(5,studioCount));
+ const more=pill.locator('select.studio-pill-more');await expect(more.locator('option')).toHaveCount(Math.max(0,studioCount-5)+1);
  await expect(pill).not.toContainText('studio.photos');
- await pill.getByRole('radio').nth(8).click();
+ await expect(more).not.toContainText('studio.photos');
+ await switchStudio(page,'Somnia Photos');
  await expect(page.getByTestId('photos-start')).toBeVisible();
  await expect(page.getByTestId('photos-start')).not.toContainText('photos.');
+});
+test('Photos AE1 advanced export: format, quality, metadata and custom name',async({page})=>{
+ await openPhoto(page);
+ await page.locator('[data-hero-id="photos.export.open"]').click();
+ const dialog=page.getByRole('dialog',{name:'Advanced Export',exact:true});
+ await expect(dialog).toBeVisible();
+ await expect(page.getByTestId('ae-size')).toContainText('Final size',{timeout:20000});
+ await expect(dialog.getByLabel('Quality',{exact:true})).toBeHidden();
+ await expect(dialog.getByLabel('Title',{exact:true})).toBeHidden();
+ await dialog.getByText('Metadata',{exact:true}).click();
+ await dialog.getByLabel('Title',{exact:true}).fill('Sunset');
+ await dialog.getByLabel('Format',{exact:true}).selectOption('jpeg');
+ await expect(dialog.getByLabel('Quality',{exact:true})).toBeVisible();
+ await expect(page.getByTestId('ae-size')).toContainText('Final size',{timeout:20000});
+ await dialog.getByLabel('File name',{exact:true}).fill('holiday');
+ const download=page.waitForEvent('download');await dialog.getByRole('button',{name:'Export',exact:true}).click();const d=await download;
+ expect(d.suggestedFilename()).toBe('holiday.jpg');
+ const bytes=readFileSync(await d.path()!);
+ expect(bytes[0]).toBe(0xff);expect(bytes[1]).toBe(0xd8);
+ expect(bytes.toString('latin1')).toContain('Title: Sunset');
+ await expect(dialog).toBeHidden();
 });

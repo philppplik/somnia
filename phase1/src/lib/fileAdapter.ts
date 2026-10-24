@@ -1,10 +1,19 @@
+import {commandTerminal} from './commandTerminal';
+import {newProjectFlow} from './frameworks/newProjectFlow';
+import {frameworkTemplate,serverFrameworkTemplate,templateEntryFile,serverTemplateEntryFile,isServerFramework} from './frameworks/templates';
+import {scaffoldProject} from './frameworks/scaffold';
+import {frameworkSession} from './frameworks/runtime';
 import {folderNameFor} from './folderName';
 import {trackNativeDrop,consumeNativeChatDrop,consumeNativeConvertDrop} from './collab/nativeChatDrop';
 import {installHoldBackend,isAgentAutosaveHeld,releaseAgentAutosave,clearAgentAutosaveHolds,heldAgentPaths} from './agent/autosaveHold';
 import {setCloseHandlers,requestClose} from './closeFlow';
 import {EditorProject} from '@somnia/editor-core';
-import {connectEditorProject,getState,markFileSaved,patchState,refreshProject} from '../store/appStore';
-import {registerCommand,executeNativeMenuCommand} from './commands';
+import {connectEditorProject,getState,getProjectGeneration,subscribe,markFileSaved,patchState,refreshProject} from '../store/appStore';
+import {registerCommand} from './commandRegistry';
+import {executeNativeMenuCommand} from './commands';
+import {registerCommandSpec} from './commandBridge';
+import {registerCoreCommandSpec} from './coreCommandRegistration';
+import {commandDispatcher} from './commandDispatcher';
 import {setSaveHandlers} from './saveFlow';
 import {addTextFiles,closeMemoryProject,openIncoming} from './projectActions';
 import {clearDraft} from './draftSession';
@@ -12,8 +21,10 @@ import {downloadProject} from './exportProject';
 import {loadFolderMedia} from './folderMedia';
 import {readProjectDocuments} from './projectIndex';
 import {setVersionsSession} from './versionsSession';
+import {setPreviewResourceSource} from './previewResourceSource';
 import {attachProjectSettings,detachProjectSettings} from './projectSettingsIO';
 /** Starts the native open-request intake (D2-E orchestrator). Installed by the app bootstrap; absent in the web build. The adapter hands over its project-focus callback for activated-existing items. Returns its cleanup. */
+const recoveryOff:Array<()=>void>=[];
 export type IntakeStarter=(port:FilePort,focusProject:(projectId:string)=>void)=>Promise<()=>void>;
 let intakeStarter:IntakeStarter|null=null;
 export const installIntakeStarter=(fn:IntakeStarter|null)=>{intakeStarter=fn;};
@@ -78,13 +89,15 @@ export async function installFileAdapter(port:FilePort){
    if(event.clientRevision!==snapshot.revision)throw Error(`Save revision changed for ${path}. Review unsaved edits.`);
   }
  };
- const close=async(keepRecovery:boolean)=>{if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();detachProjectSettings();projectId=null;model=null;restoreHeld.clear();setVersionsSession(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null});};
+ const close=async(keepRecovery:boolean)=>{await frameworkSession.stop();if(heldAgentPaths().length&&getState().isDirty&&!window.confirm('Applied AI changes are only in editor memory and are not in disk recovery. Discard these unsaved changes and close the project?'))throw Error('Close cancelled. Save the applied AI changes first, or explicitly discard them.');await queue;if(projectId)await port.invoke('close_project',{projectId,keepRecovery});unsubscribe();disconnect();detachProjectSettings();projectId=null;model=null;commandTerminal.setProject(null);restoreHeld.clear();setVersionsSession(null);setPreviewResourceSource(null);clearAgentAutosaveHolds();patchState({nativeConnected:false,storage:'memory',diskComparison:null,activeFile:'',openFiles:[],designFile:''});};
  const attach=async(selected:{projectId:string;name:string},files:Record<string,string>,nextBaselines:Map<string,Revision>,candidate?:EditorProject)=>{
   clearAgentAutosaveHolds();restoreHeld.clear();projectId=selected.projectId;counter=0;baselines=nextBaselines;current=new Map();staged=new Map();saved=new Map(Object.entries(files));
-  model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});
+  model=candidate??new EditorProject(files);disconnect=connectEditorProject(model,{name:selected.name,alreadySaved:true});const terminalGeneration=getProjectGeneration();
   unsubscribe=model.subscribe('internal',tx=>{if(suppressStage)return;const changes:Record<string,string>={};const removed:string[]=[];for(const path of tx.changedFiles)if(model&&path in model.files)changes[path]=model.files[path];else removed.push(path);enqueueStage(changes);removed.forEach(enqueueDelete);});
   {const pid=selected.projectId;await attachProjectSettings({read:()=>port.invoke<string|null>('read_project_settings',{projectId:pid}),write:async content=>{await port.invoke('write_project_settings',{projectId:pid,content});}});}
   patchState({nativeConnected:true,storage:port.volatile?'tab':'disk',notice:port.connectNotice??'Folder connected. Native autosave after 1s idle / 5s continuous edits.'});
+  commandTerminal.setProject(port.shell&&getProjectGeneration()===terminalGeneration?{projectId:selected.projectId,name:selected.name,isCurrent:()=>getProjectGeneration()===terminalGeneration&&getState().nativeConnected&&getState().coreConnected,invoke:(c,a)=>port.invoke(c,a)}:null);
+   setPreviewResourceSource({invoke:(c,a)=>port.invoke(c,a),projectId:selected.projectId});
    {const pid=selected.projectId;setVersionsSession({projectId:pid,port,nextRevision:()=>++counter,
    hasUnsavedBuffers:()=>pendingWork>0||restoreHeld.size>0||(!!model&&Object.entries(model.files).some(([f,c])=>c!==saved.get(f))),
    settle:async()=>{await queue;},
@@ -104,8 +117,12 @@ export async function installFileAdapter(port:FilePort){
     if(changed.length)refreshProject();
     const added=[...onDisk].filter(f=>!(f in model!.files)),removed=Object.keys(model.files).filter(f=>!onDisk.has(f));
     return{changed,note:added.length||removed.length?`${added.length} added and ${removed.length} removed file(s) on disk are not mirrored into the open editor. Reopen the project to see them.`:undefined};}});}
- const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});for(const recovery of recoveries){registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(!window.confirm(`Restore recovery for ${recovery.path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:recovery.path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}});}
-  for(const recovery of recoveries)registerCommand({id:`recovery.discard.${recovery.path}`,title:`Discard recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:async()=>{if(window.confirm(`Permanently discard the recovery snapshot for ${recovery.path}?`))await port.invoke('recovery_discard',{projectId,path:recovery.path});}});
+ for(const off of recoveryOff.splice(0))off();
+ const recoveries=await port.invoke<Recovery[]>('recovery_list',{projectId});
+ recoveryOff.push(registerCommandSpec<{path:string},void>({id:'recovery.restore',title:'Restore recovery',category:'Project',keywords:['recovery','restore','autosave'],params:{type:'object',properties:{path:{type:'string',minLength:1}},required:['path'],additionalProperties:false},level:'ui',enabled:()=>!!projectId,run:async({path})=>{if(!window.confirm(`Restore recovery for ${path}? The recovered file enters native autosave immediately. Conflicting disk changes stop saving.`))return;const r=await port.invoke<Recovery>('recovery_read',{projectId,path:path});if(!(r.path in model!.files))throw Error('Recovery path is not in the opened model. Use a project containing this file.');const revision=++counter;const event=await port.invoke<FileEvent>('recovery_restore',{projectId,path:r.path,clientRevision:revision});current.set(r.path,revision);staged.set(r.path,{revision,content:r.content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:r.path,text:r.content}]});refreshProject();await handle(event);patchState({notice:`Restored ${r.path} from recovery. Native autosave is active; conflicting disk changes are held.`});}}),
+  registerCommandSpec<{path:string},void>({id:'recovery.discard',title:'Discard recovery',category:'Project',keywords:['recovery','discard','autosave'],params:{type:'object',properties:{path:{type:'string',minLength:1}},required:['path'],additionalProperties:false},level:'ui',enabled:()=>!!projectId,run:async({path})=>{if(window.confirm(`Permanently discard the recovery snapshot for ${path}?`))await port.invoke('recovery_discard',{projectId,path:path});}}));
+ /* Per-path palette entries are dynamic ids (a path is not a valid dotted id segment), so they stay thin palette shims over the two specs. */
+ for(const recovery of recoveries)recoveryOff.push(registerCommand({id:`recovery.restore.${recovery.path}`,title:`Restore recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:()=>commandDispatcher.runCommand('recovery.restore',{path:recovery.path},{origin:'palette'}).then(()=>undefined)}),registerCommand({id:`recovery.discard.${recovery.path}`,title:`Discard recovery: ${recovery.path}`,category:'Project',enabled:()=>!!projectId,run:()=>commandDispatcher.runCommand('recovery.discard',{path:recovery.path},{origin:'palette'}).then(()=>undefined)}));
   if(recoveries.length)patchState({notice:`${recoveries.length} recovery snapshots available. Open Commands and choose Restore recovery. Nothing restored automatically.`});
  };
  let opening=false;
@@ -146,6 +163,32 @@ export async function installFileAdapter(port:FilePort){
   }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:false}).catch(()=>{});throw error;}
   clearDraft();await attach(selected,files,nextBaselines);patchState({notice:`Saved ${paths.length} file${paths.length===1?'':'s'} to ${selected.name}. Autosave is on.`});return true;
  };
+ const stopFrameworkCreate=newProjectFlow.install(async options=>{
+  if(getState().isDirty)throw Error('frameworks.saveFirst');
+  const startRevision=getState().revision,startFiles=getState().files;
+  const chosen=options.framework??'react';
+  const files=scaffoldProject(isServerFramework(chosen)?await serverFrameworkTemplate(chosen,options.language):await frameworkTemplate(chosen,options.language),options.name);
+  const entryFile=isServerFramework(chosen)?serverTemplateEntryFile(chosen,options.language):templateEntryFile(chosen,options.language);
+  const selected=await port.invoke<{projectId:string;name:string}|null>('choose_project',{createSubfolder:options.name});if(!selected)return false;
+  const nextBaselines=new Map<string,Revision>();
+  try{
+   const existing=await port.invoke<string[]>('list_files',{projectId:selected.projectId});
+   if(existing.length)throw Error('frameworks.overwrite');
+   if(getState().revision!==startRevision||getState().files!==startFiles)throw Error('frameworks.saveFirst');
+   let revision=0;
+   for(const [path,content] of Object.entries(files)){
+    const read=await port.invoke<Read>('read_file',{projectId:selected.projectId,path});
+    if(read.revision.exists)throw Error('frameworks.overwrite');
+    await port.invoke('stage_edit',{projectId:selected.projectId,path,content,clientRevision:++revision});
+    const event=await port.invoke<FileEvent>('save_file',{projectId:selected.projectId,path,expectedRevision:read.revision});
+    if(event.state!=='saved')throw Error('frameworks.createFailed');nextBaselines.set(path,event.diskRevision);
+   }
+   if(projectId)await close(true);
+   await attach(selected,files,nextBaselines);patchState({activeFile:entryFile,openFiles:[entryFile],viewMode:'split',livePreview:true,activeStudio:'code',problemsOpen:true});
+   // Creation is an explicit user action. The helper download consent is owned by F1.
+   void frameworkSession.start(selected.projectId,true);return true;
+  }catch(error){await port.invoke('close_project',{projectId:selected.projectId,keepRecovery:true}).catch(()=>{});throw error;}
+ });
  /** Export: write a copy of all files into a chosen folder without switching the current project. Never overwrites. */
  const exportToFolder=async(newFolder:boolean)=>{
   const st=getState();const files={...st.files};const paths=Object.keys(files);if(!paths.length)throw Error('There is nothing to export.');
@@ -167,7 +210,8 @@ export async function installFileAdapter(port:FilePort){
   patchState({saveDialog:{error:null,busy:false}});
  };
  const compare=async()=>{await queue;if(!projectId||!model)return;const path=getState().activeFile;const read=await port.invoke<Read>('read_file',{projectId,path});if(read.content===null)throw Error('The disk file is missing. This alpha cannot resolve disk deletion through merge.');const id=projectId;const openedModel=model;const reviewedEditor=model.files[path];patchState({diskComparison:{path,disk:read.content,editor:reviewedEditor,apply:async(content)=>{if(projectId!==id||model!==openedModel)throw Error('The project changed during comparison.');await queue;if(model!.files[path]!==reviewedEditor)throw Error('Editor changed after comparison opened. Reopen comparison before saving.');const revision=++counter;current.set(path,revision);const event=await port.invoke<FileEvent>('stage_edit',{projectId,path,content,clientRevision:revision});staged.set(path,{revision,content});model!.transact({origin:'internal',operations:[{type:'replaceSource',file:path,text:content}]});refreshProject();await handle(event);const savedEvent=await port.invoke<FileEvent>('save_file',{projectId,path,expectedRevision:read.revision});await handle(savedEvent);if(savedEvent.state!=='saved')throw Error(savedEvent.error||'Reviewed save was not accepted. Edits remain unsaved.');patchState({diskComparison:null});}}});};
- const cleanups=[installHoldBackend(async paths=>{await queue;if(projectId&&port.shell)await port.invoke('hold_autosave',{projectId,paths});else if(projectId)for(const path of paths)await port.invoke('read_file',{projectId,path});}),registerCommand({id:'project.compare',title:'Resolve conflict: compare active file with disk',category:'Tools',enabled:()=>!!projectId,run:compare}),registerCommand({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',run:()=>open()}),...(port.shell?[registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file','single'],run:()=>open(false,true)})]:[]),...(port.canReconnect?[registerCommand({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],run:()=>open(true)})]:[]),registerCommand({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,enabled:()=>true,run:saveCommand}),registerCommand({id:'project.close',title:'Close project',category:'Project',enabled:()=>!!projectId||getState().coreConnected,run:()=>{if(projectId)return close(true);if(getState().isDirty)patchState({closeProjectPrompt:true});else closeMemoryProject();}})];
+ const cleanups=[installHoldBackend(async paths=>{await queue;if(projectId&&port.shell)await port.invoke('hold_autosave',{projectId,paths});else if(projectId)for(const path of paths)await port.invoke('read_file',{projectId,path});}),registerCommandSpec({id:'project.compare',title:'Resolve conflict: compare active file with disk',category:'Tools',params:{type:'object',properties:{},additionalProperties:false},level:'ui',enabled:()=>!!projectId,run:async()=>{await compare();}}),registerCoreCommandSpec({id:'project.open',title:'Open folder',category:'Project',shortcut:'Mod+O',params:{type:'object',properties:{},additionalProperties:false},level:'ui',run:async()=>{await open();}}),...(port.shell?[registerCoreCommandSpec({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file','single'],params:{type:'object',properties:{},additionalProperties:false},level:'ui',run:async()=>{await open(false,true);}})]:[]),...(port.canReconnect?[registerCommandSpec({id:'project.reconnect',title:'Reconnect last folder',category:'Project',keywords:['reload','permission','folder'],params:{type:'object',properties:{},additionalProperties:false},level:'ui',run:async()=>{await open(true);}})]:[]),registerCoreCommandSpec({id:'project.save',title:'Save project',category:'Project',shortcut:'Mod+S',allowInInput:true,params:{type:'object',properties:{},additionalProperties:false},level:'ui',enabled:()=>true,run:async()=>{await saveCommand();}}),registerCommandSpec({id:'project.close',title:'Close project',category:'Project',params:{type:'object',properties:{},additionalProperties:false},level:'ui',enabled:()=>!!projectId||getState().coreConnected,run:async()=>{if(projectId){await close(true);return;}if(getState().isDirty)patchState({closeProjectPrompt:true});else closeMemoryProject();}})];
+ cleanups.push(subscribe(()=>{const project=commandTerminal.read().project;if(project?.isCurrent&&!project.isCurrent())commandTerminal.setProject(null);}));
  cleanups.push(await port.listen<FileEvent>('somnia://file-state',event=>{void handle(event.payload).catch(fail);}));
  if(port.shell)cleanups.push(await port.listen<{token:string;count:number;media?:boolean;position?:[number,number]}>('somnia://os-drop',event=>{
   const {token,count,media,position}=event.payload;
@@ -188,5 +232,5 @@ export async function installFileAdapter(port:FilePort){
  const focusProject=(pid:string)=>{if(pid===projectId)return;void open(false,false,undefined,{projectId:pid,name:''}).catch(()=>patchState({notice:'That file is already open in another project.'}));};
  if(port.shell&&intakeStarter)cleanups.push(await intakeStarter(port,focusProject).catch(error=>{fail(error);return()=>{};}));
  if(port.shell){const shell=port.shell;setCloseHandlers('disk',{saveAndClose:async()=>{await save();if(getState().isDirty)throw Error('Some edits are still unsaved. Close was cancelled.');await close(false);await shell.destroyWindow();},discardAndClose:async()=>{await close(true);await shell.destroyWindow();}});cleanups.push(()=>setCloseHandlers('disk',null));cleanups.push(await port.listen('somnia://close-blocked',()=>requestClose('disk')));}
- return ()=>{cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
+ return ()=>{commandTerminal.setProject(null);stopFrameworkCreate();void frameworkSession.stop();for(const off of recoveryOff.splice(0))off();cleanups.forEach(fn=>fn());unsubscribe();disconnect();};
 }

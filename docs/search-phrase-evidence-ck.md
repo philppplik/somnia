@@ -1,0 +1,9 @@
+# CK: literal phrase evidence
+
+Phrase search snippets and selected-source context reader render literal matches with inert mark elements, preserving source spelling/case. Context keeps the phrase that opened it while navigating; query/mode/scope/owner changes discard it. Semantic results remain unhighlighted. Text remains React text nodes, never HTML. No new reads/model calls/downloads/answers/save/cloud.
+
+Display-only mapping counts nonoverlapping normalized-lowercase query matches, maps complete codepoint boundaries back to the already normalized chunk and accepts only when character-wise lowercase equals whole-string lowercase. Unicode expansion partial matches and context-sensitive casing decline highlighting rather than guess offsets. Counts are unchanged. At most100 safely mapped highlights per chunk; omitted/unmappable matches show a caveat. No raw-source cursor offsets, cross-chunk or regex claims. Bounded chunks keep work bounded; immutable helper result.
+
+Validation:7 phrase/context/evidence unit tests pass (case/NFC/emoji UTF16, expansion/context lowercase fail-closed,100 cap, invalid query); new light/dark browser plus CJ/CI regressions pass. Browser verifies original-case evidence in snippet/context, no extra reads/embeddings, mode clears highlights and semantic stays plain. 390px reader pixels inspected both themes: underline/background highlight visible, original text readable, controls/citation labels fit. DS/Layers/Commands/UI-Commands pass, inherited Layers missing-transpiler/87 ignored/4 stale; tsc only inherited missing slides generated module. No deps/budget changes, $0; synthetic data/provider only. Native/Rust/WASM/full desktop E2E CI-only; real runtime/download/CSP/quality/cancel/citation gates unchanged.
+
+Roadmap-Delta: phrase counts -> visible bounded literal evidence in snippets and navigable selected-source context. No answer/persistence/cloud/discovery scope added. Parent-directed own-chain patch base retained.

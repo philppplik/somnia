@@ -7,6 +7,7 @@ import * as C from '../../lib/svgedit/controller';
 import {parsePathKey,pathKey,type XEl} from '../../lib/svgedit/source';
 import {MousePointer2,MousePointer,Square,Circle,Minus,PencilLine,Type,Eye,EyeOff,Lock,Unlock,ChevronDown,ChevronRight,Copy,Trash2,Container,SquareDashed} from '../../lib/icons';
 import {useAppStore} from '../../store/appStore';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const TOOLS:{id:Tool;icon:LucideIcon;key:string;label:string}[]=[
  {id:'select',icon:MousePointer2,key:'V',label:'svg.toolSelect'},{id:'node',icon:MousePointer,key:'A',label:'svg.toolNode'},{id:'pen',icon:PencilLine,key:'P',label:'svg.toolPen'},
  {id:'rect',icon:Square,key:'R',label:'svg.toolRect'},{id:'ellipse',icon:Circle,key:'O',label:'svg.toolEllipse'},{id:'line',icon:Minus,key:'L',label:'svg.toolLine'},{id:'text',icon:Type,key:'T',label:'svg.toolText'}];
@@ -17,10 +18,10 @@ export function SvgSidebar(){
   const name=C.label(el,idx);
   return <div key={key}><div role="treeitem" aria-selected={picked} aria-label={name} data-testid="svg-layer" className={`svg-layer${picked?' is-picked':''}${hidden?' is-hidden':''}`} style={{paddingLeft:6+depth*14}}
    onClick={e=>{if(locked)return;patchUi({selection:e.shiftKey?(picked?ui.selection.filter(k=>k!==key):[...ui.selection,key]):[key]});}} onDoubleClick={()=>setRenaming(key)}>
-   <button className="svg-layer-btn" aria-label={closed?t('svg.expand'):t('svg.collapse')} style={{visibility:isG?'visible':'hidden'}} onClick={e=>{e.stopPropagation();patchUi({collapsed:closed?ui.collapsed.filter(k=>k!==key):[...ui.collapsed,key]});}}>{closed?<ChevronRight size={12}/>:<ChevronDown size={12}/>}</button>
-   {renaming===key?<input autoFocus className="svg-layer-rename" defaultValue={el.attrs.find(a=>a.name==='id')?.value??''} aria-label={t('svg.rename')} onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Enter'){C.renameElement(key,e.currentTarget.value);setRenaming(null);}if(e.key==='Escape')setRenaming(null);}} onBlur={()=>setRenaming(null)}/>:<span className="grow truncate">{name}</span>}
-   <button className="svg-layer-btn" aria-label={hidden?t('svg.show'):t('svg.hide')} onClick={e=>{e.stopPropagation();C.toggleHidden(key);}}>{hidden?<EyeOff size={13}/>:<Eye size={13}/>}</button>
-   <button className="svg-layer-btn" aria-label={locked?t('svg.unlock'):t('svg.lock')} onClick={e=>{e.stopPropagation();C.toggleLock(key);}}>{locked?<Lock size={13}/>:<Unlock size={13}/>}</button></div>
+   <NativeButton className="svg-layer-btn" aria-label={closed?t('svg.expand'):t('svg.collapse')} style={{visibility:isG?'visible':'hidden'}} onClick={e=>{e.stopPropagation();patchUi({collapsed:closed?ui.collapsed.filter(k=>k!==key):[...ui.collapsed,key]});}}>{closed?<ChevronRight size={12}/>:<ChevronDown size={12}/>}</NativeButton>
+   {renaming===key?<NativeInput autoFocus className="svg-layer-rename" defaultValue={el.attrs.find(a=>a.name==='id')?.value??''} aria-label={t('svg.rename')} onClick={e=>e.stopPropagation()} onKeyDown={e=>{if(e.key==='Enter'){C.renameElement(key,e.currentTarget.value);setRenaming(null);}if(e.key==='Escape')setRenaming(null);}} onBlur={()=>setRenaming(null)}/>:<span className="grow truncate">{name}</span>}
+   <NativeButton className="svg-layer-btn" aria-label={hidden?t('svg.show'):t('svg.hide')} onClick={e=>{e.stopPropagation();C.toggleHidden(key);}}>{hidden?<EyeOff size={13}/>:<Eye size={13}/>}</NativeButton>
+   <NativeButton className="svg-layer-btn" aria-label={locked?t('svg.unlock'):t('svg.lock')} onClick={e=>{e.stopPropagation();C.toggleLock(key);}}>{locked?<Lock size={13}/>:<Unlock size={13}/>}</NativeButton></div>
    {isG&&!closed&&[...el.children].map((c,i)=>({c,i})).filter(({c})=>!SKIP.has(c.tag)).reverse().map(({c,i})=>row(c,i,depth+1))}</div>;};
  const kids=root?[...root.children].map((c,i)=>({c,i})).filter(({c})=>!SKIP.has(c.tag)).reverse():[];
  return <aside className="panel sidebar svg-sidebar" aria-label={t('svg.sidebar')} data-testid="svg-sidebar">

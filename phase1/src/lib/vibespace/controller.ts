@@ -1,6 +1,14 @@
-import {canRetry,reviewPathsAllowed,studioControls,initialVibeState,vibeReducer,type VibeViewState} from './state';
+import {canRetry,canRetryFeedback,reviewPathsAllowed,studioControls,initialVibeState,vibeReducer,type VibeViewState} from './state';
 import {parseEvent,parseSnapshot,validateCommand} from './validation';
 import type {VibeEvent,VibeIntent,VibeSpaceTransport} from './types';
+/** Native commands reject with plain objects or strings, not Error. Keep the stable code (never paths) so a user can report it. */
+function describeNativeFault(error:unknown){
+ const base='Vibe Space could not complete the request.';
+ const code=error&&typeof error==='object'&&typeof (error as {id?:unknown}).id==='string'?(error as {id:string}).id:'';
+ const kind=error&&typeof error==='object'&&typeof (error as {message?:unknown}).message==='string'?(error as {message:string}).message:'';
+ const safe=/^[A-Za-z0-9 ;:,.'\/_-]{1,160}$/.test(kind)&&!/\\|[A-Za-z]:|\/[^/ ]+\/[^/ ]/.test(kind)?kind:'';
+ return [base,code?`(${code})`:'',safe].filter(Boolean).join(' ');
+}
 /** Presentation lifecycle only. No timers or TS orchestration. */
 export class VibeSpaceController {
  private state:VibeViewState=initialVibeState;
@@ -17,7 +25,7 @@ export class VibeSpaceController {
  getSnapshot=()=>this.state;
  subscribe=(listener:()=>void)=>{this.listeners.add(listener);return()=>{this.listeners.delete(listener);};};
  private update(action:Parameters<typeof vibeReducer>[1]){this.state=vibeReducer(this.state,action);this.listeners.forEach(l=>l());}
- private error(error:unknown){this.faults++;this.update({type:'error',message:error instanceof Error?error.message:'Vibe Space could not complete the request.'});}
+ private error(error:unknown){this.faults++;this.update({type:'error',message:error instanceof Error?error.message:describeNativeFault(error)});}
  private receive(raw:VibeEvent){
   try{
    const event=parseEvent(raw);
@@ -76,13 +84,14 @@ export class VibeSpaceController {
    const studio=this.state.snapshot.studios.find(s=>s.runId===intent.runId);
    if(!studio){this.error(new Error('Target run is not loaded.'));return false;}
    const controls=studioControls(studio,false);
-   const denied=intent.type==='stop'&&!controls.stop||intent.type==='steer'&&!controls.steer||intent.type==='restore'&&!controls.restore||intent.type==='retry'&&!canRetry(this.state.snapshot,studio);
+   const denied=intent.type==='stop'&&!controls.stop||intent.type==='steer'&&!controls.steer||intent.type==='restore'&&!controls.restore||intent.type==='retry'&&!canRetry(this.state.snapshot,studio)||intent.type==='retry-feedback'&&!canRetryFeedback(studio);
    if(denied){this.error(new Error('Action is unavailable for this run.'));return false;}
    if(intent.type==='consent'){
     const consent=studio.pendingConsents.find(c=>c.requestId===intent.requestId);
     if(!controls.consent||!consent||intent.choice==='allow_for_run'&&!consent.allowForRun){this.error(new Error('Consent request changed. Reload and review it again.'));return false;}
    }
    if(intent.type==='review'&&(!controls.review||intent.reviewRevision!==studio.review?.revision||!reviewPathsAllowed(studio,intent.decision,intent.paths))){this.error(new Error('Review changed or contains conflicts. Reload and review it again.'));return false;}
+   if((intent.type==='apply-hunks'||intent.type==='request-changes')&&(!controls.review||studio.review?.revision!==intent.reviewRevision)){this.error(new Error('Review changed. Reload before acting.'));return false;}
    if(intent.type==='restore'&&!studio.checkpoints.some(c=>c.checkpointId===intent.checkpointId&&c.restorable)){this.error(new Error('Checkpoint is not restorable.'));return false;}
   }
   const generation=this.generation;

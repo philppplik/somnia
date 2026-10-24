@@ -1,6 +1,10 @@
 //! Standalone goose-agent compatibility spike. No desktop wiring or built-in tools.
 mod goose;
 mod transport;
+pub mod ollama_stream;
+pub mod evals;
+pub mod inventory;
+pub mod provider;
 use async_trait::async_trait;
 pub use goose::GooseBackend;
 use serde::{Deserialize, Serialize};
@@ -92,8 +96,28 @@ pub struct ToolProposal {
 }
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Usage {
+    /// Missing provider input/output counts must not be presented as a reported zero.
+    pub tokens_unknown: bool,
+    /// As reported by the provider. NOTE: Anthropic reports uncached input only; OpenAI-style
+    /// `prompt_tokens` already includes cached tokens. Cache fields below are never added in.
     pub input_tokens: u64,
     pub output_tokens: u64,
+    /// `None` = the provider did not report it (distinct from a reported 0).
+    pub cache_read_tokens: Option<u64>,
+    pub cache_write_tokens: Option<u64>,
+    /// Only ever copied from a provider response. No price tables, no estimates.
+    pub cost_usd: Option<f64>,
+    pub cost_source: Option<CostSource>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CostSource {
+    /// The provider response itself carried the cost (e.g. OpenRouter `usage.cost`).
+    ProviderReported,
+}
+impl Usage {
+    pub fn tokens(input_tokens: u64, output_tokens: u64) -> Self {
+        Self { input_tokens, output_tokens, ..Self::default() }
+    }
 }
 #[derive(Clone, Debug)]
 pub struct ModelReply {
@@ -114,6 +138,8 @@ pub enum EventKind {
     Started,
     Step { index: u32, name: String },
     Message(String),
+    /// Provisional text only. Never a tool or authority. Offset is UTF-8 bytes.
+    TextDelta { turn: u32, offset: u32, text: String },
     ToolProposed(ToolProposal),
     Usage(Usage),
     Completed,
@@ -129,6 +155,9 @@ pub struct RunEvent {
 pub trait ModelTransport: Send + Sync {
     /// Only explicitly configured model traffic. No logging of payloads or credentials.
     async fn complete(&self, input: ModelInput) -> Result<ModelReply, Failure>;
+    /// Default preserves existing final-only transports. Bounded sender supplies backpressure.
+    async fn stream_text(&self, input: ModelInput, _deltas: mpsc::Sender<String>) -> Result<ModelReply, Failure> { self.complete(input).await }
+
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Decision {

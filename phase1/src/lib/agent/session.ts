@@ -1,6 +1,8 @@
-import { log, logWarn, describeError } from '../log';
+import { log, logWarn } from '../log';
+import { validateReplay, type ProviderReplay } from './providerReplay';
+import { jobScheduler, type JobLease } from '../jobs/scheduler';
 import { createAIProvenance } from './privacy';
-import { AgentError, describeAgentError, toAgentError } from './errors';
+import { AgentError, ToolUnreconciledError, describeAgentError, toAgentError } from './errors';
 import type { AgentErrorCode, AgentErrorDetail } from './errors';
 import type { AgentMessage, AgentProvider, AgentToolCall, AgentUsage } from './types';
 import { AgentProjectTools } from './projectTools';
@@ -54,7 +56,7 @@ export class AgentSession {
   }
   get status(): AgentSessionStatus { return this._status; }
   get projectId(): string | null { return this.options.tools?.projectId ?? null; }
-  snapshot(): AgentSessionSnapshot { return { version: 1, projectId: this.projectId, messages: clone(this.messages) }; }
+  snapshot(): AgentSessionSnapshot { return { version: 1, projectId: this.projectId, messages: clone(this.messages.map(({images:_images,...message})=>message)) }; }
   /** Host passes its own locally stored complete snapshot, never model/tool data. */
   restore(snapshot: AgentSessionSnapshot): void {
     if (this.controller || this.options.tools?.proposals().length) throw Error('Cannot restore during work or review.');
@@ -62,7 +64,12 @@ export class AgentSession {
     const awaiting = new Set<string>();
     let expected: 'user' | 'assistant' = 'user';
     for (const m of snapshot.messages) {
+      if(m?.images!==undefined)throw Error('Image-bearing snapshots cannot be restored');
       if (!m || !['user', 'assistant', 'tool'].includes(m.role) || typeof m.content !== 'string') throw Error('Invalid session message.');
+      if (m.providerReplay !== undefined) {
+        if (m.role !== 'assistant') throw Error('Replay requires an assistant message.');
+        validateReplay(m.providerReplay);
+      }
       if (m.toolCallId !== undefined && typeof m.toolCallId !== 'string') throw Error('Invalid tool result.');
       if (m.toolCalls && (!Array.isArray(m.toolCalls) || m.toolCalls.some(t => !t || !t.id || typeof t.id !== 'string' || typeof t.name !== 'string' || typeof t.arguments !== 'string'))) throw Error('Invalid session tool calls.');
       if (awaiting.size) {
@@ -105,13 +112,20 @@ export class AgentSession {
     const working: AgentMessage[] = [...clone(this.messages), { role: 'user', content }];
     let calls = 0;
     this._status = 'running'; this.emit({ type: 'state', status: this._status, turnId });
+    // Agent turns run under a job lease: memory pressure can queue them and a
+    // lifecycle suspension can abort the turn through the lease signal.
+    let lease: JobLease | undefined;
+    const cancelJob = () => controller.abort();
     try {
+      lease = await jobScheduler.acquire({ kind: 'ai', priority: 2, documentId: this.projectId ?? undefined, resources: ['agent.turn'], signal: controller.signal });
+      lease.signal.addEventListener('abort', cancelJob, { once: true });
       for (let step = 0; step < this.limits.steps; step++) {
         controller.signal.throwIfAborted();
         const outgoing = [systemMessage, ...working];
         if (bytes(outgoing) > this.limits.context) throw new AgentError('limit', 'context', 'Agent context exceeds limit. Start a new chat or narrow context.');
         // The last step offers no tools, so the model must answer in text instead of the turn failing.
         const finalStep = step + 1 >= this.limits.steps;
+        let replay: ProviderReplay | undefined;
         let text = '', finish: string | null = null;
         let fragments = new Map<number, AgentToolCall>();
         let tokens = this.limits.tokens;
@@ -119,6 +133,11 @@ export class AgentSession {
           for await (const event of this.options.provider.stream({ model: this.options.model, messages: clone(outgoing), tools: this.options.tools && !finalStep ? this.options.tools.definitions() : [], maxOutputTokens: tokens, signal: controller.signal })) {
             controller.signal.throwIfAborted();
             if (event.type === 'text') { text += event.text; this.emit({ ...event, turnId }); }
+            else if (event.type === 'provider-replay') {
+              validateReplay(event.replay);
+              if (event.replay.provider !== this.options.provider.id || event.replay.model !== this.options.model) throw new AgentError('provider-error', 'protocol', 'Mismatched provider replay.');
+              replay = clone(event.replay);
+            }
             else if (event.type === 'usage') this.emit({ ...event, turnId });
             else if (event.type === 'finish') finish = event.reason;
             else if (event.type === 'tool-call') {
@@ -150,8 +169,8 @@ export class AgentSession {
         const toolCalls = [...fragments.entries()].sort((a, b) => a[0] - b[0]).map(([, value]) => value);
         if (toolCalls.length && finish !== 'tool_calls' || !toolCalls.length && finish === 'tool_calls') throw new AgentError('provider-error', 'protocol', 'Incomplete tool-call response.', true);
         if (!toolCalls.length) {
-          working.push({ role: 'assistant', content: text, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
-          this.options.tools?.markProvenance(createAIProvenance(this.options.provider.id, this.options.model));
+          working.push({ role: 'assistant', content: text, ...(replay ? {providerReplay: replay} : {}), provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
+          this.options.tools?.markProvenance(createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model));
           if (bytes(working) > this.limits.context) throw new AgentError('limit', 'context', 'Agent history exceeds limit.');
           this.messages = clone(working);
           const proposals = this.options.tools?.proposals() ?? [];
@@ -171,7 +190,7 @@ export class AgentSession {
         if (calls + toolCalls.length > this.limits.calls) throw new AgentError('limit', 'tool-calls', 'Agent tool-call limit reached.');
         // Do not stage writes on the last step: no request remains to complete the turn.
         if (finalStep) throw new AgentError('limit', 'steps', 'Agent step limit reached.');
-        working.push({ role: 'assistant', content: text, toolCalls, provenance: createAIProvenance(this.options.provider.id, this.options.model) });
+        working.push({ role: 'assistant', content: text, toolCalls, ...(replay ? {providerReplay: replay} : {}), provenance: createAIProvenance(this.options.provider.identity?.().provider??this.options.provider.id,this.options.provider.identity?.().model??this.options.model) });
         for (const call of toolCalls) {
           controller.signal.throwIfAborted(); calls++;
           this.emit({ type: 'tool', call, status: 'running', turnId });
@@ -182,8 +201,9 @@ export class AgentSession {
             controller.signal.throwIfAborted();
             this.emit({ type: 'tool', call, status: 'completed', result, turnId });
           } catch (toolError) {
+            if(toolError instanceof ToolUnreconciledError)throw toolError;
             controller.signal.throwIfAborted();
-            logWarn('agent.tool',`Tool ${call.name} failed: ${describeError(toolError, 200)}`);
+            logWarn('agent.tool','Agent tool failed; no raw model/tool content logged.');
             // Host permission/map callbacks can throw private errors; do not forward them.
             result = JSON.stringify({ error: 'Tool denied or failed. Check authorized paths, current editor state, tool arguments and size limits.' });
             this.emit({ type: 'tool', call, status: 'failed', result, turnId });
@@ -194,12 +214,12 @@ export class AgentSession {
       throw new AgentError('limit', 'steps', 'Agent step limit reached.');
     } catch (error) {
       // Provider/plugin errors can contain secrets. Only the classified, fixed-text AgentError is surfaced; the log redacts the raw error.
-      if (!controller.signal.aborted) log('error', 'agent.turn', `Agent turn failed: ${describeError(error, 200)}`);
+      if (!controller.signal.aborted) {const failure=toAgentError(error);log('error','agent.turn',`Agent turn failed: ${failure.code}/${failure.detail}`);}
       this.options.tools?.clear();
       const failure = toAgentError(error, { timedOut, aborted: controller.signal.aborted && !timedOut });
       this._status = failure.code === 'aborted' ? 'cancelled' : 'error';
       this.emit({ type: 'notice', message: describeAgentError(failure), code: failure.code, detail: failure.detail, retryable: failure.retryable || failure.code === 'aborted', turnId });
       this.emit({ type: 'state', status: this._status, turnId });
-    } finally { clearTimeout(timer); this.controller = null; }
+    } finally { lease?.signal.removeEventListener('abort', cancelJob); lease?.release(this._status === 'error' ? 'failed' : controller.signal.aborted ? 'cancelled' : 'completed'); clearTimeout(timer); this.controller = null; }
   }
 }

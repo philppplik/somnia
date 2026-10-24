@@ -1,0 +1,18 @@
+name: docs-links
+on:
+  pull_request:
+    paths: ['docs/**', 'README.md', 'scripts/docs-check.mjs']
+  push:
+    branches: [main]
+    paths: ['docs/**', 'README.md', 'scripts/docs-check.mjs']
+permissions:
+  contents: read
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: node scripts/docs-check.mjs

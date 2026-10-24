@@ -1,2 +1,3 @@
 import type {Page} from '@playwright/test';
-export const open=async(page:Page,title:string)=>{await page.getByRole('button',{name:'Tools',exact:true}).click();await page.getByRole('menuitem',{name:title}).click();};
+import {revealMenuItem} from './menuHelpers';
+export const open=async(page:Page,title:string)=>{const item=await revealMenuItem(page,'Tools',page.getByRole('menuitem',{name:title}));await item.click();};

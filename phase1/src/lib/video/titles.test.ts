@@ -140,3 +140,35 @@ test('every video.card.* key used in code exists in the catalogue',()=>{
  assert.ok(used.size>15);
  for(const k of used)assert.ok(k in TITLE_CATALOGUES.en,k);
 });
+
+test('background opacity defaults to solid, clamps and multiplies the fade alpha on the background only',()=>{
+ assert.equal(sanitizeTitleSpec({}).bgAlpha,1);
+ assert.equal(sanitizeTitleSpec({bgAlpha:7}).bgAlpha,1);
+ assert.equal(sanitizeTitleSpec({bgAlpha:-2}).bgAlpha,0);
+ const ctx=fakeCtx();drawTitle(ctx,sanitizeTitleSpec({text:'Hi',background:'#112233',bgAlpha:0.5,fadeIn:1}),1280,720,0.5,4);
+ assert.ok(ctx.log.some(l=>l.startsWith('rect #112233 a=0.25')),'fade 0.5 x opacity 0.5');
+ const solid=fakeCtx();drawTitle(solid,sanitizeTitleSpec({text:'Hi',background:'#112233'}),1280,720,0.5,4);
+ assert.ok(solid.log.some(l=>l.startsWith('rect #112233 a=1.00')),'untouched specs stay solid');
+ const text=ctx.log.find(l=>l.startsWith('text Hi'))!;
+ assert.ok(ctx.log.indexOf(text)>ctx.log.findIndex(l=>l.startsWith('rect #112233')),'text still draws over the background');
+});
+
+test('title entrance animations: sanitize, offsets ease to zero, none stays put',()=>{
+ assert.equal(sanitizeTitleSpec({}).animate,'none','default is no animation');
+ assert.equal(sanitizeTitleSpec({animate:'rise'}).animate,'rise');
+ assert.equal(sanitizeTitleSpec({animate:'spin' as 'rise'}).animate,'none','junk animations fall back to none');
+ const ctx=fakeCtx();
+ const spec=sanitizeTitleSpec({text:'Hi',animate:'rise'});
+ drawTitle(ctx,spec,400,200,0,3);
+ const early=ctx.log.filter(l=>l.startsWith('text'))[0];
+ drawTitle(ctx,spec,400,200,3,3);
+ const late=ctx.log.filter(l=>l.startsWith('text'))[1];
+ const yOf=(l:string)=>Number(l.match(/@(-?\d+),(-?\d+)/)![2]);
+ assert.ok(yOf(early)>yOf(late),'rise starts below the resting position');
+ const ctx2=fakeCtx();
+ const still=sanitizeTitleSpec({text:'Hi',animate:'none'});
+ drawTitle(ctx2,still,400,200,0,3);
+ drawTitle(ctx2,still,400,200,3,3);
+ const texts=ctx2.log.filter(l=>l.startsWith('text'));
+ assert.equal(texts[0],texts[1],'animate none never moves the content');
+});

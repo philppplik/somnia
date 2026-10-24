@@ -1,4 +1,5 @@
 import {test, expect} from './fixtures';
+import {switchStudio} from './helpers';
 import {readFileSync} from 'node:fs';
 import {fileURLToPath} from 'node:url';
 import type {Page} from '@playwright/test';
@@ -9,7 +10,7 @@ const fixture = (name: string) => fileURLToPath(new URL(`./assets/design-studio/
 async function openDesign(page: Page) {
   await page.goto('/');
   await expect(page.locator('[data-storage]')).toBeVisible();
-  await page.getByRole('radio', {name: /^(Somnia )?Design$/}).click();
+  await switchStudio(page,'Design');
   await expect(page.getByTestId('design-create-blank')).toBeVisible();
 }
 
@@ -148,7 +149,7 @@ test('multiple artboards retain independent content and switching studios keeps 
   await expect(page.getByTestId('design-layer-qa-other')).toBeVisible();
   await expect(page.getByTestId('design-layer-qa-card')).toHaveCount(0);
   await page.getByRole('radio', {name: 'Somnia Code'}).click();
-  await page.getByRole('radio', {name: /^(Somnia )?Design$/}).click();
+  await switchStudio(page,'Design');
   await expect(page.getByTestId('design-layer-qa-other')).toBeVisible();
   expect(await downloadProject(page)).toEqual(before);
   await page.screenshot({path: 'test-results/design-multiple-artboards.png'});

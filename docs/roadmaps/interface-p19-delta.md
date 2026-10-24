@@ -1,0 +1,6 @@
+# Interface P19 delta
+
+- Grid auto-layout upgrades: explicit row count (`layout.rows`, 1-24) distributes a fixed frame height evenly across rows; per-child column `span` (1-24, clamped to the column count) packs children across grid columns and wraps to the next row when a span no longer fits. Hug-width grids measure spanned children per column; hug-height grids pack rows with spans. Fixed rows on a hug-height frame surface a diagnostic and fall back to content-sized rows.
+- Aspect-ratio lock (`node.aspectRatio`, 0-1000): height is derived from the computed width in free, row/column, grid and constraint-stretched placement, always clamped by min/max sizing. The inspector captures the current ratio on lock and shows it read-only.
+- Min/max sizing is exercised under breakpoint reflow (`resizeInterfaceFrame` + `auditInterfaceResponsive`): fill water-filling and grid/span stretches clamp to each child's min/max, and the P17 responsive audit is reused as the regression net on grid scenes with spans.
+- Inspector: computed rendered size line per selection, Rows control (Auto/1-12) on grid frames, Column span field on grid children, DS Checkbox for the aspect lock. One undo per edit; five locales; no new dependencies; display/preview only, export unchanged.

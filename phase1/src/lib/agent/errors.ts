@@ -18,11 +18,21 @@ export type AgentErrorDetail =
   | 'steps' | 'tool-calls' | 'output-tokens' | 'timeout' | 'context'
   | 'rate-limited' | 'auth' | 'credit' | 'quota' | 'model-not-found' | 'moderation' | 'server' | 'network' | 'protocol'
   | 'account-auth' | 'not-eligible' | 'usage-limit'
-  | 'no-tool-support' | 'consent' | 'user' | 'unknown';
+  | 'no-tool-support' | 'consent' | 'user' | 'unknown' | 'tool-unreconciled';
+/** A tool callback finished but its result cannot be accepted after permission/registration drift. */
+export class ToolUnreconciledError extends Error{constructor(){super('Tool permission changed during the call. Output suppressed; completed work must be reconciled before retry.');this.name='ToolUnreconciledError';}}
 export class AgentError extends Error {
   constructor(public readonly code: AgentErrorCode, public readonly detail: AgentErrorDetail, message: string, public readonly retryable = false, public readonly status?: number, public readonly retryAfterMs?: number) {
     super(message); this.name = 'AgentError';
   }
+}
+/** Host-owned saved task choice, never a provider body or inferred error message. */
+export class LocalTaskPreflightError extends AgentError {
+ readonly model:string;
+ constructor(model:string,detail:'network'|'model-not-found'){
+  super('provider-error',detail,'Saved local task model is unavailable.',false);
+  this.model=typeof model==='string'&&model.length>0&&model.length<=512&&!/[\u0000-\u001f\u007f]/.test(model)?model:'configured local model';
+ }
 }
 /** Maps an HTTP status (plus a coarse, body-derived hint) to the taxonomy. Never stores the body. */
 export function classifyHttp(status: number, hint: { tools?: boolean; routing?: boolean; quota?: boolean } = {}, prefix = 'OpenRouter request failed'): AgentError {
@@ -40,6 +50,7 @@ export function classifyHttp(status: number, hint: { tools?: boolean; routing?: 
 }
 /** Turns any thrown value into an AgentError. `timedOut`/`userAborted` come from the session, not the error. */
 export function toAgentError(error: unknown, ctx: { timedOut?: boolean; aborted?: boolean } = {}): AgentError {
+  if(error instanceof ToolUnreconciledError)return new AgentError('internal','tool-unreconciled','Completed tool work needs review before retry.',false);
   if (ctx.timedOut) return new AgentError('limit', 'timeout', 'Agent turn timed out.', true);
   if (ctx.aborted) return new AgentError('aborted', 'user', 'Agent turn stopped.');
   if (error instanceof AgentError) return error;
@@ -63,7 +74,9 @@ export function toAgentError(error: unknown, ctx: { timedOut?: boolean; aborted?
 /** Honest, user-facing panel text: what happened, whether changes exist, what the user can do. */
 export function describeAgentError(e: AgentError): string {
   const none = 'No changes were applied.';
+  if(e instanceof LocalTaskPreflightError){const model=JSON.stringify(e.model);return e.detail==='model-not-found'?`Saved local task model ${model} is not installed. ${none} No cloud fallback. Review and pull the exact model in Settings > AI > Local Models first (no automatic download).`:`Could not check saved local task model ${model}: local inventory is unavailable. ${none} No cloud fallback. Check that Ollama is running and refresh Local Models in Settings > AI.`;}
   switch (e.detail) {
+    case 'tool-unreconciled': return 'Tool permissions changed while work was running. Its output was withheld. A proposal or completed change may still exist. Review the current document and receipts before retrying.';
     case 'user': return `Agent turn stopped. ${none} Provider costs may still occur.`;
     case 'steps': return `The agent used all its work steps before finishing. ${none} Retry with a narrower request (fewer files or one change at a time).`;
     case 'tool-calls': return `The agent tried to make more file requests than allowed in one turn. ${none} Retry with a narrower request.`;
@@ -77,7 +90,7 @@ export function describeAgentError(e: AgentError): string {
     case 'usage-limit': return `This ChatGPT account reached its usage limit. ${none} Check your ChatGPT usage settings or wait for the limit to reset. Automatic retries were stopped; no switch to other billing happens silently.`;
     case 'quota': return `The provider reports that this key's quota or spending limit is exhausted. ${none} Check usage and limits in your provider account, or choose another provider. Automatic retries were stopped.`;
     case 'credit': return `The provider reports no credit or quota for this key (HTTP 402). ${none} Add credit or use a free model.`;
-    case 'model-not-found': return `The provider has no available endpoint for this model under the current privacy settings. ${none} Check the model name; for Ollama, install the model first. Or choose another model.`;
+    case 'model-not-found': return `The provider has no available endpoint for this model under the current privacy settings. ${none} Check the model name; for Ollama, review and pull the exact model in Settings > AI > Local Models first (no automatic download). Or choose another model.`;
     case 'server': return `The provider had a server error${e.status ? ` (HTTP ${e.status})` : ''}. ${none} ${e.retryAfterMs !== undefined ? `Wait at least ${Math.ceil(e.retryAfterMs / 1000)} seconds before retrying.` : 'Retry in a moment.'}`;
     case 'network': return `Could not reach the provider. ${none} Check your connection; for Ollama, make sure it is running. Retry when connected.`;
     case 'no-tool-support': return `This model or provider does not support tool calls, which the agent needs to read and propose file changes. ${none} Choose a model with tool support.`;

@@ -3,6 +3,7 @@ import {useT} from '../../lib/useT';
 import type {ConcernCategory,StoreHost} from '../../lib/extensions/storeHost';
 import type {StoreCard} from '../../lib/extensions/storeView';
 import {StoreModal,TabList} from './StoreParts';
+import {NativeButton,NativeInput,Textarea} from '../ui/native-controls';
 
 const CATS:ConcernCategory[]=['security','impersonation','misleading','other'];
 type Route='private'|'public';
@@ -17,21 +18,21 @@ export function ReportConcern({card,store,open,onClose,openExternal}:{card:Store
  const title=t('store.report.title');
  const sub=`${card.name} · v${r.version} · ${card.publisherName}`;
  return <StoreModal open={open} onClose={onClose} title={title} subtitle={sub}>
-  {ref!==null?<div className="store-report-done" role="status"><h3>{t('store.report.done')}</h3><p>{t('store.report.done.body',{reference:ref})}</p><div className="store-modal-foot"><button type="button" className="ext-btn ext-btn-primary" onClick={onClose}>{t('store.close')}</button></div></div>
+  {ref!==null?<div className="store-report-done" role="status"><h3>{t('store.report.done')}</h3><p>{t('store.report.done.body',{reference:ref})}</p><div className="store-modal-foot"><NativeButton type="button" className="ext-btn ext-btn-primary" onClick={onClose}>{t('store.close')}</NativeButton></div></div>
   :<>
    <TabList idPrefix="store-report" label={t('store.report.tabs')} value={route} onChange={setRoute} tabs={[{id:'private',label:t('store.report.tab.private')},{id:'public',label:t('store.report.tab.public')}]}/>
    <div id="store-report-panel" role="tabpanel" aria-labelledby={`store-report-tab-${route}`} className="store-report-body">
     {route==='private'?<>
-     <fieldset className="store-radios"><legend className="sr-only">{t('store.report.category')}</legend>{CATS.map(c=><label key={c} className={`store-radio${cat===c?' is-on':''}`}><input type="radio" name="store-concern" value={c} checked={cat===c} onChange={()=>setCat(c)}/><span><strong>{t(`store.report.${c}.title`)}</strong><span className="store-radio-body">{t(`store.report.${c}.body`)}</span></span></label>)}</fieldset>
-     <textarea className="store-textarea" aria-label={t('store.report.text')} placeholder={t('store.report.text.placeholder')} value={text} maxLength={2000} onChange={e=>setText(e.target.value)}/>
+     <fieldset className="store-radios"><legend className="sr-only">{t('store.report.category')}</legend>{CATS.map(c=><label key={c} className={`store-radio${cat===c?' is-on':''}`}><NativeInput type="radio" name="store-concern" value={c} checked={cat===c} onChange={()=>setCat(c)}/><span><strong>{t(`store.report.${c}.title`)}</strong><span className="store-radio-body">{t(`store.report.${c}.body`)}</span></span></label>)}</fieldset>
+     <Textarea className="store-textarea" aria-label={t('store.report.text')} placeholder={t('store.report.text.placeholder')} value={text} maxLength={2000} onChange={e=>setText(e.target.value)}/>
      <div className="store-disclose"><p><strong>{t('store.report.sent.label')}</strong> {t('store.report.sent.body')}</p>
-      <label className="ext-check"><input type="checkbox" checked={attach} onChange={e=>setAttach(e.target.checked)}/> {t('store.report.attach')}</label>
+      <label className="ext-check"><NativeInput type="checkbox" checked={attach} onChange={e=>setAttach(e.target.checked)}/> {t('store.report.attach')}</label>
       {attach?log===undefined?<p className="ext-meta" role="status">{t('store.loading')}</p>:log===null?<p className="ext-meta">{t('store.report.log.empty')}</p>:<><p className="ext-meta">{t('store.report.log.preview')}</p><pre className="store-log" tabIndex={0} aria-label={t('store.report.log.preview')}>{log}</pre></>:null}</div>
      {error?<p role="alert" className="ext-error">{t('store.report.failed')}</p>:null}
-     <div className="store-modal-foot"><p className="store-reply">{t('store.report.reply')}</p><div className="ext-row"><button type="button" className="ext-btn" onClick={onClose}>{t('store.report.cancel')}</button><button type="button" className="ext-btn ext-btn-primary" disabled={busy} onClick={send}>{busy?t('store.report.sending'):t('store.report.send')}</button></div></div>
+     <div className="store-modal-foot"><p className="store-reply">{t('store.report.reply')}</p><div className="ext-row"><NativeButton type="button" className="ext-btn" onClick={onClose}>{t('store.report.cancel')}</NativeButton><NativeButton type="button" className="ext-btn ext-btn-primary" disabled={busy} onClick={send}>{busy?t('store.report.sending'):t('store.report.send')}</NativeButton></div></div>
     </>:<>
      <p>{t('store.report.public.body')}</p><p className="ext-meta">{t('store.report.public.note')}</p>
-     <div className="store-modal-foot"><p className="store-reply">{t('store.report.reply')}</p><div className="ext-row"><button type="button" className="ext-btn" onClick={onClose}>{t('store.report.cancel')}</button><button type="button" className="ext-btn ext-btn-primary" onClick={()=>{void openExternal(store.publicIssueUrl(card.id,r.version));}}>{t('store.report.public.open')}</button></div></div>
+     <div className="store-modal-foot"><p className="store-reply">{t('store.report.reply')}</p><div className="ext-row"><NativeButton type="button" className="ext-btn" onClick={onClose}>{t('store.report.cancel')}</NativeButton><NativeButton type="button" className="ext-btn ext-btn-primary" onClick={()=>{void openExternal(store.publicIssueUrl(card.id,r.version));}}>{t('store.report.public.open')}</NativeButton></div></div>
     </>}
    </div></>}
  </StoreModal>;

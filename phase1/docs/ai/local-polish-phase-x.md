@@ -1,0 +1,9 @@
+# Local AI polish: five bounded follow-ups
+
+1. S unknown-state UX: a successful empty inventory now says no installed models, while failed/unreadable/unreachable metadata stays Unknown. Health section exposes busy state.
+2. L/T exact-model selection safety during refresh: disable run/form/transfer controls while metadata is refreshing, clear stale selected model IDs at refresh start and keep them cleared on failure. Evaluation latest-request token and error/finally paths cannot overwrite a newer request/unmounted instance. No inference added.
+3. V privacy read integrity: validate helper byte/file/boolean DTO instead of displaying malformed data as measured size; clear stale rows and lock actions while inspecting; latest generation/unmount guards discard late responses. A failed native payload is Unknown and cannot export/delete. No negative/unsafe integer or extra field accepted.
+4. M/V keyboard/screen-reader action identity: privacy Export/Delete names include category and task Clear names include task. Native details/Field/Dialog keyboard behavior retained. Confirmation stays disabled until checkbox, Escape cancels without mutation. Existing browser tests use the stronger accessible names without dropping their storage/export/delete assertions.
+5. V locale gap: saved offline flag now says localized Enabled, Disabled or Not saved in all five locales, rather than bare true/false/Unknown for an absent setting. Unknown remains unavailable. All new labels and empty copy cover en/de/es/fr/pt-BR.
+
+These are follow-ups to the existing phase limits, not a claim that native acceptance gaps from W are closed. Synthetic browser fixtures check empty/error/read-lock, missing stale selection, malformed DTO, keyboard review cancellation and five locales. No live Ollama, native execution, downloads, new dependencies, telemetry or spend. Native/full app E2E still CI-only; voice/stream gates unchanged.

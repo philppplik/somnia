@@ -73,6 +73,7 @@ function ackStatus(status:OpenReport['outcomes'][number]['status']):ItemOutcomeS
   case 'activated-existing':return 'activated-existing';
   case 'deferred':case 'choose-handler':case 'safe-text-offer':return 'deferred';
   case 'unsupported':case 'invalid':return 'rejected';
+  case 'extension-opened':return 'opened';
  }
 }
 /** FS-006 is the single lock-conflict event (APP-002 is NOT emitted additionally). */

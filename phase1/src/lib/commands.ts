@@ -1,8 +1,26 @@
+import {runEditorCommand} from './codeEditorCommands';
+import {runLineOp} from './codeLineOps';
+import {openTranscriptHub} from './transcript/session';
+import {openLocalReferences} from './localReferencesSession';
+import {openCodeSymbols} from './codeSymbolsSession';
+import {openCodeQuickOpen} from './codeQuickOpenSession';import {commandTerminal} from './commandTerminal';
+import {openLocalRename} from './localRenameSession';
+import {goToLocalDefinition} from './localDefinitionCommand';
+import {openCodeSnippets} from './codeSnippets';import {isTauri} from '@tauri-apps/api/core';
+import {commandRegistry as registry} from './commandRegistry';
+export {registerCommand} from './commandRegistry';
+import {registerCoreCommandSpec,NO_CORE_PARAMS} from './coreCommandRegistration';
 import {reportError} from './log';
+import {scopedCommand as scoped} from './commandRegistry';
+import type {Command} from './commandRegistry';
+export {registerCommandScope} from './commandRegistry';
+export type {Command} from './commandRegistry';
 import {listStudios,getStudio} from './studios';
 import {studioModes} from './studios/modes';
 import {getUiContext} from './uiContextStore';
 import {requestStudio} from '../store/appStore';
+import {openDocsLink} from './docsLinkOpen';
+import {resolveDocsLinks} from './shell/docsLinks';
 import {copyErrorReport} from './diagnostics/hostStore';
 import {t,tOr} from './i18n';
 import {openExternal,REPO_URL} from './openExternal';
@@ -11,22 +29,19 @@ import {getActiveEditor,transformSelection} from './editorBridge';
 import {encodeEntities,decodeEntities} from './entities';
 import {newBlankFile,openFileDialog,openMediaDialog} from './projectActions';
 import {downloadProject,downloadMarkdown} from './exportProject';
+import {setExportCenterOpen} from './exportCenter';
 import {elements,insertElement} from './structureCommands';
-import { applyHistory, getState, patchState } from '../store/appStore';
+import { applyHistory, getState, patchState, type AppState } from '../store/appStore';
+import { detectFramework } from './frameworks/detect';
+import {getMedia,closeMedia} from './media';
+import {cycleScoped} from './tabScope';
 import { EditorProject } from '@somnia/editor-core';
+import {canSaveAll,canCloseAll,saveAllFiles,requestCloseAll} from './workDocsActions';
 import {getChatSession} from './collab/chatSession';
 import {toggleSessionChat} from './collab/communication';
 /** Experimental fast parsing (partial reparse). On by default; the stored choice 'off' turns it off for good, a full parse is always the fallback. */
 const FAST_KEY='somnia.fastParse.v1';
 try{if(localStorage.getItem(FAST_KEY)==='off')EditorProject.incremental.enabled=false;}catch{/* storage unavailable */}
-export interface Command {id:string;title:string;category:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help';shortcut?:string;keywords?:string[];allowInInput?:boolean;enabled?:()=>boolean;run:(payload?:unknown)=>void|Promise<void>}
-const registry=new Map<string,Command>();
-const scopes=new Set<(id:string)=>Command|undefined>();
-/** Editors can route shared Save/Undo/Close without replacing the project's registrations. */
-export function registerCommandScope(resolve:(id:string)=>Command|undefined){scopes.add(resolve);return()=>{scopes.delete(resolve);};}
-const scoped=(id:string)=>[...scopes].reverse().map(resolve=>resolve(id)).find(Boolean);
-
-export const registerCommand=(command:Command)=>{registry.set(command.id,command);return()=>{if(registry.get(command.id)===command)registry.delete(command.id);};};
 const SC_KEY='somnia.shortcuts.v1';
 /** User overrides: command id -> shortcut string, '' = disabled. Defaults live on the commands. */
 export function shortcutOverrides():Record<string,string>{try{const v=JSON.parse(localStorage.getItem(SC_KEY)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x==='string')) as Record<string,string>:{};}catch{return{};}}
@@ -48,45 +63,57 @@ export async function executeCommand(id:string,payload?:unknown){
 }
 /** Wire Tauri menu IDs directly to this function. Never run project JS or add a privileged iframe bridge. */
 export const executeNativeMenuCommand=executeCommand;
-const ui=(id:string,title:string,shortcut:string|undefined,run:()=>void)=>registerCommand({id,title,category:'View',shortcut,run});
+const ui=(id:string,title:string,shortcut:string|undefined,run:()=>void)=>registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:['settings.open','problems.toggle','theme.toggle','palette.open'].includes(id)?'Tools':'View',shortcut,run:()=>{ /* History: UI state only; no document undo entry. */ return run(); }});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'transcript.open',title:'Transcript Hub',category:'Tools',keywords:['transcription','audio','whisper','local','file'],run:()=> /* History: UI only; transcription requires a separate user action. */ openTranscriptHub()});
 ui('palette.open','Command palette','Mod+K',()=>patchState({paletteOpen:true}));
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'search.localSources',title:'Local source search (reviewed open text)',category:'Tools',keywords:['semantic','local','sources','embedding','citations','search'],run:()=> /* History: UI only; no inference, source read or index build. */ patchState({localSourceSearchOpen:true})});
 ui('search.project','Search in project','Mod+Shift+F',()=>patchState({leftTab:'search',sidebarOpen:true}));
 ui('css.open','CSS variables and classes',undefined,()=>patchState({leftTab:'css',sidebarOpen:true}));
 ui('sidebar.toggle','Toggle sidebar','Mod+B',()=>patchState({sidebarOpen:!getState().sidebarOpen}));
 ui('agent.toggle','Toggle Somnia Agent','Mod+Alt+A',()=>patchState({agentOpen:!getState().agentOpen}));
-registerCommand({id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=>toggleSessionChat()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'chat.toggle',title:'Toggle session chat',category:'View',shortcut:'Mod+Alt+C',allowInInput:true,enabled:()=>!!getChatSession(),run:()=> /* History: UI/file state only; no document undo entry. */ toggleSessionChat()});
 ui('inspector.toggle','Toggle inspector','Mod+Alt+I',()=>patchState({inspectorOpen:!getState().inspectorOpen}));
-ui('problems.toggle','Toggle problems','Mod+J',()=>patchState({problemsOpen:!getState().problemsOpen}));
+registerCoreCommandSpec({level:'ui',params:{type:'object',properties:{id:{type:'string',minLength:1,maxLength:80}},required:['id'],additionalProperties:false},id:'docs.open',title:'Open a studio docs link',category:'Help',keywords:['docs','help','documentation','link'],run:async(params:{id:string})=> /* History: UI state only; opens the system browser for a checked allowlisted URL. */ {const link=resolveDocsLinks(getStudio(getState().activeStudio).shellV2?.docsLinks).find(l=>l.id===params.id);if(!link||!(await openDocsLink(link.url).catch(()=>false)))patchState({notice:'That docs link is not available.'});}});
+ui('problems.toggle','Toggle problems','Mod+J',()=>{const s=getState();if(s.problemsOpen&&s.bottomTab==='problems')patchState({problemsOpen:false});else patchState({problemsOpen:true,bottomTab:'problems'});});
+ui('terminal.toggle','Toggle terminal','Mod+Shift+J',()=>{const s=getState();if(s.problemsOpen&&s.bottomTab==='terminal')patchState({problemsOpen:false});else patchState({problemsOpen:true,bottomTab:'terminal'});});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'terminal.new',title:'New terminal session',category:'Tools',keywords:['shell','console','pty'],enabled:()=>isTauri(),run:async()=> /* History: UI state only; no document undo entry. */ {patchState({problemsOpen:true,bottomTab:'terminal'});const {terminalSessions}=await import('./terminal/terminalSessions');await terminalSessions.spawn();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'terminal.close',title:'Close active terminal session',category:'Tools',keywords:['shell','console','pty'],enabled:()=>isTauri()&&getState().problemsOpen&&getState().bottomTab==='terminal',run:async()=> /* History: UI state only; no document undo entry. */ {const {terminalSessions}=await import('./terminal/terminalSessions');const active=terminalSessions.getSnapshot().activeId;if(active)await terminalSessions.kill(active);}});
 const canUseCodeMode=(mode:string)=>studioModes(getStudio(getState().activeStudio)).some(m=>m.command==='view.'+mode)&&!['raster','vector','pdf'].includes(getUiContext().domain);
-for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCommand({id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=>patchState({viewMode:mode})});
-for(const [index,studio] of listStudios().entries())registerCommand({id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<9?'Mod+'+(index+1):undefined,allowInInput:true,run:()=>{requestStudio(studio.id);}});
-registerCommand({id:'split.vertical',title:'Split: code and design side by side',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'vertical'})});
-registerCommand({id:'split.horizontal',title:'Split: code above, design below',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitLayout:'horizontal'})});
-registerCommand({id:'split.swap',title:'Split: swap code and design',category:'View',enabled:()=>canUseCodeMode('split'),run:()=>patchState({viewMode:'split',splitSwap:!getState().splitSwap})});
+for(const [mode,title,key] of [['code','Code',3],['design','Design',1],['split','Split',2]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.'+mode,title:title+' view',category:'View',shortcut:'Mod+Alt+'+key,enabled:()=>canUseCodeMode(mode),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:mode})});
+for(const [index,studio] of listStudios().entries())registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'studio.'+studio.id,title:'Switch to '+studio.id+' Studio',category:'View',shortcut:index<9?'Mod+'+(index+1):undefined,allowInInput:true,run:()=> /* History: UI/file state only; no document undo entry. */ {requestStudio(studio.id);}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'split.vertical',title:'Split: code and design side by side',category:'View',enabled:()=>canUseCodeMode('split'),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:'split',splitLayout:'vertical'})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'split.horizontal',title:'Split: code above, design below',category:'View',enabled:()=>canUseCodeMode('split'),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:'split',splitLayout:'horizontal'})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'split.swap',title:'Split: swap code and design',category:'View',enabled:()=>canUseCodeMode('split'),run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:'split',splitSwap:!getState().splitSwap})});
 ui('zoom.in','Zoom in','Mod+=',()=>patchState({zoom:Math.min(200,getState().zoom+10)}));
 ui('zoom.out','Zoom out','Mod+-',()=>patchState({zoom:Math.max(25,getState().zoom-10)}));
 ui('zoom.reset','Actual size','Mod+0',()=>patchState({zoom:100}));
 ui('theme.light','Use light theme',undefined,()=>patchState({themeChoice:'light',theme:'light'}));
 ui('theme.dark','Use dark theme',undefined,()=>patchState({themeChoice:'dark',theme:'dark'}));
 ui('theme.toggle','Toggle light / dark theme',undefined,()=>{const t=getState().theme==='dark'?'light':'dark';patchState({themeChoice:t,theme:t});});
-for(const direction of ['undo','redo'] as const)registerCommand({id:`edit.${direction}`,title:direction==='undo'?'Undo':'Redo',category:'Edit',shortcut:direction==='undo'?'Mod+Z':'Mod+Shift+Z',enabled:()=>getState().coreConnected,run:()=>applyHistory(direction)});
-for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S']] as const)registerCommand({id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=>{}});
-registerCommand({id:'help.errorReport',title:'Copy error report (log excerpt and version)',category:'Help',keywords:['help','error','log','bug','report','copy','diagnostics'],run:async()=>{await copyErrorReport();}});
-registerCommand({id:'help.github',title:'Somnia on GitHub (source, releases, issues)',category:'Help',keywords:['help','github','repo','source','issues','releases'],run:()=>{void openExternal(REPO_URL).catch(()=>patchState({notice:'Could not open the browser. The page is '+REPO_URL}));}});
-registerCommand({id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=>patchState({settingsOpen:true,settingsSection:'Shortcuts',settingsNavigationId:getState().settingsNavigationId+1})});
+for(const direction of ['undo','redo'] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`edit.${direction}`,title:direction==='undo'?'Undo':'Redo',category:'Edit',shortcut:direction==='undo'?'Mod+Z':'Mod+Shift+Z',enabled:()=>getState().coreConnected&&!(getState().activeStudio==='code'&&getActiveEditor()?.dom.isConnected&&getActiveEditor()?.state.readOnly),run:()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {if(getState().activeStudio==='code'&&getActiveEditor()?.dom.isConnected&&getActiveEditor()?.state.readOnly)return;applyHistory(direction);}});
+for(const [id,title,shortcut] of [['project.open','Open folder','Mod+O'],['project.save','Save project','Mod+S']] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:'Project',shortcut,allowInInput:id==='project.save',enabled:()=>false,run:()=> /* History: UI/file state only; no document undo entry. */ {}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'help.errorReport',title:'Copy error report (log excerpt and version)',category:'Help',keywords:['help','error','log','bug','report','copy','diagnostics'],run:async()=> /* History: UI/file state only; no document undo entry. */ {await copyErrorReport();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'help.github',title:'Somnia on GitHub (source, releases, issues)',category:'Help',keywords:['help','github','repo','source','issues','releases'],run:()=> /* History: UI/file state only; no document undo entry. */ {void openExternal(REPO_URL).catch(()=>patchState({notice:'Could not open the browser. The page is '+REPO_URL}));}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'help.localAI',title:'Local AI help and FAQ',category:'Help',keywords:['local','AI','Ollama','offline','privacy','voice','help','FAQ'],run:()=> /* History: UI only; no inference, settings save or document mutation. */ patchState({settingsOpen:true,settingsSection:'AI',settingsAITab:'local',localAIHelpOpen:true,settingsNavigationId:getState().settingsNavigationId+1})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'help.shortcuts',title:'Keyboard shortcuts',category:'Help',keywords:['help','keyboard'],run:()=> /* History: UI/file state only; no document undo entry. */ patchState({settingsOpen:true,settingsSection:'Shortcuts',settingsNavigationId:getState().settingsNavigationId+1})});
 export const isMac=()=>/Mac|iPhone|iPad/.test(navigator.platform);
 export const formatShortcut=(shortcut:string)=>shortcut.split('+').map(part=>({Mod:isMac()?'⌘':'Ctrl',Alt:isMac()?'⌥':'Alt',Shift:isMac()?'⇧':'Shift'}[part]??(part.length===1?part.toUpperCase():part))).join(isMac()?'':' + ');
-elements.forEach((element,i)=>registerCommand({id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=>insertElement(i)}));
-registerCommand({id:'view.livePreview',title:'Toggle live preview',category:'View',keywords:['preview','run','scripts','browser'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({livePreview:!st.livePreview,...(st.viewMode==='code'?{viewMode:'split' as const}:{})});}});
-registerCommand({id:'view.toggleCodeDesign',title:'Toggle code / design view',category:'View',shortcut:'Mod+`',keywords:['dreamweaver','switch'],run:()=>patchState({viewMode:getState().viewMode==='code'?'design':'code'})});
-registerCommand({id:'panels.hideAll',title:'Hide / show all panels',category:'View',shortcut:'F4',keywords:['dreamweaver','panels'],run:()=>{const s=getState();const anyOpen=s.sidebarOpen||s.inspectorOpen||s.problemsOpen;patchState({sidebarOpen:!anyOpen,inspectorOpen:!anyOpen,problemsOpen:false});}});
+elements.forEach((element,i)=>registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`insert.element.${i}`,title:element.label,category:'Insert',keywords:['insert','add','element',element.label.toLowerCase()],enabled:()=>getState().coreConnected,run:()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ insertElement(i)}));
+const HTML_ENTRY=/\.html?$/i;
+/** The page the live preview would open, resolved exactly like refreshProject (never a guessed entry file). */
+export const livePreviewEntry=(s:Pick<AppState,'activeFile'|'designFile'|'files'>):string=>HTML_ENTRY.test(s.activeFile)?s.activeFile:(HTML_ENTRY.test(s.designFile)&&s.designFile in s.files?s.designFile:(Object.keys(s.files).find(f=>HTML_ENTRY.test(f))??''));
+/** HTML is the supported preview path (hero-action-code.md): framework projects keep their separate startup review. */
+export const livePreviewCapable=(s:Pick<AppState,'activeFile'|'designFile'|'files'|'coreConnected'>):boolean=>s.coreConnected&&!detectFramework(s.files)&&!!livePreviewEntry(s);
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.livePreview',title:'Toggle live preview',category:'View',keywords:['preview','run','scripts','browser'],enabled:()=>livePreviewCapable(getState()),disabledReason:()=>'hero.preview.none',run:()=> /* History: UI/file state only; no document undo entry. */ {const st=getState();patchState({livePreview:!st.livePreview,...(st.viewMode==='code'?{viewMode:'split' as const}:{})});}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'view.toggleCodeDesign',title:'Toggle code / design view',category:'View',shortcut:'Mod+`',keywords:['dreamweaver','switch'],run:()=> /* History: UI/file state only; no document undo entry. */ patchState({viewMode:getState().viewMode==='code'?'design':'code'})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'panels.hideAll',title:'Hide / show all panels',category:'View',shortcut:'F4',keywords:['dreamweaver','panels'],run:()=> /* History: UI/file state only; no document undo entry. */ {const s=getState();const anyOpen=s.sidebarOpen||s.inspectorOpen||s.problemsOpen;patchState({sidebarOpen:!anyOpen,inspectorOpen:!anyOpen,problemsOpen:false});}});
 const sel=()=>getState().coreConnected&&!!getState().selectedElementId;
-registerCommand({id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=>{(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
-registerCommand({id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=>{(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
-registerCommand({id:'tab.close',title:'Close current tab',category:'View',shortcut:'Mod+W',enabled:()=>getState().openFiles.length>1,run:async()=>{(await import('../store/appStore')).closeFileTab(getState().activeFile);}});
-const cycleTab=async(step:number)=>{const {openFiles,activeFile}=getState();if(openFiles.length<2)return;(await import('../store/appStore')).openFileTab(openFiles[(openFiles.indexOf(activeFile)+step+openFiles.length)%openFiles.length]);};
-registerCommand({id:'tab.next',title:'Next tab',category:'View',shortcut:'Mod+Alt+ArrowRight',run:()=>cycleTab(1)});
-registerCommand({id:'tab.prev',title:'Previous tab',category:'View',shortcut:'Mod+Alt+ArrowLeft',run:()=>cycleTab(-1)});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.duplicate',title:'Duplicate selected element',category:'Edit',shortcut:'Mod+D',enabled:sel,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./structureCommands')).duplicateLayer(getState().selectedElementId!);}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.delete',title:'Delete selected element',category:'Edit',shortcut:'Delete',enabled:sel,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./structureCommands')).deleteLayer(getState().selectedElementId!);}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.close',title:'Close current tab',category:'View',shortcut:'Mod+W',enabled:()=>!!getState().activeFile||!!getMedia().active,run:async()=> /* History: UI/file state only; no document undo entry. */ {const m=getMedia().active;if(m){closeMedia(m);return;}(await import('../store/appStore')).closeFileTab(getState().activeFile);}});
+const cycleTab=async(step:number)=>{const {openFiles,activeFile,activeStudio,studioByTab}=getState();const to=cycleScoped(openFiles,activeFile,activeStudio,studioByTab,step);if(to)(await import('../store/appStore')).openFileTab(to);};
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.next',title:'Next tab',category:'View',shortcut:'Mod+Alt+ArrowRight',run:()=> /* History: UI/file state only; no document undo entry. */ cycleTab(1)});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tab.prev',title:'Previous tab',category:'View',shortcut:'Mod+Alt+ArrowLeft',run:()=> /* History: UI/file state only; no document undo entry. */ cycleTab(-1)});
 export function matchesShortcut(event:KeyboardEvent,shortcut:string){
  const parts=shortcut.toLowerCase().split('+');const key=parts.pop();const modifier=isMac()?event.metaKey:event.ctrlKey;
  return event.key.toLowerCase()===key&&modifier===parts.includes('mod')&&event.altKey===parts.includes('alt')&&event.shiftKey===parts.includes('shift')&&(isMac()?!event.ctrlKey:!event.metaKey);
@@ -102,6 +129,7 @@ export function attachKeyboardShortcuts(target:Window=window){
   let command:Command|undefined=matches[0];
   if(!isMac()&&matchesShortcut(event,'Mod+Y'))command=list.find(c=>c.id==='edit.redo');
   const coreEditor=element instanceof HTMLElement&&element.matches('[data-core-editor]');
+  if((command?.id==='code.references.local'||command?.id==='code.symbols'||command?.id==='code.quickOpen'||command?.id==='code.definition.local'||command?.id==='code.rename.local')&&input&&!coreEditor)return;
   const mdEditor=coreEditor&&/\.(md|markdown)$/i.test(getState().activeFile);
   if(!command||(input&&!command.allowInInput&&command.id!=='palette.open'&&!(coreEditor&&command.id.startsWith('edit.'))&&!(mdEditor&&command.id.startsWith('view.'))))return;
   event.preventDefault();void executeCommand(command.id);
@@ -117,23 +145,32 @@ export function attachKeyboardShortcuts(target:Window=window){
  target.addEventListener('keydown',listener);return()=>{target.removeEventListener('keydown',listener);target.removeEventListener('keydown',mdListener,true);};
 }
 
-registerCommand({id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=>{const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
-registerCommand({id:'tools.editImage',title:'Edit image...',category:'Tools',keywords:['image','edit','crop','resize','rotate','flip','brightness','contrast','photo'],run:()=>{window.dispatchEvent(new Event('somnia:edit-image'));}});
-registerCommand({id:'tools.convert',title:'Convert files...',category:'Tools',keywords:['convert','format','image','png','jpg','webp','svg','pdf','docx','markdown','html','csv','json','batch'],run:()=>patchState({convertDialog:true})});
-registerCommand({id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=>patchState({exportDialog:true})});
-registerCommand({id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=>{const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
-registerCommand({id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=>openFileDialog()});
-registerCommand({id:'project.openMedia',title:'Open image or PDF to preview',category:'Project',keywords:['png','jpg','jpeg','pdf','image','preview','media'],run:()=>openMediaDialog()});
-registerCommand({id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=>newBlankFile()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tools.diff',title:'Toggle diff split (compare in editor)',category:'Tools',keywords:['diff','compare','changes','saved version'],enabled:()=>getState().coreConnected,run:()=> /* History: UI/file state only; no document undo entry. */ {const st=getState();patchState({diffSplit:!st.diffSplit,...(st.viewMode==='design'?{viewMode:'split' as const}:{})});}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tools.editImage',title:'Edit image...',category:'Tools',keywords:['image','edit','crop','resize','rotate','flip','brightness','contrast','photo'],run:()=> /* History: UI/file state only; no document undo entry. */ {window.dispatchEvent(new Event('somnia:edit-image'));}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'tools.convert',title:'Convert files...',category:'Tools',keywords:['convert','format','image','png','jpg','webp','svg','pdf','docx','markdown','html','csv','json','batch'],run:()=> /* History: UI/file state only; no document undo entry. */ patchState({convertDialog:true})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.saveAll',title:'Save all files',category:'Project',keywords:['save','all','every','studios'],shortcut:'Mod+Alt+S',allowInInput:true,enabled:()=>canSaveAll(),run:async()=>{ /* History: each document provider owns saving; no added undo entry. */ await saveAllFiles();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.closeAll',title:'Close all files',category:'Project',keywords:['close','all','every','tabs','studios'],shortcut:'Mod+Alt+W',enabled:()=>canCloseAll(),run:()=> /* History: UI/file state only; no document undo entry. */ requestCloseAll()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export',title:'Export project...',category:'Project',keywords:['zip','folder','single file','download'],enabled:()=>getState().coreConnected,run:()=> /* History: UI/file state only; no document undo entry. */ patchState({exportDialog:true})});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export.advanced',title:'Advanced export...',category:'Project',keywords:['export','download','studios','all'],run:()=> /* History: UI state only; no document undo entry. */ setExportCenterOpen(true)});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'experimental.fastParse',title:'Experimental: toggle fast parsing',category:'Tools',keywords:['incremental','parse','performance','experimental'],run:()=> /* History: UI/file state only; no document undo entry. */ {const on=!EditorProject.incremental.enabled;EditorProject.incremental.enabled=on;try{localStorage.setItem(FAST_KEY,on?'on':'off');}catch{/* storage unavailable */}patchState({notice:on?'Fast parsing is on (experimental). Unsure cases still use the full parser.':'Fast parsing is off. Every edit uses the full parser.'});}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.openFile',title:'Open file',category:'Project',keywords:['open','file'],run:()=> /* History: UI/file state only; no document undo entry. */ openFileDialog()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.openMedia',title:'Open image or PDF to preview',category:'Project',keywords:['png','jpg','jpeg','pdf','image','preview','media'],run:()=> /* History: UI/file state only; no document undo entry. */ openMediaDialog()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.newFile',title:'New blank page',category:'Project',keywords:['new','blank','file'],run:()=> /* History: newBlankFile uses EditorProject createFile, or starts a new project history. */ newBlankFile()});
 
 ui('settings.open','Settings','Mod+,',()=>patchState({settingsOpen:true}));
 ui('extensions.open','Extensions',undefined,()=>patchState({extensionsOpen:true}));
 
-registerCommand({id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=>{try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'project.export.md',title:'Export active file as Markdown',category:'Project',keywords:['md','markdown'],enabled:()=>getState().coreConnected&&/\.html?$/i.test(getState().activeFile),run:()=> /* History: UI/file state only; no document undo entry. */ {try{downloadMarkdown(getState().files,getState().activeFile);patchState({notice:'Markdown download requested. The source file is unchanged.'});}catch(error){patchState({notice:error instanceof Error?error.message:'Markdown export failed.'});}}});
 /** Tools menu groups app-level utilities; registered after all commands exist. */
 for(const id of ['settings.open','problems.toggle','theme.toggle','palette.open']){const c=registry.get(id);if(c)c.category='Tools';}
 
-for(const [id,title,fn] of [['edit.encodeEntities','Encode special characters (HTML entities)',encodeEntities],['edit.decodeEntities','Decode special characters (HTML entities)',decodeEntities]] as const)registerCommand({id,title,category:'Edit',keywords:['html','entities','escape','unescape','special characters'],run:()=>{const v=getActiveEditor();if(!v||!transformSelection(v,fn))patchState({notice:'Select text in the code editor first.'});else v.focus();}});
+for(const [id,title,fn] of [['edit.encodeEntities','Encode special characters (HTML entities)',encodeEntities],['edit.decodeEntities','Decode special characters (HTML entities)',decodeEntities]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:'Edit',keywords:['html','entities','escape','unescape','special characters'],run:()=> /* History: mounted code editor dispatch owns its CodeMirror undo entry. */ {const v=getActiveEditor();if(!v||!transformSelection(v,fn))patchState({notice:'Select text in the code editor first.'});else v.focus();}});
+
+/** Line operations (sort, unique, trim, join, case) on the selected lines or the whole file in the code editor. */
+for(const [op,title,keywords] of [['sortAsc','Sort lines ascending',['sort', 'order']],['sortDesc','Sort lines descending',['sort', 'order']],['unique','Remove duplicate lines',['dedupe', 'unique']],['trim','Trim trailing whitespace',['whitespace', 'spaces']],['join','Join lines',['merge', 'single line']],['upper','Change selection to uppercase',['case', 'capital']],['lower','Change selection to lowercase',['case', 'small']]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`edit.lines.${op}`,title,category:'Edit',keywords:[...keywords],run:()=> /* History: one CodeMirror transaction in the mounted editor owns the undo entry. */ {const v=getActiveEditor();if(!v)patchState({notice:'Open a file in the code editor first.'});else if(!runLineOp(v,op))patchState({notice:op==='upper'||op==='lower'?'Select text in the code editor first.':'Nothing to change.'});else v.focus();}});
+
+/** CodeMirror multi-cursor, delete-line and comment commands as menu and palette entries (keys are bound in the editor already). */
+for(const [op,title,keywords] of [['nextOccurrence','Add next occurrence to selection',['multi', 'cursor', 'next']],['allOccurrences','Select all occurrences of selection',['multi', 'cursor', 'all']],['cursorAbove','Add cursor above',['multi', 'cursor']],['cursorBelow','Add cursor below',['multi', 'cursor']],['deleteLine','Delete line',['remove', 'line']],['toggleComment','Toggle comment',['comment', 'uncomment']]] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`edit.code.${op}`,title,category:'Edit',keywords:[...keywords],run:()=> /* History: one CodeMirror transaction in the mounted editor owns the undo entry. */ {const v=getActiveEditor();if(!v)patchState({notice:'Open a file in the code editor first.'});else if(!runEditorCommand(v,op))patchState({notice:'Nothing to change.'});else v.focus();}});
 
 /** Apply formatting to the selection, or to the whole file when nothing is selected. */
 export async function applyFormatting(){const v=getActiveEditor();const file=getState().activeFile;const lang=langFor(file);
@@ -142,19 +179,19 @@ export async function applyFormatting(){const v=getActiveEditor();const file=get
  try{const out=await formatCode(src,lang);const text=whole?out:out.replace(/\n$/,'');if(text===src){patchState({notice:'Already formatted.'});return;}
   v.dispatch({changes:{from,to,insert:text},selection:{anchor:Math.min(from,from+text.length)}});v.focus();patchState({notice:whole?'Formatted the file.':'Formatted the selection.'});}
  catch(e){patchState({notice:`Could not format: ${(e instanceof Error?e.message:String(e)).split('\n')[0]}`});}}
-registerCommand({id:'edit.format',title:'Apply formatting',category:'Edit',shortcut:'Alt+Shift+F',allowInInput:true,keywords:['format','prettier','indent','beautify'],run:()=>applyFormatting()});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.format',title:'Apply formatting',category:'Edit',shortcut:'Alt+Shift+F',allowInInput:true,keywords:['format','prettier','indent','beautify'],run:()=> /* History: mounted code editor dispatch owns its CodeMirror undo entry. */ applyFormatting()});
 
 const inTable=()=>getState().coreConnected&&!!getState().selectedElementId;
-registerCommand({id:'table.insert',title:'Insert table (3 x 3, header row, caption)',category:'Insert',keywords:['table','grid','rows','columns'],enabled:()=>getState().coreConnected,run:async()=>{(await import('./tableCommands')).insertTable(3,3);}});
-for(const [id,title,act] of [['row.above','Table: add row above','row.above'],['row.below','Table: add row below','row.below'],['row.delete','Table: delete row','row.delete'],['col.left','Table: add column left','col.left'],['col.right','Table: add column right','col.right'],['col.delete','Table: delete column','col.delete'],['header','Table: toggle header row','header'],['merge','Table: merge cell with right neighbour','merge']] as const)registerCommand({id:`table.${id}`,title,category:'Insert',keywords:['table','cell','row','column'],enabled:inTable,run:async()=>{(await import('./tableCommands')).tableAction(act);}});
+registerCoreCommandSpec({level:'ui',params:{type:'object',properties:{rows:{type:'integer',minimum:1,maximum:50},cols:{type:'integer',minimum:1,maximum:20}},additionalProperties:false},id:'table.insert',title:'Insert table (3 x 3, header row, caption)',category:'Insert',keywords:['table','grid','rows','columns'],enabled:()=>getState().coreConnected,run:async(params:{rows?:number;cols?:number}={})=>{ /* History: insertTable writes one EditorProject transaction. */ (await import('./tableCommands')).insertTable(params.rows??3,params.cols??3);}});
+for(const [id,title,act] of [['row.above','Table: add row above','row.above'],['row.below','Table: add row below','row.below'],['row.delete','Table: delete row','row.delete'],['col.left','Table: add column left','col.left'],['col.right','Table: add column right','col.right'],['col.delete','Table: delete column','col.delete'],['header','Table: toggle header row','header'],['merge','Table: merge cell with right neighbour','merge']] as const)registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:`table.${id}`,title,category:'Insert',keywords:['table','cell','row','column'],enabled:inTable,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./tableCommands')).tableAction(act);}});
 
-registerCommand({id:'edit.wrap',title:'Wrap selected element in a div',category:'Edit',keywords:['wrap','container','group'],enabled:sel,run:async()=>{(await import('./structureCommands')).wrapLayer(getState().selectedElementId!,'div');}});
-registerCommand({id:'edit.unwrap',title:'Unwrap selected element (keep content)',category:'Edit',keywords:['unwrap','ungroup','remove wrapper'],enabled:sel,run:async()=>{(await import('./structureCommands')).unwrapLayer(getState().selectedElementId!);}});
+registerCoreCommandSpec({level:'ui',params:{type:'object',properties:{tag:{type:'string',enum:['div','section','article']}},additionalProperties:false},id:'edit.wrap',title:'Wrap selected element in a div',category:'Edit',keywords:['wrap','container','group'],enabled:sel,run:async(params:{tag?:'div'|'section'|'article'}={})=>{ /* History: wrapLayer writes one EditorProject transaction. */ (await import('./structureCommands')).wrapLayer(getState().selectedElementId!,params.tag??'div');}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'edit.unwrap',title:'Unwrap selected element (keep content)',category:'Edit',keywords:['unwrap','ungroup','remove wrapper'],enabled:sel,run:async()=> /* History: EditorProject owns this document transaction (or undo/redo); no global stack. */ {(await import('./structureCommands')).unwrapLayer(getState().selectedElementId!);}});
 
 // Markdown editor commands. Only Bold and Italic have default bindings; the rest are in the palette and can be assigned in Settings.
 const mdActive=()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='design';
 const mdRun=(cmd:string)=>async()=>{const [b,f]=await Promise.all([import('./mdBridge'),import('./mdFormat')]);const v=b.getMdSource();if(v)f.runMdCommand(v,cmd as import('./mdFormat').MdCommand);};
-const mdCmd=(id:string,title:string,shortcut:string|undefined,run:()=>void|Promise<void>,enabled:()=>boolean=mdActive)=>registerCommand({id,title,category:'Insert',shortcut,keywords:['markdown'],enabled,run});
+const mdCmd=(id:string,title:string,shortcut:string|undefined,run:()=>void|Promise<void>,enabled:()=>boolean=mdActive)=>registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id,title,category:'Insert',shortcut,keywords:['markdown'],enabled,run:()=>{ /* History: runMdCommand dispatches into the mounted Markdown CodeMirror history; reveal/sync are UI-only. */ return run(); }});
 mdCmd('md.bold','Markdown: Bold','Mod+B',mdRun('bold'));mdCmd('md.italic','Markdown: Italic','Mod+I',mdRun('italic'));
 mdCmd('md.code','Markdown: Inline code',undefined,mdRun('code'));mdCmd('md.strike','Markdown: Strikethrough',undefined,mdRun('strike'));
 mdCmd('md.bullet','Markdown: Bulleted list',undefined,mdRun('bullet'));mdCmd('md.task','Markdown: Task list',undefined,mdRun('task'));
@@ -164,3 +201,20 @@ for(const n of [1,2,3,4,5,6])mdCmd(`md.h${n}`,`Markdown: Heading ${n}`,undefined
 mdCmd('md.reveal','Markdown: Reveal current preview block in source',undefined,()=>{window.dispatchEvent(new Event('somnia:md-reveal'));},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode!=='code');
 mdCmd('md.sync','Markdown: Toggle scroll sync',undefined,async()=>{const b=await import('./mdBridge');b.setSyncScroll(!b.getSyncScroll());},()=>/\.(md|markdown)$/i.test(getState().activeFile)&&getState().viewMode==='split');
 
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'frameworks.newProject',title:'New project',category:'Project',keywords:['react','framework','app','template'],run:async()=>{(await import('./frameworks/newProjectFlow')).newProjectFlow.open();}});
+/* Publish: opens the panel. The deploy.* specs behind it ask for confirmation on every publish and rollback. */
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'deploy.open',title:'Publish...',category:'Project',keywords:['publish','deploy','server','ssh','go live','upload','website'],shortcut:'Mod+Shift+U',enabled:()=>publishAvailable(),run:()=>{ /* History: UI state only; no document undo entry. */ return getPublishStore().open(); }});
+import {publishAvailable,getPublishStore} from './deploy/publishController';
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.snippets',title:'Code snippets...',category:'Insert',keywords:['snippet','template','code'],enabled:()=>getState().activeStudio==='code',run:()=>{/* History: opening local snippet manager is UI-only; insertion uses source editor history. */openCodeSnippets();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.definition.local',title:'Go to local definition',category:'Tools',shortcut:'F12',allowInInput:true,keywords:['definition','navigation','local','symbol'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only local syntax navigation. No document mutation. */goToLocalDefinition();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.rename.local',title:'Rename local symbol...',category:'Tools',shortcut:'F2',allowInInput:true,enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: review only; accepted rename has an isolated owner transaction. */openLocalRename();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.symbols',title:'Go to file symbol...',category:'Tools',shortcut:'Mod+Shift+o',allowInInput:true,keywords:['outline','symbol','function','class','navigation'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only syntax navigation. */openCodeSymbols();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.quickOpen',title:'Quick open project file...',category:'Tools',shortcut:'Mod+p',allowInInput:true,keywords:['file','path','quick','navigation'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only file navigation. */openCodeQuickOpen();}});
+
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.references.local',title:'Find local references...',category:'Tools',shortcut:'Shift+F12',allowInInput:true,keywords:['references','usages','local','symbol'],enabled:()=>getState().activeStudio==='code'&&getState().coreConnected,run:()=>{/* History: read-only binding lookup, no mutation. */openLocalReferences();}});
+registerCoreCommandSpec({level:'ui',params:NO_CORE_PARAMS,id:'code.terminal',title:'Command terminal...',category:'Tools',keywords:['terminal','shell','command'],enabled:()=>getState().activeStudio==='code',run:()=> /* History: UI only. Execution needs the explicit dialog action. */ commandTerminal.open()});

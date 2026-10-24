@@ -1,0 +1,138 @@
+[
+ {
+  "id": "en-01",
+  "lang": "en",
+  "prompt": "Create notes/todo.md with a short todo list for tomorrow.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "notes/todo.md"
+  }
+ },
+ {
+  "id": "en-02",
+  "lang": "en",
+  "prompt": "Add a one-line description to README.md.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "README.md"
+  }
+ },
+ {
+  "id": "en-03",
+  "lang": "en",
+  "prompt": "Show me what is in src/main.rs.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "src/main.rs"
+  }
+ },
+ {
+  "id": "en-04",
+  "lang": "en",
+  "prompt": "Open budget.csv and tell me the total.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "budget.csv"
+  }
+ },
+ {
+  "id": "en-05",
+  "lang": "en",
+  "prompt": "Save the intro paragraph into draft/intro.txt.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "draft/intro.txt"
+  }
+ },
+ {
+  "id": "en-06",
+  "lang": "en",
+  "prompt": "Read CHANGELOG.md.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "CHANGELOG.md"
+  }
+ },
+ {
+  "id": "de-01",
+  "lang": "de",
+  "prompt": "Lege notizen/aufgaben.md mit einer kurzen Aufgabenliste für morgen an.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "notizen/aufgaben.md"
+  }
+ },
+ {
+  "id": "de-02",
+  "lang": "de",
+  "prompt": "Füge der README.md eine Beschreibung in einer Zeile hinzu.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "README.md"
+  }
+ },
+ {
+  "id": "de-03",
+  "lang": "de",
+  "prompt": "Zeig mir, was in src/main.rs steht.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "src/main.rs"
+  }
+ },
+ {
+  "id": "de-04",
+  "lang": "de",
+  "prompt": "Öffne budget.csv und nenne mir die Summe.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "budget.csv"
+  }
+ },
+ {
+  "id": "de-05",
+  "lang": "de",
+  "prompt": "Speichere den Einleitungsabsatz in entwurf/einleitung.txt.",
+  "expect_tool": "write_file",
+  "expect_args": {
+   "path": "entwurf/einleitung.txt"
+  }
+ },
+ {
+  "id": "de-06",
+  "lang": "de",
+  "prompt": "Lies die CHANGELOG.md.",
+  "expect_tool": "read_file",
+  "expect_args": {
+   "path": "CHANGELOG.md"
+  }
+ },
+ {
+  "id": "en-07",
+  "lang": "en",
+  "prompt": "What does 'idempotent' mean? Answer in one sentence.",
+  "expect_tool": null,
+  "expect_args": {}
+ },
+ {
+  "id": "en-08",
+  "lang": "en",
+  "prompt": "Thanks, that is all for now.",
+  "expect_tool": null,
+  "expect_args": {}
+ },
+ {
+  "id": "de-07",
+  "lang": "de",
+  "prompt": "Was bedeutet 'idempotent'? Antworte in einem Satz.",
+  "expect_tool": null,
+  "expect_args": {}
+ },
+ {
+  "id": "de-08",
+  "lang": "de",
+  "prompt": "Danke, das war's fürs Erste.",
+  "expect_tool": null,
+  "expect_args": {}
+ }
+]

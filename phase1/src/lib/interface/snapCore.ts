@@ -1,0 +1,3 @@
+export interface SnapSettings {smart?:boolean;rulers?:boolean;enabled:boolean;grid:number;guidesX:number[];guidesY:number[];}
+export const DEFAULT_SNAP:SnapSettings={smart:true,rulers:true,enabled:false,grid:8,guidesX:[],guidesY:[]};
+export function validateSnap(s:SnapSettings){if(!s||typeof s!=='object'||Array.isArray(s)||typeof s.enabled!=='boolean'||s.smart!==undefined&&typeof s.smart!=='boolean'||s.rulers!==undefined&&typeof s.rulers!=='boolean'||!Array.isArray(s.guidesX)||!Array.isArray(s.guidesY)||!Number.isFinite(s.grid)||s.grid<1||s.grid>1024||s.guidesX.length>50||s.guidesY.length>50||![...s.guidesX,...s.guidesY].every(n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=32768))throw Error('Invalid grid/guides.');}

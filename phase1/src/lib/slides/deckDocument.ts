@@ -46,3 +46,19 @@ export function deckTextEdits(before:DeckDocument,after:DeckDocument,bytes:Uint8
  const runs=readRuns(bytes);return runs.filter(r=>before.slides[r.slide].texts[r.run].text!==after.slides[r.slide].texts[r.run].text).map(r=>({...r,old:r.text,text:after.slides[r.slide].texts[r.run].text}));
 }
 export function editedDeckBytes(bytes:Uint8Array,summary:DeckSummary,after:DeckDocument){const edits=deckTextEdits(readDeckDocument(bytes,summary),after,bytes);if(!edits.length)throw Error('Proposal makes no change.');return makeEditedCopy(bytes,edits);}
+
+/** Reviewed-apply edit: exactly one text run may differ from the current deck; anything else is refused before any write. */
+export const MAX_SLIDE_REVIEW_RUNS=50;
+/** Reviewed-apply edit for one slide: 1 to MAX_SLIDE_REVIEW_RUNS text runs may differ, all on the same slide; anything else is refused before any write. */
+export function sameSlideEditBytes(bytes:Uint8Array,summary:DeckSummary,after:DeckDocument){
+ const edits=deckTextEdits(readDeckDocument(bytes,summary),after,bytes);
+ if(!edits.length)throw Error('Proposal makes no change.');
+ if(edits.length>MAX_SLIDE_REVIEW_RUNS)throw Error(`A reviewed slide edit may change at most ${MAX_SLIDE_REVIEW_RUNS} text runs.`);
+ if(new Set(edits.map(e=>e.slide)).size!==1)throw Error('A reviewed slide edit must stay on one slide.');
+ return makeEditedCopy(bytes,edits);
+}
+export function singleRunEditBytes(bytes:Uint8Array,summary:DeckSummary,after:DeckDocument){
+ const edits=deckTextEdits(readDeckDocument(bytes,summary),after,bytes);
+ if(edits.length!==1)throw Error(edits.length?'A reviewed edit must change exactly one text run.':'Proposal makes no change.');
+ return editedDeckBytes(bytes,summary,after);
+}

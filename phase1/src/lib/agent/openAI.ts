@@ -1,8 +1,11 @@
+import { catalogEntries } from './catalogEntries';
+import { replayFor, validateReplay } from './providerReplay';
 import { runWithProviderConsent } from './privacy';
 import { OPENAI_ACCOUNT_OAUTH_CONFIG, assertUsableAccountToken, toAccountAuthError } from './openAIAccount';
 import type { OpenAIAccountAuth } from './openAIAccount';
 import type { AgentPrivacyGate } from './privacy';
 import { AgentError, classifyHttp } from './errors';
+import type { CompatProvider } from './compatProviders';
 import type { AgentCloudConsentGuard, AgentProvider, AgentProviderEvent, AgentProviderRequest } from './types';
 
 export interface OpenAIEndpoints { chat?: string; models?: string }
@@ -24,6 +27,8 @@ export interface OpenAIOptions {
    * (openAIAccount.ts). Defaults to the public API constants. HTTPS only.
    */
   endpoints?: OpenAIEndpoints;
+  /** Compatible vendor (xAI, Meta, DeepSeek): own id, fixed endpoints, plain `system` role, no OpenAI-only fields. Default is OpenAI itself. */
+  vendor?: CompatProvider;
   consentGuard?: AgentCloudConsentGuard;
   /** Test/host injection of the shared gate, not a replacement permission function. */
   privacyGate?: AgentPrivacyGate;
@@ -91,7 +96,7 @@ function apiError(status: number, value?: unknown, prefix = 'OpenAI request fail
   const codes = [error?.code, error?.type];
   const message = `${prefix} (HTTP ${status}).`;
   if (codes.some(code => typeof code === 'string' && /^(insufficient_quota|billing_hard_limit_reached|billing_not_active|usage_limit_reached|monthly_spend_limit_reached|project_spend_limit_reached|credit_balance_exhausted|organization_spend_limit_exceeded|project_spend_limit_exceeded|organization_usage_limit_exceeded)$/.test(code)))
-    return new AgentError('provider-error', 'credit', 'OpenAI API quota or billing limit reached. Check API billing and project limits.', false, status);
+    return new AgentError('provider-error', 'credit', `${prefix.replace(/ request failed$/, '')} API quota or billing limit reached. Check API billing and project limits.`, false, status);
   if (codes.includes('context_length_exceeded')) return new AgentError('limit', 'context', message, false, status);
   if (codes.includes('model_not_found')) return new AgentError('provider-error', 'model-not-found', message, false, status);
   if (codes.includes('content_filter')) return new AgentError('provider-error', 'moderation', message, false, status);
@@ -146,21 +151,25 @@ function retryDelay(header: string | null): number | undefined {
   return Number.isFinite(ms) && ms > 0 ? ms : undefined;
 }
 export class OpenAIProvider implements AgentProvider {
-  readonly id = 'openai';
+  readonly id: string;
+  private readonly label: string;
   readonly locality = 'cloud' as const;
   private readonly chatEndpoint: string;
   private readonly modelsEndpoint: string;
   constructor(private readonly options: OpenAIOptions) {
+    this.id = options.vendor?.id ?? 'openai';
+    this.label = options.vendor?.label ?? 'OpenAI';
+    if (options.vendor && options.account) throw Error('Account auth is OpenAI only.');
     if (options.consentGuard !== undefined && typeof options.consentGuard !== 'function') throw Error('Invalid disclosure guard.');
     if (!!options.getApiKey === !!options.account) throw Error('Configure exactly one OpenAI auth method: API key or account.');
     const endpoint = (value: string | undefined, fallback: string): string => {
       if (value === undefined) return fallback;
       try { const url = new URL(value); if (url.protocol !== 'https:' || url.username || url.password || !url.hostname) throw 0; }
-      catch { throw Error('OpenAI endpoints must be HTTPS URLs.'); }
+      catch { throw Error('Provider endpoints must be HTTPS URLs.'); }
       return value;
     };
-    this.chatEndpoint = endpoint(options.endpoints?.chat, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.responsesEndpoint : OPENAI_CHAT_ENDPOINT);
-    this.modelsEndpoint = endpoint(options.endpoints?.models, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.modelsEndpoint : OPENAI_MODELS_ENDPOINT);
+    this.chatEndpoint = endpoint(options.endpoints?.chat, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.responsesEndpoint : options.vendor?.responses ?? options.vendor?.chat ?? OPENAI_CHAT_ENDPOINT);
+    this.modelsEndpoint = endpoint(options.endpoints?.models, options.account ? OPENAI_ACCOUNT_OAUTH_CONFIG.modelsEndpoint : options.vendor?.models ?? OPENAI_MODELS_ENDPOINT);
   }
   private inFlightRefresh?: Promise<string>;
   /** One forced refresh at a time across concurrent requests; redacted errors only. */
@@ -177,6 +186,7 @@ export class OpenAIProvider implements AgentProvider {
     return this.inFlightRefresh;
   }
   async *stream(request: AgentProviderRequest): AsyncGenerator<AgentProviderEvent> {
+    if(request.messages.some(m=>m.images?.length))throw new AgentError('provider-error','protocol','Image input is not supported by this provider adapter.');
     request = { ...request, messages: structuredClone(request.messages), tools: structuredClone(request.tools) };
     // Single-slot backpressure bridge keeps the shared gate alive until all SSE
     // consumption ends. Returning a Response from the gate would lose revocation.
@@ -233,14 +243,17 @@ export class OpenAIProvider implements AgentProvider {
     request.signal.throwIfAborted();
     const credential = await this.credential();
     request.signal.throwIfAborted();
-    if (this.options.account) {
+    if (this.options.account || this.options.vendor?.responses) {
       yield* this.streamResponses(request, credential);
       return;
     }
+    const vendor = this.options.vendor;
     const body = JSON.stringify({
-      model: request.model, stream: true, store: false, max_completion_tokens: request.maxOutputTokens,
+      model: request.model, stream: true, ...(vendor ? {} : { store: false }),
+      [vendor?.maxTokensField ?? 'max_completion_tokens']: request.maxOutputTokens,
       stream_options: { include_usage: true },
-      messages: request.messages.map(m => ({ role: m.role === 'system' && !/^gpt-(3\.5|4)(?:[.-]|$)/.test(request.model) ? 'developer' : m.role, content: m.content,
+      messages: request.messages.map(m => ({ role: !vendor && m.role === 'system' && !/^gpt-(3\.5|4)(?:[.-]|$)/.test(request.model) ? 'developer' : m.role, content: m.content,
+        ...(vendor?.id === 'deepseek' && m.role === 'assistant' && request.tools.length && replayFor(m, this.id, request.model) ? {reasoning_content: replayFor(m, this.id, request.model)!.reasoningContent} : {}),
         ...(m.toolCallId ? { tool_call_id: m.toolCallId } : {}),
         ...(m.toolCalls ? { tool_calls: m.toolCalls.map(t => ({ id: t.id, type: 'function', function: { name: t.name, arguments: t.arguments } })) } : {}) })),
       ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', function: t })) } : {}),
@@ -252,9 +265,10 @@ export class OpenAIProvider implements AgentProvider {
         const err = await readJson(response, request.signal, 4096).catch(() => undefined);
         if (err) throw apiError(502, err);
       }
-      throw new AgentError('provider-error', 'protocol', 'OpenAI did not return an event stream.');
+      throw new AgentError('provider-error', 'protocol', `${this.label} did not return an event stream.`);
     }
-    let ended = false;
+    let ended = false, reasoningContent = '';
+    let sawReasoning = false;
     for await (const data of dataEvents(response.body, request.signal)) {
       if (data === '[DONE]') { ended = true; break; }
       let chunk;
@@ -267,15 +281,20 @@ export class OpenAIProvider implements AgentProvider {
       if (chunk.usage) yield { type: 'usage', usage: {
         inputTokens: finite(chunk.usage.prompt_tokens), outputTokens: finite(chunk.usage.completion_tokens),
       } };
-      if (!Array.isArray(chunk.choices)) throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI stream choices.');
+      if (!Array.isArray(chunk.choices)) throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} stream choices.`);
       for (const choice of chunk.choices) {
-        if (!choice || typeof choice !== 'object') throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI stream choice.');
+        if (!choice || typeof choice !== 'object') throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} stream choice.`);
         if ((choice.index ?? 0) !== 0) continue;
         const delta = choice.delta ?? {};
+        if (vendor?.id === 'deepseek' && delta.reasoning_content !== undefined && delta.reasoning_content !== null) {
+          if (typeof delta.reasoning_content !== 'string') throw new AgentError('provider-error', 'protocol', 'Invalid DeepSeek reasoning fragment.');
+          sawReasoning = true; reasoningContent += delta.reasoning_content;
+          if (new TextEncoder().encode(reasoningContent).byteLength > maxEventBytes) throw new AgentError('limit', 'context', 'Provider reasoning exceeds size limit.');
+        }
         if (typeof delta.content === 'string' && delta.content) yield { type: 'text', text: delta.content };
-        if (delta.tool_calls !== undefined && !Array.isArray(delta.tool_calls)) throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI tool calls.');
+        if (delta.tool_calls !== undefined && !Array.isArray(delta.tool_calls)) throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} tool calls.`);
         for (const tool of delta.tool_calls ?? []) {
-          if (!tool || typeof tool !== 'object') throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI tool call.');
+          if (!tool || typeof tool !== 'object') throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} tool call.`);
           const index = tool.index;
           if (!Number.isSafeInteger(index) || index < 0) throw new AgentError('provider-error', 'protocol', 'Invalid provider tool index.');
           yield { type: 'tool-call', index,
@@ -286,6 +305,7 @@ export class OpenAIProvider implements AgentProvider {
         if (typeof choice.finish_reason === 'string') yield { type: 'finish', reason: choice.finish_reason };
       }
     }
+    if (ended && sawReasoning) yield {type: 'provider-replay', replay: {provider: 'deepseek', model: request.model, reasoningContent}};
     if (!ended) throw new AgentError('provider-error', 'protocol', 'Provider stream ended without completion.', true);
   }
 
@@ -308,6 +328,13 @@ export class OpenAIProvider implements AgentProvider {
       if (message.role === 'user') {
         input.push({ role: 'user', content: [{ type: 'input_text', text: message.content }] });
       } else if (message.role === 'assistant') {
+        const replay = replayFor(message, this.id, request.model);
+        if (this.options.vendor?.responses && replay?.output) {
+          input.push(...structuredClone(replay.output));
+          // Meta requires an assistant message after a reasoning-only output.
+          if (replay.output.length && replay.output.at(-1)?.type === 'reasoning') input.push({role: 'assistant', content: [{type: 'output_text', text: ''}]});
+          continue;
+        }
         if (message.content) input.push({ role: 'assistant', content: [{ type: 'output_text', text: message.content }] });
         for (const call of message.toolCalls ?? []) input.push({ type: 'function_call', call_id: call.id, name: call.name, arguments: call.arguments });
       } else {
@@ -322,6 +349,7 @@ export class OpenAIProvider implements AgentProvider {
     }
     const body = JSON.stringify({
       model: request.model, store: false, stream: true,
+      ...(this.options.vendor?.responses ? {max_output_tokens: request.maxOutputTokens, include: ['reasoning.encrypted_content']} : {}),
       ...(instructions ? { instructions } : {}),
       input,
       ...(request.tools.length ? { tools: request.tools.map(t => ({ type: 'function', name: t.name, description: t.description, parameters: t.parameters })) } : {}),
@@ -330,9 +358,9 @@ export class OpenAIProvider implements AgentProvider {
     if (!response.body || !response.headers.get('content-type')?.includes('text/event-stream')) {
       if (response.body && response.headers.get('content-type')?.includes('json')) {
         const err = await readJson(response, request.signal, 4096).catch(() => undefined);
-        if (err) throw accountApiError(502, err);
+        if (err) throw this.options.account ? accountApiError(502, err) : apiError(502, err, `${this.label} request failed`);
       }
-      throw new AgentError('provider-error', 'protocol', 'OpenAI did not return an event stream.');
+      throw new AgentError('provider-error', 'protocol', `${this.label} did not return an event stream.`);
     }
     let terminal = false, refused = false, sawFunctionCall = false;
     const argumentDeltas = new Set<number>();
@@ -373,16 +401,22 @@ export class OpenAIProvider implements AgentProvider {
         if (usage && typeof usage === 'object') yield { type: 'usage', usage: { inputTokens: finite(usage.input_tokens), outputTokens: finite(usage.output_tokens) } };
         if (type === 'response.incomplete') {
           const reason = finished.incomplete_details?.reason;
-          if (reason === 'content_filter') throw new AgentError('provider-error', 'moderation', 'OpenAI account response was stopped by a content filter.');
-          if (reason === 'max_output_tokens') throw new AgentError('limit', 'output-tokens', 'OpenAI account response exceeded its output budget.', true);
-          throw new AgentError('provider-error', 'protocol', 'OpenAI account response did not complete.', true);
+          if (reason === 'content_filter') throw new AgentError('provider-error', 'moderation', `${this.label} response was stopped by a content filter.`);
+          if (reason === 'max_output_tokens') throw new AgentError('limit', 'output-tokens', `${this.label} response exceeded its output budget.`, true);
+          throw new AgentError('provider-error', 'protocol', `${this.label} response did not complete.`, true);
         }
-        if (refused) throw new AgentError('provider-error', 'moderation', 'OpenAI account response was a refusal.');
+        if (this.options.vendor?.responses) {
+          if (!Array.isArray(finished.output)) throw new AgentError('provider-error', 'protocol', 'Missing Responses replay output.');
+          const replay = {provider: this.options.vendor.id, model: request.model, output: finished.output};
+          validateReplay(replay);
+          yield {type: 'provider-replay', replay};
+        }
+        if (refused) throw new AgentError('provider-error', 'moderation', `${this.label} response was a refusal.`);
         yield { type: 'finish', reason: sawFunctionCall ? 'tool_calls' : 'stop' };
       } else if (type === 'response.failed') {
-        throw accountApiError(502, { error: event.response?.error });
+        throw this.options.account ? accountApiError(502, {error: event.response?.error}) : apiError(502, {error: event.response?.error}, `${this.label} request failed`);
       } else if (type === 'error') {
-        throw accountApiError(502, { error: event.error ?? event });
+        throw this.options.account ? accountApiError(502, {error: event.error ?? event}) : apiError(502, {error: event.error ?? event}, `${this.label} request failed`);
       }
       // All other Responses event types (created, reasoning, content parts,
       // item.done, rate limits, ...) carry no adapter output and are ignored.
@@ -397,32 +431,33 @@ export class OpenAIProvider implements AgentProvider {
     }
     let key: string;
     try { key = await this.options.getApiKey!(); }
-    catch { throw new AgentError('provider-error', 'auth', 'Could not read OpenAI credential from the credential store.'); }
+    catch { throw new AgentError('provider-error', 'auth', `Could not read ${this.label} credential from the credential store.`); }
     if (typeof key !== 'string' || !key.trim() || key.length > 8192 || /[\r\n\0]/.test(key))
-      throw new AgentError('provider-error', 'auth', 'OpenAI credential is missing or invalid.');
+      throw new AgentError('provider-error', 'auth', `${this.label} credential is missing or invalid.`);
     return key;
   }
 
   /** Non-inference discovery. Catalog membership does not prove chat/tool compatibility. */
   async listModels(signal: AbortSignal): Promise<OpenAIModel[]> {
     const run = this.options.privacyGate ? this.options.privacyGate.run.bind(this.options.privacyGate) : runWithProviderConsent;
-    return run({provider: this.id, endpoint: OPENAI_MODELS_ENDPOINT}, async guardedSignal => {
+    return run({provider: this.id, endpoint: this.modelsEndpoint}, async guardedSignal => {
       guardedSignal.throwIfAborted();
       const credential = await this.credential(); guardedSignal.throwIfAborted();
       const response = await this.fetchWithRetry(this.modelsEndpoint, credential, 'GET', undefined, guardedSignal);
       let value: any;
       try { value = await readJson(response, guardedSignal, 4 * 1024 * 1024); } catch {
         guardedSignal.throwIfAborted();
-        throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI model catalog.');
+        throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`);
       }
       guardedSignal.throwIfAborted();
-      if (value?.object !== 'list' || !Array.isArray(value.data) || value.data.length > 10000)
-        throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI model catalog.');
+      if ((!this.options.vendor && value?.object !== 'list') || !Array.isArray(value?.data) || value.data.length > 10000)
+        throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`);
+      try { catalogEntries(value); } catch { throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`); }
       const models: OpenAIModel[] = []; const ids = new Set<string>();
       for (const model of value.data) {
-        if (!model || typeof model.id !== 'string' || !model.id || model.id.length > 512 || /[\r\n\0]/.test(model.id) || typeof model.owned_by !== 'string' || !Number.isSafeInteger(model.created) || model.created < 0)
-          throw new AgentError('provider-error', 'protocol', 'Invalid OpenAI model catalog.');
-        if (!ids.has(model.id)) { ids.add(model.id); models.push({id: model.id, ownedBy: model.owned_by, created: model.created}); }
+        if (!model || typeof model.id !== 'string' || !model.id || model.id.length > 512 || /[\r\n\0]/.test(model.id) || (!this.options.vendor && (typeof model.owned_by !== 'string' || !Number.isSafeInteger(model.created) || model.created < 0)))
+          throw new AgentError('provider-error', 'protocol', `Invalid ${this.label} model catalog.`);
+        if (!ids.has(model.id)) { ids.add(model.id); models.push({id: model.id, ownedBy: typeof model.owned_by === 'string' ? model.owned_by : '', created: Number.isSafeInteger(model.created) && model.created >= 0 ? model.created : 0}); }
       }
       return models.sort((a, b) => a.id.localeCompare(b.id));
     }, signal);
@@ -433,7 +468,7 @@ export class OpenAIProvider implements AgentProvider {
    * refresh and one immediate retry. A second 401 is a plain auth failure. */
   private async fetchWithRetry(url: string, credential: string, method: 'GET' | 'POST', body: string | undefined, signal: AbortSignal): Promise<Response> {
     const accountMode = !!this.options.account;
-    const prefix = accountMode ? 'OpenAI account request failed' : 'OpenAI request failed';
+    const prefix = accountMode ? 'OpenAI account request failed' : `${this.label} request failed`;
     let bearer = credential;
     let refreshed = false;
     const configured = this.options.maxRetries ?? 3;
@@ -471,7 +506,7 @@ export class OpenAIProvider implements AgentProvider {
         signal.throwIfAborted();
         if (error instanceof AgentError) throw error;
         // A failed POST may already have run and incurred cost. Never retry an ambiguous transport failure.
-        throw new AgentError('provider-error', 'network', 'Network request to OpenAI failed.', true);
+        throw new AgentError('provider-error', 'network', `Network request to ${this.label} failed.`, true);
       }
       if (!failure.retryable || attempt >= retries || (retryAfter !== undefined && retryAfter > 15000)) throw failure;
       await sleep(retryAfter ?? Math.min(1000 * 2 ** attempt + Math.random() * 250, 15000), signal);

@@ -74,6 +74,13 @@ fn collect_text(shapes:&[Shape], out:&mut Vec<String>) {
 mod tests {
  use super::*;
  #[test] fn fixture(){let mut e=SlidesEngine::new(); assert!(e.open(include_bytes!("../fixtures/independent.pptx")).unwrap().contains("\"slides\":2"));assert!(e.read_slide(0).unwrap().contains("Somnia Documents Studio"));assert_eq!(&e.render_png(1,1.0).unwrap()[..8],b"\x89PNG\r\n\x1a\n");}
+ /// CI-only: decks produced by the TS authoring model (lib/slides/deckPackage.ts) must reopen in the Rust importer
+ /// and render. Regenerate the fixtures with the generator test in deckPackage.test.ts when the model changes.
+ fn reopened(bytes:&[u8],slides:usize,first:&str)->SlidesEngine{let mut e=SlidesEngine::new();let summary=e.open(bytes).unwrap();assert!(summary.contains(&format!("\"slides\":{slides}")),"{summary}");assert!(e.read_slide(0).unwrap().contains(first));for i in 0..slides{assert_eq!(&e.render_png(i,1.0).unwrap()[..8],b"\x89PNG\r\n\x1a\n");}e}
+ #[test] fn reordered_deck_reopens(){let e=reopened(include_bytes!("../fixtures/reordered.pptx"),2,"Worker stays responsive");assert!(e.read_slide(1).unwrap().contains("Somnia Documents Studio"));}
+ #[test] fn duplicated_deck_reopens(){let e=reopened(include_bytes!("../fixtures/duplicated.pptx"),3,"Somnia Documents Studio");assert!(e.read_slide(1).unwrap().contains("Somnia Documents Studio"));assert!(e.read_slide(2).unwrap().contains("Worker stays responsive"));}
+ #[test] fn deleted_deck_reopens(){reopened(include_bytes!("../fixtures/deleted.pptx"),1,"Worker stays responsive");}
+ #[test] fn new_slide_deck_reopens(){let e=reopened(include_bytes!("../fixtures/newslide.pptx"),3,"Somnia Documents Studio");assert!(e.read_slide(2).unwrap().contains("Worker stays responsive"));}
  #[test] fn invalid_zip(){assert!(preflight(b"not zip").is_err());}
  #[test] fn compressed_cap(){assert!(preflight(&vec![0;INPUT+1]).is_err());}
  #[test] fn expansion_cap(){use std::io::Write;let mut z=zip::ZipWriter::new(Cursor::new(Vec::new()));z.start_file("ppt/presentation.xml",zip::write::SimpleFileOptions::default().compression_method(zip::CompressionMethod::Deflated)).unwrap();z.write_all(&vec![b'x';XML as usize+1]).unwrap();let b=z.finish().unwrap().into_inner();assert!(preflight(&b).unwrap_err().contains("cap"));}

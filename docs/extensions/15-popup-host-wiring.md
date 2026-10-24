@@ -34,4 +34,7 @@ Every candidate is `no-signed-match`. Duplicates (same id and version) and block
 ## Not wired yet
 
 - The v2 `ExtensionSupervisor` does not load packages from `V2PackageStore` yet. Approved v2 installs are listed, can be disabled, revoked and removed, but do not run.
-- `BlocklistService` needs the bundled Ed25519 public key and the signed index URL. The host takes it through `DefaultHostOptions.blocklist`; with none configured nothing is blocked.
+
+## Blocklist wiring
+
+`BlocklistService` runs in the app host (`blocklistWiring.ts`). The extensions popup receives it through `DefaultHostOptions.blocklist` (`ExtensionsPopupMount`); matches disable and notify in both lanes and the launch + 24 h monitor starts when the app boots. The shipping `BLOCKLIST_CONFIG` carries an empty public key, so nothing is blocked until a maintainer key and the signed feed are published (see [the store concept](../extensions-store.md#blocklist)).

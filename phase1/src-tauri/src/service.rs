@@ -27,6 +27,8 @@ const MAX_DOCS: usize = 2048;
 const MAX_FILES: usize = 20_000;
 /// Upper bound for one media file (PNG, JPEG, PDF) read for preview.
 pub const MAX_MEDIA_BYTES: usize = 25_000_000;
+/// Upper bound for one linked resource (CSS, JS, image, font, media) read for the live preview.
+pub const MAX_RESOURCE_BYTES: usize = 10_000_000;
 const QUIET: Duration = Duration::from_millis(1000);
 const MAX_WAIT: Duration = Duration::from_secs(5);
 const POLL: Duration = Duration::from_secs(2);
@@ -630,6 +632,23 @@ impl Project {
         }
         Ok(bytes)
     }
+    /// Raw bytes of any regular file inside the project, for the live preview resolver, with a MIME type from the extension.
+    /// Same path rules as every other read: relative `/`-separated path, no `..`, no symlinks, no escape from the canonical root, reserved folders denied.
+    pub fn read_resource(&self, path: &str) -> Result<(String, Vec<u8>)> {
+        let p = self.safe_path(path)?;
+        let mut file = self.root.open(p)?;
+        if !file.metadata()?.is_file() {
+            return Err(AppError::Denied("Not a regular file".into()));
+        }
+        let mut bytes = Vec::new();
+        Read::by_ref(&mut file)
+            .take((MAX_RESOURCE_BYTES + 1) as u64)
+            .read_to_end(&mut bytes)?;
+        if bytes.len() > MAX_RESOURCE_BYTES {
+            return Err(AppError::Limit);
+        }
+        Ok((resource_mime(path).to_string(), bytes))
+    }
     /// Per-project settings file `.somnia/settings.json` (UI preferences only, max 64 KB). The folder is reserved, so the normal file layer never touches it.
     pub fn read_project_settings(&self) -> Result<Option<String>> {
         let dir = match self.root.open_dir(PROJECT_SETTINGS_DIR) {
@@ -856,6 +875,10 @@ impl Project {
     pub fn has_dirty(&self) -> bool {
         self.documents.values().any(|d| d.pending.is_some())
     }
+    /// Root-relative paths of files with unsaved editor content (Git buffer guard).
+    pub fn dirty_paths(&self) -> Vec<String> {
+        self.documents.iter().filter(|(_, d)| d.pending.is_some()).map(|(p, _)| p.clone()).collect()
+    }
 }
 /// True for file names with a PNG, JPEG or PDF extension (case-insensitive).
 pub fn is_media_path(path: &str) -> bool {
@@ -863,6 +886,43 @@ pub fn is_media_path(path: &str) -> bool {
         .extension()
         .map(|e| e.to_string_lossy().to_ascii_lowercase())
         .is_some_and(|e| matches!(e.as_str(), "png" | "jpg" | "jpeg" | "gif" | "avif" | "bmp" | "ico" | "tga" | "tif" | "tiff" | "qoi" | "ppm" | "pnm" | "webp" | "psd" | "docx" | "xlsx" | "pptx" | "pdf"))
+}
+/// MIME type for a linked preview resource, from the lower-cased extension. Unknown extensions are `application/octet-stream`.
+pub fn resource_mime(path: &str) -> &'static str {
+    let ext = Path::new(path)
+        .extension()
+        .map(|e| e.to_string_lossy().to_ascii_lowercase())
+        .unwrap_or_default();
+    match ext.as_str() {
+        "html" | "htm" => "text/html",
+        "css" => "text/css",
+        "js" | "mjs" | "cjs" => "text/javascript",
+        "json" | "map" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "avif" => "image/avif",
+        "bmp" => "image/bmp",
+        "ico" => "image/x-icon",
+        "woff" => "font/woff",
+        "woff2" => "font/woff2",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        "mp4" | "m4v" => "video/mp4",
+        "webm" => "video/webm",
+        "ogv" => "video/ogg",
+        "mov" => "video/quicktime",
+        "mp3" => "audio/mpeg",
+        "wav" => "audio/wav",
+        "ogg" | "oga" => "audio/ogg",
+        "m4a" => "audio/mp4",
+        "flac" => "audio/flac",
+        "txt" => "text/plain",
+        "wasm" => "application/wasm",
+        _ => "application/octet-stream",
+    }
 }
 const PROJECT_SETTINGS_DIR: &str = ".somnia";
 const PROJECT_SETTINGS_FILE: &str = "settings.json";
@@ -912,13 +972,36 @@ fn acquire_lease(path: &Path, exclusive: bool) -> Result<fs::File> {
         .read(true)
         .write(true)
         .open(path)?;
-    if exclusive {
-        FileExt::try_lock_exclusive(&lock)
-    } else {
-        FileExt::try_lock_shared(&lock)
+    // A one-shot try_lock is the deliberate UX semantic (report "open elsewhere"
+    // immediately instead of hanging), but lease release after close()/process
+    // teardown is not guaranteed to be visible to a fresh try_lock in the same
+    // instant on every platform. Under heavy parallel load (the 288-test
+    // single-binary suite) an immediate reopen sporadically observed a
+    // just-released lease as still contended on the Linux and macOS CI
+    // runners. Absorb that propagation window with a short bounded grace;
+    // genuinely held leases outlive it by orders of magnitude (seconds in the
+    // tests, indefinitely in the app), so mutual-exclusion semantics and the
+    // immediate Locked answer for real contention are unchanged.
+    const RETRY_DELAY: Duration = Duration::from_millis(10);
+    const RELEASE_GRACE: Duration = Duration::from_millis(250);
+    let deadline = Instant::now() + RELEASE_GRACE;
+    loop {
+        let result = if exclusive {
+            FileExt::try_lock_exclusive(&lock)
+        } else {
+            FileExt::try_lock_shared(&lock)
+        };
+        match result {
+            Ok(()) => return Ok(lock),
+            Err(error)
+                if error.raw_os_error() == fs2::lock_contended_error().raw_os_error()
+                    && Instant::now() < deadline =>
+            {
+                std::thread::sleep(RETRY_DELAY);
+            }
+            Err(error) => return Err(project_lock_error(error)),
+        }
     }
-    .map_err(project_lock_error)?;
-    Ok(lock)
 }
 
 fn project_lock_error(error: std::io::Error) -> AppError {

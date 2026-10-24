@@ -15,7 +15,7 @@ Somnia is one local-first creative workspace. Its chrome stays familiar while th
 
 **Implementation baseline:** `somnia-agent` commit `d91046fdb82ed861b18e11bda1b38d73cd25c99e`, inspected on 2026-10-09. This is a source snapshot, not a claim that every branch, release or operating system has the same behavior. The documentation change does not alter runtime code.
 
-The baseline includes the Base UI/shadcn-derived primitives, Components browsing system, raster/vector/PDF inline editors and existing context-sensitive controls. The baseline snapshot predates Studio S0/S1; they have since been integrated (see [Studio direction](studio-direction.md)). Statements in this guide about the baseline were not re-audited against the Studio shell.
+The baseline includes the Base UI/shadcn-derived primitives, Components browsing system, raster/vector/PDF inline editors and existing context-sensitive controls. The historical audit snapshot predates Studio S0/S1, which are integrated in the current `int/shell` base. P0 guardrails were rechecked against `22fe72d8` on 2026-10-14 (see [P0 implementation](P0-guardrails.md)). Other historical contract findings have not all been re-audited against the current shell.
 
 Throughout the guide:
 
@@ -35,6 +35,48 @@ All file links are repository-relative, so they remain useful on a feature branc
 5. [Shared Studio direction](studio-direction.md)
 6. [Contribution and verification](verification.md)
 7. [Foundation palette values](palette-reference.md) and [machine-readable reference](token-reference.json)
+8. [Migration guide: bespoke controls to DS primitives](migration-guide.md)
+9. [Design-system audit report](final-audit.md)
+10. [Extensions area DS adoption](extensions-adoption.md)
+11. [Vibespace area DS adoption](vibespace-adoption.md)
+12. [Pdf/pdfedit areas DS adoption](pdf-adoption.md)
+13. [Agent area DS adoption](agent-adoption.md)
+14. [Vectorstudio area DS adoption](vectorstudio-adoption.md)
+15. [Settings area DS adoption](settings-adoption.md)
+16. [Svgedit area DS adoption](svgedit-adoption.md)
+17. [Documents area DS adoption](documents-adoption.md)
+18. [Video area DS adoption](video-adoption.md)
+19. [Versions area DS adoption](versions-adoption.md)
+20. [Photos area DS adoption](photos-adoption.md)
+21. [Imageedit area DS adoption](imageedit-adoption.md)
+22. [Imgedit area DS adoption](imgedit-adoption.md)
+23. [Layers surfaces DS adoption](layers-adoption.md)
+24. [Export and conversion dialogs DS adoption](export-adoption.md)
+25. [Photos crop guides (rule of thirds)](photos-crop-guides.md)
+26. [Photos clipping overlay (false-color warning)](photos-clipping-overlay.md)
+27. [Photos before/after split view](photos-split-view.md)
+28. [Photos settings sync (copy/paste)](photos-settings-sync.md)
+29. [Photos prev/next navigation](photos-nav.md)
+30. [Photos zoom presets](photos-zoom-presets.md)
+31. [Photos filmstrip](photos-filmstrip.md)
+32. [Photos batch export](photos-batch-export.md)
+33. [Photos heal / clone stamp](photos-heal-clone.md)
+34. [Photos dodge/burn — local adjustment mask](photos-dodge-burn.md)
+35. [Photos preset sync](photos-preset-sync.md)
+36. [Photos overlay markers](photos-overlay-markers.md)
+37. [Photos graduated filter](photos-grad-filter.md)
+38. [Photos radial filter](photos-radial-filter.md)
+39. [Photos tone curves](photos-curves.md)
+40. [Photos HSL color mixer](photos-hsl-mixer.md)
+41. [Photos targeted adjustment](photos-targeted-adjustment.md)
+42. [Photos versions and split polish](photos-versions.md)
+43. [Photos adjustment brush](photos-adjustment-brush.md)
+44. [Photos lens correction](photos-lens-correction.md)
+45. [Photos luminosity mask](photos-lum-mask.md)
+46. [Photos auto tone and auto white balance](photos-auto-tone.md)
+47. [Photos star ratings](photos-ratings.md)
+48. [Photos pick / reject flags](photos-flags.md)
+49. [Studio shell panel consolidation](shell-panel-consolidation.md)
 
 ## The system in one view
 
@@ -95,3 +137,19 @@ Context adaptation is not permission. A selected object can suggest a control; i
 Do not create competing homes for format-specific behavior. Use [vector tools](../vector-tools.md), [PDF/layout design](../pdf-layout-tools.md), [appearance surfaces](../appearance-surfaces.md), [glass behavior](../../GLASS.md), [window background](../../WINDOW-BACKGROUND.md), [Components](../../features/component-system.md), [collaboration](../../collaboration.md), [Agent](../../agent/README.md) and [settings deep links](../../SETTINGS-DEEP-LINKS.md) for their own details.
 
 This guide supplies the cross-cutting system. The [verification guide](verification.md) lists known gaps and the procedure for keeping it current.
+
+## Current contributor entry points
+
+- [Component usage](contributor-guide.md)
+- [Token tables and exchange aliases](contributor-tokens.md)
+- [Theme importer](theme-importer-guide.md)
+- [P3 Settings plan and CI-only capture harness](settings-migration-plan.md)
+- [Theme author guide and advisory contrast warnings](theme-author-guide.md)
+
+- [Keyboard and focus checklist](a11y-checklist.md)
+- [Component gallery index and studio recipes](gallery-index.md)
+
+- [New-studio state adoption audit](new-studios-state-audit.md)
+- [Shared motion and opt-in density](motion-density.md)
+
+- [Shell chrome adoption audit](shell-chrome-adoption.md)

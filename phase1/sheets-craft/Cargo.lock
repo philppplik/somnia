@@ -448,6 +448,7 @@ name = "somnia-sheets-craft"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
+ "gridcraft-chart",
  "gridcraft-engine",
  "gridcraft-xlsx",
  "serde_json",

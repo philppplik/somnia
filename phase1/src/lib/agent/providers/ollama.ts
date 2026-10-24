@@ -1,3 +1,6 @@
+import {recordLocalModelSuccess} from '../localModelUsage';
+import {localContextBudgetReport,type LocalContextBudgetReport} from '../localContextReport';
+import {checkLocalContext} from '../localContext';
 import { AgentError, ProviderError } from '../errors';
 import { fetchProviderResponse, type RetryOptions } from '../retry';
 import type { AgentMessage, AgentProvider, AgentProviderEvent, AgentProviderRequest } from '../types';
@@ -11,6 +14,8 @@ export const OLLAMA_DEFAULT_URL = 'http://127.0.0.1:11434';
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
 export interface OllamaOptions extends RetryOptions {
+  /** Aggregate final prepared request report; observer cannot alter enforcement. */
+  onContextBudget?:(report:LocalContextBudgetReport,signal:AbortSignal)=>void;
   /** Daemon base URL. Default http://127.0.0.1:11434. */
   baseUrl?: string;
   /** Injectable for tests. */
@@ -19,6 +24,8 @@ export interface OllamaOptions extends RetryOptions {
   requestTimeoutMs?: number;
   /** Context window (tokens) sent as options.num_ctx. Unset = daemon default. The daemon may still clamp or truncate; no guarantee. */
   numCtx?: number;
+  /** Seconds to retain a loaded model. 0 unloads after the request; unset uses daemon default. */
+  keepAliveSeconds?: number;
 }
 
 const isAbort = (e: unknown) => (e as { name?: string })?.name === 'AbortError';
@@ -28,6 +35,7 @@ export function normalizeBaseUrl(raw: string | undefined): string {
   const v = (raw ?? '').trim() || OLLAMA_DEFAULT_URL;
   let u: URL;
   try { u = new URL(/^[a-z]+:\/\//i.test(v) ? v : 'http://' + v); } catch { throw new ProviderError('protocol', `Invalid Ollama URL: ${v}`); }
+  if(u.username||u.password||u.search||u.hash)throw new ProviderError('protocol','Ollama URL must not contain credentials, query or fragment');
   if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new ProviderError('protocol', `Unsupported protocol: ${u.protocol}`);
   return u.origin + u.pathname.replace(/\/+$/, '');
 }
@@ -49,22 +57,36 @@ function withTimeout(signal: AbortSignal | undefined, ms: number): { signal: Abo
   return { signal: c.signal, done: () => { clearTimeout(t); signal?.removeEventListener('abort', onAbort); } };
 }
 
+/** Bound metadata bodies too, not just streaming output. Never accept stale/partial JSON. */
+async function boundedJson(response:Response,signal:AbortSignal|undefined,timeout:number):Promise<unknown>{
+ if(!response.body)throw new ProviderError('protocol','Ollama metadata has no body');
+ const reader=response.body.getReader(),timer=withTimeout(signal,timeout);let size=0,text='';const decoder=new TextDecoder();
+ const abort=()=>{void reader.cancel().catch(()=>{});};timer.signal.addEventListener('abort',abort,{once:true});
+ try{timer.signal.throwIfAborted();for(;;){const part=await reader.read();timer.signal.throwIfAborted();if(part.done)break;size+=part.value.byteLength;if(size>2_000_000)throw new ProviderError('protocol','Ollama metadata exceeds limit');text+=decoder.decode(part.value,{stream:true});}text+=decoder.decode();try{return JSON.parse(text);}catch{throw new ProviderError('protocol','Invalid Ollama metadata JSON');}}
+ finally{timer.done();timer.signal.removeEventListener('abort',abort);await reader.cancel().catch(()=>{});reader.releaseLock();}
+}
+
 export class OllamaProvider implements AgentProvider {
   readonly id = 'ollama';
+  readonly supportsImages=true;
   /** Derived from the validated endpoint: 'local' only for http loopback, else 'cloud' (must pass the consent gate). */
   readonly locality: 'cloud' | 'local';
   private numCtx?: number;
+  private keepAliveSeconds?: number;
   readonly baseUrl: string;
   private f: FetchLike;
   private timeout: number;
   private retries: RetryOptions;
+  private onContextBudget?:OllamaOptions['onContextBudget'];
 
   constructor(opts: OllamaOptions = {}) {
-    this.retries = opts;
+    this.retries = opts;this.onContextBudget=opts.onContextBudget;
     this.baseUrl = normalizeBaseUrl(opts.baseUrl);
     this.locality = isLoopbackHttp(this.baseUrl) ? 'local' : 'cloud';
     if (opts.numCtx !== undefined && (!Number.isInteger(opts.numCtx) || opts.numCtx < 1)) throw new ProviderError('protocol', 'numCtx must be a positive integer');
     this.numCtx = opts.numCtx;
+    if(opts.keepAliveSeconds!==undefined&&(!Number.isInteger(opts.keepAliveSeconds)||opts.keepAliveSeconds<0||opts.keepAliveSeconds>86400))throw new ProviderError('protocol','keepAliveSeconds must be an integer between 0 and 86400');
+    this.keepAliveSeconds=opts.keepAliveSeconds;
     this.f = opts.fetch ?? ((u, i) => fetch(u, i));
     this.timeout = opts.requestTimeoutMs ?? 5000;
   }
@@ -105,10 +127,10 @@ export class OllamaProvider implements AgentProvider {
       if (r.status === 404) return no('model-not-found', `Model "${model}" is not installed`);
       if (!r.ok) return no('invalid-response', `Ollama answered ${r.status} for /api/show`);
       let j: { remote_host?: unknown; remote_model?: unknown; model_info?: unknown };
-      try { j = await r.json(); } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
+      try { j = await boundedJson(r,signal,this.timeout) as typeof j; } catch { return no('invalid-response', 'Invalid JSON from /api/show'); }
       if (!j || typeof j !== 'object') return no('invalid-response', 'Unexpected /api/show response');
       if (j.remote_host || j.remote_model) return no('remote-model', `Model "${model}" is served by a remote host`);
-      if (!j.model_info || typeof j.model_info !== 'object' || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
+      if (!j.model_info || typeof j.model_info !== 'object' || Array.isArray(j.model_info) || Object.keys(j.model_info).length === 0) return no('no-local-weights', `No local model metadata for "${model}"`);
       return { local: true, model };
     } catch (e) {
       const pe = this.toError(e, t.signal, signal);
@@ -116,10 +138,23 @@ export class OllamaProvider implements AgentProvider {
     } finally { t.done(); }
   }
 
+  /** Declared daemon capabilities only. Missing/malformed stays unknown, never inferred from names. */
+  async capabilities(model:string,signal?:AbortSignal):Promise<string[]|null>{
+    if(this.locality!=='local')return null;
+    const timer=withTimeout(signal,this.timeout);
+    try{
+      const response=await this.f(this.baseUrl+'/api/show',{method:'POST',redirect:'error',headers:{'content-type':'application/json'},body:JSON.stringify({model}),signal:timer.signal});
+      if(!response.ok)return null;
+      const value=await boundedJson(response,signal,this.timeout) as any;
+      if(!value||value.remote_host||value.remote_model||!value.model_info||typeof value.model_info!=='object'||Array.isArray(value.model_info)||!Object.keys(value.model_info).length||!Array.isArray(value.capabilities)||!value.capabilities.every((c:unknown)=>typeof c==='string'))return null;
+      return value.capabilities;
+    }catch{return null;}finally{timer.done();}
+  }
+
   async health(signal?: AbortSignal): Promise<HealthStatus> {
     try {
       const r = await this.get('/api/version', signal);
-      const j = (await r.json().catch(() => ({}))) as { version?: string };
+      const j = (await boundedJson(r,signal,this.timeout)) as { version?: string };
       return { ok: true, version: typeof j.version === 'string' ? j.version : undefined };
     } catch (e) {
       const pe = e as ProviderError;
@@ -130,14 +165,19 @@ export class OllamaProvider implements AgentProvider {
   async listModels(signal?: AbortSignal): Promise<ModelInfo[]> {
     const r = await this.get('/api/tags', signal);
     let j: { models?: Array<{ name?: string; model?: string; size?: number; details?: Record<string, unknown> }> };
-    try { j = await r.json(); } catch { throw new ProviderError('protocol', 'Ollama returned invalid JSON for /api/tags'); }
-    if (!Array.isArray(j.models)) throw new ProviderError('protocol', 'Unexpected /api/tags response');
+    try { j = await boundedJson(r,signal,this.timeout) as typeof j; } catch { throw new ProviderError('protocol', 'Ollama returned invalid JSON for /api/tags'); }
+    if (!j||typeof j!=='object'||!Array.isArray(j.models)) throw new ProviderError('protocol', 'Unexpected /api/tags response');
+    const seen=new Set<string>();
     return j.models
       .map((m) => {
+        if(!m||typeof m!=='object'||Array.isArray(m))throw new ProviderError('protocol','Invalid Ollama inventory row');
+        const valid=(v:unknown)=>typeof v==='string'&&v.trim().length>0&&v.length<=512;
+        if(m.model===undefined&&m.name===undefined||m.model!==undefined&&!valid(m.model)||m.name!==undefined&&!valid(m.name)||m.model!==undefined&&m.name!==undefined&&m.model!==m.name)throw new ProviderError('protocol','Ambiguous Ollama model identity');
         const id = m.model || m.name || '';
+        if(seen.has(id))throw new ProviderError('protocol','Duplicate Ollama model identity');seen.add(id);
         const details: Record<string, string> = {};
         for (const [k, v] of Object.entries(m.details ?? {})) if (typeof v === 'string' && v) details[k] = v;
-        return { id, label: m.name || id, sizeBytes: typeof m.size === 'number' ? m.size : undefined, details } as ModelInfo;
+        return { id, label: m.name || id, sizeBytes: typeof m.size === 'number' && Number.isFinite(m.size) && m.size>=0 ? m.size : undefined, details } as ModelInfo;
       })
       .filter((m) => m.id)
       .sort((a, b) => a.label.localeCompare(b.label));
@@ -145,13 +185,19 @@ export class OllamaProvider implements AgentProvider {
 
   async *stream(req: AgentProviderRequest): AsyncGenerator<AgentProviderEvent> {
     const { signal } = req;
+    req={...structuredClone({model:req.model,messages:req.messages,tools:req.tools,maxOutputTokens:req.maxOutputTokens}),signal};
     if (signal.aborted) { yield { type: 'finish', reason: 'aborted' }; return; }
+    const maxOutputTokens=this.numCtx===undefined?req.maxOutputTokens:Math.min(req.maxOutputTokens,Math.max(1,Math.floor(this.numCtx/4)));
+    try{this.onContextBudget?.(localContextBudgetReport({...req,maxOutputTokens},this.numCtx),req.signal);}catch{/* Observer never grants/bypasses request. */}
+    if(signal.aborted){yield {type:'finish',reason:'aborted'};return;}
+    checkLocalContext({...req,maxOutputTokens},this.numCtx);
     const body = {
       model: req.model,
       messages: toOllamaMessages(req.messages),
       ...(req.tools.length && { tools: req.tools.map((t) => ({ type: 'function', function: { name: t.name, description: t.description, parameters: t.parameters } })) }),
       stream: true,
-      options: { num_predict: req.maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
+      ...(this.keepAliveSeconds!==undefined?{keep_alive:this.keepAliveSeconds}:{}),
+      options: { num_predict: maxOutputTokens, ...(this.numCtx && { num_ctx: this.numCtx }) },
     };
     let res: Response;
     try {
@@ -170,28 +216,34 @@ export class OllamaProvider implements AgentProvider {
     const abortReader=()=>{void reader.cancel().catch(()=>{});};
     signal.addEventListener('abort',abortReader,{once:true});
     const dec = new TextDecoder();
-    let buf = '';
+    let buf = '';let totalBytes=0;const MAX_LINE=1024*1024,MAX_STREAM=16*1024*1024;
     let toolIndex = 0;
     let finished = false;
     const handle = (line: string): AgentProviderEvent[] => {
+      if (line.length>MAX_LINE)throw new ProviderError('protocol','Ollama frame exceeds limit');
       if (!line.trim()) return [];
       let j: OllamaChunk;
       try { j = JSON.parse(line); } catch { throw new ProviderError('protocol', 'Invalid line in Ollama stream'); }
+      if(!j||typeof j!=='object'||Array.isArray(j)||j.message?.content!==undefined&&typeof j.message.content!=='string'||j.message?.tool_calls!==undefined&&!Array.isArray(j.message.tool_calls)||j.done!==undefined&&typeof j.done!=='boolean')throw new ProviderError('protocol','Invalid Ollama event');
+      if(j.message!==undefined&&(!j.message||typeof j.message!=='object'||Array.isArray(j.message))||j.error!==undefined&&typeof j.error!=='string'||j.done_reason!==undefined&&typeof j.done_reason!=='string')throw new ProviderError('protocol','Invalid Ollama event fields');
+      for(const count of [j.prompt_eval_count,j.eval_count])if(count!==undefined&&(!Number.isSafeInteger(count)||count<0))throw new ProviderError('protocol','Invalid Ollama usage');
       if (this.locality === 'local' && (j.remote_host || j.remote_model)) throw new ProviderError('not-local', 'Ollama answered from a remote host; refusing to treat this as local processing');
       if (j.error) throw new ProviderError(/not found/i.test(j.error) ? 'model-not-found' : 'http', 'Ollama reported a streaming error.');
       const out: AgentProviderEvent[] = [];
       if (j.message?.content) out.push({ type: 'text', text: j.message.content });
       for (const tc of j.message?.tool_calls ?? []) {
+        if(!tc||typeof tc!=='object'||!tc.function||typeof tc.function!=='object')throw new ProviderError('protocol','Invalid Ollama tool call');
         const name = tc.function?.name;
-        if (!name) continue;
+        if(typeof name!=='string'||!name.trim()||tc.id!==undefined&&(typeof tc.id!=='string'||!tc.id))throw new ProviderError('protocol','Invalid Ollama tool identity');
         const args = tc.function?.arguments;
         // Ollama sends each call complete, arguments as an object. Contract wants a JSON string.
         out.push({ type: 'tool-call', index: toolIndex, id: tc.id || `ollama-call-${toolIndex}`, name, arguments: typeof args === 'string' ? args : JSON.stringify(args ?? {}) });
         toolIndex++;
       }
       if (j.done) {
+        if(this.locality==='local'&&!/(^|[:\-_/])cloud$/i.test(req.model.trim())&&!signal.aborted&&j.done_reason!=='length')recordLocalModelSuccess(this.baseUrl,req.model);
         // Local usage is real token counts; costUsd stays absent (contract: absent = unknown).
-        if (j.prompt_eval_count !== undefined || j.eval_count !== undefined) out.push({ type: 'usage', usage: { inputTokens: j.prompt_eval_count, outputTokens: j.eval_count } });
+        if (j.prompt_eval_count !== undefined || j.eval_count !== undefined) out.push({ type: 'usage', usage: { inputTokens: j.prompt_eval_count, outputTokens: j.eval_count, ...(typeof j.eval_duration==='number'&&Number.isSafeInteger(j.eval_duration)&&j.eval_duration>0?{outputDurationNs:j.eval_duration}:{}) } });
         out.push({ type: 'finish', reason: toolIndex > 0 ? 'tool_calls' : j.done_reason === 'length' ? 'length' : 'stop' });
       }
       return out;
@@ -199,17 +251,20 @@ export class OllamaProvider implements AgentProvider {
     try {
       for (;;) {
         const { done, value } = await reader.read();
+        if(signal.aborted){yield {type:'finish',reason:'aborted'};return;}
         if (done) break;
+        totalBytes+=value.byteLength;if(totalBytes>MAX_STREAM)throw new ProviderError('protocol','Ollama stream exceeds limit');
         buf += dec.decode(value, { stream: true });
         let i: number;
         while ((i = buf.indexOf('\n')) >= 0) {
-          const line = buf.slice(0, i); buf = buf.slice(i + 1);
-          for (const ev of handle(line)) { yield ev; if (ev.type === 'finish') finished = true; }
+          signal.throwIfAborted();const line = buf.slice(0, i); buf = buf.slice(i + 1);
+          for (const ev of handle(line)) { signal.throwIfAborted();yield ev; if (ev.type === 'finish') finished = true; }
           if (finished) { await reader.cancel().catch(() => {}); return; }
         }
+        if(buf.length>MAX_LINE)throw new ProviderError('protocol','Ollama frame exceeds limit');
       }
-      buf += dec.decode();
-      for (const ev of handle(buf)) { yield ev; if (ev.type === 'finish') finished = true; }
+      signal.throwIfAborted();buf += dec.decode();
+      for (const ev of handle(buf)) { signal.throwIfAborted();yield ev; if (ev.type === 'finish') finished = true; }
       if (!finished) throw new ProviderError('protocol', 'Ollama stream ended before completion');
     } catch (e) {
       if (e instanceof ProviderError) throw e;
@@ -221,7 +276,7 @@ export class OllamaProvider implements AgentProvider {
 
 interface OllamaChunk {
   message?: { content?: string; tool_calls?: Array<{ id?: string; function?: { name?: string; arguments?: unknown } }> };
-  done?: boolean; done_reason?: string; error?: string; remote_host?: string; remote_model?: string; prompt_eval_count?: number; eval_count?: number;
+  done?: boolean; done_reason?: string; error?: string; remote_host?: string; remote_model?: string; prompt_eval_count?: number; eval_duration?: number; eval_count?: number;
 }
 
 /** Maps contract messages to Ollama's /api/chat shape. Tool results are keyed by tool name, so resolve it from the earlier assistant call. */
@@ -233,7 +288,8 @@ export function toOllamaMessages(messages: readonly AgentMessage[]): unknown[] {
     if (m.role === 'assistant' && m.toolCalls?.length) {
       return { role: 'assistant', content: m.content, tool_calls: m.toolCalls.map((c) => ({ function: { name: c.name, arguments: safeParse(c.arguments) } })) };
     }
-    return { role: m.role, content: m.content };
+    if(m.images?.length&&m.role!=='user')throw new ProviderError('protocol','Images require a user message');
+    return { role: m.role, content: m.content, ...(m.images?.length?{images:m.images.map(image=>image.base64)}:{}) };
   });
 }
 function safeParse(s: string): unknown { try { const v = JSON.parse(s); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }

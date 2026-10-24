@@ -93,7 +93,9 @@ pub struct RunEvent {
 pub struct Usage {
     pub input_tokens: u64,
     pub output_tokens: u64,
-    pub cached_tokens: u64,
+    /// `None` = the provider did not report it (distinct from a reported 0).
+    pub cache_read_tokens: Option<u64>,
+    pub cache_write_tokens: Option<u64>,
     pub cost_usd: Option<f64>,
     pub cost_source: Option<String>,
 }
@@ -153,7 +155,8 @@ mod tests {
             let usage = Usage {
                 input_tokens: 1,
                 output_tokens: 2,
-                cached_tokens: 0,
+                cache_read_tokens: None,
+                cache_write_tokens: None,
                 cost_usd: cost,
                 cost_source: None,
             };
@@ -162,7 +165,8 @@ mod tests {
         let usage = Usage {
             input_tokens: 1,
             output_tokens: 2,
-            cached_tokens: 0,
+            cache_read_tokens: Some(600),
+            cache_write_tokens: None,
             cost_usd: Some(0.1),
             cost_source: Some("provider_reported".into()),
         };
@@ -225,6 +229,9 @@ pub struct PendingConsent {
     pub scope: String,
     pub reason: String,
     pub allow_for_run: bool,
+    /// Policy v2 action kind ("shell"/"network"/...); absent on legacy projections.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub kind: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -381,4 +388,47 @@ pub struct SpaceSummary {
     pub scope_label: String,
     pub autonomy: String,
     pub studio_count: u64,
+}
+
+/// Native review extension, separate from v1 whole-path review DTOs.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HunkApply {
+    pub run_id: String,
+    pub review_revision: String,
+    pub paths: Vec<String>,
+    pub hunks: Vec<somnia_vibespace_checkpoints::HunkSelection>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RequestChanges {
+    pub run_id: String,
+    pub review_revision: String,
+    pub request_id: String,
+    pub message: String,
+}
+#[derive(Clone,Debug,PartialEq,Eq,Serialize,Deserialize)]
+#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct RetryFeedback{pub run_id:String,pub request_id:String,pub message:String}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewHunks {
+    pub revision: String,
+    pub files: Vec<FileHunks>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct FileHunks {
+    pub path: String,
+    pub hunks: Vec<somnia_vibespace_checkpoints::TextHunk>,
+}
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TimelineEntry {
+    pub sequence: u64,
+    pub timestamp_utc: String,
+    pub kind: String,
+    pub detail: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub usage: Option<Usage>,
 }

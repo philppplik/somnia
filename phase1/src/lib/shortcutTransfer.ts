@@ -6,3 +6,7 @@ export function parseShortcutFile(text:string,known:readonly string[]):Record<st
  for(const [id,shortcut] of Object.entries(value)){if(!ids.has(id))throw Error('Unknown command: '+id);if(typeof shortcut!=='string'||shortcut.length>80)throw Error('Invalid shortcut for '+id);if(shortcut&&!/^(?:(?:Mod|Alt|Shift)\+)*[a-zA-Z0-9`.,;/=\[\]\\-]+$/.test(shortcut))throw Error('Invalid shortcut for '+id);out[id]=shortcut;}
  return out;
 }
+/** Shape check for one shortcut string ("" = explicitly unbound). Shared by the file parser and the setup importer. */
+export function isValidShortcut(shortcut:unknown):shortcut is string{
+ return typeof shortcut==='string'&&shortcut.length<=80&&(shortcut===''||/^(?:(?:Mod|Alt|Shift)\+)*[a-zA-Z0-9`.,;/=\[\]\\-]+$/.test(shortcut));
+}

@@ -13,7 +13,7 @@
 @media(prefers-reduced-motion:reduce){.ext-consent *{transition:none!important;animation:none!important}}
 @media(forced-colors:active){.ec-card,.ec-choices label,.ec-notice{border:1px solid CanvasText}.ec-choices label:has(input:checked){outline:2px solid Highlight}}
 
-.ext-consent button[data-slot=button].bg-accent-fill{color:white}
+.ext-consent button[data-slot=button].bg-accent-fill{color:var(--action-ink)}
 
 .ec-body{flex:0 1 auto}.ext-consent{font-size:calc(15px * var(--ui-scale,1))}.ec-name svg{display:block}.ec-settings-actions{margin-top:18px}
 .ext-consent .ec-body h2{font-size:calc(29px * var(--ui-scale,1))}.ext-consent .ec-card h3{font-size:calc(16px * var(--ui-scale,1))}.ext-consent .ec-card p{font-size:calc(14px * var(--ui-scale,1))}.ext-consent .ec-target,.ext-consent .ec-notice,.ext-consent .ec-tabs span{font-size:calc(13px * var(--ui-scale,1))}.ext-consent .ec-name{font-size:calc(20px * var(--ui-scale,1))}.ext-consent .ec-eyebrow,.ext-consent small,.ext-consent .ec-pill{font-size:calc(12px * var(--ui-scale,1))}.ext-consent[style*="--ui-scale: 2"] .ec-compare{grid-template-columns:1fr}.ext-consent[style*="--ui-scale: 2"] .ec-footer{flex-direction:column;align-items:stretch}

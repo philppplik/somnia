@@ -7,7 +7,7 @@ export function diagnosePptx(bytes:Uint8Array):SlidesDiagnostics {const entries=
  if(names.some(n=>n.startsWith('ppt/charts/')))warnings.push('Charts are preview-only; chart data is not editable.');
  if(names.some(n=>n.startsWith('ppt/diagrams/')))warnings.push('SmartArt may use a fallback preview.');
  if(names.some(n=>n.startsWith('ppt/embeddings/')))warnings.push('Embedded OLE objects are never executed and may not render.');
- if(/<(?:p:timing|p:transition)\b/.test(xml))warnings.push('Animations and transitions are not played.');
+ if(/<(?:p:timing|p:transition)\b/.test(xml))warnings.push('Animations are not played; a plain fade, push, wipe or cover transition plays in the presentation.');
  if(names.some(n=>n.startsWith('ppt/fonts/')))warnings.push('Embedded fonts are not guaranteed to match the preview.');
  if(names.some(n=>n.startsWith('ppt/notesSlides/')))warnings.push('Speaker notes are retained in copies but not shown.');
  if(names.filter(n=>n.endsWith('.rels')).some(n=>/TargetMode=["']External["']/.test(strFromU8(zip[n]))))warnings.push('External relationships are not fetched.');

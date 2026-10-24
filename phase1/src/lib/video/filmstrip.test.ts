@@ -12,6 +12,8 @@ class FakeDecoder implements ThumbDecoder{
   this.calls.push({times});if(this.gate)await this.gate;
   return times.map(t=>{if(this.failTimes.has(t))return null;const th={width:w,height:h,closed:false,close(){th.closed=true;}};this.made.push(th);return th as Thumb&{closed:boolean};});
  }
+ peakCalls=0;peakData:Float32Array|null=new Float32Array([-0.5,0.5]);
+ async peaks(){this.peakCalls++;return this.peakData;}
  close(){this.closed++;}dispose(){}
 }
 const wait=()=>new Promise(r=>setTimeout(r,5));

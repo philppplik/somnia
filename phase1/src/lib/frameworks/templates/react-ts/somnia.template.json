@@ -1,0 +1,11 @@
+{
+  "id": "react-ts",
+  "framework": "react",
+  "language": "ts",
+  "output": "static",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

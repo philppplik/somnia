@@ -1,9 +1,11 @@
+import {Button} from './ui/button';
+import {visibleProjectRows,revealProjectPath} from '../lib/projectTree';
 import {VirtualProjectRows} from './VirtualProjectRows';
 import {indexProjectRows} from '../lib/projectIndex';
 import {useT} from '../lib/useT';
 import {useRef,useState,useEffect,useMemo} from 'react';
-import {File,FileCode,FileText,Folder,FilePlus,Pencil,Copy,Trash2} from '../lib/icons';
-import {applyOperations,openFileTab,patchState,useAppStore} from '../store/appStore';
+import {ChevronRight,ChevronDown,File,FileCode,FileText,Folder,FilePlus,Pencil,Copy,Trash2} from '../lib/icons';
+import {getProjectGeneration,applyOperations,openFileTab,patchState,useAppStore} from '../store/appStore';
 import {cn} from '../lib/cn';
 import {closeMedia,setActiveMedia,useMedia} from '../lib/media';
 import {Image as ImageIcon} from '../lib/icons';
@@ -25,7 +27,12 @@ export function FilesPanel(){
    :run([{type:'renameFile',file:edit.path,to:p}],()=>{if(s.activeFile===edit.path)patchState({activeFile:p});});
   if(ok){setEdit(null);setError('');}};
  const del=(path:string,dir:boolean)=>{const targets=dir?paths.filter(f=>f.startsWith(path+'/')):[path];if(run(targets.map(file=>({type:'deleteFile' as const,file}))))setConfirmDelete(null);};
- const rows=useMemo(()=>indexProjectRows(paths),[paths]);
+ const [collapsed,setCollapsed]=useState<Set<string>>(()=>new Set());const generation=getProjectGeneration();
+ useEffect(()=>{setCollapsed(new Set());},[generation]);
+ useEffect(()=>{setCollapsed(current=>revealProjectPath(current,s.activeFile));},[s.activeFile]);
+ const toggleFolder=(path:string)=>setCollapsed(current=>{const next=new Set(current);if(next.has(path))next.delete(path);else next.add(path);return next;});
+ const allRows=useMemo(()=>indexProjectRows(paths),[paths]);
+ const rows=useMemo(()=>visibleProjectRows(allRows,collapsed),[allRows,collapsed]);
  const act=(label:string,I:typeof Pencil,fn:()=>void)=><button aria-label={label} title={label} onClick={fn} className="grid size-6 place-items-center rounded-sm border-0 bg-transparent p-0 text-ink-2 hover:bg-hover"><I size={12}/></button>;
  return <nav aria-label={t('panels.files.projectFiles')} className="flex h-full min-h-0 flex-col p-2">
   <div className="mb-1 flex items-center justify-between px-2"><span className="text-[10px] uppercase tracking-[.08em] text-ink-2">{t('panels.files.files')}</span>{act(t('panels.files.newFile'),FilePlus,()=>start({mode:'new',path:''}))}</div>
@@ -35,14 +42,14 @@ export function FilesPanel(){
    {error&&<div role="alert" className="text-[11px] text-[#e5484d]">{error}</div>}
    <div className="flex justify-end gap-1"><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={()=>setEdit(null)}>{t('panels.files.cancel')}</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-2 text-[11px]" onClick={commit}>{edit.mode==='new'?t('panels.files.create'):edit.mode==='rename'?t('panels.files.rename'):t('panels.files.duplicate')}</button></div></div>}
   {!paths.length&&<p className="p-4 text-xs text-ink-2">{t('panels.files.noProjectFilesYetUse')}</p>}
-  {<VirtualProjectRows rows={rows} active={s.activeFile} render={r=>{const Icon=r.dir?Folder:icon(r.name);const pad=8+r.depth*14;
+  {<VirtualProjectRows rows={rows} active={s.activeFile} collapsed={collapsed} onToggle={toggleFolder} render={r=>{const Icon=r.dir?Folder:icon(r.name);const pad=8+r.depth*14;
    return <div key={r.path} className="group flex items-center">
-    {r.dir?<div className="flex h-8 flex-1 items-center gap-2 px-2 text-xs text-ink-3" style={{paddingLeft:pad}}><Icon size={14}/>{r.name}</div>
-    :<button aria-label={t('panels.files.open',{path:r.path})} aria-current={r.path===s.activeFile} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',r.path===s.activeFile&&'bg-accent-soft text-ink')} style={{paddingLeft:pad}} onClick={()=>{openFileTab(r.path);if(s.viewMode==='design')patchState({viewMode:'split'});}}><Icon size={14}/><span className="truncate">{r.name}</span></button>}
+    {r.dir?<Button size="compact" aria-label={t('code.files.folder',{path:r.path})} aria-expanded={!collapsed.has(r.path)} data-project-path={r.path} onClick={()=>toggleFolder(r.path)} className="h-8 min-w-0 flex-1 justify-start gap-1 overflow-hidden text-xs" style={{paddingLeft:pad}}>{collapsed.has(r.path)?<ChevronRight size={12}/>:<ChevronDown size={12}/>}<Icon size={14}/><span className="truncate">{r.name}</span></Button>
+    :<button data-project-path={r.path} aria-label={t('panels.files.open',{path:r.path})} aria-current={r.path===s.activeFile} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',r.path===s.activeFile&&'bg-accent-soft text-ink')} style={{paddingLeft:pad}} onClick={()=>{openFileTab(r.path);if(s.viewMode==='design')patchState({viewMode:'split'});}}><Icon size={14}/><span className="truncate">{r.name}</span></button>}
     {confirmDelete===r.path?<span className="flex items-center gap-1 pr-1 text-[10px]" role="group" aria-label={t('panels.files.deleteConfirm',{path:r.path})}><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5 text-[#e5484d]" onClick={()=>del(r.path,r.dir)}>{t('panels.files.delete')}</button><button className="h-6 rounded-sm border border-subtle bg-transparent px-1.5" onClick={()=>setConfirmDelete(null)}>{t('panels.files.keep')}</button></span>
     :<span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(t('panels.files.renamePath',{path:r.path}),Pencil,()=>start({mode:'rename',path:r.path,dir:r.dir}))}{!r.dir&&act(t('panels.files.duplicatePath',{path:r.path}),Copy,()=>start({mode:'duplicate',path:r.path}))}{act(t('panels.files.deletePath',{path:r.path}),Trash2,()=>{setEdit(null);setConfirmDelete(r.path);})}</span>}
    </div>;}}/>}
  {media.items.length>0&&<div className="mt-2 flex flex-col gap-0.5" role="group" aria-label="Preview files"><div className="px-2 text-[10px] uppercase tracking-[.08em] text-ink-2">Previews</div>
-  {media.items.map(m=><div key={m.name} className="group flex items-center"><button aria-label={`Preview ${m.name}`} aria-current={m.name===media.active} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',m.name===media.active&&'bg-accent-soft text-ink')} onClick={()=>setActiveMedia(m.name)}>{m.kind==='pdf'?<FileText size={14}/>:<ImageIcon size={14}/>}<span className="truncate">{m.name}</span></button><span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(`Close preview ${m.name}`,Trash2,()=>closeMedia(m.name))}</span></div>)}</div>}
+  {media.items.map(m=><div key={m.name} className="group flex items-center"><button aria-label={`Preview ${m.name}`} aria-current={m.name===media.active} draggable={m.kind==='audio'||m.kind==='video'||m.kind==='image'} onDragStart={m.kind==='audio'||m.kind==='video'||m.kind==='image'?e=>{e.dataTransfer.setData('application/x-somnia-media',m.name);e.dataTransfer.effectAllowed='copy';}:undefined} className={cn('flex h-8 flex-1 items-center gap-2 overflow-hidden rounded-sm border-0 bg-transparent px-2 text-left text-xs text-ink-2 hover:bg-hover',m.name===media.active&&'bg-accent-soft text-ink')} onClick={()=>setActiveMedia(m.name)}>{m.kind==='pdf'?<FileText size={14}/>:<ImageIcon size={14}/>}<span className="truncate">{m.name}</span></button><span className="flex opacity-0 focus-within:opacity-100 group-hover:opacity-100">{act(`Close preview ${m.name}`,Trash2,()=>closeMedia(m.name))}</span></div>)}</div>}
  </nav>;
 }

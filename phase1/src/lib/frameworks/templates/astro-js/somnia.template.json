@@ -1,0 +1,11 @@
+{
+  "id": "astro-js",
+  "framework": "astro",
+  "language": "js",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

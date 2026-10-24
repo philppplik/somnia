@@ -23,6 +23,19 @@ Activation order within `code`:
 
 When the user runs a command, the host sends `command.run` to the worker. The handler has 5 seconds to finish. On timeout the user sees a notice; the worker is not killed, so avoid loops that never end. Errors thrown by the handler are shown as a notice.
 
+## Idle suspend
+
+Somnia can suspend the worker of an extension that has been idle, and start it again when it is needed. This follows the extensions bucket of the lifecycle resource profile (64 MiB on the normal profile, see [Studio lifecycle](../studio-lifecycle.md)).
+
+- A worker is suspended after 5 minutes without activity, or after 1 minute when the lifecycle manager reports memory pressure.
+- If the running workers exceed the extensions bucket, the least recently used ones are suspended first, whatever their idle time.
+- A worker is never suspended while a command is running, or during its first 10 seconds.
+- Commands, snippets, themes, accent palettes and panels are declarative and stay available while the worker is suspended.
+- Running a command resumes the worker. Your `code` runs again, exactly as on activation, so keep it idempotent and keep state in `storage`, not in globals.
+- Suspending does nothing when the lifecycle manager is turned off in settings.
+
+Implementation: `phase1/src/lib/extensions/idleSuspend.ts`. `activateExtensions(list, idle)` in `host.ts` enables it when the optional `idle` options are passed; without them nothing changes.
+
 ## Updates
 
 Installing a manifest with the same `id` replaces the stored one. The enabled flag and revoked permissions stay as they were. See [Versioning](11-versioning.md).

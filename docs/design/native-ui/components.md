@@ -11,6 +11,8 @@ Somnia has two distinct systems:
 
 The Base UI primitives in `phase1/src/components/ui/` belong to the first system. `ComponentsPanel`, `componentSystem` and the library belong to the second. Use precise names in issues, tests and reviews.
 
+P0 implementation note (2026-10-14): Studio S0/S1 are integrated on `int/shell`; the historical audit below is not a current shell coverage claim. See [P0 guardrails](P0-guardrails.md) for verified scope and pending visual baselines.
+
 ## 2. Shared primitive inventory
 
 | Primitive | Public surface | Implemented styling/behavior |
@@ -32,7 +34,7 @@ Source: [`components/ui/`](../../../phase1/src/components/ui/). The wrappers are
 | --- | --- | --- |
 | `ghost` (default) | Transparent, neutral hover | Toolbars, rails, secondary actions |
 | `outline` | Elevated background, default border | Bounded secondary action |
-| `primary` | Accent-fill background, white text | Main action within a local task |
+| `primary` | Accent-fill background, derived custom-accent ink (white by default) | Main action within a local task |
 
 Common states: disabled cursor/opacity, hover only when not disabled, `aria-pressed` accent-soft/accent treatment, 100 ms color transition. Global focus styles supply the visible outline. There is no shared destructive or loading variant in this snapshot. A new state must preserve label, hit target and focus, not merely add a spinner.
 

@@ -1,0 +1,647 @@
+{
+  "version": 1,
+  "fixtures": [
+    {
+      "id": "flex-row",
+      "category": "flex",
+      "entry": "pages/flex-row.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "flex-wrap",
+      "category": "flex",
+      "entry": "pages/flex-wrap.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "flex-alignment",
+      "category": "flex",
+      "entry": "pages/flex-alignment.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "flex-order",
+      "category": "flex",
+      "entry": "pages/flex-order.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "grid-columns",
+      "category": "grid",
+      "entry": "pages/grid-columns.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "grid-areas",
+      "category": "grid",
+      "entry": "pages/grid-areas.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "grid-autofit",
+      "category": "responsive",
+      "entry": "pages/grid-autofit.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "grid-spanning",
+      "category": "grid",
+      "entry": "pages/grid-spanning.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "table-basic",
+      "category": "table",
+      "entry": "pages/table-basic.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "table-spans",
+      "category": "table",
+      "entry": "pages/table-spans.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "table-fixed",
+      "category": "table",
+      "entry": "pages/table-fixed.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "form-inputs",
+      "category": "forms",
+      "entry": "pages/form-inputs.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "form-controls",
+      "category": "forms",
+      "entry": "pages/form-controls.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "form-states",
+      "category": "forms",
+      "entry": "pages/form-states.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "mail-layout",
+      "category": "mail",
+      "entry": "pages/mail-layout.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "mail-columns",
+      "category": "mail",
+      "entry": "pages/mail-columns.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "responsive-breakpoint",
+      "category": "responsive",
+      "entry": "pages/responsive-breakpoint.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "responsive-type",
+      "category": "responsive",
+      "entry": "pages/responsive-type.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "responsive-container",
+      "category": "responsive",
+      "entry": "pages/responsive-container.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "box-sizing",
+      "category": "geometry",
+      "entry": "pages/box-sizing.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "positioning",
+      "category": "geometry",
+      "entry": "pages/positioning.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "transforms",
+      "category": "geometry",
+      "entry": "pages/transforms.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "overflow-scroll",
+      "category": "geometry",
+      "entry": "pages/overflow-scroll.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "typography",
+      "category": "type",
+      "entry": "pages/typography.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "lists-code",
+      "category": "type",
+      "entry": "pages/lists-code.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "rtl-flow",
+      "category": "type",
+      "entry": "pages/rtl-flow.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "svg-inline",
+      "category": "assets",
+      "entry": "pages/svg-inline.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "svg-linked",
+      "category": "assets",
+      "entry": "pages/svg-linked.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "css-background",
+      "category": "assets",
+      "entry": "pages/css-background.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "css-import",
+      "category": "assets",
+      "entry": "pages/css-import.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    },
+    {
+      "id": "script-linked",
+      "category": "scripts",
+      "entry": "pages/script-linked.html",
+      "scripts": true,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ],
+      "readySelector": "#result",
+      "readyText": "Linked script ran"
+    },
+    {
+      "id": "motion-reveal",
+      "category": "motion",
+      "entry": "pages/motion-reveal.html",
+      "scripts": false,
+      "viewports": [
+        {
+          "width": 960,
+          "height": 640
+        },
+        {
+          "width": 375,
+          "height": 640
+        }
+      ],
+      "selectors": [
+        "main",
+        "h1"
+      ]
+    }
+  ]
+}

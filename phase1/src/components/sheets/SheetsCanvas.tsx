@@ -1,156 +1,620 @@
+import {SheetsLiveSelectionReview} from './SheetsLiveSelectionReview';import {reviewLiveSheetSelection} from '../../lib/sheets/liveSelectionReview';import '../../lib/sheets/panelI18n';import {registerSheetsPanelController,type SheetsPanelController} from '../../lib/sheets/panelController';
+import {parsePanelRange,rangeAddress} from '../../lib/sheets/panelModel';
+import {parseGoalResult} from '../../lib/sheets/whatIfOps';
+import {parseShownView} from '../../lib/sheets/savedViews';
+import {toBridgeOp,type OutlineCommand} from '../../lib/sheets/outlineOps';
+import {layoutBlockProblem} from '../../lib/sheets/layoutOps';
+import {cellToolProblem,functionFormulaStart} from '../../lib/sheets/cellToolOps';
+import {dataToolProblem} from '../../lib/sheets/dataToolOps';
+import {pivotSourceProblem} from '../../lib/sheets/pivotEditOps';
+import {cfLayers,type CfLayer} from '../../lib/sheets/cfVisuals';
+import {parseAddress,parseSpan,MAX_ROWS,MAX_COLS} from '../../lib/sheets/format';
+import {studioContextStore} from '../../lib/shell/studioContext';
 import {reportError} from '../../lib/log';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
 import {useCallback,useEffect,useMemo,useRef,useState,type ClipboardEvent,type KeyboardEvent} from 'react';
+import {tabListKeyDown} from '../../lib/tabNav';
 import {FileTabs} from '../FileTabs';
 import {Button} from '../ui/button';
 import {Table2,Redo2,Undo2} from '../../lib/icons';
 import {addMediaFile,formatBytes,useMedia,type MediaItem} from '../../lib/media';
+import {readXlsx} from '../../lib/office/xlsx';
+import {SheetsHandoffBar} from './SheetsHandoffBar';
 import {useT} from '../../lib/useT';
 import {SheetsEngine} from '../../lib/sheets/engine';
-import type {SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import type {NoteList,NoteReviewOp} from '../../lib/sheets/notes';
+import {SheetsShortcutsDialog} from './SheetsShortcutsDialog';
+import {SheetsImportDialog} from './SheetsImportDialog';
+import type {ImportPlan,ImportTarget} from '../../lib/sheets/csvImport';
+import {setSheetsShortcutsOpen} from '../../lib/sheets/shortcuts';
+import type {PageList} from '../../lib/sheets/pageBreaks';
+import type {CellInfo} from '../../lib/sheets/cellInfo';
+import type {ReviewKind,ReviewResult} from '../../lib/sheets/reviewInfo';
+import type {AuditOp,TraceInfo,ErrorsInfo,WatchRow} from '../../lib/sheets/audit';
+import type {ValidationListItem,ValidationManageOp,InvalidCells,ValidationRuleInfo,CfManageOp,CfRuleInfo,ChartInfo,ChartScene,SparklineScene,ChartOp,SparklineOp,ProtectOp,WhatIfOp,ScenarioInfo,SavedViewOp,SavedView,OutlineInfo,LayoutOp,CellToolOp,DataToolOp,PivotEditOp,PivotReport,FunctionInfo,ObjectOp,ObjectsInfo,ImageObject,ShapeObject,PageInfo,PageSetupOp,PasteOp,ExportOp,PivotOp,TableOp,TablesInfo,FillDirection,NameInfo,NameOp,AnnotateOp,CellAnnotations,DedupeOp,SplitOp,ReplaceOp,ValidationOp,CfOp,FilterOp,SortOp,SheetOp,FormatOp,LineAxis,LineEditKind,LineOp,SheetInfo,SheetLayout,ViewCell,WorkbookInfo} from '../../lib/sheets/protocol';
+import {functionHint} from '../../lib/sheets/formulaHint';
+import {applySuggestion,completionAt} from '../../lib/sheets/nameComplete';
+import {NativeSelect} from '../ui/native-controls';
+import {editSpan,MAX_SHEET_COLS,MAX_SHEET_ROWS} from '../../lib/sheets/lineOps';
 import {Geometry} from '../../lib/sheets/geometry';
 import {MAX_CELL_BYTES} from '../../lib/sheets/protocol';
+import {downloadExport,exportName} from '../../lib/sheets/exportFile';
+import {sceneToSvg,svgDataUrl} from '../../lib/sheets/chartOps';
+import {shapeSvg} from '../../lib/sheets/objectOps';
+import {SheetObjectImg,SheetObjectHandle} from './SheetObjectImg';
+import {dropPlacement,type ObjectDrag} from '../../lib/sheets/objectDrag';
+import {fitZoom,type ViewCommand} from '../../lib/sheets/viewOps';
 import {addressOf,cellText,colName,displayValue,editText,isErrorValue,cellAlign} from '../../lib/sheets/format';
-import {inRect,parseTsv,pasteRect,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
+import {MAX_SHEETS,safeTabColor} from '../../lib/sheets/sheetOps';
+import {SheetTabDot} from './SheetTabDot';
+import {SheetBreakLine} from './SheetBreakLine';
+import {sortBlockProblem} from '../../lib/sheets/sortOps';
+import {shiftBlockProblem,type ShiftOp} from '../../lib/sheets/specialOps';
+import {replaceWholeWord,type SpellChange} from '../../lib/sheets/spelling';
+import {fillBlockProblem,fillDragOp,type AutoFillOp,type SeriesOp} from '../../lib/sheets/fillOps';
+import {formatRectOk,toggleOp,type ToggleKind} from '../../lib/sheets/formatOps';
+import {inRect,parseTsv,pasteFromEngineCopy,planPaste,rectCells,rectOf,toTsv} from '../../lib/sheets/clipboard';
 import {MAX_READ_CELLS} from '../../lib/sheets/protocol';
-import {saveSheetsCopy,setSheetsDirty} from '../../lib/sheets/session';
-import {setSheetsSelection} from '../../lib/sheets/sheetsStore';
-const HEAD_W=48,HEAD_H=24;
+import '../../lib/sheets/guards';
+import {acquireSheetsSession,endSheetsSession,getSheetsSession,noteSheetsSaveStart,saveSheetsCopy,sheetsSaved,setSheetsDirty,sheetsIsDirty,subscribeSheetsDirty} from '../../lib/sheets/session';
+import {noteFilterApplied,noteFilterHistory,resetSlicerFilter} from '../../lib/sheets/slicerState';
+import {registerDocSaver} from '../../lib/workDocs';
+import {registerSheetsCommands,registerSheetsCommandController} from '../../lib/sheets/commands';
+import {setSheetsExportState} from '../../lib/sheets/exportState';
+import {SheetsExportPopover} from './SheetsExportPopover';
+import {openSheetsFormulasPanel} from './formulasHero';
+import {getCollab,onSessionChange} from '../../lib/collab/session';
+import {shareSheetsFile,adoptSheetsFile} from '../../lib/collab/office/officeSession';
+import {buildMismatches} from '../../lib/collab/buildSync';
+import {openSheetsModel,sheetsModelMeta,sharedSheetList,type SheetsModel} from '../../lib/collab/office/sheetsModel';
+import {SheetsCollabBinding} from '../../lib/collab/office/sheetsBinding';
+import {announceSheetSel,peerSheetSels,type PeerSheetPresence} from '../../lib/collab/office/sheetsPresence';
+import {getFillMode,setSheetsSelection} from '../../lib/sheets/sheetsStore';
+import {PeerSwatch,PeerSelectionBox} from '../collab/PeerSwatch';
+const HEAD_W0=48,HEAD_H0=24;
 type Phase={kind:'loading'}|{kind:'error';message:string}|{kind:'ready'};
+type AbsBox={left:number;top:number;width:number;height:number};
+const AbsBoxImg=({box,surface,...rest}:{box:AbsBox;surface?:boolean}&React.ImgHTMLAttributes<HTMLImageElement>)=>{
+ const ref=useCallback((el:HTMLImageElement|null)=>{if(!el)return;el.style.left=box.left+'px';el.style.top=box.top+'px';el.style.width=box.width+'px';el.style.height=box.height+'px';el.style.zIndex='1';el.style.background=surface?'var(--bg-surface)':'';},[box.left,box.top,box.width,box.height,surface]);
+ return <img ref={ref} draggable={false} className="pointer-events-none absolute" {...rest}/>;
+};
 export function SheetsCanvas(){
- const media=useMedia();const {t}=useT();const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
+ const media=useMedia();const {t}=useT();useEffect(()=>registerSheetsCommands({openFormulas:openSheetsFormulasPanel,openExportAdvanced:()=>setSheetsExportState({open:true})}),[]);const item=media.items.find(i=>i.name===media.active&&i.kind==='xlsx');
  if(!item)return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><StudioEmptyState studio="sheets" icon={<Table2/>} onOpen={()=>new Promise<void>((resolve,reject)=>{const input=document.createElement('input');input.type='file';input.accept='.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';input.oncancel=()=>resolve();input.onchange=async()=>{try{const file=input.files?.[0];if(file){const result=await addMediaFile(file,file.name);if('error' in result)throw Error(result.error);}resolve();}catch(e){reject(e);}};input.click();})} onCreate={()=>createBlankProject('sheets')} testId="sheets-empty"/></section></div></main>;
  return <main className="center" aria-label={t('sheets.workspace')}><div className="workspace"><section className="code-pane" aria-label={t('sheets.workspace')}><FileTabs/><Workbook key={item.url} item={item}/></section></div></main>;
 }
 function Workbook({item}:{item:MediaItem}){
  const {t}=useT();
- const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);
+ const [engineReadEpoch,setEngineReadEpoch]=useState(0);const selectionEpoch=useRef(0);const engine=useRef<SheetsEngine|null>(null);const original=useRef<Uint8Array|null>(null);const session=useRef<ReturnType<typeof acquireSheetsSession<SheetsEngine>>|null>(null);
  const [phase,setPhase]=useState<Phase>({kind:'loading'});const [book,setBook]=useState<WorkbookInfo|null>(null);
- const [sheet,setSheet]=useState(0);const [info,setInfo]=useState<SheetInfo|null>(null);
- const [sel,setSel]=useState({row:0,col:0});const [ext,setExt]=useState<{row:number;col:number}|null>(null);const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
- const setDraft=(v:string|null)=>{draftRef.current=v;setDraftState(v);};
+ const [sheet,setSheetState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sheet:0);const setSheet=(n:number)=>{selectionEpoch.current++;const s=getSheetsSession(item.name);if(s)s.sheet=n;setSheetState(n);};const [info,setInfo]=useState<SheetInfo|null>(null);
+ const [sel,setSelState]=useState(()=>getSheetsSession(item.name)?.url===item.url?getSheetsSession(item.name)!.sel:{row:0,col:0});const setSel=(v:{row:number;col:number})=>{selectionEpoch.current++;const s=getSheetsSession(item.name);if(s)s.sel=v;setSelState(v);};const [ext,rawSetExt]=useState<{row:number;col:number}|null>(null);const setExt=(v:Parameters<typeof rawSetExt>[0])=>{selectionEpoch.current++;rawSetExt(v);};const dragging=useRef(false);const [draft,setDraftState]=useState<string|null>(null);const draftRef=useRef<string|null>(null);const formulaRef=useRef<HTMLInputElement>(null);
+ const setDraft=(v:string|null)=>{selectionEpoch.current++;draftRef.current=v;setDraftState(v);};
  const startEdit=(v:string)=>{setDraft(v);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(v.length,v.length);}});};
- const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirty]=useState(false);
+ const [cacheStamp,setCacheStamp]=useState('');const [cells,setCells]=useState<Map<string,ViewCell>>(new Map());const [layout,setLayout]=useState<SheetLayout|null>(null);const [rev,setRev]=useState(0);const [dirty,setDirtyState]=useState(()=>sheetsIsDirty(item.name));const setDirty=(v:boolean)=>{setSheetsDirty(item.name,v);setDirtyState(v);};
  const [notice,setNotice]=useState('');const [view,setView]=useState({w:800,h:400,top:0,left:0});
  const scroller=useRef<HTMLDivElement>(null);
- const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
+ const fail=useCallback((e:unknown)=>{reportError('sheets.engine',e,{context:{studio:'sheets',file:item.name}});const message=e instanceof Error?e.message:String(e);if(engine.current?.isDisposed){endSheetsSession(item.name);setDirtyState(false);}if(engine.current?.isDisposed)setPhase({kind:'error',message});else setNotice(message);},[item.name]);
  // Open: the engine gets a copy; the original bytes stay here for recovery.
- useEffect(()=>{let live=true;const eng=new SheetsEngine();engine.current=eng;
-  (async()=>{try{const buf=await (await fetch(item.url)).arrayBuffer();const bytes=new Uint8Array(buf);original.current=bytes;const opened=await eng.open(bytes);if(!live)return;setBook(opened);setPhase({kind:'ready'});}catch(e){if(live)reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});if(live)setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});}})();
-  return()=>{live=false;eng.dispose();engine.current=null;setSheetsSelection(null);};},[item.url]);
+ // Open: the session registry owns the engine, so it survives studio/tab switches; the view only attaches. The original bytes stay in the session for recovery.
+ useEffect(()=>{let live=true;const prev=getSheetsSession(item.name);if(!(prev&&prev.url===item.url&&!prev.engine.isDisposed))resetSlicerFilter(item.name);const sess=acquireSheetsSession(item.name,item.url,{create:()=>new SheetsEngine(),load:async u=>new Uint8Array(await (await fetch(u)).arrayBuffer())});session.current=sess;engine.current=sess.engine;const offDirty=subscribeSheetsDirty(()=>setDirtyState(sheetsIsDirty(item.name)));const offRead=sess.engine.subscribeSelectionRead(()=>{setEngineReadEpoch(x=>x+1);if(!sess.engine.hasPendingMutation){setRev(x=>x+1);setDirtyState(sheetsIsDirty(item.name));}});
+  sess.ready.then(opened=>{if(!live)return;original.current=sess.original;setBook(sess.book??opened);const rec=sess.recovery;if(rec){sess.recovery=null;if(rec==='restored'){setSheetState(sess.sheet);setSelState(sess.sel);setNotice(t('sheets.recovered'));}else setNotice(t('sheets.recoverySourceChanged'));}setPhase({kind:'ready'});}).catch(e=>{if(!live)return;reportError('sheets.open',e,{context:{studio:'sheets',file:item.name}});setPhase({kind:'error',message:e instanceof Error?e.message:String(e)});});
+  return()=>{live=false;offRead();offDirty();engine.current=null;session.current=null;setSheetsSelection(null);};},[item.url,item.name]);
  // Sheet info (used range, history flags) after open, sheet switch and every edit.
+ // Collab: while a session shares this workbook, edits route through the shared model (concept 3.2).
+ const collab=useRef<{binding:SheetsCollabBinding;model:SheetsModel;aw:import('y-protocols/awareness').Awareness}|null>(null);
+ useEffect(()=>{if(phase.kind!=='ready'||!original.current||!book)return;
+  let disposed=false;
+  let sync:()=>void=()=>undefined;
+  const finish=(m:SheetsModel,aw:import('y-protocols/awareness').Awareness)=>{
+   const eng=engine.current;if(!eng||disposed)return;
+   const names=sharedSheetList(m);
+   const binding=new SheetsCollabBinding(m.doc,item.name,{engine:{set:(sh,a,i)=>eng.set(sh,a,i),format:(sh,r,c2,rs,cs,op)=>eng.format(sh,r,c2,rs,cs,op),setValues:(sh,r,c2,v)=>eng.setValues(sh,r,c2,v),clear:(sh,r,c2,rs,cs)=>eng.clear(sh,r,c2,rs,cs),editSheet:(sh,l)=>eng.editSheet(sh,l),sheets:async()=>(await eng.sheets()).sheets.map(x=>x.name)},sheetIndexOf:id=>names.findIndex(x=>x.id===id)});
+   for(const sh of names)binding.replay(sh.id);
+   binding.syncSheetsNow();
+   collab.current={binding,model:m,aw};
+   sync=()=>{
+    if(buildMismatches(aw).length){aw.off('change',sync);collab.current?.binding.destroy();collab.current=null;setPeers([]);setNotice(t('sheets.buildMismatch'));return;}   // a late joiner on another build pauses co-editing
+    setPeers(peerSheetSels(aw,item.name).filter(x=>x.sheet>=0));};
+   aw.on('change',sync);sync();
+   setRev(x=>x+1);};
+  const attach=async()=>{
+   const c=getCollab();if(!c||disposed||collab.current)return;
+   if(buildMismatches(c.awareness).length){setNotice(t('sheets.buildMismatch'));return;}   // engine determinism rule (concept 7.4)
+   const bytes=original.current;if(!bytes)return;
+   if(sheetsModelMeta(openSheetsModel(c.doc,item.name))){
+    const ad=await adoptSheetsFile(c.doc,item.name,bytes);
+    if(!ad.ok||disposed)return;
+    finish(ad.model,c.awareness);
+   }else{
+    const m=await shareSheetsFile(c.doc,item.name,bytes,book.sheets.map(x=>x.name));
+    if(!disposed)finish(m,c.awareness);}};
+  void attach();
+  const off=onSessionChange(()=>{if(!getCollab()){if(collab.current){collab.current.aw.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);}else void attach();});
+  return()=>{disposed=true;off();if(collab.current){collab.current.aw.off('change',sync);collab.current.binding.destroy();collab.current=null;}setPeers([]);};},[phase,book,item.name]);
+ const [peers,setPeers]=useState<PeerSheetPresence[]>([]);
+ // Presence: publish my selection while collab is live; cleared on sheet switch/unmount by the announce(null) cleanup.
+ useEffect(()=>{const a=collab.current?.aw;if(!a)return;
+  const lo={row:Math.min(sel.row,(ext??sel).row),col:Math.min(sel.col,(ext??sel).col)},hi={row:Math.max(sel.row,(ext??sel).row),col:Math.max(sel.col,(ext??sel).col)};
+  announceSheetSel(a,item.name,sheet,{r0:lo.row,c0:lo.col,r1:hi.row,c1:hi.col});
+  return()=>announceSheetSel(a,null,0,null);},[sel,ext,sheet,rev,item.name]);
+ /** Collab route: edit through the shared model when a session is live; returns false to fall back to the plain engine call. */
+ const collabEdit=async(fn:(b:SheetsCollabBinding,sheetId:string)=>Promise<void>):Promise<boolean>=>{
+  const c=collab.current;if(!c)return false;
+  const id=sharedSheetList(c.model)[sheet]?.id;if(!id)return false;
+  await fn(c.binding,id);return true;};
  useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.info(sheet).then(i=>{if(live)setInfo(i);}).catch(fail);return()=>{live=false;};},[phase,sheet,rev,fail]);
- useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail]);
- const totalRows=Math.max(100,(info?.rows??0)+50),totalCols=Math.max(26,(info?.cols??0)+6);
+ useEffect(()=>{if(phase.kind!=='ready')return;let live=true;engine.current?.layout(sheet).then(l=>{if(live)setLayout(l);}).catch(fail);return()=>{live=false;};},[phase,sheet,fail,rev]);
+ const totalRows=Math.min(MAX_ROWS,Math.max(100,(info?.rows??0)+50,sel.row+50)),totalCols=Math.min(MAX_COLS,Math.max(26,(info?.cols??0)+6,sel.col+6));
  const geo=useMemo(()=>new Geometry(layout,totalRows,totalCols),[layout,totalRows,totalCols]);
  // Bounded viewport read (values, formats and styles) for the visible window only.
+ const showHead=layout?.showHeadings!==false,HEAD_W=showHead?HEAD_W0:0,HEAD_H=showHead?HEAD_H0:0;
  const win=useMemo(()=>geo.window(view.top,view.left,view.w-HEAD_W,view.h-HEAD_H),[geo,view]);
  useEffect(()=>{if(phase.kind!=='ready'||!engine.current)return;let live=true;const eng=engine.current;const fr=geo.freezeRows,fc=geo.freezeCols;
   // Main window plus the frozen strips, so frozen rows/columns stay painted while scrolling.
   const rects=[win];if(fr>0)rects.push({row:0,col:win.col,rows:fr,cols:win.cols});if(fc>0)rects.push({row:win.row,col:0,rows:win.rows,cols:fc});if(fr>0&&fc>0)rects.push({row:0,col:0,rows:fr,cols:fc});
-  Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
+  Promise.all(rects.map(w=>eng.view(sheet,w.row,w.col,Math.max(1,Math.min(w.rows,100)),Math.max(1,Math.min(w.cols,60))))).then(rs=>{if(!live)return;const m=new Map<string,ViewCell>();for(const r of rs)for(const c of r.cells)m.set(c.address,c);setCells(m);setCacheStamp(sheet+':'+rev);}).catch(fail);return()=>{live=false;};},[phase,sheet,win,geo,rev,fail]);
  useEffect(()=>{const el=scroller.current;if(!el)return;const measure=()=>setView(v=>({...v,w:el.clientWidth,h:el.clientHeight}));measure();const ro=new ResizeObserver(measure);ro.observe(el);return()=>ro.disconnect();},[phase.kind]);
  useEffect(()=>{const up=()=>{dragging.current=false;};window.addEventListener('mouseup',up);return()=>window.removeEventListener('mouseup',up);},[]);
  const address=addressOf(sel.row,sel.col);const cur=cells.get(address);
- useEffect(()=>{if(phase.kind!=='ready')return;setSheetsSelection({file:item.name,sheet,sheetName:book?.sheets[sheet]?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo});},[phase.kind,item.name,sheet,book,address,cur,dirty,info]);
+
  const commit=async(input:string)=>{
   setDraft(null);if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));return;}
   const before=editText(cur?.value,cur?.formula);if(input===before)return;
-  try{await engine.current!.set(sheet,address,input);setDirty(true);setNotice('');setRev(r=>r+1);}catch(e){fail(e);}};
+  try{if(!await collabEdit((b,id)=>b.applyLocalEdit(id,sel.row,sel.col,input)))await engine.current!.set(sheet,address,input);setDirty(true);setNotice('');setRev(r=>r+1);}catch(e){fail(e);}};
  const move=(dr:number,dc:number,extend=false)=>{const s=extend?(ext??sel):sel;let row=s.row,col=s.col;const step=(v:number,d:number,max:number,size:(i:number)=>number)=>{let n=v;for(let k=0;k<max&&d!==0;k++){const t=n+d;if(t<0||t>=max)break;n=t;if(size(t)>0)break;}return n;};
    row=step(row,dr,totalRows,r=>geo.rowHeight(r));col=step(col,dc,totalCols,c=>geo.colWidth(c));
    const next={row,col};const el=scroller.current;if(el){const top=geo.rowTop(row),left=geo.colLeft(col),h=geo.rowHeight(row),w=geo.colWidth(col);if(top<el.scrollTop)el.scrollTop=top;else if(top+h>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=top+h-el.clientHeight+HEAD_H;if(left<el.scrollLeft)el.scrollLeft=left;else if(left+w>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=left+w-el.clientWidth+HEAD_W;}if(extend)setExt(next);else{setSel(next);setExt(null);}};
 
  const range=rectOf(sel,ext??sel);const multi=rectCells(range)>1;
+ const reviewScope=JSON.stringify([item.url,sheet,rev,range,selectionEpoch.current,engineReadEpoch,phase.kind,draft]);const reviewScopeRef=useRef(reviewScope);reviewScopeRef.current=reviewScope;const reviewEpoch=selectionEpoch.current;
+ const readSelection=async(signal:AbortSignal)=>{const eng=engine.current;if(!eng||draftRef.current!==null||selectionEpoch.current!==reviewEpoch)throw Error('Selection changed');return reviewLiveSheetSelection(eng,item.url,sheet,range,reviewScope,()=>({engine:engine.current,scope:selectionEpoch.current===reviewEpoch&&draftRef.current===null?reviewScopeRef.current:''}),signal);};
+
+ const contextOwner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ useEffect(()=>{const owner=studioContextStore.claim('sheets',{id:item.name,kind:'xlsx',dirty:false,readOnly:false});contextOwner.current=owner;return()=>{owner.release();contextOwner.current=null;};},[item.name,item.url]);
+ const [clip,setClip]=useState<{sheetName:string;address:string;cut:boolean}|null>(null);const clipText=useRef<string|null>(null);const [listItems,setListItems]=useState<string[]|null>(null);const [annotations,setAnnotations]=useState<CellAnnotations|null>(null);const [definedNames,setDefinedNames]=useState<NameInfo[]>([]);const [scenarios,setScenarios]=useState<ScenarioInfo[]>([]);const [savedViews,setSavedViews]=useState<SavedView[]>([]);const [functions,setFunctions]=useState<FunctionInfo[]>([]);const [caret,setCaret]=useState(0);const acDown=useRef(false);const [pivots,setPivots]=useState<PivotReport[]>([]);const [cfRules,setCfRules]=useState<CfRuleInfo[]>([]);const [valRules,setValRules]=useState<ValidationListItem[]>([]);const [valRule,setValRule]=useState<ValidationRuleInfo|null>(null);const [noteList,setNoteList]=useState<NoteList|null>(null);const [customStyles,setCustomStyles]=useState<string[]>([]);const [auditResult,setAuditResult]=useState<{trace?:TraceInfo;errors?:ErrorsInfo}|null>(null);const [watchRows,setWatchRows]=useState<WatchRow[]>([]);const [reviewResult,setReviewResult]=useState<ReviewResult|null>(null);const [cellInfo,setCellInfo]=useState<CellInfo|null>(null);const [pageList,setPageList]=useState<PageList|null>(null);const [invalidCells,setInvalidCells]=useState<InvalidCells|null>(null);const [outline,setOutline]=useState<OutlineInfo|null>(null);const [objects,setObjects]=useState<ObjectsInfo>({images:[],shapes:[]});const [objectUrls,setObjectUrls]=useState<Map<string,string>>(new Map());const pictureCache=useRef(new Map<string,string>());const [selObj,setSelObj]=useState<string|null>(null);const [drag,setDrag]=useState<ObjectDrag|null>(null);const dragRef=useRef<ObjectDrag|null>(null);dragRef.current=drag;const [tablesInfo,setTablesInfo]=useState<TablesInfo|null>(null);const [pageInfo,setPageInfo]=useState<PageInfo|null>(null);const [charts,setCharts]=useState<ChartInfo[]>([]);const [chartImages,setChartImages]=useState<Map<number,string>>(new Map());const [sparks,setSparks]=useState<{scene:SparklineScene;url:string}[]>([]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setTablesInfo(null);return;}let live=true;void e.tables(sheet).then(x=>{if(live)setTablesInfo(x);},()=>{if(live)setTablesInfo(null);});return()=>{live=false;};},[phase.kind,sheet,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setCharts([]);setChartImages(new Map());setSparks([]);return;}let live=true;void (async()=>{const list=await e.charts(sheet);const images=new Map<number,string>();for(const c of list){const sc=await e.chartScene(sheet,c.id);if(sc)images.set(c.id,svgDataUrl(sceneToSvg(sc)));}const sp=(await e.sparklines(sheet)).map(scene=>({scene,url:svgDataUrl(sceneToSvg(scene))}));if(live){setCharts(list);setChartImages(images);setSparks(sp);}})().catch(()=>{if(live){setCharts([]);setChartImages(new Map());setSparks([]);}});return()=>{live=false;};},[phase.kind,sheet,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setPageInfo(null);return;}let live=true;void e.pageInfo(sheet).then(x=>{if(live)setPageInfo(x);},()=>{if(live)setPageInfo(null);});return()=>{live=false;};},[phase.kind,sheet,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setObjects({images:[],shapes:[]});setObjectUrls(new Map());return;}let live=true;void (async()=>{const info=await e.objects(sheet);const urls=new Map<string,string>();const keep=new Set<string>();
+  for(const i of info.images){const key=sheet+':'+i.id+':'+i.bytes;keep.add(key);let url=pictureCache.current.get(key);if(!url){url=(await e.imageUrl(sheet,i.id))??'';if(url)pictureCache.current.set(key,url);}if(url)urls.set('image:'+i.id,url);}
+  for(const k of [...pictureCache.current.keys()])if(!keep.has(k)&&k.startsWith(sheet+':'))pictureCache.current.delete(k);
+  for(const s of info.shapes){const svg=shapeSvg(s);if(svg)urls.set('shape:'+s.id,svgDataUrl(svg));}
+  if(live){setObjects(info);setObjectUrls(urls);}})().catch(()=>{if(live){setObjects({images:[],shapes:[]});setObjectUrls(new Map());}});return()=>{live=false;};},[phase.kind,sheet,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setOutline(null);return;}let live=true;void e.outline(sheet).then(v=>{if(live)setOutline(v);},()=>{if(live)setOutline(null);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setSavedViews([]);return;}let live=true;void e.savedViews().then(v=>{if(live)setSavedViews(v);},()=>{if(live)setSavedViews([]);});return()=>{live=false;};},[phase.kind,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setValRules([]);return;}let live=true;void e.validationRules(sheet).then(v=>{if(live)setValRules(v);},()=>{if(live)setValRules([]);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setFunctions([]);return;}let live=true;void e.functionCatalog().then(v=>{if(live)setFunctions(v);},()=>{if(live)setFunctions([]);});return()=>{live=false;};},[phase.kind]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setPivots([]);return;}let live=true;void e.pivotInfo(sheet).then(v=>{if(live)setPivots(v);},()=>{if(live)setPivots([]);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setCfRules([]);return;}let live=true;void e.cfRules(sheet).then(v=>{if(live)setCfRules(v);},()=>{if(live)setCfRules([]);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setValRule(null);return;}let live=true;void e.validationInfo(sheet,sel.row,sel.col).then(v=>{if(live)setValRule(v);},()=>{if(live)setValRule(null);});return()=>{live=false;};},[phase.kind,sheet,sel.row,sel.col,rev]);
+ useEffect(()=>{setInvalidCells(null);},[rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setCellInfo(null);return;}let live=true;void e.cellInfo(sheet,sel.row,sel.col).then(v=>{if(live)setCellInfo(v);},()=>{if(live)setCellInfo(null);});return()=>{live=false;};},[phase.kind,rev,sheet,sel.row,sel.col]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setNoteList(null);return;}let live=true;void e.notesOverview(sheet).then(v=>{if(live)setNoteList(v);},()=>{if(live)setNoteList(null);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setCustomStyles([]);return;}let live=true;void e.customStyles().then(v=>{if(live)setCustomStyles(v);},()=>{if(live)setCustomStyles([]);});return()=>{live=false;};},[phase.kind,rev]);
+ + useEffect(()=>{setAuditResult(null);setReviewResult(null);setPageList(null);const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setWatchRows([]);return;}let live=true;void e.auditOp(sheet,0,0,{kind:'watchList'}).then(v=>{if(live)setWatchRows(v.watch??[]);},()=>{if(live)setWatchRows([]);});return()=>{live=false;};},[phase.kind,rev,sheet]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setScenarios([]);return;}let live=true;void e.scenarios(sheet).then(n=>{if(live)setScenarios(n);},()=>{if(live)setScenarios([]);});return()=>{live=false;};},[phase.kind,sheet,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setDefinedNames([]);return;}let live=true;void e.names().then(n=>{if(live)setDefinedNames(n);},()=>{if(live)setDefinedNames([]);});return()=>{live=false;};},[phase.kind,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setAnnotations(null);return;}let live=true;void e.annotations(sheet,sel.row,sel.col).then(a=>{if(live)setAnnotations(a);},()=>{if(live)setAnnotations(null);});return()=>{live=false;};},[phase.kind,sheet,sel.row,sel.col,rev]);
+ useEffect(()=>{const e=engine.current;if(phase.kind!=='ready'||!e||e.isDisposed){setListItems(null);return;}let live=true;void e.validationItems(sheet,sel.row,sel.col).then(i=>{if(live)setListItems(i);},()=>{if(live)setListItems(null);});return()=>{live=false;};},[phase.kind,sheet,sel.row,sel.col,rev]);
+ useEffect(()=>{if(phase.kind!=='ready')return;const count=rectCells(range);setSheetsSelection({editing:draft!==null,file:item.name,sheet,sheetName:book?.sheets.find(s=>s.index===sheet)?.name??'',address,kind:cur?.value.t??'Empty',text:displayValue(cur?.value),formula:cur?.formula??null,dirty,canUndo:!!info?.canUndo,canRedo:!!info?.canRedo,range,workbook:book??undefined,info,layout,style:cur?.style,revision:rev,listItems,annotations,names:definedNames,scenarios,savedViews,functions,pivots,cfRules,validationRules:valRules,noteList,customStyles,auditResult,watchRows,reviewResult,cellInfo,pageList,validationRule:valRule,invalidCells,outline,objects,tables:tablesInfo,page:pageInfo,clip,charts});contextOwner.current?.report({document:{id:item.name,kind:'xlsx',dirty,readOnly:false},selection:{kind:count>1?'many':'one',type:'cell',count,ids:[rangeAddress(range)]},busy:false,services:{workbook:true},data:{sheet,address,range:rangeAddress(range)}});},[draft,phase.kind,item.name,sheet,book,address,cur,dirty,info,layout,rev,listItems,annotations,definedNames,scenarios,savedViews,functions,pivots,cfRules,valRules,noteList,customStyles,auditResult,watchRows,reviewResult,cellInfo,pageList,valRule,invalidCells,outline,objects,tablesInfo,pageInfo,clip,charts,range.r0,range.r1,range.c0,range.c1]);
+ // One typed formatting operation over the current selection = one engine call = one undo step. A pending cell edit is committed first so it is not lost or reordered.
+ const applyFormat=async(op:FormatOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(!formatRectOk(rectCells(range)))throw Error('Selection is too large to format.');
+  const sent:FormatOp=op.kind==='decimals'?{...op,at:{row:sel.row,col:sel.col}}:op;
+  try{if(!await collabEdit((b,id)=>b.applyLocalFormat(id,range.r0,range.c0,range.r1,range.c1,sent)))await engine.current!.format(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,sent);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ // Row/column sizing acts on whole lines spanned by the selection; the layout reloads through `rev`.
+ const applyLines=async(axis:LineAxis,op:LineOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const first=axis==='rows'?range.r0:range.c0,count=(axis==='rows'?range.r1-range.r0:range.c1-range.c0)+1;
+  try{await engine.current!.resize(sheet,axis,first,count,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ // Insert/delete whole rows or columns: the engine shifts every reference, one undo step; info, layout and cells reload through `rev`.
+ const applyEdit=async(axis:LineAxis,kind:LineEditKind)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const first=axis==='rows'?range.r0:range.c0,count=(axis==='rows'?range.r1-range.r0:range.c1-range.c0)+1;
+  const span=editSpan(kind,first,count,axis==='rows'?MAX_SHEET_ROWS:MAX_SHEET_COLS);
+  try{await engine.current!.editLines(sheet,axis,span.first,span.count,span.op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyFreeze=async(rows:number,cols:number)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.freeze(sheet,rows,cols);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const toggleFormat=(kind:ToggleKind)=>{void applyFormat(toggleOp(kind,cur?.style)).catch(()=>undefined);};
+ const panelOperations=useRef<SheetsPanelController>(null!);
+ panelOperations.current={ready:()=>phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed,navigate:async(sheetIndex,targetAddress)=>{const span=parseSpan(targetAddress),target=span?.from;if(!span||!target||!book?.sheets.some(s=>s.index===sheetIndex&&s.visibility==='Visible'))throw Error('Invalid sheet or cell.');if(draftRef.current!==null)await commit(draftRef.current);setSheet(sheetIndex);setSel(target);setExt(span.to);setDraft(null);},setCell:async input=>{if(new TextEncoder().encode(input).length>MAX_CELL_BYTES)throw Error('Cell input is too long.');if(!await collabEdit((b,id)=>b.applyLocalEdit(id,sel.row,sel.col,input)))await engine.current!.set(sheet,address,input);setDraft(null);setDirty(true);setNotice('');setRev(r=>r+1);},formatCells:async op=>{await applyFormat(op);},resizeLines:async(axis,op)=>{await applyLines(axis,op);},editLines:async(axis,kind)=>{await applyEdit(axis,kind);},freezePanes:async(rows,cols)=>{await applyFreeze(rows,cols);},editSheet:async op=>{await applySheet(op);},sortRange:async op=>{await applySort(op);},filterRows:async op=>{await applyFilter(op);},fillRange:async dir=>{await applyFill(dir);},highlightRules:async op=>{await applyHighlight(op);},setValidation:async op=>{await applyValidation(op);},replaceText:async op=>applyReplace(op),removeDuplicates:async op=>applyDedupe(op),annotateCell:async op=>{await applyAnnotate(op);},nameOperation:async op=>{await applyName(op);},tableOperation:async op=>{await applyTable(op);},pivotOperation:async op=>{await applyPivot(op);},chartOperation:async op=>{await applyChart(op);},sparklineOperation:async op=>{await applySparkline(op);},protectOperation:async op=>{await applyProtect(op);},whatIfOperation:async op=>{await applyWhatIf(op);},objectOperation:async op=>{await applyObject(op);},savedViewOperation:async op=>{await applySavedView(op);},outlineOperation:async op=>{await applyOutline(op);},layoutOperation:async op=>{await applyLayout(op);},cellTool:async op=>{await applyCellTool(op);},dataTool:async op=>{await applyDataTool(op);},pivotEdit:async op=>{await applyPivotEdit(op);},cfManage:async op=>{await applyCfManage(op);},validationManage:async op=>{await applyValidationManage(op);},validationCheck:async()=>{await applyValidationCheck();},noteReview:async op=>{await applyNoteReview(op);},
+  audit:async op=>{await applyAudit(op);},review:async kind=>{await applyReview(kind);},pages:async kind=>{await applyPages(kind);},insertSymbol:async ch=>{await applySymbol(ch);},insertFunction:name=>{startFunction(name);},insertPicture:async p=>{await applyPicture(p);},viewOperation:async op=>{await applyView(op);},pageSetup:async op=>{await applyPageSetup(op);},pasteSpecial:async op=>{await applyPaste(op);},autoFill:async op=>{await applyAutoFill(op);},fillSeries:async op=>{await applyFillSeries(op);},spellChange:async op=>{await applySpellChange(op);},shiftCells:async op=>{await applyShift(op);},findSpecial:async kind=>engine.current!.findSpecial(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,kind),exportFile:async op=>{await applyExport(op);},pivotFields:async()=>engine.current!.pivotFields(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1),splitColumn:async op=>{await applySplit(op);},importDelimited:async(plan,target)=>{await applyImport(plan,target);},countMatches:async op=>{const n=engine.current!;return n.findCount(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);},readRange:async(input,styled)=>{const r=parsePanelRange(input);if(!r)throw Error('Invalid range.');return styled?(await engine.current!.view(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells:(await engine.current!.range(sheet,r.r0,r.c0,r.r1-r.r0+1,r.c1-r.c0+1)).cells;}};
+ useEffect(()=>registerSheetsPanelController({ready:()=>panelOperations.current.ready(),navigate:(...args)=>panelOperations.current.navigate(...args),setCell:input=>panelOperations.current.setCell(input),readRange:input=>panelOperations.current.readRange(input),formatCells:op=>panelOperations.current.formatCells(op),resizeLines:(axis,op)=>panelOperations.current.resizeLines(axis,op),editLines:(axis,kind)=>panelOperations.current.editLines(axis,kind),freezePanes:(rows,cols)=>panelOperations.current.freezePanes(rows,cols),editSheet:op=>panelOperations.current.editSheet(op),sortRange:op=>panelOperations.current.sortRange(op),filterRows:op=>panelOperations.current.filterRows(op),fillRange:dir=>panelOperations.current.fillRange(dir),highlightRules:op=>panelOperations.current.highlightRules(op),setValidation:op=>panelOperations.current.setValidation(op),replaceText:op=>panelOperations.current.replaceText(op),removeDuplicates:op=>panelOperations.current.removeDuplicates(op),annotateCell:op=>panelOperations.current.annotateCell(op),nameOperation:op=>panelOperations.current.nameOperation(op),tableOperation:op=>panelOperations.current.tableOperation(op),pivotOperation:op=>panelOperations.current.pivotOperation(op),chartOperation:op=>panelOperations.current.chartOperation(op),sparklineOperation:op=>panelOperations.current.sparklineOperation(op),protectOperation:op=>panelOperations.current.protectOperation(op),whatIfOperation:op=>panelOperations.current.whatIfOperation(op),objectOperation:op=>panelOperations.current.objectOperation(op),savedViewOperation:op=>panelOperations.current.savedViewOperation(op),outlineOperation:op=>panelOperations.current.outlineOperation(op),layoutOperation:op=>panelOperations.current.layoutOperation(op),cellTool:op=>panelOperations.current.cellTool(op),dataTool:op=>panelOperations.current.dataTool(op),pivotEdit:op=>panelOperations.current.pivotEdit(op),cfManage:op=>panelOperations.current.cfManage(op),validationManage:op=>panelOperations.current.validationManage(op),validationCheck:()=>panelOperations.current.validationCheck(),noteReview:op=>panelOperations.current.noteReview(op),audit:op=>panelOperations.current.audit(op),review:kind=>panelOperations.current.review(kind),pages:kind=>panelOperations.current.pages(kind),insertSymbol:ch=>panelOperations.current.insertSymbol(ch),insertFunction:name=>panelOperations.current.insertFunction(name),insertPicture:p=>panelOperations.current.insertPicture(p),viewOperation:op=>panelOperations.current.viewOperation(op),pageSetup:op=>panelOperations.current.pageSetup(op),pasteSpecial:op=>panelOperations.current.pasteSpecial(op),autoFill:op=>panelOperations.current.autoFill(op),fillSeries:op=>panelOperations.current.fillSeries(op),spellChange:op=>panelOperations.current.spellChange(op),findSpecial:kind=>panelOperations.current.findSpecial(kind),shiftCells:op=>panelOperations.current.shiftCells(op),exportFile:op=>panelOperations.current.exportFile(op),pivotFields:()=>panelOperations.current.pivotFields(),splitColumn:op=>panelOperations.current.splitColumn(op),countMatches:op=>panelOperations.current.countMatches(op),importDelimited:(plan,target)=>panelOperations.current.importDelimited(plan,target)}),[]);
+ useEffect(()=>{if(phase.kind!=='ready')return;const el=scroller.current;if(!el)return;const top=geo.rowTop(sel.row),left=geo.colLeft(sel.col);if(top<el.scrollTop||top+geo.rowHeight(sel.row)>el.scrollTop+el.clientHeight-HEAD_H)el.scrollTop=Math.max(0,top);if(left<el.scrollLeft||left+geo.colWidth(sel.col)>el.scrollLeft+el.clientWidth-HEAD_W)el.scrollLeft=Math.max(0,left);},[sel.row,sel.col,sheet,geo,phase.kind]);
  const readRange=async()=>{if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return null;}
   const r=await engine.current!.range(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);const m=new Map(r.cells.map(c=>[c.address,c]));
   return Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(m.get(addressOf(range.r0+i,range.c0+j))?.value)));};
  const clearRange=async()=>{if(!multi){await commit('');return;}
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
-  try{for(let r=range.r0;r<=range.r1;r++)for(let c=range.c0;c<=range.c1;c++)await engine.current!.set(sheet,addressOf(r,c),'');setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
+  try{if(!await collabEdit((b,id)=>b.applyLocalClear(id,range.r0,range.c0,range.r1,range.c1)))await engine.current!.clear(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);}};
  const onCopy=(e:ClipboardEvent<HTMLDivElement>,cut:boolean)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();
   if(rectCells(range)>MAX_READ_CELLS){setNotice(t('sheets.rangeTooLarge'));return;}
-  const after=(rows:string[][])=>{const text=toTsv(rows);return text;};
+  // Without live collaboration a cut waits for the paste: then the engine moves the block and the references to it. With collaboration it stays copy and clear.
+  const engineCut=cut&&!collab.current;
+  const after=(rows:string[][])=>{const text=toTsv(rows);clipText.current=text;return text;};
+  // The engine keeps its own copy (formulas, formats) for Paste Special; the system clipboard still gets plain text. Posted before any cut clears the cells.
+  {const from=sheet,at=addressOf(range.r0,range.c0)+(multi?':'+addressOf(range.r1,range.c1):''),name=book?.sheets.find(s=>s.index===from)?.name??'';void engine.current!.clipCopy(from,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,engineCut).then(()=>setClip({sheetName:name,address:at,cut:engineCut}),()=>{setClip(null);if(engineCut)setNotice(t('sheets.copyFailed'));});}
   // clipboardData is only writable synchronously: ranges inside the loaded window use the cells already read, bigger ones fall back to the async clipboard API.
   const inWin=range.r0>=win.row&&range.r1<win.row+win.rows&&range.c0>=win.col&&range.c1<win.col+win.cols;
-  if(inWin){const rows=Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(cells.get(addressOf(range.r0+i,range.c0+j))?.value)));e.clipboardData.setData('text/plain',after(rows));if(cut)void clearRange();return;}
-  void readRange().then(async rows=>{if(!rows)return;try{await navigator.clipboard.writeText(after(rows));}catch{setNotice(t('sheets.copyFailed'));return;}if(cut)await clearRange();}).catch(fail);};
- const onPaste=(e:ClipboardEvent<HTMLDivElement>)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();const text=e.clipboardData.getData('text/plain');const data=parseTsv(text);
-  const origin={row:range.r0,col:range.c0};const rect=pasteRect(origin,data);if(!rect){setNotice(t('sheets.rangeTooLarge'));return;}
-  void (async()=>{try{for(let i=0;i<data.length;i++)for(let j=0;j<data[i].length;j++){const input=data[i][j];if(new TextEncoder().encode(input).length>MAX_CELL_BYTES){setNotice(t('sheets.tooLong'));continue;}if(origin.row+i>rect.r1||origin.col+j>rect.c1)continue;await engine.current!.set(sheet,addressOf(origin.row+i,origin.col+j),input);}
-   setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setRev(x=>x+1);}catch(err){fail(err);}})();};
+  if(inWin){const rows=Array.from({length:range.r1-range.r0+1},(_,i)=>Array.from({length:range.c1-range.c0+1},(_,j)=>displayValue(cells.get(addressOf(range.r0+i,range.c0+j))?.value)));e.clipboardData.setData('text/plain',after(rows));if(cut&&!engineCut)void clearRange();return;}
+  void readRange().then(async rows=>{if(!rows)return;try{await navigator.clipboard.writeText(after(rows));}catch{setNotice(t('sheets.copyFailed'));return;}if(cut&&!engineCut)await clearRange();}).catch(fail);};
+ const onPaste=(e:ClipboardEvent<HTMLDivElement>)=>{if(draft!==null||phase.kind!=='ready')return;e.preventDefault();const pastedText=e.clipboardData.getData('text/plain'),data=parseTsv(pastedText);
+  // Our own unchanged copy pastes from the engine (formulas with adjusted references, formats); outside text and live collaboration stay a plain text paste.
+  if(pasteFromEngineCopy({collab:!!collab.current,hasCopy:!!clip,copiedText:clipText.current,pastedText})){
+   void (async()=>{try{const res=await engine.current!.pasteSpecial(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,{what:'all'}) as {range?:string}|null;
+    const span=typeof res?.range==='string'?parseSpan(res.range):null;if(span){setSel(span.from);setExt(span.to);}if(clip?.cut){setClip(null);clipText.current=null;}setDirty(true);setNotice('');setRev(x=>x+1);return;}
+   catch(err){if(!(err instanceof Error&&/Nothing was copied/.test(err.message))){fail(err);return;}setClip(null);}
+   await pasteText();})();return;}
+  void pasteText();
+  async function pasteText(){
+  const plan=planPaste({row:range.r0,col:range.c0},data,MAX_CELL_BYTES);if(!plan.ok){if(plan.reason!=='empty')setNotice(t(plan.reason==='tooLong'?'sheets.tooLong':'sheets.rangeTooLarge'));return;}
+  const {rect,values}=plan;
+  // One engine call = one undo step; a rejected block (bad formula, limits) changes nothing.
+  void (async()=>{try{if(!await collabEdit((b,id)=>b.applyLocalBlock(id,rect.r0,rect.c0,values)))await engine.current!.setValues(sheet,rect.r0,rect.c0,values);
+   setSel({row:rect.r0,col:rect.c0});setExt(rectCells(rect)>1?{row:rect.r1,col:rect.c1}:null);setDirty(true);setNotice('');setRev(x=>x+1);}catch(err){fail(err);}})();}};
  const onGridKey=(e:KeyboardEvent)=>{
   if(draft!==null)return;
   const k=e.key;
   if(k==='ArrowDown'){e.preventDefault();move(1,0,e.shiftKey);}else if(k==='ArrowUp'){e.preventDefault();move(-1,0,e.shiftKey);}else if(k==='ArrowRight'){e.preventDefault();move(0,1,e.shiftKey);}else if(k==='ArrowLeft'){e.preventDefault();move(0,-1,e.shiftKey);}
   else if(k==='Tab'){e.preventDefault();move(0,e.shiftKey?-1:1);}else if(k==='Enter'||k==='F2'){e.preventDefault();startEdit(editText(cur?.value,cur?.formula));}
+  else if(k===' '&&cur?.style?.fmt==='checkbox'&&cur.value.t==='Bool'){e.preventDefault();void applyCellTool({kind:'toggleCheckbox'}).catch(()=>undefined);}
   else if(k==='Delete'||k==='Backspace'){e.preventDefault();void clearRange();}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='a'){e.preventDefault();setSel({row:0,col:0});setExt({row:Math.max(0,(info?.rows??1)-1),col:Math.max(0,(info?.cols??1)-1)});}
+  else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&['b','i','u'].includes(k.toLowerCase())){e.preventDefault();toggleFormat(({b:'bold',i:'italic',u:'underline'} as const)[k.toLowerCase() as 'b'|'i'|'u']);}
+  else if((e.ctrlKey||e.metaKey)&&e.shiftKey&&!e.altKey&&(k==='%'||k==='5')){e.preventDefault();void applyFormat({kind:'numFmt',preset:'percent',decimals:0}).catch(()=>undefined);}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='z'){e.preventDefault();void history(e.shiftKey?'redo':'undo');}
   else if((e.ctrlKey||e.metaKey)&&k.toLowerCase()==='y'){e.preventDefault();void history('redo');}
+  else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='`'){e.preventDefault();void applyView({formulas:!layout?.showFormulas}).catch(()=>undefined);}
+  else if((e.ctrlKey||e.metaKey)&&!e.shiftKey&&!e.altKey&&k==='/'){e.preventDefault();setSheetsShortcutsOpen(true);}
   else if(k.length===1&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();startEdit(k);}
  };
- const history=async(kind:'undo'|'redo')=>{try{await (kind==='undo'?engine.current!.undo():engine.current!.redo());setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+ // The sheet list can change through sheet edits and undo/redo: reload it, keep the shown sheet when it still exists, otherwise fall back to the first visible one.
+ const syncSheets=async(prefer?:number,resetView=false)=>{
+  const fresh=await engine.current!.sheets();if(session.current)session.current.book=fresh;setBook(fresh);
+  const visible=fresh.sheets.filter(s=>s.visibility==='Visible');const want=prefer??sheet;const next=visible.some(s=>s.index===want)?want:(visible[0]?.index??0);
+  if(next!==sheet||resetView){setSheet(next);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}
+  return fresh;};
+ const applyTable=async(op:TableOp)=>{
+  if(collab.current){setNotice(t('sheets.tb.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.tableOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyChart=async(op:ChartOp)=>{
+  if(collab.current){setNotice(t('sheets.ch.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.chartOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applySparkline=async(op:SparklineOp)=>{
+  if(collab.current){setNotice(t('sheets.ch.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.sparklineOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const [fillPt,setFillPt]=useState<{x:number;y:number;copy:boolean}|null>(null);const fillRef=useRef<{x:number;y:number;copy:boolean}|null>(null);
+ /** The cell under a pointer position (client coordinates), in sheet coordinates. */
+ const fillCellAt=(p:{x:number;y:number})=>{const el=scroller.current,rect=el?.getBoundingClientRect();return {row:geo.rowAt(p.y-(rect?.top??0)+(el?.scrollTop??0)-HEAD_H),col:geo.colAt(p.x-(rect?.left??0)+(el?.scrollLeft??0)-HEAD_W)};};
+ const fillRelease=useRef<(p:{x:number;y:number;copy:boolean})=>void>(()=>undefined);
+ fillRelease.current=p=>{const op=fillDragOp(range,fillCellAt(p),totalRows,totalCols,p.copy?'copy':getFillMode());if(op)void applyAutoFill(op).catch(()=>undefined);};
+ useEffect(()=>{if(!fillPt)return;
+  const move=(e:PointerEvent)=>{fillRef.current={x:e.clientX,y:e.clientY,copy:e.ctrlKey||e.metaKey};setFillPt(fillRef.current);};
+  const up=()=>{const p=fillRef.current;fillRef.current=null;setFillPt(null);if(p)fillRelease.current(p);};
+  const esc=(e:globalThis.KeyboardEvent)=>{if(e.key==='Escape'){fillRef.current=null;setFillPt(null);}};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});window.addEventListener('keydown',esc);
+  return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc);};},[fillPt!==null]);
+ const renderObjects=()=>{const out:React.ReactNode[]=[];
+  for(const c of charts){const url=chartImages.get(c.id);if(!url)continue;out.push(<AbsBoxImg key={'chart'+c.id} src={url} alt={c.title??''} data-testid={'sheets-chart-'+c.id} surface box={{left:HEAD_W+geo.colLeft(c.col)+c.dx*geo.zoom,top:HEAD_H+geo.rowTop(c.row)+c.dy*geo.zoom,width:c.width*geo.zoom,height:c.height*geo.zoom}}/>);}
+  const place=(kind:'image'|'shape',o:ImageObject|ShapeObject)=>{
+   const key=kind+':'+o.id,url=objectUrls.get(key);if(!url)return;const d=drag&&drag.key===key?drag:null,z=geo.zoom;
+   const w=Math.max(o.width,kind==='shape'?2:1)*z+(d?.mode==='resize'?d.mx:0),h=Math.max(o.height,kind==='shape'?2:1)*z+(d?.mode==='resize'?d.my:0),left=HEAD_W+geo.colLeft(o.col)+o.dx*z+(d?.mode==='move'?d.mx:0),top=HEAD_H+geo.rowTop(o.row)+o.dy*z+(d?.mode==='move'?d.my:0);
+   const chosen=selObj===key;
+   out.push(<SheetObjectImg key={key} src={url} alt={'alt' in o?o.alt:o.text} left={left} top={top} width={Math.max(4,w)} height={Math.max(4,h)} z={chosen?2:1} selected={chosen} onPointerDown={collab.current?undefined:e=>{e.preventDefault();e.stopPropagation();if(draftRef.current!==null)void commit(draftRef.current);setSelObj(key);setDrag({key,mode:'move',x0:e.clientX,y0:e.clientY,mx:0,my:0});}} testId={'sheets-'+kind+'-'+o.id}/>);
+   if(chosen&&!collab.current)out.push(<SheetObjectHandle key={key+':handle'} left={left+Math.max(4,w)-6} top={top+Math.max(4,h)-6} onPointerDown={e=>{e.preventDefault();e.stopPropagation();setDrag({key,mode:'resize',x0:e.clientX,y0:e.clientY,mx:0,my:0});}} testId={'sheets-'+kind+'-'+o.id+'-resize'}/>);
+  };
+  for(const i of objects.images)place('image',i);
+  for(const o of objects.shapes)place('shape',o);
+  for(const s of sparks){const box=geo.box(s.scene.row,s.scene.col);if(!box||box.width===0||box.height===0)continue;out.push(<AbsBoxImg key={'spark'+s.scene.row+':'+s.scene.col} src={s.url} alt="" box={{left:HEAD_W+box.left,top:HEAD_H+box.top,width:box.width,height:box.height}}/>);}
+   if(pageList){
+    // Page edges from the engine's print layout: the rectangle of every page, each shared edge drawn once.
+    const seen=new Set<string>();
+    for(const p of pageList.pages){
+     const [a,b]=p.range.split(':'),from=parseAddress(a),to=parseAddress(b??a);if(!from||!to)continue;
+     const left=HEAD_W+geo.colLeft(from.col),right=HEAD_W+geo.colLeft(to.col+1),top=HEAD_H+geo.rowTop(from.row),bottom=HEAD_H+geo.rowTop(to.row+1);
+     for(const [kind,at] of [['h',from.row],['h',to.row+1],['v',from.col],['v',to.col+1]] as const){
+      const key=kind+at+(kind==='h'?':'+from.col+':'+to.col:':'+from.row+':'+to.row);if(seen.has(key)||seen.size>=400)continue;seen.add(key);
+      if(kind==='h')out.push(<SheetBreakLine key={'pb'+key} left={left} top={at===from.row?top:bottom} length={right-left} vertical={false} testId="sheets-page-break"/>);
+      else out.push(<SheetBreakLine key={'pb'+key} left={at===from.col?left:right} top={top} length={bottom-top} vertical testId="sheets-page-break"/>);
+     }
+    }
+   }
+  if(phase.kind==='ready'&&!collab.current&&!drag){
+   const right=HEAD_W+geo.colLeft(range.c1)+geo.colWidth(range.c1),bottom=HEAD_H+geo.rowTop(range.r1)+geo.rowHeight(range.r1);
+   out.push(<SheetObjectHandle key="fill-handle" left={right-5} top={bottom-5} testId="sheets-fill-handle" onPointerDown={e=>{e.preventDefault();e.stopPropagation();if(draftRef.current!==null)return;fillRef.current={x:e.clientX,y:e.clientY,copy:e.ctrlKey||e.metaKey};setFillPt(fillRef.current);}}/>);
+   const fop=fillPt?fillDragOp(range,fillCellAt(fillPt),totalRows,totalCols,fillPt.copy?'copy':getFillMode()):null;
+   if(fop){
+    const r0=fop.dir==='up'?range.r0-fop.count:range.r0,c0=fop.dir==='left'?range.c0-fop.count:range.c0,r1=fop.dir==='down'?range.r1+fop.count:range.r1,c1=fop.dir==='right'?range.c1+fop.count:range.c1;
+    const l=HEAD_W+geo.colLeft(c0),r=HEAD_W+geo.colLeft(c1+1),tp=HEAD_H+geo.rowTop(r0),bt=HEAD_H+geo.rowTop(r1+1);
+    out.push(<SheetBreakLine key="fill-t" left={l} top={tp} length={r-l} vertical={false} testId="sheets-fill-preview"/>,<SheetBreakLine key="fill-b" left={l} top={bt} length={r-l} vertical={false}/>,<SheetBreakLine key="fill-l" left={l} top={tp} length={bt-tp} vertical/>,<SheetBreakLine key="fill-r" left={r} top={tp} length={bt-tp} vertical/>);
+   }
+  }
+  return out;};
+ const applyProtect=async(op:ProtectOp)=>{
+  if(collab.current){setNotice(t('sheets.pt.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.protectOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyLayout=async(op:LayoutOp)=>{
+  if(collab.current){setNotice(t('sheets.cl.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const rows=range.r1-range.r0+1,cols=range.c1-range.c0+1;if(layoutBlockProblem(op,rows,cols))throw Error('Select a block that fits this operation.');
+  try{await engine.current!.layoutOp(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyCellTool=async(op:CellToolOp)=>{
+  if(collab.current){setNotice(t('sheets.ct.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const rows=range.r1-range.r0+1,cols=range.c1-range.c0+1;if(cellToolProblem(op,rows,cols))throw Error('Select a block that fits this tool.');
+  try{await engine.current!.cellToolOp(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyDataTool=async(op:DataToolOp)=>{
+  if(collab.current){setNotice(t('sheets.dt.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(dataToolProblem(op,range.c0))throw Error('Pick a cell in a column that has a column to its left.');
+  try{await engine.current!.dataToolOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyPivotEdit=async(op:PivotEditOp)=>{
+  if(collab.current){setNotice(t('sheets.pe.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const rows=range.r1-range.r0+1,cols=range.c1-range.c0+1;if(op.kind==='changeSource'&&pivotSourceProblem(rows,cols))throw Error('Select a header row and at least one data row.');
+  try{await engine.current!.pivotEditOp(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyNoteReview=async(op:NoteReviewOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const at=parseAddress(op.cell);if(!at)throw Error('Name the cell of the note, like B7.');
+  try{await engine.current!.annotate(sheet,at.row,at.col,op.kind==='remove'?{kind:'remove'}:{kind:'resolve',resolved:op.kind==='resolve'});setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applySymbol=async(ch:string)=>{
+  if(collab.current){setNotice(t('sheets.ct.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const at=parseAddress(address);if(!at)throw Error('Select a cell first.');
+  try{await engine.current!.insertSymbol(sheet,at.row,at.col,ch);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyPages=async(kind:'show'|'clear')=>{
+  if(kind==='clear'){setPageList(null);return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{setPageList(await engine.current!.pageBreaks(sheet));setNotice('');}catch(e){fail(e);throw e;}};
+ const applyReview=async(kind:ReviewKind)=>{
+  if(kind==='clear'){setReviewResult(null);return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{setReviewResult(await engine.current!.reviewInfo(sheet,kind));setNotice('');}catch(e){fail(e);throw e;}};
+ const applyAudit=async(op:AuditOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(op.kind==='clear'){setAuditResult(null);return;}
+  const at=parseAddress(address);if(!at)throw Error('Select a cell first.');
+  try{const a=await engine.current!.auditOp(sheet,at.row,at.col,op.kind==='watchRemove'?op:{kind:op.kind as 'trace'|'errors'|'watchAdd'});
+   if(a.trace||a.errors)setAuditResult({trace:a.trace,errors:a.errors});if(a.watch){setWatchRows(a.watch);setDirty(true);}setNotice('');}catch(e){fail(e);throw e;}};
+ const applyValidationCheck=async()=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{setInvalidCells(await engine.current!.validationInvalid(sheet));setNotice('');}catch(e){fail(e);throw e;}};
+ const applyValidationManage=async(op:ValidationManageOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.validationManage(sheet,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyCfManage=async(op:CfManageOp)=>{
+  if(collab.current){setNotice(t('sheets.cm.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.cfManage(sheet,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const startFunction=(name:string)=>{if(draftRef.current!==null)throw Error('Finish the cell edit first.');startEdit(functionFormulaStart(name));};
+ const applyOutline=async(cmd:OutlineCommand)=>{
+  if(collab.current){setNotice(t('sheets.ol.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const op=toBridgeOp(cmd,range);await engine.current!.outlineOp(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applySavedView=async(op:SavedViewOp)=>{
+  if(collab.current){setNotice(t('sheets.sv.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const r=await engine.current!.savedViewOp(sheet,range.r0,range.c0,op);
+   if(op.kind==='show'){const to=parseShownView(r);if(!to)throw Error('The view could not be shown.');await panelOperations.current.navigate(to.sheet,to.selection);}
+   else setDirty(true);
+   setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyObject=async(op:ObjectOp)=>{
+  if(collab.current){setNotice(t('sheets.ob.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.objectOp(sheet,range.r0,range.c0,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyPicture=async(p:{bytes:Uint8Array;alt:string;width:number})=>{
+  if(collab.current){setNotice(t('sheets.ob.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.pictureOp(sheet,range.r0,range.c0,p.bytes,p.alt,p.width);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyWhatIf=async(op:WhatIfOp)=>{
+  if(collab.current){setNotice(t('sheets.wi.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const r=await engine.current!.whatIfOp(sheet,op);
+   if(op.kind==='scenarioSummary')await syncSheets(undefined,true);
+   setDirty(true);setNotice(op.kind==='goalSeek'?goalNotice(parseGoalResult(r)):'');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const goalNotice=(g:{value:number;converged:boolean}|null)=>g?t(g.converged?'sheets.wi.goalFound':'sheets.wi.goalNear',{value:String(Math.round(g.value*1e6)/1e6)}):'';
+ const applyView=async(op:ViewCommand)=>{
+  if(('gridlines' in op||'headings' in op||'zeros' in op||'formulas' in op)&&collab.current){setNotice(t('sheets.vw.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const req='fit' in op?{zoom:fitZoom(geo.colLeft(range.c1+1)-geo.colLeft(range.c0),geo.rowTop(range.r1+1)-geo.rowTop(range.r0),view.w-HEAD_W,view.h-HEAD_H,geo.zoom)}:op;await engine.current!.viewOp(sheet,req);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ /** Corrects one word in one text cell: the cell is read again first, so a changed cell is refused instead of overwritten. One undo step. */
+ const applySpellChange=async(op:SpellChange)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const at=parseAddress(op.cell);if(!at)throw Error('Invalid cell.');
+  try{const cell=(await engine.current!.range(sheet,at.row,at.col,1,1)).cells[0];
+   if(!cell||cell.formula!==null||cell.value.t!=='Text')throw Error('This cell no longer holds plain text.');
+   const next=replaceWholeWord(cell.value.v,op.word,op.to);if(next===null)throw Error('The word is no longer in this cell.');
+   if(/^\s*[=+\-@]/.test(next)||new TextEncoder().encode(next).length>MAX_CELL_BYTES)throw Error('The corrected text cannot be entered as plain text.');
+   if(!await collabEdit((b,id)=>b.applyLocalEdit(id,at.row,at.col,next)))await engine.current!.set(sheet,op.cell,next);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyShift=async(op:ShiftOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(shiftBlockProblem(op,range,totalRows,totalCols))throw Error('Select a block that fits.');
+  try{await engine.current!.shiftCells(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyFillSeries=async(op:SeriesOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.fillSeries(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyAutoFill=async(op:AutoFillOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const res=await engine.current!.autoFill(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op) as {range?:string}|null;
+   const span=typeof res?.range==='string'?parseSpan(res.range):null;if(span){setSel(span.from);setExt(span.to);}setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyPaste=async(op:PasteOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(!clip)throw Error(t('sheets.ps.nothing'));
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.pasteSpecial(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyPageSetup=async(op:PageSetupOp)=>{
+  if(collab.current){setNotice(t('sheets.pr.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.pageSetup(sheet,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyExport=async(op:ExportOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const res=await engine.current!.exportFile(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);downloadExport(res,exportName(item.name,op.format,op.scope==='sheet'&&op.format!=='pdf'?book?.sheets.find(s=>s.index===sheet)?.name:undefined));setNotice('');}catch(e){fail(e);throw e;}};
+ const applyPivot=async(op:PivotOp)=>{
+  if(collab.current){setNotice(t('sheets.tb.collab'));return;}
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{if(op.kind==='refresh')await engine.current!.pivotRefresh();else{const at=await engine.current!.pivotCreate(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,{rows:op.rows,values:op.values,...(op.columns?{columns:op.columns}:{}),...(op.func?{func:op.func}:{})});await syncSheets(at,true);}setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyName=async(op:NameOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{if(op.kind==='define')await engine.current!.defineName(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,{name:op.name,scope:op.scope,...(op.replace?{replace:true}:{})});else if(op.kind==='delete')await engine.current!.deleteName(sheet,{name:op.name,scope:op.scope});else if(op.kind==='rename')await engine.current!.renameName(sheet,{name:op.name,scope:op.scope,newName:op.newName});else if(op.kind==='fromSelection')await engine.current!.createNames(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,{...(op.top?{top:true}:{}),...(op.left?{left:true}:{}),...(op.replace?{replace:true}:{})});else if(op.kind==='comment')await engine.current!.editName(sheet,{kind:'comment',name:op.name,scope:op.scope,text:op.text});else await engine.current!.editName(sheet,{kind:'constant',name:op.name,scope:op.scope,value:op.value,...(op.replace?{replace:true}:{})});setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyAnnotate=async(op:AnnotateOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.annotate(sheet,sel.row,sel.col,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyDedupe=async(op:DedupeOp):Promise<number>=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const cols=range.c1-range.c0+1;if(op.columns.some(c=>c>=cols))throw Error('Column is outside the selection.');
+  try{const n=await engine.current!.dedupe(sheet,range.r0,range.c0,range.r1-range.r0+1,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);return n;}catch(e){fail(e);throw e;}};
+ const applySplit=async(op:SplitOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.split(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyReplace=async(op:ReplaceOp):Promise<number>=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{const n=await engine.current!.replace(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);return n;}catch(e){fail(e);throw e;}};
+ const applyValidation=async(op:ValidationOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.validation(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyHighlight=async(op:CfOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.cf(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyFill=async(dir:FillDirection)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const rows=range.r1-range.r0+1,cols=range.c1-range.c0+1;if(fillBlockProblem(range.r0,range.c0,rows,cols,dir))throw Error('Select a block to fill.');
+  try{await engine.current!.fill(sheet,range.r0,range.c0,rows,cols,dir);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applyFilter=async(op:FilterOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  try{await engine.current!.filter(sheet,range.r0,range.c0,range.r1-range.r0+1,range.c1-range.c0+1,op);noteFilterApplied(item.name,sheet,range,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applySort=async(op:SortOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  const cols=range.c1-range.c0+1,rows=range.r1-range.r0+1,across=op.orientation==='columns';if(op.keys.some(x=>x.column>=(across?rows:cols)))throw Error('Sort column is outside the selection.');
+  const problem=across?sortBlockProblem(cols,rows,op.header):sortBlockProblem(rows,cols,op.header);if(problem)throw Error(across?'Select a block with at least two columns to sort.':'Select a block with at least two rows to sort.');
+  try{await engine.current!.sort(sheet,range.r0,range.c0,rows,cols,op);setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ const applySheet=async(op:SheetOp)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  if(collab.current&&(op.kind==='move'||op.kind==='duplicate'||op.kind==='hide'||op.kind==='unhide'||op.kind==='tabColor'||op.kind==='notesList')){setNotice(t('sheets.collabSheetOpUnsupported'));return;}   // position-keyed shared cells would detach from their sheet
+  try{const r=await engine.current!.editSheet(sheet,op);const fresh=await syncSheets(r.active,op.kind==='add'||op.kind==='duplicate'||op.kind==='delete'||op.kind==='hide'||op.kind==='unhide'||op.kind==='notesList');
+   if(collab.current&&fresh&&op.kind!=='duplicate'){const idx=op.kind==='add'?r.active:sheet;collab.current.binding.applyLocalSheetOp(idx,op.kind as 'add'|'delete'|'rename',fresh.sheets[idx]?.name);}
+   setDirty(true);setNotice('');setRev(x=>x+1);}catch(e){fail(e);throw e;}};
+ /** CSV/TSV import: optionally a new sheet, then the validated block in engine-sized bands (one undo step each). */
+ const applyImport=async(plan:ImportPlan,target:ImportTarget)=>{
+  if(draftRef.current!==null)await commit(draftRef.current);
+  let targetSheet=sheet,row=range.r0,col=range.c0;
+  if(target.kind==='newSheet'){
+   const r=await engine.current!.editSheet(sheet,{kind:'add',name:target.name});
+   await syncSheets(r.active,true);targetSheet=r.active;row=0;col=0;
+  }
+  for(const chunk of plan.chunks){
+   if(!await collabEdit((b,id)=>b.applyLocalBlock(id,row+chunk.rowOffset,col,chunk.values)))await engine.current!.setValues(targetSheet,row+chunk.rowOffset,col,chunk.values);
+  }
+  setSheet(targetSheet);setSel({row,col});setExt(plan.rows>1||plan.cols>1?{row:row+plan.rows-1,col:col+plan.cols-1}:null);setDirty(true);setNotice('');setRev(x=>x+1);
+ };
+ const history=async(kind:'undo'|'redo')=>{try{
+  if(collab.current){if(kind==='undo')collab.current.binding.undo();else collab.current.binding.redo();}
+  else{await (kind==='undo'?engine.current!.undo():engine.current!.redo());await syncSheets();}
+  noteFilterHistory(item.name);setDirty(true);setRev(r=>r+1);}catch(e){fail(e);}};
+ const cellBackground=(l:CfLayer|null,overlay:boolean):React.CSSProperties=>{const o='linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))';if(!l)return overlay?{backgroundImage:o}:{};return overlay?{backgroundImage:o+', '+l.image,backgroundSize:'auto, '+l.size,backgroundPosition:'0 0, '+l.position,backgroundRepeat:'repeat, no-repeat'}:{backgroundImage:l.image,backgroundSize:l.size,backgroundPosition:l.position,backgroundRepeat:'no-repeat'};};
  const side=(b:{w:number;style:string;color:string}|null|undefined)=>b?`${Math.max(1,Math.min(3,Math.round(b.w)))}px ${b.style} ${b.color}`:undefined;
+ useEffect(()=>{if(!drag)return;const key=drag.key;
+  const move=(e:PointerEvent)=>setDrag(d=>d&&d.key===key?{...d,mx:e.clientX-d.x0,my:e.clientY-d.y0}:d);
+  const up=()=>{const d=dragRef.current;setDrag(null);if(!d||Math.abs(d.mx)+Math.abs(d.my)<3)return;const m=/^(image|shape):(\d+)$/.exec(d.key);if(!m)return;
+   const list=m[1]==='image'?objects.images:objects.shapes,o=list.find(x=>x.id===Number(m[2]));if(!o)return;
+   const op=dropPlacement(m[1] as 'image'|'shape',o,d,geo);void applyObject(op).catch(()=>undefined);};
+  const esc=(e:globalThis.KeyboardEvent)=>{if(e.key==='Escape')setDrag(null);};
+  window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});window.addEventListener('keydown',esc);
+  return()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);window.removeEventListener('keydown',esc);};},[drag?.key,drag?.mode]);
  const renderCells=()=>{
   const fr=geo.freezeRows,fc=geo.freezeCols;const out:React.ReactNode[]=[];const seen=new Set<string>();
   const rowsList=[...new Set([...Array.from({length:fr},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])],colsList=[...new Set([...Array.from({length:fc},(_,i)=>i),...Array.from({length:win.cols},(_,j)=>win.col+j)])];
   for(const r of rowsList)for(const c of colsList){
    const box=geo.box(r,c);if(!box||box.width===0||box.height===0)continue;
    const a=addressOf(r,c);if(seen.has(a))continue;seen.add(a);const cell=cells.get(a);const selected=r===sel.row&&c===sel.col;const st=cell?.style;
-   const frozenR=r<fr,frozenC=c<fc;const align=cellAlign(st?.h,cell);const bd=st?.borders;
+   const cfl=cfLayers(cell?.cfBar,cell?.cfIcon,geo.zoom);const frozenR=r<fr,frozenC=c<fc;const align=cellAlign(st?.h,cell);const bd=st?.borders;
    const css:React.CSSProperties={position:'absolute',left:HEAD_W+box.left+(frozenC?view.left:0),top:HEAD_H+box.top+(frozenR?view.top:0),width:box.width,height:box.height,textAlign:align,zIndex:frozenR&&frozenC?3:frozenR||frozenC?2:undefined,
-    fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*10)/10}px`:undefined,
-    fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,
-    color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--surface, #fff)':undefined),
-    borderLeft:side(bd?.l),borderRight:side(bd?.r),backgroundImage:multi&&inRect(range,r,c)&&!selected?'linear-gradient(rgba(59,130,246,0.16),rgba(59,130,246,0.16))':undefined,borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
-    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap?'16px':`${Math.max(16,box.height-1)}px`};
+    fontFamily:st?.font?`"${st.font}", system-ui, sans-serif`:undefined,fontSize:st?.size?`${Math.round(st.size*96/72*geo.zoom*10)/10}px`:geo.zoom!==1?`${Math.round(12*geo.zoom*10)/10}px`:undefined,
+    fontWeight:st?.bold?700:undefined,fontStyle:st?.italic?'italic':undefined,textDecoration:[st?.underline?'underline':'',st?.strike?'line-through':''].filter(Boolean).join(' ')||undefined,textDecorationStyle:st?.underline&&st.ul2?'double':undefined,...(st?.rot===90?{writingMode:'vertical-rl' as const,transform:'rotate(180deg)'}:st?.rot===-90?{writingMode:'vertical-rl' as const}:st?.rot===255?{writingMode:'vertical-rl' as const,textOrientation:'upright' as const}:{}),
+    color:isErrorValue(cell?.value)?undefined:(cell?.fmtColor??st?.color??undefined),backgroundColor:st?.fill??((frozenR||frozenC)?'var(--bg-surface, #fff)':undefined),
+    borderLeft:side(bd?.l),borderRight:side(bd?.r),...cellBackground(cfl,multi&&inRect(range,r,c)&&!selected),borderTop:side(bd?.t),borderBottom:side(bd?.b),boxSizing:'border-box',
+    whiteSpace:st?.wrap?'pre-wrap':'nowrap',overflow:'hidden',textOverflow:st?.wrap?'clip':'ellipsis',lineHeight:st?.wrap||st?.v==='top'?`${Math.round(16*geo.zoom)}px`:`${Math.max(16,box.height-1)}px`,...(cfl?.padLeft&&!st?.indent?{paddingLeft:cfl.padLeft}:{}),...(st?.indent?{[align==='right'?'paddingRight':'paddingLeft']:6+st.indent*9}:{})};
    out.push(<div key={a} role="gridcell" aria-selected={selected||(multi&&inRect(range,r,c))} aria-rowindex={r+1} aria-colindex={c+1} data-address={a} data-frozen={frozenR||frozenC?'true':undefined} data-merged={geo.mergeCovering(r,c)?'true':undefined}
-    className={'border-b border-r border-subtle px-1.5 text-[12px] '+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
+    className={'border-b border-r px-1.5 text-[12px] '+(layout?.showGridlines===false?'border-transparent ':'border-subtle ')+(selected?(st?.fill?'':'bg-hover ')+'outline outline-2 -outline-offset-2 outline-accent':'')+(isErrorValue(cell?.value)?' text-red-600':'')}
     style={css}
-    onMouseDown={e=>{e.preventDefault();if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{cellText(cell)}</div>);}
+    onMouseDown={e=>{e.preventDefault();setSelObj(null);if(draftRef.current!==null)void commit(draftRef.current);if(e.shiftKey)setExt({row:r,col:c});else{setSel({row:r,col:c});setExt(null);dragging.current=true;}scroller.current?.focus();}} onMouseEnter={()=>{if(dragging.current)setExt(x=>x&&x.row===r&&x.col===c?x:{row:r,col:c});}} onDoubleClick={()=>startEdit(editText(cell?.value,cell?.formula))}>{st?.fmt==='checkbox'&&cell?.value.t==='Bool'?(cell.value.v?'\u2611':'\u2610'):cellText(cell)}</div>);}
   return out;};
- const exportCopy=async()=>{try{const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')setDirty(false);setNotice(t('sheets.exported'));}catch(e){fail(e);}};
- useEffect(()=>{setSheetsDirty(item.name,dirty);return()=>setSheetsDirty(item.name,false);},[dirty,item.name]);
+ const markSaved=()=>{if(sheetsSaved(item.name))setDirtyState(false);};
+ const exportCopy=async()=>{try{noteSheetsSaveStart(item.name);const bytes=await engine.current!.save();const r=await saveSheetsCopy(item.name,bytes);if(r==='cancelled')return;if(r==='saved')markSaved();setNotice(t('sheets.exported'));}catch(e){fail(e);}};
+ const exportRef=useRef(exportCopy);exportRef.current=exportCopy;
+ const historyRef=useRef(history);historyRef.current=history;const infoRef=useRef(info);infoRef.current=info;
+ // Command layer bridge (sheets/commands.ts): exposes this workbook's engine to the sheets.* command specs while mounted.
+ useEffect(()=>registerSheetsCommandController({ready:()=>!!engine.current&&!engine.current.isDisposed,canUndo:()=>!!infoRef.current?.canUndo,canRedo:()=>!!infoRef.current?.canRedo,undo:()=>historyRef.current('undo'),redo:()=>historyRef.current('redo'),saveCopy:()=>exportRef.current()}),[]);
+ useEffect(()=>registerDocSaver('sheets',item.name,async()=>{await exportRef.current();await new Promise(r=>setTimeout(r,100));return !sheetsIsDirty(item.name);}),[item.name]);
  const restart=()=>{if(original.current)window.location.reload();};
  if(phase.kind==='error')return <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-center" role="alert" data-testid="sheets-error"><p className="text-[13px] text-red-600">{phase.message}</p><p className="text-[12px] text-ink-3">{t('sheets.errorHint')}</p>{original.current&&<Button onClick={restart}>{t('sheets.reopen')}</Button>}</div>;
  const names=book?.sheets??[];
- return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}>
+ const fnHint=draft!==null?functionHint(functions,draft,caret):null;
+ const comp=draft!==null?completionAt(draft,caret,{fns:functions,names:definedNames,tables:tablesInfo?.tables??[],sheets:(book?.sheets??[]).filter(x=>x.visibility==='Visible').map(x=>x.name)}):null,word=comp,suggestions=comp?.suggestions??[];
+ const pickSuggestion=(i:number)=>{const s=suggestions[i];if(!s||!word||draft===null)return;const r=applySuggestion(draft,word.start,caret,s);if(!r)return;setDraft(r.text);setCaret(r.caret);requestAnimationFrame(()=>{const el=formulaRef.current;if(el){el.focus();el.setSelectionRange(r.caret,r.caret);}});};
+ const reviewReady=phase.kind==='ready'&&draft===null&&!!engine.current&&!engine.current.isDisposed&&!engine.current.hasPendingMutation&&book?.sheets.find(s=>s.index===sheet)?.visibility==='Visible'&&rectCells(range)<=100;
+ return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('sheets.workbook',{name:item.name})}><details><summary>{t('sheets.liveReview.title')}</summary><SheetsLiveSelectionReview scope={reviewScope} read={reviewReady?readSelection:null}/></details>
+  <SheetsShortcutsDialog/>
+  <SheetsImportDialog existingSheets={(book?.sheets??[]).map(x=>x.name)}/>
   <div className="media-bar flex items-center gap-2 border-b border-subtle px-3 py-1.5 text-[12px]">
    <span className="truncate" data-testid="media-name">{item.name}</span><span className="text-ink-3">XLSX, {formatBytes(item.size)}</span>
    {dirty&&<span className="rounded-sm bg-hover px-1.5 text-ink-2" data-testid="sheets-dirty">{t('sheets.edited')}</span>}<span className="flex-1"/>
-   <Button size="icon" aria-label={t('cmd.edit.undo')} title={t('cmd.edit.undo')} disabled={!info?.canUndo} onClick={()=>void history('undo')}><Undo2/></Button>
-   <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
+   <Button size="icon" aria-label={t('cmd.edit.undo')} title={t('cmd.edit.undo')} disabled={collab.current?!collab.current.binding.canUndo:!info?.canUndo} onClick={()=>void history('undo')}><Undo2/></Button>
+   <Button size="icon" aria-label={t('cmd.edit.redo')} title={t('cmd.edit.redo')} disabled={collab.current?!collab.current.binding.canRedo:!info?.canRedo} onClick={()=>void history('redo')}><Redo2/></Button>
    <Button variant="outline" disabled={phase.kind!=='ready'} onClick={()=>void exportCopy()} data-testid="sheets-export">{t('sheets.exportCopy')}</Button>
   </div>
+  <SheetsExportPopover name={item.name} ready={phase.kind==='ready'&&!!engine.current&&!engine.current.isDisposed} getBytes={()=>{noteSheetsSaveStart(item.name);return engine.current!.save();}} onSaved={r=>{if(r==='saved')markSaved();if(r!=='cancelled')setNotice(t('sheets.exported'));}}/>
   {book&&book.warnings.length>0&&<ul className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-warnings">{book.warnings.map(w=><li key={w}>{w}</li>)}</ul>}
   <p className="px-3 py-1 text-[12px] text-ink-3" role="note" data-testid="sheets-fidelity">{t('sheets.fidelity')}</p>
+  <SheetsHandoffBar file={item.name} disabled={phase.kind!=='ready'} onError={setNotice} getRows={async()=>{
+   const sess=session.current;if(!sess)throw new Error('Spreadsheet engine closed');
+   const {sheets}=readXlsx(await sess.engine.save());
+   return ((sheets[sheet]??sheets[0])?.rows??[]).map(r=>r.map(c=>c==null?'':String(c)));
+  }}/>
   {notice&&<p className="px-3 py-1 text-[12px] text-ink-2" role="status" data-testid="sheets-notice">{notice}</p>}
   <div className="flex w-full items-center gap-2 border-b border-subtle px-3 py-1">
    <span className="w-14 shrink-0 rounded-sm bg-hover px-2 py-0.5 text-center text-[12px]" data-testid="sheets-address" aria-label={t('sheets.address')}>{address}</span>
    <span className="text-ink-3" aria-hidden="true">fx</span>
    <input ref={formulaRef} aria-label={t('sheets.formulaBar')} data-testid="sheets-formula" className="h-7 min-w-0 flex-1 rounded-sm border border-subtle bg-transparent px-2 text-[12px]" spellCheck={false}
-    value={draft??editText(cur?.value,cur?.formula)} onFocus={()=>{if(draftRef.current===null)setDraft(editText(cur?.value,cur?.formula));}} onChange={e=>setDraft(e.target.value)}
+    value={draft??editText(cur?.value,cur?.formula)} onFocus={()=>{acDown.current=false;if(draftRef.current===null)setDraft(editText(cur?.value,cur?.formula));}} onChange={e=>{setDraft(e.target.value);setCaret(e.target.selectionStart??e.target.value.length);}} onSelect={e=>setCaret(e.currentTarget.selectionStart??0)}
     onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void commit(draftRef.current??'').then(()=>{move(1,0);scroller.current?.focus();});}else if(e.key==='Escape'){e.preventDefault();setDraft(null);scroller.current?.focus();}}}
-    onBlur={()=>{if(draftRef.current!==null)void commit(draftRef.current);}}/>
+    onBlur={()=>{if(acDown.current){acDown.current=false;return;}if(draftRef.current!==null)void commit(draftRef.current);}}/>
   </div>
+  {valRule&&(valRule.inputMessage||valRule.inputTitle)&&<p className="px-3 py-1 text-xs text-ink-3" role="note" data-testid="sheets-input-hint">{[valRule.inputTitle,valRule.inputMessage].filter(Boolean).join(': ')}</p>}
+  {suggestions.length>0&&<NativeSelect className="mx-3 my-1 w-64" aria-label={t('sheets.ac.pick')} value="" onChange={e=>{const i=Number(e.currentTarget.value);if(Number.isInteger(i))pickSuggestion(i);}} onPointerDown={()=>{acDown.current=true;}} onKeyDown={()=>{acDown.current=true;}} data-testid="sheets-ac"><option value="">{t('sheets.ac.pick')}</option>{suggestions.map((s,i)=><option key={s.kind+s.label} value={i}>{s.label+(s.kind==='fn'?' ( )':' ')+t('sheets.ac.'+s.kind)}</option>)}</NativeSelect>}
+  {fnHint&&<p className="px-3 py-1 text-xs text-ink-3" role="note" data-testid="sheets-fn-hint">{fnHint.name}({fnHint.args.map((a,i)=><span key={i}>{i>0&&', '}{i===fnHint.active?<strong>{a}</strong>:a}</span>)}) - {fnHint.description}</p>}
   <div ref={scroller} role="grid" tabIndex={0} aria-label={t('sheets.grid',{sheet:names[sheet]?.name??''})} aria-rowcount={totalRows} aria-colcount={totalCols} data-testid="sheets-grid"
    className="relative min-h-0 flex-1 overflow-auto outline-none focus-visible:ring-2 focus-visible:ring-accent" onKeyDown={onGridKey} onCopy={e=>onCopy(e,false)} onCut={e=>onCopy(e,true)} onPaste={onPaste}
    onScroll={e=>{const el=e.currentTarget;setView(v=>({...v,top:el.scrollTop,left:el.scrollLeft}));}}>
    <div style={{width:HEAD_W+geo.width,height:HEAD_H+geo.height,position:'relative'}}>
-    <div style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
+    <div className={showHead?undefined:'hidden'} style={{position:'sticky',top:0,zIndex:2,height:HEAD_H,width:HEAD_W+geo.width}} aria-hidden="false">
      {[...new Set([...Array.from({length:geo.freezeCols},(_,i)=>i),...Array.from({length:win.cols},(_,i)=>win.col+i)])].map(c=><div key={'h'+c} role="columnheader" aria-colindex={c+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:HEAD_W+geo.colLeft(c)+(c<geo.freezeCols?view.left:0),top:0,zIndex:c<geo.freezeCols?2:undefined,width:geo.colWidth(c),height:HEAD_H,display:geo.colWidth(c)===0?'none':undefined}}>{colName(c)}</div>)}
     </div>
-    <div style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
+    <div className={showHead?undefined:'hidden'} style={{position:'sticky',left:0,zIndex:1,width:HEAD_W,height:0}}>
      {[...new Set([...Array.from({length:geo.freezeRows},(_,i)=>i),...Array.from({length:win.rows},(_,i)=>win.row+i)])].map(r=><div key={'r'+r} role="rowheader" aria-rowindex={r+1} className="border-b border-r border-subtle bg-hover text-center text-[11px] leading-6 text-ink-3" style={{position:'absolute',left:0,top:geo.rowTop(r)+(r<geo.freezeRows?view.top:0),zIndex:r<geo.freezeRows?2:undefined,width:HEAD_W,height:geo.rowHeight(r),display:geo.rowHeight(r)===0?'none':undefined}}>{r+1}</div>)}
+     {peers.filter(p=>p.sheet===sheet).map(p=>{const left=HEAD_W+geo.colLeft(p.sel.c0),top=HEAD_H+geo.rowTop(p.sel.r0),w=geo.colLeft(p.sel.c1)+geo.colWidth(p.sel.c1)-geo.colLeft(p.sel.c0),h=geo.rowTop(p.sel.r1)+geo.rowHeight(p.sel.r1)-geo.rowTop(p.sel.r0);
+      return <PeerSelectionBox key={'peer'+p.clientId} left={left} top={top} width={w} height={h} color={p.user.color}>
+       <PeerSwatch className="absolute -top-5 left-0 rounded-sm px-1 text-xs leading-4 text-white" bg={p.user.color}>{p.user.name}</PeerSwatch></PeerSelectionBox>;})}
     </div>
-    <div aria-hidden="true" className="border-b border-r border-subtle bg-hover" style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
+    <div aria-hidden="true" className={'border-b border-r border-subtle bg-hover'+(showHead?'':' hidden')} style={{position:'sticky',left:0,top:0,zIndex:3,width:HEAD_W,height:HEAD_H,marginTop:-HEAD_H}}/>
     {renderCells()}
+    {renderObjects()}
    </div>
   </div>
-  <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1">
-   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{s.name}</button>)}
+  <div role="tablist" aria-label={t('sheets.tabs')} className="flex w-full gap-1 border-t border-subtle px-3 py-1" onKeyDown={tabListKeyDown}>
+   <Button variant="outline" size="icon" aria-label={t('sheets.sheetOps.add')} disabled={names.length>=MAX_SHEETS} onClick={()=>void applySheet({kind:'add'}).catch(()=>undefined)} data-testid="sheets-tab-add">+</Button>
+   {names.filter(s=>s.visibility==='Visible').map(s=><button key={s.index} role="tab" aria-selected={s.index===sheet} tabIndex={s.index===sheet?0:-1} className={'h-7 cursor-pointer rounded-sm border-0 bg-transparent px-2 text-[12px] text-ink-2 hover:bg-hover'+(s.index===sheet?' bg-hover font-semibold':'')} onClick={()=>{setSheet(s.index);setSel({row:0,col:0});setExt(null);setDraft(null);scroller.current?.scrollTo(0,0);}}>{safeTabColor(s.tabColor)&&<SheetTabDot color={safeTabColor(s.tabColor)??''} testId={'sheets-tab-color-'+s.index}/>}{s.name}</button>)}
   </div>
  </section>;
 }

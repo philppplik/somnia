@@ -1,0 +1,16 @@
+{
+  "code.rail.layers": "Calques",
+  "code.rail.files": "Fichiers",
+  "code.rail.search": "Rechercher",
+  "code.rail.components": "Composants",
+  "code.rail.css": "CSS",
+  "code.rail.versions": "Versions",
+  "code.rail.responsive": "Adaptatif",
+  "code.rail.outline": "Plan",
+  "code.rail.inspector": "Conception",
+  "code.inspector": "Conception",
+  "code.inspector.empty": "Rien à inspecter ici.",
+  "code.inspector.design": "Conception",
+  "code.inspector.interactions": "Interactions",
+  "code.inspector.source": "Source"
+}

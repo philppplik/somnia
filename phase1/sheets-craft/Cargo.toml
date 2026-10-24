@@ -18,6 +18,7 @@ crate-type = ["cdylib", "rlib"]
 # fix, see vendor/README.md) and staged into .upstream/ by ./prepare-upstream.sh.
 # Run it before any cargo command.
 [dependencies]
+gridcraft-chart = { path = ".upstream/gridcraft/crates/chart" }
 gridcraft-engine = { path = ".upstream/gridcraft/crates/engine" }
 gridcraft-xlsx = { path = ".upstream/gridcraft/crates/xlsx" }
 serde_json = "1"

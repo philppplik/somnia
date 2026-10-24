@@ -14,7 +14,7 @@ async function errors(page:Page,files:Record<string,string>,active='index.html')
 }
 test('maps multiple inline runtime and syntax errors after HTML serialization',async({page})=>{
  await page.goto('/');const result=await errors(page,{'index.html':'<!doctype html>\n<html>\n<head><style>h1{color:red}\n</style></head>\n<body>\n<script>\nthrow new Error("first");\n</script>\n<script>const broken = ;</script>\n<script>\nthrow new Error("third");\n</script></body></html>'});
- 
+
  expect(result).toHaveLength(3);expect(result[0].location).toEqual({file:'index.html',line:7,col:7});
  expect(result[1].location?.line).toBe(9);expect(result[2].location).toEqual({file:'index.html',line:11,col:7});
 });
@@ -37,7 +37,7 @@ test('clicking a mapped error opens its source line and leaves HTML preview runn
   (window as any).__somnia.setSource('index.html','<html><head></head><body><h1>Page stays here</h1><script src="runtime.js"></script></body></html>');
  });
  await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('live preview');await page.getByRole('option',{name:/live preview/i}).click();
- await page.getByRole('button',{name:'Run scripts',exact:true}).click();
+
  const error=page.getByRole('button',{name:/Open runtime.js line 3 column 7/});await expect(error).toBeVisible();
  await page.screenshot({path:'tests/artifacts/preview-error-lines.png'});
  await error.click();
@@ -62,7 +62,7 @@ test('maps syntax errors in modules and tags with quoted greater-than attributes
 });
 test('ignores messages from a prior preview generation',async({page})=>{
  await page.goto('/');await showCode(page);await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<body><h1>Current</h1></body>'));
- await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('live preview');await page.getByRole('option',{name:/live preview/i}).click();await page.getByRole('button',{name:'Run scripts',exact:true}).click();
+ await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('live preview');await page.getByRole('option',{name:/live preview/i}).click();
  await expect(page.frameLocator('iframe[title="Live preview frame"]').getByText('Current')).toBeVisible();
  await page.evaluate(()=>{const frame=document.querySelector('iframe[title="Live preview frame"]') as HTMLIFrameElement;window.dispatchEvent(new MessageEvent('message',{source:frame.contentWindow,data:{somnia:'error',id:'old-preview',message:'stale error'}}));});
  await expect(page.getByRole('alert',{name:'Preview errors'})).toHaveCount(0);

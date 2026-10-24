@@ -17,6 +17,8 @@ struct Backend {
     drop_grant: Option<DropGrant>,
     /// Bounded native open-request queue (cold argv, second instance). Same mutex as `projects`.
     intake: crate::intake::queue::OpenQueue,
+    /// Reviewed publication plans awaiting their single-use apply. Same mutex as `projects`.
+    publication: crate::git::publication::PublicationRegistry,
 }
 type Shared = Arc<Mutex<Backend>>;
 #[derive(Serialize)]
@@ -59,9 +61,9 @@ fn emit(window: &WebviewWindow, event: &StateEvent) {
 static AGENT_SETTINGS_LOCK: Mutex<()> = Mutex::new(());
 #[derive(serde::Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
-struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt> }
+struct AgentSettingsReply { provider: String, model: String, api_key: String, #[serde(default)] custom_prompts: Vec<crate::agent_settings::CustomPrompt>, #[serde(default,skip_serializing_if="Option::is_none")] local_runtime: Option<crate::agent_settings::LocalRuntimePreferences> }
 fn agent_key_for(provider: &str) -> std::result::Result<keyring::Entry, String> {
-    if !matches!(provider, "openrouter" | "openai" | "claude") { return Err("Unsupported credential provider".into()); }
+    if !matches!(provider, "openrouter" | "openai" | "claude" | "xai" | "meta" | "deepseek") { return Err("Unsupported credential provider".into()); }
     keyring::Entry::new("de.philipp-paulik.somnia.agent", provider)
         .map_err(|_| "OS credential store is unavailable".into())
 }
@@ -142,6 +144,12 @@ pub(crate) async fn oauth_refresh_loop() {
 fn account_status_now() -> std::result::Result<crate::oauth_store::Status, String> {
     oauth_store().status(now_ms(), OAUTH_PENDING.load(std::sync::atomic::Ordering::SeqCst)).map_err(|e| e.to_string())
 }
+#[tauri::command]
+fn installer_handoff_take(window: WebviewWindow) -> Option<crate::installer_handoff::Handoff> {
+    gate(&window).ok()?;
+    crate::installer_handoff::read(&window.app_handle().path().app_config_dir().ok()?)
+}
+
 #[tauri::command]
 async fn agent_account_status(window: WebviewWindow, provider: String) -> std::result::Result<crate::oauth_store::Status, String> {
     gate(&window).map_err(|_| "Only the trusted editor may inspect credentials")?;
@@ -298,6 +306,73 @@ async fn github_account_disconnect(window: WebviewWindow) -> std::result::Result
     GITHUB_CANCEL.notify_waiters();
     tauri::async_runtime::spawn_blocking(|| { { let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Credential store is busy".to_string())?; github_store().disconnect().map_err(|e| e.to_string())?; } github_status_now() }).await.map_err(|_| "Could not access credential store")?
 }
+#[tauri::command]
+async fn local_voice_storage_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::HelperStorage,String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::helper_storage_status(&data)).await.map_err(|_|"Helper storage failed")?}
+#[tauri::command]
+async fn local_voice_storage_remove(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::helper_storage_remove(&data)).await.map_err(|_|"Helper removal failed")?}
+#[tauri::command]
+async fn local_voice_status(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<crate::local_voice::VoiceStatus,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::status(&data,&resource)).await.map_err(|_|"Voice status failed".into())}
+#[tauri::command]
+async fn local_voice_helper_install(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool,sha256:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::install_helper(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged,sha256)}
+#[tauri::command]
+async fn local_voice_helper_remove(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::remove_helper(&app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?)}
+#[tauri::command]
+async fn local_voice_download(window:WebviewWindow,app:tauri::AppHandle,acknowledged:bool)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::download(app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?,acknowledged)}
+#[tauri::command]
+async fn local_voice_transcribe(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;let resource=app.path().resource_dir().map_err(|_|"Voice resources unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe(data,resource,pcm,language)).await.map_err(|_|"Voice job failed")?}
+#[tauri::command]
+async fn local_voice_transcribe_file(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe_file(data,pcm,language)).await.map_err(|_|"Voice file job failed")?}
+#[tauri::command]
+async fn local_voice_transcribe_segments(window:WebviewWindow,app:tauri::AppHandle,pcm:Vec<i16>,language:String)->std::result::Result<String,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::require_preview()?;let data=app.path().app_data_dir().map_err(|_|"Voice storage unavailable")?;tauri::async_runtime::spawn_blocking(move||crate::local_voice::transcribe_segments(data,pcm,language)).await.map_err(|_|"Voice segment job failed")?}
+#[tauri::command]
+async fn local_voice_poll(window:WebviewWindow,id:String)->std::result::Result<crate::local_voice::VoiceState,String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::poll(&id)}
+#[tauri::command]
+async fn local_voice_cancel(window:WebviewWindow,id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"Trusted editor required")?;crate::local_voice::cancel(&id)}
+#[tauri::command]
+async fn local_models_disk_choose(window:WebviewWindow,app:tauri::AppHandle)->std::result::Result<Option<crate::local_model_disk::Disk>,String>{gate(&window).map_err(|_|"Trusted editor required")?;tauri::async_runtime::spawn_blocking(move||{let Some(selected)=app.dialog().file().blocking_pick_folder()else{return Ok(None)};let path=selected.into_path().map_err(|_|"Model folder unavailable")?;crate::local_model_disk::select(path).map(Some)}).await.map_err(|_|"Disk check failed")?}
+#[tauri::command]
+async fn local_models_disk_check(window:WebviewWindow,token:String)->std::result::Result<crate::local_model_disk::Disk,String>{gate(&window).map_err(|_|"Trusted editor required")?;tauri::async_runtime::spawn_blocking(move||crate::local_model_disk::check(&token)).await.map_err(|_|"Disk check failed")?}
+#[tauri::command]
+async fn local_models_detect(window: WebviewWindow) -> std::result::Result<crate::local_models::Detection, String> {
+    gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
+    tauri::async_runtime::spawn_blocking(crate::local_models::detect).await.map_err(|_| "Local runtime detection failed".into())
+}
+#[tauri::command]
+async fn local_models_read(window: WebviewWindow, base_url: String, operation: String, model: Option<String>) -> std::result::Result<serde_json::Value, String> {
+    gate(&window).map_err(|_| "Only trusted editor may inspect local runtime")?;
+    crate::local_models::read(&base_url, &operation, model.as_deref()).await
+}
+#[tauri::command]
+async fn local_models_discover(window:WebviewWindow,base_url:String,runtime:String)->std::result::Result<serde_json::Value,String>{
+ gate(&window).map_err(|_|"Only trusted editor may inspect runtimes")?;
+ crate::local_models::discover(&base_url,&runtime).await
+}
+#[tauri::command]
+async fn local_models_hardware(window:WebviewWindow)->std::result::Result<crate::local_hardware::Hardware,String>{
+ gate(&window).map_err(|_| "Only trusted editor may inspect hardware")?;
+ tauri::async_runtime::spawn_blocking(crate::local_hardware::snapshot).await.map_err(|_| "Hardware probe failed".into())
+}
+#[tauri::command]
+async fn local_models_start(window: WebviewWindow) -> std::result::Result<crate::local_model_actions::StartOutcome,String> {
+ gate(&window).map_err(|_| "Only trusted editor may start Ollama")?;
+ tauri::async_runtime::spawn_blocking(crate::local_model_actions::start).await.map_err(|_| "Ollama launch failed")?
+}
+#[tauri::command]
+async fn local_models_pull(window: WebviewWindow,base_url:String,model:String,disk_token:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_| "Only trusted editor may pull models")?;let disk=crate::local_model_disk::check(&disk_token)?;crate::local_model_disk::require_capacity(&model,disk.free_bytes)?;crate::local_model_actions::pull(&base_url,&model).await
+}
+#[tauri::command]
+async fn local_models_pull_next(window:WebviewWindow,id:String)->std::result::Result<Option<Vec<u8>>,String>{
+ gate(&window).map_err(|_| "Only trusted editor may read pull progress")?;crate::local_model_actions::next(&id).await
+}
+#[tauri::command]
+async fn local_models_pull_cancel(window:WebviewWindow,id:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_| "Only trusted editor may cancel pulls")?;Ok(crate::local_model_actions::cancel(&id).await)
+}
+#[tauri::command]
+async fn local_models_delete(window:WebviewWindow,base_url:String,model:String,expected_digest:String)->std::result::Result<(),String>{
+ gate(&window).map_err(|_| "Only trusted editor may delete models")?;crate::local_model_actions::delete(&base_url,&model,&expected_digest).await
+}
 // Credentials are independent of preferences: saving an Ollama configuration must
 // never delete an OpenRouter key. No raw backend/credential error reaches the UI.
 struct NativeResponse { receiver: tokio::sync::Mutex<tokio::sync::mpsc::Receiver<std::result::Result<Vec<u8>, String>>>, task: tokio::task::AbortHandle, expires: std::time::Instant }
@@ -310,42 +385,46 @@ struct NativeStart { id: String, status: u16, headers: BTreeMap<String,String> }
 #[tauri::command]
 async fn provider_http_start(window: WebviewWindow, state: State<'_, ProviderNetwork>, provider: String, url: String, method: String, body: Option<String>, candidate_key: Option<String>) -> std::result::Result<NativeStart,String> {
     gate(&window).map_err(|_| "Only trusted editor may use provider transport")?;
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
     crate::provider_transport::endpoint(&provider,&url,&method)?;
     if body.as_ref().is_some_and(|b|b.len()>2_000_000) { return Err("Provider request is too large".into()); }
     if method=="GET" && body.is_some() {return Err("GET request body is not allowed".into());}
     // Candidate keys only validate account metadata, never inference before save.
-    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key")) { return Err("Candidate key is allowed for authentication only".into()); }
+    if candidate_key.is_some() && (method!="GET" || !matches!(url.as_str(),"https://api.openai.com/v1/models"|"https://api.anthropic.com/v1/models?limit=1"|"https://openrouter.ai/api/v1/key"|"https://api.x.ai/v1/models"|"https://api.meta.ai/v1/models"|"https://api.deepseek.com/models")) { return Err("Candidate key is allowed for authentication only".into()); }
     let key = if let Some(key)=candidate_key {
         if key.is_empty() || key.len()>8192 || key.chars().any(|c|c.is_control()||c.is_whitespace()) { return Err("Invalid API key".into()); } key
     } else {
         if provider=="openai" && blocking_store(|s|s.method()).await.is_ok_and(|m|m==crate::oauth_store::Method::Account) { oauth_access_token().await? } else {
         let p=provider.clone();tauri::async_runtime::spawn_blocking(move||agent_key_for(&p)?.get_password().map_err(|_| "OS credential store is locked or key is missing".to_string())).await.map_err(|_| "Credential lookup failed")?? }
     };
-    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(120)).build().map_err(|_| "Provider transport unavailable")?;
+    let client=reqwest::Client::builder().no_proxy().redirect(reqwest::redirect::Policy::none()).connect_timeout(Duration::from_secs(15)).timeout(Duration::from_secs(300)).build().map_err(|_| "Provider transport unavailable")?;
     let mut request=client.request(if method=="GET" {reqwest::Method::GET} else {reqwest::Method::POST},&url);
     request=if provider=="claude" {request.header("x-api-key",key).header("anthropic-version","2023-06-01")} else {request.bearer_auth(key)};
     if let Some(body)=body {request=request.header("content-type","application/json").body(body);}
-    let response=request.send().await.map_err(|_| "Provider connection failed")?;
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
+    let response=crate::agent_settings::cloud_request(request.send()).await?;
     let mut headers=BTreeMap::new();
     for name in ["content-type","retry-after"] {if let Some(v)=response.headers().get(name).and_then(|v|v.to_str().ok()) {headers.insert(name.into(),v.into());}}
     let status=response.status().as_u16();let id=uuid::Uuid::new_v4().to_string();
+    if crate::agent_settings::local_only(){return Err("Local-only mode blocks cloud providers".into());}
     let mut active=state.0.lock().await;active.retain(|_,r|r.expires>std::time::Instant::now());
     if active.len()>=4 { return Err("Too many active provider requests".into()); }
     let (sender,receiver)=tokio::sync::mpsc::channel(1);
     let task=tokio::spawn(async move {
       let mut response=response;
-      loop {match response.chunk().await {
+      loop {match crate::agent_settings::cloud_request(response.chunk()).await {
        Ok(Some(chunk)) if chunk.len()<=1_000_000 => {if sender.send(Ok(chunk.to_vec())).await.is_err(){break;}},
        Ok(None)=>break,
        _=>{let _=sender.send(Err("Provider stream interrupted".into())).await;break;}
       }}
     });
-    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(120)}));
+    active.insert(id.clone(),Arc::new(NativeResponse{receiver:tokio::sync::Mutex::new(receiver),task:task.abort_handle(),expires:std::time::Instant::now()+Duration::from_secs(300)}));
     Ok(NativeStart{id,status,headers})
 }
 #[tauri::command]
 async fn provider_http_next(window: WebviewWindow,state: State<'_, ProviderNetwork>,id:String) -> std::result::Result<Option<Vec<u8>>,String> {
     gate(&window).map_err(|_| "Only trusted editor may read provider transport")?;
+    if crate::agent_settings::local_only(){state.0.lock().await.clear();return Err("Local-only mode blocks cloud output".into());}
     let r=state.0.lock().await.get(&id).cloned().ok_or("Provider request is closed")?;
     if r.expires<std::time::Instant::now() {state.0.lock().await.remove(&id);return Err("Provider request timed out".into());}
     let mut receiver=r.receiver.lock().await;
@@ -449,13 +528,30 @@ async fn mcp_server_remove(window: WebviewWindow, host: State<'_, crate::mcp_hos
     host.stop(&id).await;
     Ok(())
 }
+/// The one app-level broker scope of the MCP host (built lazily on the app's single consent broker).
+#[derive(Default)]
+struct McpBrokerState(std::sync::OnceLock<std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String>>);
+async fn mcp_broker(window: &WebviewWindow, st: &McpBrokerState) -> std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String> {
+    if let Some(r) = st.0.get() { return r.clone(); }
+    let app = window.app_handle().clone();
+    let built = tauri::async_runtime::spawn_blocking(move || -> std::result::Result<std::sync::Arc<crate::mcp_broker::McpBroker>, String> {
+        let vs = app.state::<crate::vibespace_commands::VibeSpaceState>();
+        let runtime = vs.runtime(&app).map_err(|_| "mcp_broker_failed".to_string())?;
+        let work = app.path().app_data_dir().map_err(|_| "mcp_broker_failed".to_string())?.join("mcp").join("work");
+        crate::mcp_broker::McpBroker::open(runtime.acp_broker(), crate::mcp_broker::platform_executor(&work)).map(std::sync::Arc::new).map_err(String::from)
+    }).await.map_err(|_| "mcp_broker_failed".to_string())?;
+    st.0.get_or_init(|| built).clone()
+}
+/// Starts an approved stdio server. It only ever starts through the broker: `choice` is the user's answer to the
+/// consent request (none when a program grant already covers it; the broker then answers `mcp_consent_required` if not).
 #[tauri::command]
-async fn mcp_server_start(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, id: String) -> std::result::Result<Vec<crate::mcp_host::McpToolInfo>, String> {
+async fn mcp_server_start(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, broker: State<'_, McpBrokerState>, id: String, choice: Option<crate::mcp_broker::Choice>) -> std::result::Result<Vec<crate::mcp_host::McpToolInfo>, String> {
     gate(&window).map_err(|_| "Only the trusted editor may manage MCP servers")?;
     let path = mcp_path(&window)?;
     let list = tauri::async_runtime::spawn_blocking(move || crate::mcp_host::load_servers(&path)).await.map_err(|_| "Could not read MCP servers")??;
     let cfg = list.into_iter().find(|c| c.id == id).ok_or("Unknown MCP server")?;
-    host.start(&cfg).await?;
+    let b = mcp_broker(&window, &broker).await?;
+    host.start_via_broker(b, &cfg, choice).await?;
     host.tools(&id).await
 }
 #[tauri::command]
@@ -464,10 +560,24 @@ async fn mcp_server_stop(window: WebviewWindow, host: State<'_, crate::mcp_host:
     host.stop(&id).await;
     Ok(())
 }
+/// One tool call, through the broker's MCP route (digest-bound grant, or `choice` = the user's answer to this call).
 #[tauri::command]
-async fn mcp_tool_call(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, server: String, tool: String, arguments: serde_json::Map<String, serde_json::Value>) -> std::result::Result<String, String> {
+async fn mcp_tool_call(window: WebviewWindow, host: State<'_, crate::mcp_host::McpHost>, broker: State<'_, McpBrokerState>, server: String, tool: String, arguments: serde_json::Map<String, serde_json::Value>, choice: Option<crate::mcp_broker::Choice>) -> std::result::Result<String, String> {
     gate(&window).map_err(|_| "Only the trusted editor may call MCP tools")?;
-    host.call(&server, &tool, arguments).await
+    let b = mcp_broker(&window, &broker).await?;
+    host.call_via_broker(&b, &server, &tool, arguments, choice).await
+}
+/// Grants of the MCP scope (program, domain and digest-bound tool grants), for the grants view.
+#[tauri::command]
+async fn mcp_grants_list(window: WebviewWindow, broker: State<'_, McpBrokerState>) -> std::result::Result<crate::mcp_broker::McpGrantsReply, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP grants")?;
+    mcp_broker(&window, &broker).await?.grants().map_err(String::from)
+}
+/// Revoke one grant of the MCP scope. `kind` is shell, network or mcp.
+#[tauri::command]
+async fn mcp_grant_revoke(window: WebviewWindow, broker: State<'_, McpBrokerState>, kind: String, grant_id: String) -> std::result::Result<usize, String> {
+    gate(&window).map_err(|_| "Only the trusted editor may manage MCP grants")?;
+    mcp_broker(&window, &broker).await?.revoke(&kind, &grant_id).map_err(String::from)
 }
 #[tauri::command]
 async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<AgentSettingsReply, String> {
@@ -475,22 +585,23 @@ async fn agent_settings_load(window: WebviewWindow) -> std::result::Result<Agent
     let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
     tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
-        let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;
+        let p = crate::agent_settings::load(&dir.join("agent-settings.json"))?;crate::agent_settings::configure_local_only(&p);
         let api_key = String::new(); // Keys are loaded independently through agent_key_load.
-        Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts })
+        Ok(AgentSettingsReply { provider: p.provider, model: p.model, api_key, custom_prompts: p.custom_prompts, local_runtime:p.local_runtime })
     }).await.map_err(|_| "Could not load agent settings")?
 }
 #[tauri::command]
-async fn agent_settings_save(window: WebviewWindow, settings: AgentSettingsReply) -> std::result::Result<(), String> {
+async fn agent_settings_save(window: WebviewWindow, state:State<'_,ProviderNetwork>, settings: AgentSettingsReply) -> std::result::Result<(), String> {
     gate(&window).map_err(|_| "Only the trusted editor may save agent settings")?;
     let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?;
-    tauri::async_runtime::spawn_blocking(move || {
+    let result=tauri::async_runtime::spawn_blocking(move || {
         let _guard = AGENT_SETTINGS_LOCK.lock().map_err(|_| "Agent settings are busy")?;
-        let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts };
+        let p = crate::agent_settings::Preferences { provider: settings.provider, model: settings.model, custom_prompts: settings.custom_prompts,local_runtime:settings.local_runtime };
         p.validate()?;
         if settings.api_key.len() > 8192 || settings.api_key.contains(['\r', '\n', '\0']) { return Err("Invalid API key".into()); }
-        crate::agent_settings::save(&dir.join("agent-settings.json"), &p)
-    }).await.map_err(|_| "Could not save agent settings")?
+        crate::agent_settings::save(&dir.join("agent-settings.json"), &p)?;crate::agent_settings::configure_local_only(&p);Ok(())
+    }).await.map_err(|_| "Could not save agent settings")?;
+    if crate::agent_settings::local_only(){state.0.lock().await.clear();}result
 }
 
 #[tauri::command]
@@ -1143,6 +1254,28 @@ async fn read_media(
     })
     .await
 }
+/// One linked file of the open project (CSS, JS, image, font, media) for the live preview, as base64 plus MIME type. Read only, max 10 MB, never leaves the project root.
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ResourceReply {
+    mime: String,
+    size: u64,
+    data: String,
+}
+#[tauri::command]
+async fn read_project_resource(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    project_id: String,
+    path: String,
+) -> Result<ResourceReply> {
+    gate(&window)?;
+    work(state.inner().clone(), move |b| {
+        let (mime, bytes) = project(b, &project_id)?.read_resource(&path)?;
+        Ok(ResourceReply { mime, size: bytes.len() as u64, data: base64_encode(&bytes) })
+    })
+    .await
+}
 // ---------- image editor file access (one-time grants, raw bytes, atomic save) ----------
 #[derive(Default)]
 struct ImageGrants {
@@ -1539,6 +1672,19 @@ async fn open_external(window: WebviewWindow, url: String) -> Result<()> {
     result.map(|_| ()).map_err(|e| AppError::Io(e.to_string()))
 }
 #[tauri::command]
+async fn open_preview_external(window: WebviewWindow, url: String) -> Result<()> {
+    gate(&window)?;
+    crate::preview_links::validate_external(&url).map_err(|e| AppError::Denied(e.into()))?;
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("rundll32")
+        .args(["url.dll,FileProtocolHandler", url.as_str()]).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(url.as_str()).spawn();
+    #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(url.as_str()).spawn();
+    result.map(|_| ()).map_err(|e| AppError::Io(e.to_string()))
+}
+#[tauri::command]
 async fn recovery_list(
     window: WebviewWindow,
     state: State<'_, Shared>,
@@ -1607,17 +1753,113 @@ async fn recovery_discard(
     .await
 }
 #[tauri::command]
+fn preview_open(window: WebviewWindow, app: tauri::AppHandle, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; crate::framework_preview::open(&app, &runner, &run_id)
+}
+#[tauri::command]
+fn preview_close(window: WebviewWindow, app: tauri::AppHandle, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; crate::framework_preview::close(&app, &run_id)
+}
+// Command terminal is deliberately separate from framework fixed executable tasks.
+#[tauri::command]
+fn terminal_context(window: WebviewWindow,state: State<'_,Shared>,project_id:String)->std::result::Result<String,String>{
+ gate(&window).map_err(|_|"terminal.denied")?;
+ let mut backend=state.lock().map_err(|_|"terminal.busy")?;
+ let root=project(&mut backend,&project_id).map_err(|_|"terminal.projectMissing")?.root_path().canonicalize().map_err(|_|"terminal.projectMissing")?;
+ Ok(root.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+fn terminal_run(window: WebviewWindow,state: State<'_,Shared>,terminal: State<'_,crate::command_terminal::CommandTerminal>,project_id:String,command:String,request_id:String,expected_cwd:String)->std::result::Result<crate::command_terminal::TerminalSnapshot,String>{
+ gate(&window).map_err(|_|"terminal.denied")?;
+ let mut backend=state.lock().map_err(|_|"terminal.busy")?;
+ let root=project(&mut backend,&project_id).map_err(|_|"terminal.projectMissing")?.root_path().to_path_buf();
+ if root.canonicalize().map_err(|_|"terminal.projectMissing")?!=std::path::PathBuf::from(expected_cwd){return Err("terminal.projectMissing".into());}
+ terminal.start(&root,project_id,window.label().to_string(),command,request_id)
+}
+#[tauri::command]
+fn terminal_status(window: WebviewWindow,terminal: State<'_,crate::command_terminal::CommandTerminal>,run_id:String)->std::result::Result<crate::command_terminal::TerminalSnapshot,String>{gate(&window).map_err(|_|"terminal.denied")?;terminal.status(&run_id,window.label())}
+#[tauri::command]
+fn terminal_stop(window: WebviewWindow,terminal: State<'_,crate::command_terminal::CommandTerminal>,run_id:String)->std::result::Result<(),String>{gate(&window).map_err(|_|"terminal.denied")?;terminal.stop(&run_id,window.label())}
+// Framework commands resolve the root from an opened project, never renderer paths.
+#[tauri::command]
+fn runtime_status(window: WebviewWindow, app: tauri::AppHandle) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.installFailed")?;
+    Ok(crate::runtime::status(&base))
+}
+#[tauri::command]
+async fn runtime_install(window: WebviewWindow, app: tauri::AppHandle, consent: bool) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    if !consent { return Err("frameworks.consentRequired".into()); }
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.installFailed")?;
+    tauri::async_runtime::spawn_blocking(move || crate::runtime::install(&base)).await.map_err(|_| "frameworks.installFailed")?
+}
+#[tauri::command]
+async fn runtime_remove(window: WebviewWindow, app: tauri::AppHandle, runner: State<'_, crate::proc_runner::ProcessRunner>) -> std::result::Result<crate::runtime::RuntimeStatus, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    if runner.active() { return Err("frameworks.stopBeforeRemove".into()); }
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.removeFailed")?;
+    tauri::async_runtime::spawn_blocking(move || crate::runtime::remove(&base)).await.map_err(|_| "frameworks.removeFailed")?
+}
+#[tauri::command]
+fn project_run(window: WebviewWindow, app: tauri::AppHandle, state: State<'_, Shared>, runner: State<'_, crate::proc_runner::ProcessRunner>, project_id: String, kind: crate::proc_runner::RunKind) -> std::result::Result<crate::proc_runner::RunnerHandle, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let base = app.path().app_data_dir().map_err(|_| "frameworks.startFailed")?;
+    let mut backend = state.lock().map_err(|_| "frameworks.busy")?;
+    let root = project(&mut backend, &project_id).map_err(|_| "frameworks.projectMissing")?.root_path().to_path_buf();
+    let origin = window.url().map_err(|_| "frameworks.startFailed")?.origin().ascii_serialization();
+    runner.start(&base, &root, project_id, kind, origin)
+}
+#[tauri::command]
+fn project_stop(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.stop(&run_id)
+}
+#[tauri::command]
+fn project_status(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<crate::proc_runner::RunnerHandle, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.status(&run_id)
+}
+#[tauri::command]
+fn project_logs(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String, after_sequence: u64) -> std::result::Result<crate::proc_runner::LogReply, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.logs(&run_id, after_sequence)
+}
+#[tauri::command]
+async fn deploy_artifact_collect(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<crate::deploy_artifact::ArtifactSummary, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let handle = runner.status(&run_id)?;
+    let root = runner.root(&run_id)?;
+    tauri::async_runtime::spawn_blocking(move || crate::deploy_artifact::summarize(&handle, &root)).await.map_err(|_| "frameworks.artifact.io".to_string())?
+}
+#[tauri::command]
+async fn deploy_node_build_collect(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>, run_id: String) -> std::result::Result<crate::deploy_artifact::ArtifactSummary, String> {
+    gate(&window).map_err(|_| "frameworks.denied")?;
+    let handle = runner.status(&run_id)?;
+    let root = runner.root(&run_id)?;
+    tauri::async_runtime::spawn_blocking(move || crate::deploy_artifact::summarize_node(&handle, &root)).await.map_err(|_| "frameworks.artifact.io".to_string())?
+}
+#[tauri::command]
+fn project_stop_all(window: WebviewWindow, runner: State<'_, crate::proc_runner::ProcessRunner>) -> std::result::Result<(), String> {
+    gate(&window).map_err(|_| "frameworks.denied")?; runner.stop_all(); Ok(())
+}
+
+#[tauri::command]
 async fn close_project(
     window: WebviewWindow,
     state: State<'_, Shared>,
     project_id: String,
     keep_recovery: bool,
+    runner: State<'_, crate::proc_runner::ProcessRunner>,
 ) -> Result<()> {
     gate(&window)?;
+    let close_runner = runner.inner().clone();
+    let close_terminal = window.state::<crate::command_terminal::CommandTerminal>().inner().clone();
     work(state.inner().clone(), move |b| {
         if project(b, &project_id)?.has_dirty() && !keep_recovery {
             return Err(AppError::Dirty);
         }
+        let root = project(b, &project_id)?.root_path().to_path_buf();
+        close_runner.stop_root(&root);
+        close_terminal.stop_root(&root);
         b.projects
             .remove(&project_id)
             .ok_or(AppError::UnknownProject)?;
@@ -1729,6 +1971,19 @@ fn git_trust_path(window: &WebviewWindow) -> std::result::Result<PathBuf, String
         .map(|d| d.join("git-trusted-repos.json"))
         .map_err(|_| "App config directory is unavailable".to_string())
 }
+/// Deployment accepts an opened native folder only, never a renderer-provided filesystem path.
+/// Working directory for new inline terminal sessions: the first open project root, if any.
+pub(crate) fn first_project_root(app: &tauri::AppHandle) -> Option<PathBuf> {
+    let shared = app.state::<Shared>();
+    let backend = shared.lock().ok()?;
+    backend.projects.values().next().map(|p| p.root_path().to_path_buf())
+}
+pub(crate) fn deploy_project_root(app: &tauri::AppHandle) -> std::result::Result<PathBuf, String> {
+    let state = app.state::<Shared>();
+    let backend = state.lock().map_err(|_| "deploy:storage".to_string())?;
+    if backend.projects.len() != 1 { return Err("deploy:preflight-failed".into()); }
+    Ok(backend.projects.values().next().expect("one open project").root_path().to_path_buf())
+}
 fn git_project_root(backend: &Backend) -> std::result::Result<PathBuf, String> {
     match backend.projects.len() {
         1 => Ok(backend
@@ -1811,6 +2066,46 @@ async fn git_diff_file(
         crate::git::diff_file(&root, &path, base, target).map_err(|e| e.to_json())
     })
     .await
+}
+// One native runner for these read commands; common/checkout locks shared with other hosts.
+static GIT_READ_RUNNER: std::sync::OnceLock<crate::git::jobs::GitJobRunner> = std::sync::OnceLock::new();
+fn git_read_runner(window: &WebviewWindow) -> std::result::Result<&'static crate::git::jobs::GitJobRunner, String> {
+    if let Some(runner) = GIT_READ_RUNNER.get() { return Ok(runner); }
+    let dir = window.app_handle().path().app_config_dir().map_err(|_| "App config directory is unavailable")?.join("git-job-locks");
+    let runner = crate::git::jobs::GitJobRunner::new(dir).map_err(|e| e.to_string())?;
+    let _ = GIT_READ_RUNNER.set(runner);
+    Ok(GIT_READ_RUNNER.get().expect("runner installed"))
+}
+async fn git_read_context(state: &Shared, runner: &crate::git::jobs::GitJobRunner) -> std::result::Result<crate::git::context::RepoContext, String> {
+    let root = { let b = state.lock().map_err(|e| e.to_string())?; git_project_root(&b)? };
+    let workspace = runner.workspace(&root).unwrap_or_default();
+    tauri::async_runtime::spawn_blocking(move || crate::git::context::RepoContext::discover(&root, workspace).map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))).await.map_err(|e| e.to_string())?
+}
+#[tauri::command]
+async fn git_diff_refs(window: WebviewWindow, state: State<'_, Shared>, request: crate::git::ref_contract::DiffRequest) -> std::result::Result<crate::git::ref_contract::DiffResult, String> {
+    git_gate(&window)?;
+    let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::diff_job(runner, context, crate::git::jobs::JobOrigin::Human, request).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_safety_list(window: WebviewWindow, state: State<'_, Shared>) -> std::result::Result<Vec<crate::git::ref_contract::SafetyEntry>, String> {
+    git_gate(&window)?;
+    let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::safety_job(runner, context, crate::git::jobs::JobOrigin::Human).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_ref_tree(window: WebviewWindow, state: State<'_, Shared>, git_ref: String) -> std::result::Result<crate::git::ref_contract::RefTree, String> {
+    git_gate(&window)?; let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::tree_job(runner, context, crate::git::jobs::JobOrigin::Human, git_ref).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
+}
+#[tauri::command]
+async fn git_read_blob(window: WebviewWindow, state: State<'_, Shared>, blob: String) -> std::result::Result<crate::git::ref_contract::BlobRead, String> {
+    git_gate(&window)?; let runner = git_read_runner(&window)?;
+    let context = git_read_context(state.inner(), runner).await?;
+    crate::git::ref_contract::blob_job(runner, context, crate::git::jobs::JobOrigin::Human, blob).await.map_err(|e| serde_json::to_string(&e).unwrap_or_else(|_| e.to_string()))
 }
 #[tauri::command]
 async fn git_init(
@@ -2026,6 +2321,323 @@ async fn git_combine_abort(
     .await
 }
 
+// ---- Publication: native side of the renderer review contract ----
+// Contract: src/lib/git/publication/types.ts, boundary: docs/git/PUBLICATION-REVIEW.md,
+// integration: docs/git/PUBLICATION-HOST.md. No credential crosses this seam.
+
+/// Unsaved editor buffers for the current project, snapshotted for one remote job.
+struct HostBuffers {
+    project_root: PathBuf,
+    dirty: Vec<String>,
+}
+impl crate::git::remote::BufferGuard for HostBuffers {
+    fn unsaved_paths(&self, repo_root: &std::path::Path) -> Vec<String> {
+        match self.project_root.strip_prefix(repo_root) {
+            Ok(rel) if rel.as_os_str().is_empty() => self.dirty.clone(),
+            Ok(rel) => {
+                let prefix = rel.to_string_lossy().replace('\\', "/");
+                self.dirty.iter().map(|p| format!("{prefix}/{p}")).collect()
+            }
+            // The repo is not the project tree: fail closed so a dirty buffer is never missed.
+            Err(_) => vec!["(unsaved editor buffer)".into()],
+        }
+    }
+}
+
+/// Agent grants have no UI yet: no agent apply is permitted through this seam.
+struct NoGrants;
+impl crate::git::remote::PublishGrants for NoGrants {
+    fn permits(&self, _grant_id: &str, _action: crate::git::remote::GrantAction, _plan_id: &str) -> bool {
+        false
+    }
+}
+
+/// Per-job environment for the remote transport: policy, lease provider, buffers, grants,
+/// cancel/progress context. Detached NetCtx: cancellation lands with git_network_cancel.
+struct RemoteJob {
+    policy: crate::git::remote::Policy,
+    leases: crate::git::remote::bridge::BridgeLeases,
+    buffers: HostBuffers,
+    grants: NoGrants,
+    net: crate::git::remote::NetCtx,
+}
+impl RemoteJob {
+    fn env<'a>(&'a self, trust: &'a crate::git::TrustStore) -> crate::git::remote::RemoteEnv<'a> {
+        crate::git::remote::RemoteEnv {
+            policy: &self.policy,
+            trust: Some(trust),
+            leases: &self.leases,
+            buffers: &self.buffers,
+            grants: &self.grants,
+            net: &self.net,
+        }
+    }
+}
+
+/// The credential-bridge lease provider over the connected GitHub account. The helper
+/// binary ships next to the app executable (Tauri sidecar); the token stays inside the
+/// bridge: this process hands git only an opaque helper path.
+fn bridge_leases(account: &crate::github_account::Account) -> std::result::Result<crate::git::remote::bridge::BridgeLeases, String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let helper = exe
+        .parent()
+        .ok_or_else(|| "The credential helper is missing".to_string())?
+        .join(format!("somnia-git-credential{}", std::env::consts::EXE_SUFFIX));
+    Ok(crate::git::remote::bridge::BridgeLeases {
+        source: Arc::new(crate::git_credential::StoreTokenSource::new(KeyringBackend)) as Arc<dyn crate::git_credential::TokenSource>,
+        helper,
+        account_login: account.login.clone(),
+        scopes: account.scope.split(|c: char| c == ',' || c == ' ').filter(|s| !s.is_empty()).map(str::to_string).collect(),
+        ttl: Duration::from_secs(10 * 60),
+        policy: crate::git_credential::Policy::github(),
+    })
+}
+
+/// The connected GitHub account, or a typed needs-auth error. Keyring access is
+/// serialized like the other credential commands.
+async fn github_account_now() -> std::result::Result<crate::github_account::Account, crate::git::remote::RemoteError> {
+    use crate::git::remote::{RemoteError, RemoteErrorCode as C};
+    tauri::async_runtime::spawn_blocking(|| {
+        let _g = AGENT_SETTINGS_LOCK.lock().map_err(|_| RemoteError::new(C::AuthRequired, "The credential store is busy"))?;
+        match github_store().load() {
+            Ok(Some(a)) => Ok(a),
+            _ => Err(RemoteError::new(C::AuthRequired, "Connect your GitHub account in Settings first")),
+        }
+    })
+    .await
+    .map_err(|_| RemoteError::new(C::AuthRequired, "Could not access the credential store"))?
+}
+
+/// Classifies a GitHub API response without surfacing its body.
+fn classify_api(status: u16, rate_limited: bool, saml: bool) -> crate::git::remote::RemoteError {
+    use crate::git::remote::{friendly, RemoteError, RemoteErrorCode as C};
+    let code = match (status, rate_limited, saml) {
+        (401, _, _) => C::AuthRequired,
+        (403, _, true) => C::SsoRequired,
+        (403, true, _) | (429, _, _) => C::RateLimited,
+        (403, _, _) => C::PermissionDenied,
+        (404, _, _) => C::NotFound,
+        _ => C::Unknown,
+    };
+    RemoteError::new(code, friendly(code))
+}
+
+/// Live validation of the selected account and the destination repository, as the review
+/// contract requires ("resolve and validate the selected account and repository visibility
+/// live; no inferred account fallback"). The token never leaves this process: it appears
+/// only in the Authorization header of these two calls. Response bodies are parsed for
+/// public identity fields and never surfaced, logged or returned.
+async fn github_live_check(
+    account: &crate::github_account::Account,
+    repo_path: &str,
+) -> std::result::Result<crate::git::publication::RepoVisibility, crate::git::remote::RemoteError> {
+    use crate::git::remote::{friendly, RemoteError, RemoteErrorCode as C};
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .redirect(reqwest::redirect::Policy::none())
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(20))
+        .build()
+        .map_err(|_| RemoteError::new(C::Unknown, "The GitHub check is unavailable"))?;
+    let api = |url: String| {
+        let c = client.clone();
+        let token = account.access_token.clone();
+        async move {
+            c.get(url)
+                .header("authorization", format!("Bearer {token}"))
+                .header("accept", "application/vnd.github+json")
+                .header("user-agent", "somnia-desktop")
+                .header("x-github-api-version", "2022-11-28")
+                .send()
+                .await
+        }
+    };
+    let read = |r: reqwest::Response| async move {
+        let status = r.status().as_u16();
+        let rate_limited = r.headers().get("x-ratelimit-remaining").and_then(|v| v.to_str().ok()) == Some("0");
+        let body = r.text().await.unwrap_or_default();
+        (status, rate_limited, body)
+    };
+    let offline = || RemoteError::new(C::Offline, friendly(C::Offline));
+
+    // 1. The token still belongs to the account the plan binds.
+    let (status, rate_limited, body) = read(api("https://api.github.com/user".into()).await.map_err(|_| offline())?).await;
+    if status != 200 {
+        return Err(classify_api(status, rate_limited, body.contains("SAML")));
+    }
+    let user: serde_json::Value = serde_json::from_str(&body).map_err(|_| RemoteError::new(C::Unknown, "GitHub returned an unexpected answer"))?;
+    let login = user.get("login").and_then(|l| l.as_str()).unwrap_or("");
+    if login.is_empty() || !login.eq_ignore_ascii_case(&account.login) {
+        return Err(RemoteError::new(C::AuthRequired, "The connected GitHub account changed. Reconnect it in Settings."));
+    }
+
+    // 2. The destination repository exists for this account, under this exact name.
+    let (status, rate_limited, body) = read(api(format!("https://api.github.com/repos/{repo_path}")).await.map_err(|_| offline())?).await;
+    if status != 200 {
+        return Err(classify_api(status, rate_limited, body.contains("SAML")));
+    }
+    let repo: serde_json::Value = serde_json::from_str(&body).map_err(|_| RemoteError::new(C::Unknown, "GitHub returned an unexpected answer"))?;
+    let full_name = repo.get("full_name").and_then(|n| n.as_str()).unwrap_or("");
+    if !full_name.eq_ignore_ascii_case(repo_path) {
+        return Err(RemoteError::new(C::NotFound, "The repository moved on GitHub. Update the remote in the project."));
+    }
+    match repo.get("visibility").and_then(|v| v.as_str()) {
+        Some("private") => Ok(crate::git::publication::RepoVisibility::Private),
+        Some("public") => Ok(crate::git::publication::RepoVisibility::Public),
+        Some("internal") => Ok(crate::git::publication::RepoVisibility::Internal),
+        _ => match repo.get("private").and_then(|p| p.as_bool()) {
+            Some(true) => Ok(crate::git::publication::RepoVisibility::Private),
+            Some(false) => Ok(crate::git::publication::RepoVisibility::Public),
+            None => Err(RemoteError::new(C::Unknown, "GitHub returned an unexpected answer")),
+        },
+    }
+}
+
+/// Project root and unsaved-buffer snapshot for one remote job. Exactly one open project,
+/// same rule as the local Git commands. The state lock is never held across git/network.
+fn publication_snapshot(state: &Shared) -> std::result::Result<(PathBuf, Vec<String>), String> {
+    let backend = state.lock().map_err(|e| e.to_string())?;
+    let root = git_project_root(&backend)?;
+    let dirty = backend.projects.values().next().map(|p| p.dirty_paths()).unwrap_or_default();
+    Ok((root, dirty))
+}
+
+#[tauri::command]
+async fn git_push_plan(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationTarget,
+) -> std::result::Result<crate::git::publication::PublicationPlan, String> {
+    git_gate(&window)?;
+    crate::git::publication::check_target(&request).map_err(|e| e.to_json())?;
+    let account = github_account_now().await.map_err(|e| e.to_json())?;
+    if !account.login.eq_ignore_ascii_case(&request.account_id) {
+        return Err(crate::git::remote::RemoteError::new(
+            crate::git::remote::RemoteErrorCode::AuthRequired,
+            "The selected account is not the connected GitHub account",
+        )
+        .to_json());
+    }
+    let store = git_store(&window)?;
+    let (root, dirty) = publication_snapshot(&state)?;
+    let unsaved_buffers = dirty.len();
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root.clone(), dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let plan_request = crate::git::remote::push::PushPlanRequest {
+        project_root: root.to_string_lossy().into_owned(),
+        remote: Some(request.remote.clone()),
+        local_branch: request.source_branch.clone(),
+        target_branch: Some(request.target_branch.clone()),
+        set_upstream: false,
+    };
+    let stored_request = plan_request.clone();
+    let blocking_root = root.clone();
+    let (native, untracked, excluded) = tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        let native = crate::git::remote::push::push_plan(&env, &plan_request)?;
+        // Informational listings; a listing failure never blocks a review.
+        let untracked = crate::git::publication::local_untracked(&blocking_root).unwrap_or_default();
+        let excluded = crate::git::publication::local_excluded(&blocking_root).unwrap_or_default();
+        Ok::<_, crate::git::remote::RemoteError>((native, untracked, excluded))
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_json())?;
+    let visibility = github_live_check(&account, &native.repo).await.map_err(|e| e.to_json())?;
+    let view = crate::git::publication::plan_view(&native, &request, visibility, untracked, excluded, unsaved_buffers);
+    {
+        let mut backend = state.lock().map_err(|e| e.to_string())?;
+        backend.publication.put(stored_request, &native.plan_id, &native.local_tree);
+    }
+    Ok(view)
+}
+
+#[tauri::command]
+async fn git_push_apply(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationApply,
+) -> std::result::Result<crate::git::publication::PublicationOutcome, String> {
+    use crate::git::publication::{error_outcome, outcome_view, PublicationOutcome as Out, Take};
+    git_gate(&window)?;
+    if !request.confirmed {
+        // The contract sends confirmed: true from the reviewed dialog. Anything else fails closed.
+        return Ok(Out::Failed);
+    }
+    let reviewed = {
+        let mut backend = state.lock().map_err(|e| e.to_string())?;
+        backend.publication.take(&request.plan_id, &request.content_hash)
+    };
+    let Take::Ready(reviewed) = reviewed else {
+        return Ok(Out::StalePlan);
+    };
+    let remote_name = reviewed.request.remote.clone().unwrap_or_else(|| "origin".into());
+    let account = match github_account_now().await {
+        Ok(a) => a,
+        Err(e) => return Ok(error_outcome(&e)),
+    };
+    let store = git_store(&window)?;
+    // Project state is best-effort here: the apply replays the stored plan inputs, and a
+    // missing snapshot degrades to the fail-closed buffer marker, never to a rejected invoke.
+    let (root, dirty) = publication_snapshot(&state).unwrap_or_else(|_| (PathBuf::new(), vec!["(unsaved editor buffer)".into()]));
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root, dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let apply_request = crate::git::remote::push::PushApplyRequest {
+        request: reviewed.request,
+        plan_id: request.plan_id,
+        // Built by the host from the real confirmation in the review dialog, never from a plan object.
+        authority: crate::git::remote::Authority::Human { confirmed: true },
+    };
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        crate::git::remote::push::push_apply(&env, &apply_request)
+    })
+    .await
+    .map_err(|e| e.to_string())?;
+    Ok(match result {
+        Ok(res) => outcome_view(&res, &remote_name),
+        Err(e) => error_outcome(&e),
+    })
+}
+
+#[tauri::command]
+async fn git_fetch(
+    window: WebviewWindow,
+    state: State<'_, Shared>,
+    request: crate::git::publication::PublicationFetch,
+) -> std::result::Result<crate::git::remote::FetchResult, String> {
+    git_gate(&window)?;
+    crate::git::publication::check_fetch(&request).map_err(|e| e.to_json())?;
+    let account = github_account_now().await.map_err(|e| e.to_json())?;
+    let store = git_store(&window)?;
+    let (root, dirty) = publication_snapshot(&state)?;
+    let job = RemoteJob {
+        policy: crate::git::remote::Policy::github(),
+        leases: bridge_leases(&account)?,
+        buffers: HostBuffers { project_root: root.clone(), dirty },
+        grants: NoGrants,
+        net: crate::git::remote::NetCtx::detached(),
+    };
+    let fetch_request = crate::git::remote::FetchRequest { project_root: root.to_string_lossy().into_owned(), remote: Some(request.remote) };
+    tauri::async_runtime::spawn_blocking(move || {
+        let env = job.env(&store);
+        crate::git::remote::fetch(&env, &fetch_request)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_json())
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ExtDocReply {
@@ -2169,6 +2781,7 @@ pub fn run() {
         .plugin(ext_navigation_plugin())
         .manage(ProviderNetwork::default())
         .manage(crate::mcp_host::McpHost::new())
+        .manage(McpBrokerState::default())
         .manage(crate::mcp_studio::StudioMcp::default())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -2180,7 +2793,11 @@ pub fn run() {
         .manage(AudioGrants::default())
         .manage(crate::lan_host::LanHost::default())
         .setup(move |app| {
+            let prefs_path=app.path().app_config_dir()?.join("agent-settings.json");
+            crate::agent_settings::initialize_local_only(&prefs_path);
             crate::vibespace_commands::manage(app.handle(), Vec::new())?;
+            app.manage(crate::vibespace_schedule_commands::VibeScheduleState::default());
+            app.manage(crate::vibespace_acp_commands::AcpState::default());
             // Cold start: same worker pipeline as a second instance. The flag owes the main window
             // one activation even if it is not created yet.
             app.state::<Pending>().0.store(true, std::sync::atomic::Ordering::SeqCst);
@@ -2193,6 +2810,7 @@ pub fn run() {
             );
             tauri::async_runtime::spawn(oauth_refresh_loop());
             if let Ok(dir) = app.path().app_data_dir() {
+                if crate::local_voice::preview_enabled(){let _=crate::local_voice::initialize(&dir);}
                 crate::applog::init(dir.join("logs"));
                 // S3 native diagnostics: incident store under app data, then the lock-free panic
                 // writer (it replaces the logger-lock hook from applog::init, never chains it).
@@ -2215,12 +2833,40 @@ pub fn run() {
                     ),
                 }
             }
+            crate::terminal::glue::install_sink(
+                app.state::<crate::terminal::TerminalManager>().inner(),
+                app.handle().clone(),
+            );
             let app_handle = app.handle().clone();
-            std::thread::spawn(move || loop {
+            std::thread::spawn(move || {
+              let mut watchers: std::collections::BTreeMap<String, crate::git::invalidation::GitStatusWatcher> = Default::default();
+              let mut retry: std::collections::BTreeMap<String, std::time::Instant> = Default::default();
+              loop {
                 std::thread::sleep(Duration::from_millis(250));
                 let Some(window) = app_handle.get_webview_window("main") else {
                     break;
                 };
+                // Copy identities only. Watch setup and event draining do not hold the file mutex.
+                let projects = match shared.lock() {
+                    Ok(b) => b.projects.values().map(|p| (p.id.clone(), p.root_path().to_path_buf())).collect::<Vec<_>>(),
+                    Err(_) => break,
+                };
+                watchers.retain(|id, _| projects.iter().any(|(p, _)| p == id));
+                retry.retain(|id, _| projects.iter().any(|(p, _)| p == id));
+                for (id, root) in projects {
+                    if !watchers.contains_key(&id) && retry.get(&id).map_or(true, |t| t.elapsed() >= Duration::from_secs(5)) {
+                        retry.insert(id.clone(), std::time::Instant::now());
+                        if let Ok(w) = crate::git::invalidation::GitStatusWatcher::new(&root) { watchers.insert(id.clone(), w); }
+                    }
+                    if let Some(event) = watchers.get_mut(&id).and_then(|w| w.drain(&id)) {
+                        if let Some(runner) = GIT_READ_RUNNER.get() {
+                            if let Ok(ctx) = crate::git::context::RepoContext::discover(&root, Default::default()) {
+                                let _ = crate::git::invalidation::advance_workspace_generation(runner, &ctx.root);
+                            }
+                        }
+                        let _ = window.emit("somnia://git-invalidated", event);
+                    }
+                }
                 let events = match shared.lock() {
                     Ok(mut backend) => backend
                         .projects
@@ -2232,10 +2878,12 @@ pub fn run() {
                 for event in events {
                     emit(&window, &event);
                 }
+              }
             });
             Ok(())
         })
         .on_window_event(|window, event| {
+            if window.label() != "main" { return; }
             if window.label() == "main" {
                 if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, position, .. }) =
                     event
@@ -2258,6 +2906,12 @@ pub fn run() {
                     };
                 }
             }
+            if let tauri::WindowEvent::Destroyed = event {
+                if window.label()=="main"{crate::local_voice::cancel_owned();}
+                window.state::<crate::proc_runner::ProcessRunner>().stop_all();
+                window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());                window.state::<crate::terminal::TerminalManager>().kill_all();
+
+            }
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let shared = window.state::<Shared>();
                 // Keep the app open while unsaved edits are in flight. UI must present
@@ -2269,10 +2923,34 @@ pub fn run() {
                 if blocked {
                     api.prevent_close();
                     let _ = window.emit("somnia://close-blocked", ());
+                } else {
+                    window.state::<crate::proc_runner::ProcessRunner>().stop_all();
+                    window.state::<crate::command_terminal::CommandTerminal>().stop_owner(window.label());                    window.state::<crate::terminal::TerminalManager>().kill_all();
+
                 }
             }
         })
+        .manage(crate::terminal::TerminalManager::default())
+        .manage(crate::proc_runner::ProcessRunner::default())
+        .manage(crate::command_terminal::CommandTerminal::default())
         .invoke_handler(tauri::generate_handler![
+            crate::update_channel::check_channel_update,
+            crate::update_channel::install_channel_update,
+            crate::studio_copy::studio_copy_open,
+            crate::studio_copy::studio_copy_take,
+            crate::studio_copy::studio_copy_export,            terminal_context, terminal_run, terminal_status, terminal_stop,            installer_handoff_take,
+            runtime_status, runtime_install, runtime_remove, project_run, project_stop, project_status, project_logs, project_stop_all, deploy_artifact_collect, deploy_node_build_collect, preview_open, preview_close,
+            crate::terminal::glue::terminal_spawn,
+            crate::terminal::glue::terminal_list,
+            crate::terminal::glue::terminal_attach,
+            crate::terminal::glue::terminal_write,
+            crate::terminal::glue::terminal_resize,
+            crate::terminal::glue::terminal_kill,
+            crate::vibespace_schedule_commands::vibespace_schedule_preview,
+            crate::vibespace_schedule_commands::vibespace_schedule_create,
+            crate::vibespace_schedule_commands::vibespace_schedule_list,
+            crate::vibespace_schedule_commands::vibespace_schedule_set_enabled,
+            crate::vibespace_schedule_commands::vibespace_schedule_return_card,
             crate::vibespace_commands::vibespace_choose_folder,
             crate::vibespace_commands::vibespace_create_space,
             crate::vibespace_commands::vibespace_create_studio,
@@ -2285,20 +2963,72 @@ pub fn run() {
             crate::vibespace_commands::vibespace_steer_run,
             crate::vibespace_commands::vibespace_decide_consent,
             crate::vibespace_commands::vibespace_apply_run,
+            crate::vibespace_commands::vibespace_review_hunks,
+            crate::vibespace_commands::vibespace_run_timeline,
+            crate::vibespace_commands::vibespace_apply_hunks,
+            crate::vibespace_commands::vibespace_request_changes,
+            crate::vibespace_commands::vibespace_retry_feedback,
+            crate::vibespace_commands::vibespace_board_budget,
+            crate::vibespace_commands::vibespace_board_budget_save,
+
             crate::vibespace_commands::vibespace_discard_run,
             crate::vibespace_commands::vibespace_restore_checkpoint,
             crate::vibespace_commands::vibespace_memory_list,
             crate::vibespace_commands::vibespace_memory_add,
             crate::vibespace_commands::vibespace_memory_delete,
+            crate::vibespace_commands::vibespace_memory_search,
+            crate::vibespace_commands::vibespace_memory_review,
+            crate::vibespace_commands::vibespace_memory_clear,
+            crate::vibespace_commands::vibespace_memory_vector_status,
+            crate::vibespace_commands::vibespace_memory_vector_enable,
+            crate::vibespace_commands::vibespace_memory_vector_disable,
+            crate::vibespace_commands::vibespace_memory_model_state,
+            crate::vibespace_commands::vibespace_memory_model_download,
+            crate::vibespace_commands::vibespace_memory_model_cancel,
+            crate::vibespace_commands::vibespace_skills_list,
+            crate::vibespace_commands::vibespace_skills_install,
+            crate::vibespace_commands::vibespace_skills_get_version,
+            crate::vibespace_commands::vibespace_skills_accept_update,
+            crate::vibespace_commands::vibespace_skills_reject_update,
+            crate::vibespace_commands::vibespace_skills_uninstall,
+            crate::vibespace_acp_commands::vibespace_acp_launch,
+            crate::vibespace_acp_commands::vibespace_acp_session,
+            crate::vibespace_acp_commands::vibespace_acp_prompt,
+            crate::vibespace_acp_commands::vibespace_acp_decide_consent,
+            crate::vibespace_acp_commands::vibespace_acp_cancel,
+            crate::vibespace_acp_commands::vibespace_acp_state,
             ext_panel_open,
             crate::extension_activity_commands::extension_activity_query,
             crate::extension_activity_commands::extension_activity_export,
+            crate::lifecycle_commands::lifecycle_memory_sample,
             ext_worker_open,
             ext_worker_url,
             ext_close,
             selftest_env,
             selftest_write,
             selftest_exit,
+            local_voice_status,
+            local_voice_storage_status,
+            local_voice_storage_remove,
+            local_voice_helper_install,
+            local_voice_helper_remove,
+            local_voice_download,
+            local_voice_transcribe,
+            local_voice_transcribe_file,
+            local_voice_transcribe_segments,
+            local_voice_poll,
+            local_voice_cancel,
+            local_models_disk_choose,
+            local_models_disk_check,
+            local_models_discover,
+            local_models_hardware,
+            local_models_start,
+            local_models_pull,
+            local_models_pull_next,
+            local_models_pull_cancel,
+            local_models_delete,
+            local_models_detect,
+            local_models_read,
             provider_http_start,
             provider_http_next,
             provider_http_cancel,
@@ -2306,6 +3036,33 @@ pub fn run() {
             agent_key_save,
             agent_key_delete,
             agent_account_status,
+            crate::deploy_commands::deploy_targets_list,
+            crate::deploy_commands::deploy_target_save,
+            crate::deploy_commands::deploy_target_delete,
+            crate::deploy_commands::deploy_plan,
+            crate::deploy_commands::deploy_plan_rollback,
+            crate::deploy_commands::deploy_confirm_issue,
+            crate::deploy_commands::deploy_publish,
+            crate::deploy_commands::deploy_rollback,
+            crate::deploy_commands::deploy_hostkey_probe,
+            crate::deploy_commands::deploy_hostkey_trust,
+            crate::deploy_commands::deploy_hostkey_replace,
+            crate::deploy_commands::deploy_key_create,
+            crate::deploy_commands::deploy_releases,
+            crate::deploy_commands::deploy_ftp_password_set,
+            crate::deploy_commands::deploy_remote_list,
+            crate::deploy_commands::deploy_open_site,
+            crate::deploy_commands::deploy_key_public,
+            crate::deploy_commands::deploy_live_release,
+            crate::deploy_commands::deploy_cancel,
+            crate::deploy_commands::deploy_bootstrap_script,
+            crate::deploy_commands::deploy_bootstrap_run,
+            crate::deploy_commands::deploy_dns_check,
+            crate::deploy_commands::deploy_node_env_keys,
+            crate::deploy_commands::deploy_node_env_apply,
+            crate::deploy_commands::deploy_node_logs,
+            crate::deploy_commands::deploy_node_status,
+            crate::deploy_commands::deploy_node_artifact_collect,
             studio_mcp_start,
             studio_mcp_stop,
             studio_mcp_status,
@@ -2316,6 +3073,8 @@ pub fn run() {
             mcp_server_start,
             mcp_server_stop,
             mcp_tool_call,
+            mcp_grants_list,
+            mcp_grant_revoke,
             agent_account_disconnect,
             agent_account_set_method,
             agent_account_start,
@@ -2360,6 +3119,7 @@ pub fn run() {
             list_files,
             read_file,
             read_media,
+            read_project_resource,
             image_pick,
             image_read,
             pdf_save_pick,
@@ -2378,6 +3138,7 @@ pub fn run() {
             save_file,
             delete_file,
             open_external,
+            open_preview_external,
             recovery_list,
             recovery_read,
             recovery_restore,
@@ -2391,6 +3152,10 @@ pub fn run() {
             git_detect,
             git_status,
             git_diff_file,
+            git_diff_refs,
+            git_safety_list,
+            git_ref_tree,
+            git_read_blob,
             git_init,
             git_commit,
             git_log,
@@ -2406,7 +3171,10 @@ pub fn run() {
             git_combine_status,
             git_combine_resolve,
             git_combine_finish,
-            git_combine_abort
+            git_combine_abort,
+            git_push_plan,
+            git_push_apply,
+            git_fetch
         ])
         .run(tauri::generate_context!())
         .unwrap_or_else(|error| {

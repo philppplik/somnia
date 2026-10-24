@@ -8,7 +8,7 @@
   "description": "Counts words in the current project document without saving to disk.",
   "license": "MIT",
   "engines": {
-    "somnia": ">=11.0.0 <12.0.0",
+    "somnia": ">=12.0.0 <13.0.0",
     "api": ">=2.0.0 <3.0.0"
   },
   "runtime": {

@@ -1,6 +1,6 @@
 # Live preview (design, v10)
 
-Status: design, not built. Today the canvas is an editing surface: scripts, external links, event handlers and network are stripped (see renderPreview.ts). That stays. Live preview is a separate, opt-in mode.
+Status: historical design note from v10. The shipped behaviour is documented in docs/live-preview-architecture.md. Today the canvas is an editing surface: scripts, external links, event handlers and network are stripped (see renderPreview.ts). That stays. Live preview is a separate, opt-in mode.
 
 ## Goals
 - Run the page as a browser would, including its own JS and linked CSS/JS from the project, without weakening the editing canvas.

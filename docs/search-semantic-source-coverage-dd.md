@@ -1,0 +1,7 @@
+# DD: full filtered semantic source coverage and best-chunk review
+
+Semantic report now includes every filtered candidate source, exact candidate/passing/shown/omitted counts and frozen highest-cosine chunk. Canonical input-order score ties retained. Includes below-cutoff and top-k-omitted sources, never equates best cosine with factual quality/confidence. Explicit per-source Inspect best opens existing exact context reader even when omitted from returned result list, with no new source read/embedding. Off-list context has explicit no-displayed-rank notice; below-cutoff source status says not returned match. Original returned-rank inspector remains unchanged.
+
+Inspect action checks exact selected source buffers/ready session and uses report's frozen exact chunk. Query/filter/cutoff/source/index change clears report/context as before. Editor open still refreshes model/source binding. No hidden/new source expansion, answers/persistence/cloud/save/writes/deps/budget changes or real downloads/inference, $0.
+
+Validation:7 retrieval tests, new per-source counts/zero-cutoff/omission/tie/frozen best test.390px light/dark browser production adapter synthetic HTTP:9 sources/7 passing/5 shown -> omitted best exact context -> below-cutoff source context,2 embeddings unchanged, off-list/no rank clear. Existing DC/CY regression retained. Native/CSP/real daemon/model quality/editor selection CI/manual gate. Synthetic scores only. Source details are expandable because they can reach32 rows; normal results retain original bounded top-k.

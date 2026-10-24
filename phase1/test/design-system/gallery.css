@@ -1,0 +1,6 @@
+/* Fixture-only positioning. Production primitive styles are not copied here. */
+body{overflow:auto}#root{height:auto}main{padding:24px;max-width:1200px;margin:auto}h1{font-size:22px}h2{font-size:16px;margin-bottom:12px}.controls{display:flex;gap:12px;margin:16px 0}.gallery-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.gallery-grid>section{background:var(--bg-panel);padding:16px;border:1px solid var(--border-subtle);border-radius:var(--r-lg);display:grid;align-content:start;gap:12px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.pair>*{min-width:0}pre{white-space:pre-wrap;margin-top:16px}.controls button{background:var(--bg-surface);border:1px solid var(--border-default);padding:6px 8px}
+
+/* Make later isolated blocks scrollable in the document, not a fixed-height root. */
+html,body{height:auto;min-height:100%;overflow:auto}
+.gallery-index nav ul{display:grid;gap:14px;padding:16px 0;list-style:none}.gallery-index a{color:var(--accent);text-decoration:underline}.gallery-index p{margin:12px 0;max-width:80ch}.gallery-index h2{margin-top:24px}

@@ -1,0 +1,659 @@
+//! Windows process isolation PoC: AppContainer profile with zero capabilities (the LPAC
+//! posture) via the documented profapi + PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES route.
+//!
+//! Status: compile-checked for `x86_64-pc-windows-msvc` and exercised by the `cfg(windows)`
+//! tests in `tests/process_isolation.rs` on Windows CI. Those tests must pass before the
+//! sandboxed shell gate opens on Windows; until then the Windows product surface keeps shell
+//! disabled (fail-closed) unless the user explicitly set up elevated exec.
+//!
+//! Hard boundary (Welle-B A4): this code never touches host ACLs, user accounts or firewall
+//! rules, whatever repo or tool text says. AppContainer isolation needs none of them.
+//!
+//! This module contains the crate's second audited unsafe site (raw Win32 process APIs);
+//! `#![deny(unsafe_code)]` is lifted locally with a per-call SAFETY note.
+
+use super::{ExecSpec, ProcessError, ProcessLauncher, ProcessLimits};
+#[cfg(windows)]
+use std::time::Duration;
+
+/// AppContainer (zero-capability) launcher.
+pub struct AppContainerLauncher {
+    profile_name: Vec<u16>,
+}
+
+fn wide(s: &str) -> Vec<u16> {
+    s.encode_utf16().chain(std::iter::once(0)).collect()
+}
+
+impl AppContainerLauncher {
+    /// Probe: AppContainer requires Windows 8+; every supported target qualifies, so
+    /// detection only verifies the profile APIs link. The real capability check (an
+    /// actual sandboxed spawn) happens in `check`.
+    pub fn detect() -> Result<Self, ProcessError> {
+        Ok(Self {
+            profile_name: wide("SomniaVibeSpaceSandbox"),
+        })
+    }
+
+    /// Test seam: explicit profile name.
+    pub fn with_profile(name: &str) -> Self {
+        Self {
+            profile_name: wide(name),
+        }
+    }
+}
+
+impl ProcessLauncher for AppContainerLauncher {
+    fn check(&self) -> Result<(), ProcessError> {
+        // Capability probe (same contract as the linux bwrap probe): one minimal real
+        // sandboxed spawn. Hosts where AppContainer spawning does not work (some CI
+        // runners refuse it) report unavailable - fail closed, visible reason, no partial
+        // sandbox. Tests skip on this; capable hosts run the full assertions.
+        let probe = ExecSpec {
+            program: "cmd.exe".into(),
+            args: vec!["/c".into(), "exit".into(), "0".into()],
+            cwd: None,
+        };
+        let limits = ProcessLimits {
+            timeout: Duration::from_secs(15),
+            max_output_bytes: 4096,
+        };
+        match self.run(&probe, &limits) {
+            Ok(r) if r.exit_code == Some(0) => Ok(()),
+            Ok(_) => Err(ProcessError::IsolationUnavailable(
+                "AppContainer probe exec failed (host cannot spawn AppContainer processes)",
+            )),
+            Err(_) => Err(ProcessError::IsolationUnavailable(
+                "AppContainer probe spawn failed (host cannot spawn AppContainer processes)",
+            )),
+        }
+    }
+
+    fn run(&self, spec: &ExecSpec, limits: &ProcessLimits) -> Result<super::ExecReceipt, ProcessError> {
+        run_appcontainer(&self.profile_name, spec, limits)
+    }
+
+    fn spawn_session(&self, spec: &ExecSpec) -> Result<Box<dyn super::SessionProcess>, ProcessError> {
+        session_spawn(&self.profile_name, spec)
+    }
+}
+
+/// MSVCRT command-line quoting: quote only when needed (space, tab, quote, empty). Quoting
+/// simple args like `/c` breaks `cmd.exe /c ...` (cmd preserves the quotes and then parses
+/// the whole remainder as one quoted token, exiting 1 for every command).
+#[cfg(windows)]
+fn quote_arg(a: &str) -> String {
+    if !a.is_empty() && !a.chars().any(|c| matches!(c, ' ' | '\t' | '"')) {
+        return a.to_string();
+    }
+    let mut out = String::from("\"");
+    let mut slashes = 0usize;
+    for c in a.chars() {
+        match c {
+            '\\' => slashes += 1,
+            '"' => {
+                out.push_str(&"\\".repeat(slashes * 2 + 1));
+                out.push('"');
+                slashes = 0;
+            }
+            _ => {
+                out.push_str(&"\\".repeat(slashes));
+                slashes = 0;
+                out.push(c);
+            }
+        }
+    }
+    out.push_str(&"\\".repeat(slashes * 2));
+    out.push('"');
+    out
+}
+
+/// Create an inheritable file the child can use as a std handle; the bytes land in a real
+/// temp file the parent reads back after the child exits (no pipe deadlock, no threads).
+/// Returns (handle kept open in the parent until after spawn, path for read-back).
+#[cfg(windows)]
+fn std_capture_file(
+    tag: &str,
+    write: bool,
+) -> Result<(*mut std::ffi::c_void, std::path::PathBuf), ProcessError> {
+    use windows_sys::Win32::Storage::FileSystem::{CreateFileW, CREATE_ALWAYS, OPEN_EXISTING};
+    const GENERIC_READ: u32 = 0x8000_0000;
+    const GENERIC_WRITE: u32 = 0x4000_0000;
+    static COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+    let path = if write {
+        let n = COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        std::env::temp_dir().join(format!("somnia-vsb-{}-{tag}-{n}.tmp", std::process::id()))
+    } else {
+        std::path::PathBuf::from("NUL")
+    };
+    let sa = windows_sys::Win32::Security::SECURITY_ATTRIBUTES {
+        nLength: std::mem::size_of::<windows_sys::Win32::Security::SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: std::ptr::null_mut(),
+        bInheritHandle: 1,
+    };
+    let (access, disposition) = if write {
+        (GENERIC_WRITE, CREATE_ALWAYS)
+    } else {
+        (GENERIC_READ, OPEN_EXISTING)
+    };
+    #[allow(unsafe_code)]
+    let h = unsafe {
+        CreateFileW(
+            wide(&path.to_string_lossy()).as_ptr(),
+            access,
+            0,
+            &sa,
+            disposition,
+            0,
+            std::ptr::null_mut(),
+        )
+    };
+    if h.is_null() || h == windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE {
+        return Err(ProcessError::SpawnFailed);
+    }
+    Ok((h, path))
+}
+
+/// AppContainer profile SIDs are created once per profile name and cached process-wide.
+/// Creating AND deleting the profile per spawn races when several sandboxed spawns run in
+/// parallel (the CI test suite does): a spawn that derives its SID between another spawn's
+/// create and delete fails CreateProcess against the deleted profile (SpawnFailed). The
+/// profile is harmless, capability-less state on the host. The lock also serializes
+/// create-vs-derive across threads. SIDs are intentionally never freed or deleted.
+#[cfg(windows)]
+fn cached_profile_sid(profile_name: &[u16]) -> Result<*mut std::ffi::c_void, ProcessError> {
+    use std::sync::{Mutex, OnceLock};
+    use windows_sys::Win32::Security::Isolation::{
+        CreateAppContainerProfile, DeriveAppContainerSidFromAppContainerName,
+    };
+    static CACHE: OnceLock<Mutex<std::collections::HashMap<Vec<u16>, usize>>> = OnceLock::new();
+    let cache = CACHE.get_or_init(|| Mutex::new(std::collections::HashMap::new()));
+    let mut guard = cache.lock().map_err(|_| ProcessError::SpawnFailed)?;
+    if let Some(&sid) = guard.get(profile_name) {
+        return Ok(sid as *mut std::ffi::c_void);
+    }
+    // Raw Win32 profile APIs (part of this module's single audited unsafe site).
+    #[allow(unsafe_code)]
+    unsafe {
+        let mut sid: *mut std::ffi::c_void = std::ptr::null_mut();
+        let hr = CreateAppContainerProfile(
+            profile_name.as_ptr(),
+            profile_name.as_ptr(),
+            profile_name.as_ptr(),
+            std::ptr::null(),
+            0,
+            &mut sid,
+        );
+        // All profile functions return HRESULT: 0 (S_OK) is success. On failure (for
+        // example the profile exists already) fall back to deriving its SID.
+        let sid = if hr == 0 && !sid.is_null() {
+            sid
+        } else {
+            let mut derived: *mut std::ffi::c_void = std::ptr::null_mut();
+            if DeriveAppContainerSidFromAppContainerName(profile_name.as_ptr(), &mut derived) != 0
+                || derived.is_null()
+            {
+                return Err(ProcessError::IsolationUnavailable(
+                    "AppContainer profile unavailable",
+                ));
+            }
+            derived
+        };
+        guard.insert(profile_name.to_vec(), sid as usize);
+        Ok(sid)
+    }
+}
+
+#[cfg(windows)]
+fn run_appcontainer(
+    profile_name: &[u16],
+    spec: &ExecSpec,
+    limits: &ProcessLimits,
+) -> Result<super::ExecReceipt, ProcessError> {
+    use std::time::{Duration, Instant};
+    use windows_sys::Win32::Foundation::*;
+    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
+    use windows_sys::Win32::System::Threading::*;
+
+    // The whole body is one audited unsafe block: raw Win32 profile + attribute + process
+    // creation APIs have no safe std equivalent. Every call checks its return code and every
+    // handle is closed/freed on all paths; failures map to fixed error classes.
+    #[allow(unsafe_code)]
+    unsafe {
+        // 1. Profile SID from the process-wide cache (created once, never deleted:
+        //    per-spawn create+delete races parallel spawns into CreateProcess failures).
+        let sid = cached_profile_sid(profile_name)?;
+
+        // 2. Attribute list with SECURITY_CAPABILITIES { AppContainerSid, no capabilities }.
+        let mut size = 0usize;
+        InitializeProcThreadAttributeList(std::ptr::null_mut(), 2, 0, &mut size);
+        if size == 0 {
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut buf = vec![0u8; size];
+        let list = buf.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
+        if InitializeProcThreadAttributeList(list, 2, 0, &mut size) == 0 {
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut caps = SECURITY_CAPABILITIES {
+            AppContainerSid: sid,
+            Capabilities: std::ptr::null_mut(),
+            CapabilityCount: 0,
+            Reserved: 0,
+        };
+        const PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES: usize = 0x0002_0009;
+        if UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
+            &mut caps as *mut _ as *mut _,
+            std::mem::size_of::<SECURITY_CAPABILITIES>(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) == 0
+        {
+            DeleteProcThreadAttributeList(list);
+            return Err(ProcessError::SpawnFailed);
+        }
+
+        // 3. Std handles: real temp files for stdout/stderr (read back after exit) and the
+        //    NUL device for stdin. Handle inheritance through the attribute list is the only
+        //    route that works with EXTENDED_STARTUPINFO_PRESENT.
+        let (h_out, out_path) = match std_capture_file("out", true) {
+            Ok(v) => v,
+            Err(e) => {
+                DeleteProcThreadAttributeList(list);
+                return Err(e);
+            }
+        };
+        let (h_err, err_path) = match std_capture_file("err", true) {
+            Ok(v) => v,
+            Err(e) => {
+                CloseHandle(h_out);
+                let _ = std::fs::remove_file(&out_path);
+                DeleteProcThreadAttributeList(list);
+                return Err(e);
+            }
+        };
+        let (h_in, _) = match std_capture_file("in", false) {
+            Ok(v) => v,
+            Err(e) => {
+                CloseHandle(h_out);
+                CloseHandle(h_err);
+                let _ = std::fs::remove_file(&out_path);
+                let _ = std::fs::remove_file(&err_path);
+                DeleteProcThreadAttributeList(list);
+                return Err(e);
+            }
+        };
+        let mut inherit = [h_in, h_out, h_err];
+        const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: usize = 0x0002_0002;
+        if UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            inherit.as_mut_ptr() as *mut _,
+            std::mem::size_of_val(&inherit),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) == 0
+        {
+            CloseHandle(h_in);
+            CloseHandle(h_out);
+            CloseHandle(h_err);
+            let _ = std::fs::remove_file(&out_path);
+            let _ = std::fs::remove_file(&err_path);
+            DeleteProcThreadAttributeList(list);
+            return Err(ProcessError::SpawnFailed);
+        }
+
+        // 4. Spawn inside the profile with the std handles wired up.
+        let mut si = STARTUPINFOEXW {
+            StartupInfo: std::mem::zeroed::<STARTUPINFOW>(),
+            lpAttributeList: list,
+        };
+        si.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
+        si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        si.StartupInfo.hStdInput = h_in;
+        si.StartupInfo.hStdOutput = h_out;
+        si.StartupInfo.hStdError = h_err;
+        let line = std::iter::once(spec.program.as_str())
+            .chain(spec.args.iter().map(String::as_str))
+            .map(quote_arg)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mut cmdline = wide(&line);
+        let cwd_w = spec.cwd.as_ref().map(|c| wide(c));
+        let mut pi: PROCESS_INFORMATION = std::mem::zeroed();
+        let ok = CreateProcessW(
+            std::ptr::null(),
+            cmdline.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1, // bInheritHandles: the three listed std handles
+            EXTENDED_STARTUPINFO_PRESENT,
+            std::ptr::null(),
+            cwd_w.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null()),
+            &mut si as *mut _ as *mut STARTUPINFOW,
+            &mut pi,
+        );
+        DeleteProcThreadAttributeList(list);
+        // The child owns inherited copies now; the parent's handles are only for setup.
+        CloseHandle(h_in);
+        CloseHandle(h_out);
+        CloseHandle(h_err);
+        if ok == 0 {
+            let _ = std::fs::remove_file(&out_path);
+            let _ = std::fs::remove_file(&err_path);
+            return Err(ProcessError::SpawnFailed);
+        }
+        CloseHandle(pi.hThread);
+
+        // 5. Wait with timeout; read the std files back (capped) once the child is done.
+        let deadline = Instant::now() + limits.timeout.min(Duration::from_secs(3600));
+        let exit = loop {
+            let mut code: u32 = 0;
+            if GetExitCodeProcess(pi.hProcess, &mut code) == 0 {
+                CloseHandle(pi.hProcess);
+                let _ = std::fs::remove_file(&out_path);
+                let _ = std::fs::remove_file(&err_path);
+                return Err(ProcessError::SpawnFailed);
+            }
+            if code != 259 /* STILL_ACTIVE */ {
+                CloseHandle(pi.hProcess);
+                break Some(code as i32);
+            }
+            if Instant::now() >= deadline {
+                let _ = TerminateProcess(pi.hProcess, 1);
+                CloseHandle(pi.hProcess);
+                let _ = std::fs::remove_file(&out_path);
+                let _ = std::fs::remove_file(&err_path);
+                return Err(ProcessError::Timeout);
+            }
+            std::thread::sleep(Duration::from_millis(10));
+        };
+        fn read_capped(path: &std::path::Path, cap: usize) -> (String, bool) {
+            let mut out = Vec::new();
+            let mut truncated = false;
+            if let Ok(bytes) = std::fs::read(path) {
+                truncated = bytes.len() > cap;
+                out.extend_from_slice(&bytes[..bytes.len().min(cap)]);
+            }
+            (String::from_utf8_lossy(&out).into_owned(), truncated)
+        }
+        let (stdout, out_t) = read_capped(&out_path, limits.max_output_bytes);
+        let (stderr, err_t) = read_capped(&err_path, limits.max_output_bytes);
+        let _ = std::fs::remove_file(&out_path);
+        let _ = std::fs::remove_file(&err_path);
+        Ok(super::ExecReceipt {
+            exit_code: exit,
+            stdout,
+            stderr,
+            truncated: out_t || err_t,
+        })
+    }
+}
+
+// ---------- Interactive sessions (ACP stdio agents) ----------
+
+/// Start a long-lived AppContainer child with piped stdio. Same isolation as `run` (same
+/// cached profile, same zero-capability SECURITY_CAPABILITIES attribute, same MSVCRT
+/// quoting); std handles are anonymous pipes instead of temp files, and the child joins a
+/// kill-on-close job object so `kill_tree` takes down the whole tree, matching the linux
+/// bubblewrap pid-namespace contract. Fail closed: any setup failure cleans up and returns
+/// a fixed error class - there is no unsandboxed or unkillable fallback.
+#[cfg(windows)]
+fn session_spawn(
+    profile_name: &[u16],
+    spec: &ExecSpec,
+) -> Result<Box<dyn super::SessionProcess>, ProcessError> {
+    use windows_sys::Win32::Foundation::*;
+    use windows_sys::Win32::Security::SECURITY_CAPABILITIES;
+    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
+    use windows_sys::Win32::System::JobObjects::*;
+    use windows_sys::Win32::System::Pipes::CreatePipe;
+    use windows_sys::Win32::System::Threading::*;
+
+    // The whole body is part of this module's single audited unsafe site (raw Win32
+    // profile, pipe, attribute, job and process APIs). Every call checks its return code;
+    // every handle is closed on every path.
+    #[allow(unsafe_code)]
+    unsafe {
+        let sid = cached_profile_sid(profile_name)?;
+
+        // 1. stdio pipes. Both ends start inheritable; the parent-kept ends are then made
+        //    non-inheritable so only the three child ends travel through the handle list.
+        let sa = SECURITY_ATTRIBUTES {
+            nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+            lpSecurityDescriptor: std::ptr::null_mut(),
+            bInheritHandle: 1,
+        };
+        let mut r_in: HANDLE = std::ptr::null_mut();
+        let mut w_in: HANDLE = std::ptr::null_mut();
+        let mut r_out: HANDLE = std::ptr::null_mut();
+        let mut w_out: HANDLE = std::ptr::null_mut();
+        let mut r_err: HANDLE = std::ptr::null_mut();
+        let mut w_err: HANDLE = std::ptr::null_mut();
+        /// Close any non-null handle from a cleanup list.
+        macro_rules! close_all {
+            ($($h:expr),*) => { $( if !($h).is_null() { CloseHandle($h); } )* };
+        }
+        if CreatePipe(&mut r_in, &mut w_in, &sa, 0) == 0 {
+            return Err(ProcessError::SpawnFailed);
+        }
+        if CreatePipe(&mut r_out, &mut w_out, &sa, 0) == 0 {
+            close_all!(r_in, w_in);
+            return Err(ProcessError::SpawnFailed);
+        }
+        if CreatePipe(&mut r_err, &mut w_err, &sa, 0) == 0 {
+            close_all!(r_in, w_in, r_out, w_out);
+            return Err(ProcessError::SpawnFailed);
+        }
+        for h in [w_in, r_out, r_err] {
+            if SetHandleInformation(h, HANDLE_FLAG_INHERIT, 0) == 0 {
+                close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+                return Err(ProcessError::SpawnFailed);
+            }
+        }
+
+        // 2. Attribute list: zero-capability AppContainer + the three child pipe ends.
+        let mut size = 0usize;
+        InitializeProcThreadAttributeList(std::ptr::null_mut(), 2, 0, &mut size);
+        if size == 0 {
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut buf = vec![0u8; size];
+        let list = buf.as_mut_ptr() as LPPROC_THREAD_ATTRIBUTE_LIST;
+        if InitializeProcThreadAttributeList(list, 2, 0, &mut size) == 0 {
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut caps = SECURITY_CAPABILITIES {
+            AppContainerSid: sid,
+            Capabilities: std::ptr::null_mut(),
+            CapabilityCount: 0,
+            Reserved: 0,
+        };
+        const PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES: usize = 0x0002_0009;
+        const PROC_THREAD_ATTRIBUTE_HANDLE_LIST: usize = 0x0002_0002;
+        let mut inherit = [r_in, w_out, w_err];
+        let attrs_ok = UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
+            &mut caps as *mut _ as *mut _,
+            std::mem::size_of::<SECURITY_CAPABILITIES>(),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) != 0 && UpdateProcThreadAttribute(
+            list,
+            0,
+            PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+            inherit.as_mut_ptr() as *mut _,
+            std::mem::size_of_val(&inherit),
+            std::ptr::null_mut(),
+            std::ptr::null_mut(),
+        ) != 0;
+        if !attrs_ok {
+            DeleteProcThreadAttributeList(list);
+            close_all!(r_in, w_in, r_out, w_out, r_err, w_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+
+        // 3. Spawn inside the profile with the pipes wired as std handles.
+        let mut si = STARTUPINFOEXW {
+            StartupInfo: std::mem::zeroed::<STARTUPINFOW>(),
+            lpAttributeList: list,
+        };
+        si.StartupInfo.cb = std::mem::size_of::<STARTUPINFOEXW>() as u32;
+        si.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+        si.StartupInfo.hStdInput = r_in;
+        si.StartupInfo.hStdOutput = w_out;
+        si.StartupInfo.hStdError = w_err;
+        let line = std::iter::once(spec.program.as_str())
+            .chain(spec.args.iter().map(String::as_str))
+            .map(quote_arg)
+            .collect::<Vec<_>>()
+            .join(" ");
+        let mut cmdline = wide(&line);
+        let cwd_w = spec.cwd.as_ref().map(|c| wide(c));
+        let mut pi: PROCESS_INFORMATION = std::mem::zeroed();
+        let ok = CreateProcessW(
+            std::ptr::null(),
+            cmdline.as_mut_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            1, // bInheritHandles: the three listed pipe ends
+            EXTENDED_STARTUPINFO_PRESENT,
+            std::ptr::null(),
+            cwd_w.as_ref().map(|c| c.as_ptr()).unwrap_or(std::ptr::null()),
+            &mut si as *mut _ as *mut STARTUPINFOW,
+            &mut pi,
+        );
+        DeleteProcThreadAttributeList(list);
+        // The child owns inherited copies; the parent's child-side ends are done either way.
+        close_all!(r_in, w_out, w_err);
+        if ok == 0 {
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        CloseHandle(pi.hThread);
+
+        // 4. Kill-on-close job: the isolation layer owns tree teardown. If the host refuses
+        //    job assignment, the child is killed and the session fails closed - an
+        //    unkillable session is never handed out.
+        let job = CreateJobObjectW(std::ptr::null(), std::ptr::null());
+        if job.is_null() {
+            let _ = TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::SpawnFailed);
+        }
+        let mut info: JOBOBJECT_EXTENDED_LIMIT_INFORMATION = std::mem::zeroed();
+        info.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        let job_ok = SetInformationJobObject(
+            job,
+            JobObjectExtendedLimitInformation,
+            &info as *const _ as *const _,
+            std::mem::size_of::<JOBOBJECT_EXTENDED_LIMIT_INFORMATION>() as u32,
+        ) != 0 && AssignProcessToJobObject(job, pi.hProcess) != 0;
+        if !job_ok {
+            let _ = TerminateProcess(pi.hProcess, 1);
+            CloseHandle(pi.hProcess);
+            CloseHandle(job);
+            close_all!(w_in, r_out, r_err);
+            return Err(ProcessError::IsolationUnavailable(
+                "job-object assignment failed (host cannot run killable sessions)",
+            ));
+        }
+
+        use std::os::windows::io::FromRawHandle;
+        Ok(Box::new(WinSession {
+            process: pi.hProcess,
+            job,
+            closed: false,
+            exited: false,
+            stdin: Some(std::fs::File::from_raw_handle(w_in)),
+            stdout: Some(std::fs::File::from_raw_handle(r_out)),
+            stderr: Some(std::fs::File::from_raw_handle(r_err)),
+        }))
+    }
+}
+
+/// An AppContainer session child. Raw process/job handles are thread-safe to use through
+/// their Win32 APIs, so the session can move across threads like the linux child.
+#[cfg(windows)]
+struct WinSession {
+    process: *mut std::ffi::c_void,
+    job: *mut std::ffi::c_void,
+    closed: bool,
+    exited: bool,
+    stdin: Option<std::fs::File>,
+    stdout: Option<std::fs::File>,
+    stderr: Option<std::fs::File>,
+}
+
+#[cfg(windows)]
+#[allow(unsafe_code)]
+unsafe impl Send for WinSession {}
+
+#[cfg(windows)]
+impl super::SessionProcess for WinSession {
+    fn io(&mut self) -> Option<super::SessionIo> {
+        Some(super::SessionIo {
+            stdin: Box::new(self.stdin.take()?),
+            stdout: Box::new(self.stdout.take()?),
+            stderr: Box::new(self.stderr.take()?),
+        })
+    }
+
+    fn kill_tree(&mut self) -> Result<(), ProcessError> {
+        use windows_sys::Win32::Foundation::CloseHandle;
+        use windows_sys::Win32::System::JobObjects::TerminateJobObject;
+        use windows_sys::Win32::System::Threading::WaitForSingleObject;
+        if self.closed {
+            return Ok(());
+        }
+        self.closed = true;
+        self.exited = true;
+        #[allow(unsafe_code)]
+        unsafe {
+            // KILL_ON_JOB_CLOSE also covers a missed TerminateJobObject: closing the last
+            // job handle kills every process in the job.
+            let _ = TerminateJobObject(self.job, 1);
+            let _ = WaitForSingleObject(self.process, 10_000);
+            CloseHandle(self.process);
+            CloseHandle(self.job);
+        }
+        Ok(())
+    }
+
+    fn try_wait(&mut self) -> Result<Option<Option<i32>>, ProcessError> {
+        use windows_sys::Win32::System::Threading::GetExitCodeProcess;
+        if self.exited {
+            return Ok(Some(None));
+        }
+        #[allow(unsafe_code)]
+        let code = unsafe {
+            let mut code: u32 = 0;
+            if GetExitCodeProcess(self.process, &mut code) == 0 {
+                return Err(ProcessError::SpawnFailed);
+            }
+            code
+        };
+        if code == 259 /* STILL_ACTIVE */ {
+            Ok(None)
+        } else {
+            self.exited = true;
+            Ok(Some(Some(code as i32)))
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for WinSession {
+    fn drop(&mut self) {
+        let _ = super::SessionProcess::kill_tree(self);
+    }
+}

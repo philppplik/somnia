@@ -100,7 +100,7 @@ test('two far-apart changes in one paragraph apply as one undoable edit; heading
  await page.getByTestId('documents-undo').click();await expect.poll(()=>first.inputValue()).toBe(old);
  await expect(page.getByTestId('documents-undo')).toBeDisabled();
 });
-test('on-page caret: click, type, select, delete, undo as one step; tables are locked',async({page})=>{
+test('on-page caret: click, type, select, delete, undo as one step; table cells take the caret',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
  await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
  await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
@@ -127,9 +127,13 @@ test('on-page caret: click, type, select, delete, undo as one step; tables are l
  await expect.poll(()=>second.inputValue()).toBe('>HeyX'+old2.slice(2));
  for(let i=0;i<6;i++){if(await page.getByTestId('documents-undo').isDisabled())break;await page.getByTestId('documents-undo').click();await page.waitForTimeout(150);}
  await expect.poll(()=>second.inputValue()).toBe(old2);expect(await first.inputValue()).toBe(old);
- // table row is locked
+ // a table cell takes a caret and edits in place; one undo step restores it
  const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
- await expect(page.getByTestId('documents-caret-locked')).toBeVisible();await expect(page.getByTestId('documents-caret')).toHaveCount(0);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);await expect(page.getByTestId('documents-caret-locked')).toHaveCount(0);
+ await page.keyboard.type('Q');await page.waitForTimeout(200);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
 });
 test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo walk both steps',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
@@ -137,7 +141,10 @@ test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo
  await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
  const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
  await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
- const boxes=page.getByTestId('documents-editor').getByRole('textbox');const n=await boxes.count();const old2=await boxes.nth(1).inputValue();
+ const boxes=page.getByTestId('documents-editor').getByRole('textbox');
+ // The page image can be complete before the paragraph textboxes are mounted: counting here must wait for the populated editor, otherwise n is a partial count (CI saw 0 with 8 boxes rendering a tick later).
+ let n=0;await expect(async()=>{n=await boxes.count();expect(n).toBeGreaterThan(1);}).toPass({timeout:15000});
+ const old2=await boxes.nth(1).inputValue();
  const b=(await pg.boundingBox())!;await page.mouse.click(b.x+b.width*0.2,b.y+b.height*0.127);
  await expect(page.getByTestId('documents-caret')).toBeVisible();
  await page.keyboard.press('Enter');
@@ -151,4 +158,304 @@ test('Enter splits a paragraph, Backspace at its start joins it again, undo/redo
  await expect(boxes).toHaveCount(n);await expect.poll(()=>boxes.nth(1).inputValue()).toBe(old2);
  await page.getByTestId('documents-redo').click();await expect(boxes).toHaveCount(n+1);
  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});
+/* ---- D0 session safety. Written against the real engine; runs in CI only (the WASM build is not available in the authoring sandbox). ---- */
+const clickSecondParagraph=async(page:any)=>{
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();await expect(page.getByTestId('documents-input')).toBeFocused();
+};
+const secondText=(page:any)=>page.getByTestId('documents-editor').getByRole('textbox').nth(1);
+test('D0: an edit survives switching to Code and back; dirty state and undo are kept',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('Keep ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+ await page.keyboard.press('Control+1');await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
+ await page.keyboard.press('Control+2');await expect(page.getByRole('radio',{name:'Somnia Documents'})).toHaveAttribute('aria-checked','true');
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+ await expect(page.getByTestId('documents-undo')).toBeEnabled();
+ await page.getByTestId('documents-undo').click();await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+ await page.getByTestId('documents-redo').click();await expect.poll(()=>secondText(page).inputValue()).toBe('Keep '+old2);
+});
+test('D0: switching between two DOCX tabs keeps each file\'s edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'one.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-name')).toHaveText('one.docx');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('One ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('One '+old2);
+ await openBuffers(page,[{name:'two.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-name')).toHaveText('two.docx');
+ await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+ await page.evaluate(async()=>{(await import('/src/lib/media.ts')).setActiveMedia('one.docx');});
+ await expect(page.getByTestId('documents-name')).toHaveText('one.docx');await expect.poll(()=>secondText(page).inputValue()).toBe('One '+old2);
+});
+test('D0: Save a copy right after typing contains the pending edit',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);const download=page.waitForEvent('download');
+ await page.keyboard.type('Pending');await page.getByTestId('documents-save-copy').click();
+ const d=await download;const xml=Buffer.from(unzipSync(new Uint8Array(readFileSync((await d.path())!)))['word/document.xml']).toString('utf8');
+ expect(xml).toContain('Pending');
+});
+test('D0: closing a file with unsaved edits asks first; declining keeps the edits',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);await page.keyboard.type('Guard ');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Guard '+old2);
+ const prompts:string[]=[];page.on('dialog',d=>{prompts.push(d.message());void d.dismiss();});
+ const closed=await page.evaluate(async()=>{const m=await import('/src/lib/media.ts');m.closeMedia('sample.docx');return !m.findMedia('sample.docx');});
+ expect(closed).toBe(false);expect(prompts.length).toBe(1);expect(prompts[0]).toContain('sample.docx');
+ await expect.poll(()=>secondText(page).inputValue()).toBe('Guard '+old2);
+});
+/* ---- D1 typing feel. Real-engine specs: written for CI, not run in the authoring sandbox (no WASM build there). ---- */
+const paras=(page:any)=>page.getByTestId('documents-editor').getByRole('textbox');
+test('D1: Ctrl+arrows move by word, Shift+arrow selects across paragraphs, one Delete and one undo',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);await page.keyboard.press('Home');
+ const before=await paras(page).count();const first=await secondText(page).inputValue();
+ await page.keyboard.press('Control+ArrowRight');await page.keyboard.press('Control+Shift+ArrowRight');
+ await expect(page.getByTestId('documents-selection').first()).toBeVisible();
+ await page.keyboard.press('End');await page.keyboard.down('Shift');await page.keyboard.press('ArrowRight');await page.keyboard.press('ArrowRight');await page.keyboard.up('Shift');
+ await page.keyboard.press('Delete');
+ await expect.poll(()=>paras(page).count()).toBe(before-1);
+ await page.keyboard.press('Control+z');await expect.poll(()=>paras(page).count()).toBe(before);await expect.poll(()=>secondText(page).inputValue()).toBe(first);
+});
+test('D1: multi-line paste creates paragraphs and undoes in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ await clickSecondParagraph(page);const before=await paras(page).count();
+ await page.getByTestId('documents-input').evaluate((el:HTMLTextAreaElement)=>{const dt=new DataTransfer();dt.setData('text/plain','Line A\nLine B\nLine C');el.dispatchEvent(new ClipboardEvent('paste',{clipboardData:dt,bubbles:true,cancelable:true}));});
+ await expect.poll(()=>paras(page).count()).toBe(before+2);
+ await page.keyboard.press('Control+z');await expect.poll(()=>paras(page).count()).toBe(before);
+});
+test('D1: IME composition and a dead-key accent land as text; undo removes them',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const old2=await secondText(page).inputValue();await clickSecondParagraph(page);
+ const cdp=await page.context().newCDPSession(page);
+ await cdp.send('Input.imeSetComposition',{text:'にほん',selectionStart:3,selectionEnd:3});await cdp.send('Input.insertText',{text:'日本'});
+ await expect.poll(()=>secondText(page).inputValue()).toContain('日本');
+ await page.keyboard.insertText('é😀');await expect.poll(()=>secondText(page).inputValue()).toContain('é😀');
+ await page.keyboard.press('Backspace');await expect.poll(()=>secondText(page).inputValue()).not.toContain('😀');
+ for(let i=0;i<6;i++)await page.keyboard.press('Control+z');await expect.poll(()=>secondText(page).inputValue()).toBe(old2);
+});
+
+test('D2a: Ctrl+B bolds a selection in the engine render, pressed state follows, one undo removes it, and the saved DOCX keeps it',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-format-bold')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ for(let i=0;i<4;i++)await page.keyboard.press('Shift+ArrowRight');
+ const before=await img.screenshot();
+ await page.keyboard.press('Control+b');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','true');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await page.keyboard.press('Control+b');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','false');
+ await page.keyboard.press('Control+b');await page.keyboard.press('Control+z');
+ await expect(page.getByTestId('documents-format-bold')).toHaveAttribute('aria-pressed','false');
+});
+
+test('D2b: font, size and colour from the format bar change the engine render and are one undo step each',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-format-size')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ for(let i=0;i<4;i++)await page.keyboard.press('Shift+ArrowRight');
+ const before=await img.screenshot();
+ await page.getByTestId('documents-format-size').selectOption('24');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await expect(page.getByTestId('documents-format-size')).toHaveValue('24');
+ await page.getByTestId('documents-format-font').selectOption('JetBrains Mono');
+ await expect(page.getByTestId('documents-format-font')).toHaveValue('JetBrains Mono');
+ await page.getByTestId('documents-color-C0392B').click();
+ await expect(page.getByTestId('documents-color-C0392B')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('format-font-size-color')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-color-C0392B')).toHaveAttribute('aria-pressed','false');
+ await expect(page.getByTestId('documents-format-font')).toHaveValue('JetBrains Mono');
+});
+
+test('D3a: alignment, indent and spacing change the engine render, one undo step each, and survive save and reopen',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-align-center')).toBeDisabled();
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ const before=await img.screenshot();
+ await page.getByTestId('documents-align-center').click();
+ await expect(page.getByTestId('documents-align-center')).toHaveAttribute('aria-pressed','true');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ await page.getByTestId('documents-indent-increase').click();
+ await page.getByTestId('documents-line-spacing').selectOption('2');
+ await expect(page.getByTestId('documents-line-spacing')).toHaveValue('2');
+ await page.keyboard.press('Control+r');
+ await expect(page.getByTestId('documents-align-right')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('paragraph-format')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-align-center')).toHaveAttribute('aria-pressed','true');
+});
+
+test('D3b: heading style and lists from the format bar change the engine render, outline lists headings, undo is one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;
+ await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toBeVisible();
+ const before=await img.screenshot();
+ await page.getByTestId('documents-style').selectOption('Heading2');
+ await expect(page.getByTestId('documents-style')).toHaveValue('Heading2');
+ await expect.poll(async()=>!(await img.screenshot()).equals(before)).toBe(true);
+ const outlineBtn=page.getByRole('button',{name:'Outline panel'});if((await outlineBtn.getAttribute('aria-pressed'))!=='true')await outlineBtn.click();
+ await expect(page.getByTestId('documents-outline-headings-only')).toBeVisible();
+ await page.getByTestId('documents-outline-headings-only').check();
+ await expect(page.getByTestId('documents-outline-panel').getByRole('listitem')).not.toHaveCount(0);
+ await page.getByTestId('documents-list-bullet').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','true');
+ await page.getByTestId('documents-list-bullet').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','false');
+ await page.getByTestId('documents-page').first().screenshot({path:shot('style-list')});
+ await page.getByTestId('documents-undo').click();
+ await expect(page.getByTestId('documents-list-bullet')).toHaveAttribute('aria-pressed','true');
+});
+test('table menu: insert and delete a row and a column from a cell caret, each undone in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ await expect(page.getByTestId('documents-table-menu')).toHaveCount(0);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');await expect(menu).toBeVisible();
+ for(const op of ['row_below','col_right','delete_col','delete_row']){
+  await menu.selectOption(op);await page.waitForTimeout(250);
+  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ }
+ for(let i=0;i<4;i++){await page.getByTestId('documents-undo').click();await page.waitForTimeout(200);}
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});
+test('insert table: a size preset adds a table after the paragraph, the caret lands in its first cell, one undo removes it',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-table-insert').selectOption('3x3');await page.waitForTimeout(300);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await expect(page.getByTestId('documents-table-menu')).toBeVisible();// the caret is in a cell now
+ await page.keyboard.type('Hi');await page.waitForTimeout(200);
+ await page.getByTestId('documents-undo').click();await page.getByTestId('documents-undo').click();await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+});
+test('table menu: merge a cell with its right neighbour, split it again, undo both',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');
+ await menu.selectOption('merge_right');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await menu.selectOption('split_cell');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await menu.selectOption('split_cell');await page.waitForTimeout(250);// an unmerged cell refuses
+ await expect(page.getByTestId('documents-edit-error')).toBeVisible();
+});
+test('table cells: Enter splits a paragraph, Backspace joins it, Tab moves to the next cell',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Enter');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Backspace');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.keyboard.press('Tab');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.keyboard.press('Shift+Tab');await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+});
+test('table menu: a custom size inserts a table; bad sizes keep the dialog button disabled; Escape closes',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-table-insert').selectOption('custom');
+ await expect(page.getByTestId('documents-table-size-dialog')).toBeVisible();
+ await page.getByTestId('documents-table-size-rows').fill('21');await expect(page.getByTestId('documents-table-size-ok')).toBeDisabled();
+ await page.keyboard.press('Escape');await expect(page.getByTestId('documents-table-size-dialog')).toHaveCount(0);
+ await page.getByTestId('documents-table-insert').selectOption('custom');
+ await page.getByTestId('documents-table-size-rows').fill('4');await page.getByTestId('documents-table-size-cols').fill('2');
+ await page.getByTestId('documents-table-size-ok').click();await page.waitForTimeout(300);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);await expect(page.getByTestId('documents-table-menu')).toBeVisible();
+});
+test('table menu: merge with the cell below and split it again, refusals shown',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const b2=(await pg.boundingBox())!;await page.mouse.click(b2.x+b2.width*0.15,b2.y+b2.height*0.19);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ const menu=page.getByTestId('documents-table-menu');
+ await menu.selectOption('split_down');await page.waitForTimeout(250);// unmerged: refused
+ await expect(page.getByTestId('documents-edit-error')).toBeVisible();
+ await menu.selectOption('merge_down');await page.waitForTimeout(250);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ // the fixture's cell below may have another width, in which case the engine refuses and there is nothing to split
+ if(await page.getByTestId('documents-edit-error').count()===0){
+  await menu.selectOption('split_down');await page.waitForTimeout(250);
+  await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ }
+});
+test('header and footer dialog: set a header, footer and page number, reopen to see them, undo in one step',async({page})=>{
+ await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
+ await openBuffers(page,[{name:'sample.docx',mimeType:DOCX,buffer:sample()}]);
+ await expect(page.getByTestId('documents-pages')).toHaveText('1 pages');
+ const pg=page.getByTestId('documents-page').first();const img=pg.locator('img');
+ await expect.poll(()=>img.evaluate((i:HTMLImageElement)=>i.complete&&i.naturalWidth)).toBeGreaterThan(300);
+ const box=(await pg.boundingBox())!;await page.mouse.click(box.x+box.width*0.125,box.y+box.height*0.127);
+ await expect(page.getByTestId('documents-caret')).toHaveCount(1);
+ await page.getByTestId('documents-hf-open').click();
+ const header=page.getByTestId('documents-hf-header');await expect(header).toBeVisible();
+ if(await header.isDisabled()){await expect(page.getByTestId('documents-hf-locked')).toBeVisible();await page.keyboard.press('Escape');return;}
+ await header.fill('Quarterly report');await page.getByTestId('documents-hf-footer').fill('Draft');await page.getByTestId('documents-hf-page').check();
+ await page.getByTestId('documents-hf-apply').click();await page.waitForTimeout(400);
+ await expect(page.getByTestId('documents-edit-error')).toHaveCount(0);
+ await page.getByTestId('documents-hf-open').click();
+ await expect(page.getByTestId('documents-hf-header')).toHaveValue('Quarterly report');await expect(page.getByTestId('documents-hf-page')).toBeChecked();
+ await page.keyboard.press('Escape');
+ await page.getByTestId('documents-undo').click();await page.waitForTimeout(300);
+ await page.getByTestId('documents-hf-open').click();
+ await expect(page.getByTestId('documents-hf-header')).not.toHaveValue('Quarterly report');
 });

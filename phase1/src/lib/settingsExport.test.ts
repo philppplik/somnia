@@ -6,7 +6,7 @@ import { DEFAULT_WORKFLOW_PREFS } from './workflowPrefs';
 import { DEFAULT_EDITOR_PREFS } from './editorPrefs';
 import { DEFAULT_DOCUMENT_PREFS } from './documentPrefs';
 
-const base = () => ({ workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, wrapLines: false });
+const base = () => ({ workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS }, editorPrefs: { ...DEFAULT_EDITOR_PREFS }, documentPrefs: { ...DEFAULT_DOCUMENT_PREFS }, previewScripts: true, wrapLines: false });
 test('export holds only changes and roundtrips through import', () => {
   const s = { ...base(), workflowPrefs: { ...DEFAULT_WORKFLOW_PREFS, units: 'imperial', draftSeconds: 10 }, wrapLines: true };
   const text = exportSettings(s);
@@ -29,3 +29,14 @@ test('bad files are refused without throwing', () => {
   assert.equal(parseSettingsImport('nope').warnings.length, 1);
 });
 test('every registry default is a valid value', () => { for (const e of SETTINGS_REGISTRY) assert.ok(validSettingValue(e, e.default), e.id); });
+
+test('global preview scripts opt-out exports, imports and resets through the registry', () => {
+  const off = { ...base(), previewScripts: false };
+  const exported = exportSettings(off);
+  assert.deepEqual(JSON.parse(exported).settings, { previewScripts: false });
+  const parsed = parseSettingsImport(exported);
+  assert.deepEqual(parsed.warnings, []);
+  assert.equal(importPatch(base(), parsed.accepted).previewScripts, false);
+  assert.equal(importPatch(off, {}).previewScripts, true);
+  assert.ok(parseSettingsImport('{"kind":"settings","settings":{"previewScripts":"false"}}').warnings.length);
+});

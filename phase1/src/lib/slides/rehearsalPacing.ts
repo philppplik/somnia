@@ -1,0 +1,6 @@
+/** Private equal-share guide, not a prediction or automatic navigation schedule. */
+export function rehearsalTarget(input:string){if(!/^[1-9]\d{0,2}$/.test(input.trim()))return null;const minutes=Number(input.trim());return minutes<=180?minutes*60000:null;}
+export function rehearsalPacing(target:number,total:number,elapsed:number){if(!Number.isSafeInteger(target)||target<60000||target>10800000||target%60000!==0||!Number.isSafeInteger(total)||total<1||total>10000||!Number.isFinite(elapsed)||elapsed<0)throw Error('Invalid rehearsal pacing');return Object.freeze({target,perSlide:target/total,remaining:Math.max(0,target-elapsed),overtime:Math.max(0,elapsed-target),percent:Math.min(100,elapsed/target*100)});}
+
+/** Slides that count for pacing: hidden slides are skipped in the show. Falls back to the full count when flags do not match the deck or every slide is hidden. */
+export function pacedSlides(hidden:readonly boolean[],total:number){const shown=hidden.filter(h=>!h).length;return hidden.length===total&&shown>=1?shown:total;}

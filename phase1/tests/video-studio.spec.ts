@@ -1,3 +1,4 @@
+import {showPanel,switchStudio} from './helpers';
 import {test,expect} from './fixtures';
 import path from 'node:path';
 import {readFileSync} from 'node:fs';
@@ -12,7 +13,8 @@ test.beforeAll(async({browser})=>{
 const asset=(n:string)=>path.join(import.meta.dirname,'assets',n);
 async function openVideo(page:any,file='clip.webm'){
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  await expect(page.getByTestId('video-start')).toBeVisible();
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset(file));
  await expect(page.getByTestId('video-workspace')).toBeVisible();
@@ -28,7 +30,7 @@ test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',
  await expect(page.getByRole('radio',{name:'Somnia Video'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('video-info')).toContainText('320×180',{timeout:30000});
  await expect(page.getByTestId('video-info')).toContainText('vp9');
- await expect(page.getByTestId('video-controls')).toBeVisible();
+ await expect(page.getByTestId('inspector-section-document')).toBeVisible();await expect(page.getByTestId('inspector-section-export')).toBeVisible();
  await expect(page.getByTestId('video-result')).toContainText('No edits yet');
  await page.screenshot({path:'test-results/video-open.png'});
  // playback really advances
@@ -36,16 +38,16 @@ test('Video Studio: open WebM, play, trim with I/O, export a real trimmed WebM',
  await expect.poll(async()=>page.evaluate(()=>document.querySelector('video')!.currentTime),{timeout:8000}).toBeGreaterThan(0.15);
  await page.getByTestId('video-play').click();
  // trim via I/O keys at the playhead edits the clip under it
- await page.evaluate(()=>{document.querySelector('video')!.currentTime=0.5;});
- await page.getByTestId('video-workspace').press('i');
- await page.evaluate(()=>{document.querySelector('video')!.currentTime=1.5;});
- await page.getByTestId('video-workspace').press('o');
+ // Seek and mark atomically: a paused render re-syncs the element to the session playhead, so the keydown must land before any render.
+ const mark=(key:string,at:number)=>page.evaluate(({key,at})=>{const el=document.querySelector('video')!;el.currentTime=at;document.querySelector('[data-testid="video-workspace"]')!.dispatchEvent(new KeyboardEvent('keydown',{key,bubbles:true,cancelable:true}));},{key,at});
+ await mark('i',0.5);
+ await mark('o',1.5);
  await page.getByTestId('video-clip').first().click();
  await expect(page.getByTestId('video-clip-in-input')).toHaveValue('0.5');
  await expect(page.getByTestId('video-clip-out-input')).toHaveValue('1.5');
  await page.screenshot({path:'test-results/video-trimmed.png'});
  // export is a real VP9/Opus WebM of the trimmed range
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  const bytes=readFileSync(await d.path()!);
  expect([...bytes.subarray(0,4)]).toEqual([0x1a,0x45,0xdf,0xa3]);expect(bytes.length).toBeGreaterThan(10_000);
@@ -67,7 +69,8 @@ test('Video Studio: H.264 MP4 shows an honest no-preview note but still probes a
 });
 test('Video Studio: a file that is not video is rejected with a notice, no tab opens',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();
- await page.getByRole('radio',{name:'Somnia Video'}).click();
+ await switchStudio(page,'Somnia Video');
+ await showPanel(page,'Sources');await showPanel(page,'Sequence');await showPanel(page,'Video');
  const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-open').click();await (await chooser).setFiles(asset('fake.webm'));
  await expect(page.locator('footer [role="status"]')).toContainText('fake.webm is not a valid');
  await expect(page.getByTestId('video-workspace')).toHaveCount(0);
@@ -78,12 +81,13 @@ test('Video Studio: switching to Code keeps the video tab and shows the settings
  await page.getByRole('radio',{name:'Somnia Code'}).click();
  await expect(page.getByRole('radio',{name:'Somnia Code'})).toHaveAttribute('aria-checked','true');
  await expect(page.getByTestId('video-workspace')).toBeVisible();
+ // Code has no Video inspector, so the workspace carries the settings inline (withPanel).
  await expect(page.getByTestId('video-controls')).toBeVisible();
 });
 test('Video Studio: add a second source, split, ripple delete, reorder, mute, export the joined timeline',async({page})=>{
  await openVideo(page);
  // add clip2.webm straight from the file dialog; the project tab stays active
- const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-add-open').click();await (await chooser).setFiles(asset('clip2.webm'));
+ const chooser=page.waitForEvent('filechooser');await page.getByTestId('video-source-open').click();await (await chooser).setFiles(asset('clip2.webm'));
  await expect(page.getByTestId('video-clip')).toHaveCount(2);
  await expect(page.getByTestId('video-clip-count')).toContainText('2');
  await expect(page.getByTestId('video-timeline-summary')).toContainText('4.01');
@@ -110,7 +114,7 @@ test('Video Studio: add a second source, split, ripple delete, reorder, mute, ex
  await page.getByTestId('video-clip-gain').fill('0.5');
  await page.screenshot({path:'test-results/video-clip-settings.png'});
  // export joins everything into one WebM of the timeline duration
- const download=page.waitForEvent('download');await page.getByTestId('video-export').click();const d=await download;
+ const download=page.waitForEvent('download');await page.getByTestId('video-export').click();await page.getByTestId('video-export-review').getByTestId('video-shell-export').click();await page.getByTestId('video-export-review').getByRole('button',{name:'Close',exact:true}).click();const d=await download;
  expect(d.suggestedFilename()).toBe('clip-edited.webm');
  const bytes=readFileSync(await d.path()!);
  expect([...bytes.subarray(0,4)]).toEqual([0x1a,0x45,0xdf,0xa3]);
@@ -120,8 +124,8 @@ test('Video Studio: add a second source, split, ripple delete, reorder, mute, ex
 });
 for(const locale of ['de','es','fr','pt-BR'])test(`Video Studio strings: ${locale}`,async({page})=>{
  await page.addInitScript(l=>localStorage.setItem('somnia.locale.v1',l),locale);await page.goto('/');
- await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(9);
+ const studioCount=await page.evaluate(async()=>{const m=await import('/src/lib/studios/index.ts');return m.listStudios().length;});await expect(page.locator('header [role="radiogroup"]').getByRole('radio')).toHaveCount(Math.min(5,studioCount));
  await expect(page.locator('header [role="radiogroup"]')).not.toContainText('studio.video');
- await page.locator('header [role="radiogroup"]').getByRole('radio').nth(5).click();
+ await switchStudio(page,'Somnia Video');
  await expect(page.getByTestId('video-start')).toBeVisible();await expect(page.getByTestId('video-start')).not.toContainText('video.');
 });

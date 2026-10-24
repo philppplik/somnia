@@ -8,7 +8,10 @@ export interface WorkerLike{postMessage(m:unknown):void;terminate():void;onmessa
 /** One sandboxed worker per extension. All traffic is JSON over postMessage; each api.call is checked in callApi. */
 export class ExtensionRuntime{
  private worker:WorkerLike;private runs=new Map<number,{resolve:()=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();private n=0;
- constructor(private manifest:ExtensionManifest,private deps:Omit<ApiDeps,'registerHandler'>&{log(text:string):void},makeWorker:(source:string,extId:string)=>WorkerLike,private timeoutMs=5000){
+ private lifecycleReqs=new Map<number,{resolve:(m:any)=>void;reject:(e:Error)=>void;timer:ReturnType<typeof setTimeout>}>();
+ /** Lifecycle (docs/studio-lifecycle.md): activated protocol, suspension state and the extension's serializable state. */
+ private activated=false;private workerProtocol=1;private suspended=false;private suspendedState:unknown=null;
+ constructor(private manifest:ExtensionManifest,private deps:Omit<ApiDeps,'registerHandler'>&{log(text:string):void},private makeWorker:(source:string,extId:string)=>WorkerLike,private timeoutMs=5000){
   this.worker=makeWorker(WORKER_SOURCE,manifest.id);
   this.worker.onmessage=e=>this.onMessage(e.data);
   this.worker.onerror=e=>this.onWorkerError(e);
@@ -25,6 +28,8 @@ export class ExtensionRuntime{
   try{this.worker.terminate();}catch{/* worker may already be gone */}
   for(const r of this.runs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was stopped.`));}
   this.runs.clear();
+  for(const r of this.lifecycleReqs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was stopped.`));}
+  this.lifecycleReqs.clear();
   reportError('extensions.worker',`Extension ${this.manifest.name} (${this.manifest.id}) was stopped: ${detail}`,{notify:`Extension ${this.manifest.name} was stopped: ${detail}`});
  }
  private onMessage(m:any){
@@ -35,11 +40,77 @@ export class ExtensionRuntime{
    catch(error){log('warn','extensions.api',`${this.manifest.name} api call ${String(m.method)} failed: ${error instanceof Error?error.message:String(error)}`);reply({ok:false,error:error instanceof Error?error.message:String(error)});}
   }else if(m.type==='activated'){if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}
    if(m.error){this.failHard('activation failed');reportError('extensions.activate',`Extension ${this.manifest.name} (${this.manifest.id}) failed to start`,{notify:`Extension ${this.manifest.name} could not be started.`});}
+   else{this.activated=true;this.workerProtocol=typeof m.protocol==='number'?m.protocol:1;}
+  }else if(m.type==='suspend.done'||m.type==='resume.done'){const r=this.lifecycleReqs.get(m.requestId);if(!r)return;clearTimeout(r.timer);this.lifecycleReqs.delete(m.requestId);r.resolve(m);
   }else if(m.type==='log'){if(m.level==='error')log('error','extensions.worker',`${this.manifest.name}: ${String(m.text).slice(0,500)}`);this.deps.log(`${this.manifest.name}: ${String(m.text).slice(0,200)}`);}
   else if(m.type==='command.done'){const r=this.runs.get(m.requestId);if(!r)return;clearTimeout(r.timer);this.runs.delete(m.requestId);m.error?r.reject(new Error(String(m.error))):r.resolve();}
  }
- runCommand(id:string){return new Promise<void>((resolve,reject)=>{if(this.failed){reject(new Error(`${this.manifest.name} is stopped.`));return;}const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);reject(new Error(`${this.manifest.name} did not finish in time.`));this.failHard(`command ${id} timed out`);},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId});});}
- dispose(){this.failed=true;if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}for(const r of this.runs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was disposed.`));}this.runs.clear();this.worker.terminate();}
+ /** True while the extension is suspended (worker terminated, state held by the host). */
+ isSuspended(){return this.suspended;}
+ /**
+  * Suspend an idle extension: ask for its serializable state (protocol v2),
+  * then terminate the worker. Refused while a command runs or the worker
+  * speaks an older protocol - legacy extensions stay resident (pinned).
+  * A hung suspend kills the worker with a diagnosis, like any other timeout.
+  */
+ async suspend():Promise<{ok:boolean;reason?:string}>{
+  if(this.failed)return{ok:false,reason:'failed'};
+  if(this.suspended)return{ok:true};
+  if(this.runs.size)return{ok:false,reason:'command-in-flight'};
+  if(!this.activated)return{ok:false,reason:'not-activated'};
+  if(this.workerProtocol<2)return{ok:false,reason:'unsupported-protocol'};
+  const requestId=++this.n;
+  const reply=await new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>{this.lifecycleReqs.delete(requestId);reject(new Error('suspend timed out'));this.failHard('suspend timed out');},this.timeoutMs);this.lifecycleReqs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'suspend',requestId});}).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}));
+  if(!reply.ok){if(reply.error!=='suspend timed out')log('warn','extensions.worker',`${this.manifest.name} onSuspend failed: ${String(reply.error).slice(0,300)}`);return{ok:false,reason:'onSuspend-failed'};}
+  this.suspendedState=reply.noHandler?null:reply.state??null;
+  try{this.worker.terminate();}catch{/* worker may already be gone */}
+  this.suspended=true;
+  return{ok:true};
+ }
+ /**
+  * Resume a suspended extension: recreate the sandboxed worker from the same
+  * manifest code (same CSP, same checked API - no new authority), re-activate
+  * it, then hand back its state through onResume when registered.
+  */
+ async resume():Promise<boolean>{
+  if(this.failed||!this.suspended)return!this.failed;
+  this.suspended=false;this.activated=false;this.workerProtocol=1;
+  this.worker=this.makeWorker(WORKER_SOURCE,this.manifest.id);
+  this.worker.onmessage=e=>this.onMessage(e.data);
+  this.worker.onerror=e=>this.onWorkerError(e);
+  const ok=await new Promise<boolean>(resolve=>{
+   const timer=setTimeout(()=>{resolve(false);},this.timeoutMs);
+   const prev=this.worker.onmessage;
+   this.worker.onmessage=e=>{const m=e.data;if(m&&m.type==='activated'){clearTimeout(timer);this.worker.onmessage=prev;prev?.(e);resolve(!m.error);return;}prev?.(e);};
+   this.activate();
+  });
+  if(!ok){this.failHard('resume activation failed');return false;}
+  if(this.suspendedState===null)return true; // no state captured (no onSuspend handler)
+  const requestId=++this.n;
+  const reply=await new Promise<any>((resolve,reject)=>{const timer=setTimeout(()=>{this.lifecycleReqs.delete(requestId);reject(new Error('resume timed out'));this.failHard('resume timed out');},this.timeoutMs);this.lifecycleReqs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'resume',requestId,state:this.suspendedState});}).catch(e=>({ok:false,error:e instanceof Error?e.message:String(e)}));
+  if(!reply.ok){log('warn','extensions.worker',`${this.manifest.name} onResume failed: ${String(reply.error).slice(0,300)}`);return false;}
+  this.suspendedState=null;
+  return true;
+ }
+ runCommand(id:string,args?:unknown){return new Promise<void>(async(resolve,reject)=>{if(this.failed){reject(new Error(`${this.manifest.name} is stopped.`));return;}
+  let payload:unknown;
+  if(args!==undefined){try{payload=jsonCopy(args,new Set());}catch{reject(new Error(`${this.manifest.name}: command arguments must be JSON-serializable.`));return;}}
+  if(this.suspended){try{if(!await this.resume()){reject(new Error(`${this.manifest.name} could not be resumed.`));return;}}catch(e){reject(e instanceof Error?e:new Error(String(e)));return;}}const requestId=++this.n;const timer=setTimeout(()=>{this.runs.delete(requestId);reject(new Error(`${this.manifest.name} did not finish in time.`));this.failHard(`command ${id} timed out`);},this.timeoutMs);this.runs.set(requestId,{resolve,reject,timer});this.worker.postMessage({type:'command.run',id,requestId,...(args!==undefined?{args:payload}:{})});});}
+ dispose(){this.failed=true;if(this.activateTimer){clearTimeout(this.activateTimer);this.activateTimer=null;}for(const r of this.runs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was disposed.`));}this.runs.clear();for(const r of this.lifecycleReqs.values()){clearTimeout(r.timer);r.reject(new Error(`${this.manifest.name} was disposed.`));}this.lifecycleReqs.clear();try{this.worker.terminate();}catch{/* suspended workers are already gone */}}
+}
+/** Deep-copies command arguments into plain JSON, rejecting functions, non-finite numbers, bigint and cycles. Handlers must never receive host object identities. */
+function jsonCopy(v:unknown,seen:Set<object>):unknown{
+ if(v===null)return null;
+ const t=typeof v;
+ if(t==='string'||t==='boolean')return v;
+ if(t==='number'){if(!Number.isFinite(v as number))throw new Error('non-finite number');return v;}
+ if(t!=='object')throw new Error(`not JSON: ${t}`);
+ if(seen.has(v as object))throw new Error('circular structure');
+ seen.add(v as object);
+ if(Array.isArray(v))return v.map(x=>jsonCopy(x,seen));
+ const out:Record<string,unknown>={};
+ for(const[k,x]of Object.entries(v as Record<string,unknown>))if(x!==undefined)out[k]=jsonCopy(x,seen);
+ return out;
 }
 /** URL contract with the Rust side: the worker bootstrap is a separate response with its own CSP (script-src 'unsafe-eval'; connect-src 'none'). Windows and Android WebViews expose custom schemes as http://<scheme>.localhost/. */
 export const WORKER_SCHEME='somnia-ext';

@@ -5,7 +5,13 @@ import {hasStudio,type StudioId} from './registry';
  * Studio is registered at the time of the call, so a queued Studio (Vector, Design, Photos) can be listed here without being
  * advertised: until it registers, its rule is skipped and the next candidate wins.
  */
-export type OpenKind='docx'|'xlsx'|'pptx'|'audio'|'video'|'image'|'pdf'|'psd'|'raster-preview'|'svg'|'text';
+export type OpenKind='docx'|'xlsx'|'pptx'|'audio'|'video'|'image'|'pdf'|'psd'|'raster-preview'|'svg'|'text'|'model3d';
+/** The closed set of validated document kinds, in canonical order. Bytes decide the kind (openIntake), never a handler or extension declaration. */
+export const OPEN_KINDS:readonly OpenKind[]=['docx','xlsx','pptx','audio','video','image','pdf','psd','raster-preview','svg','text','model3d'];
+/** One file offered to Smart Open: native picker, OS open, drop or explicit Open. Bytes are read once at intake. */
+export interface OpenInput{name:string;bytes:Uint8Array;/** Source identity for per-document preference; defaults to name. */key?:string;
+ /** Native intake correlation. Basenames are NOT identity; outcomes are keyed by position and, when present, these. */
+ requestId?:string;ordinal?:number;/** Opaque host file identity; a document already open under it is activated, not opened twice. */identityToken?:string}
 export interface OpenHandler{
  id:string;studioId:StudioId;kinds:readonly OpenKind[];
  /** Higher wins. Equal priorities between ready handlers are never decided by registration order: the user is asked. */
@@ -31,6 +37,7 @@ registerOpenHandler({id:'open.sheets',studioId:'sheets',kinds:['xlsx'],priority:
 registerOpenHandler({id:'open.slides',studioId:'slides',kinds:['pptx'],priority:100,capability:'edit'});
 registerOpenHandler({id:'open.sound',studioId:'sound',kinds:['audio'],priority:100,capability:'edit'});
 registerOpenHandler({id:'open.video',studioId:'video',kinds:['video'],priority:100,capability:'edit'});
+registerOpenHandler({id:'open.3d',studioId:'3d',kinds:['model3d'],priority:100,capability:'edit'});
 // QUEUED (Builder): Vector Studio. Affinity-style svg -> Vector. Needs the strict `vectorio` SVG importer; on incompatible
 // SVG the Vector adapter must reject at prepare time so the Code rule below takes over. The rule exists, it is not wired:
 // it stays inert until a Studio with id 'vector' registers itself.

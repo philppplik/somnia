@@ -18,7 +18,7 @@ import {HASH_RE,CHUNK_BYTES,chunkCount,expectedChunkLength,decodeBlobFrame,encod
 export const MAX_SHARED_MEDIA_FILES=200;
 export const MAX_SHARED_MEDIA_BYTES=60_000_000;
 export const MAX_SHARED_MEDIA_FILE=25_000_000;
-export const MEDIA_PATH=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx)$`,'i');
+export const MEDIA_PATH=new RegExp(`\\.(${RASTER_EXTENSIONS}|pdf|psd|docx|xlsx|pptx)$`,'i');
 
 export interface MediaPort{
  /** Media files this window currently shows. `read` returns the bytes. */

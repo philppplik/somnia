@@ -31,8 +31,9 @@ type Gesture = {
   ref?: NodeRef; side?: HandleSide; shifted?: boolean; moved: boolean;
 };
 const ACCENT = 'var(--accent, #7c3aed)';
-const toolbarStyle: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' };
-const buttonStyle: CSSProperties = { border: '1px solid var(--border, #d9dce3)', borderRadius: 10, padding: '6px 10px', background: 'var(--surface, #F8F9FB)', color: 'inherit', fontSize: 12 };
+const toolbarClass = 'flex flex-wrap items-center gap-1.5';
+const buttonClass = 'rounded-[10px] border border-line bg-surface px-2.5 py-1.5 text-xs text-ink';
+const buttonActiveClass = 'border-accent-fill bg-accent-fill text-action-ink';
 const joinSelection = (a: NodeRef[], b: NodeRef[]) => Array.from(new Map([...a, ...b].map(r => [refKey(r), r])).values());
 
 /** Standalone SVG surface. No assumptions about vectorcore operations, raster editor or host history. */
@@ -181,22 +182,23 @@ export function PenToolEditor(props: PenToolEditorProps) {
   const active = value.paths.find(p => p.id === activePath);
   const last = active?.nodes.at(-1);
   return (
-    <section className={props.className} style={{ display: 'grid', gap: 10, padding: 14, borderRadius: 25, background: 'var(--surface, #F8F9FB)', ...props.style }} aria-label="Vector path editor" data-testid="vector-editor">
-      <div style={toolbarStyle} role="toolbar" aria-label="Vector tools">
-        <button style={{ ...buttonStyle, ...(tool === 'pen' ? { background: ACCENT, color: 'white', borderColor: ACCENT } : {}) }} type="button" disabled={disabled} aria-pressed={tool === 'pen'} title="Pen (P): click for corner, drag for smooth" onClick={() => { finish(); setTool('pen'); }}>Pen</button>
-        <button style={{ ...buttonStyle, ...(tool === 'node' ? { background: ACCENT, color: 'white', borderColor: ACCENT } : {}) }} type="button" disabled={disabled} aria-pressed={tool === 'node'} title="Edit nodes (V)" onClick={() => { finish(); setTool('node'); }}>Nodes</button>
-        <span style={{ width: 1, height: 20, background: 'var(--border, #d9dce3)' }} />
-        <button style={buttonStyle} type="button" disabled={disabled || !hasSelection} title="Independent handles (C)" onClick={() => convert('corner')}>Corner</button>
-        <button style={buttonStyle} type="button" disabled={disabled || !hasSelection} title="Create smooth handles (S)" onClick={() => convert('smooth')}>Smooth</button>
-        <button style={buttonStyle} type="button" disabled={disabled || !hasSelection} title="Equal-length mirrored handles" onClick={() => convert('symmetric')}>Symmetric</button>
-        <button style={buttonStyle} type="button" disabled={disabled || !hasSelection} title="Clear both handles" onClick={() => apply(removeHandles(latest.current, selection), 'convert')}>Remove handles</button>
-        <button style={buttonStyle} type="button" disabled={disabled || !hasSelection} title="Delete selected anchors (Delete)" onClick={remove}>Delete</button>
-        <button style={buttonStyle} type="button" disabled={disabled || !activePath} title="Finish open path (Enter or Escape)" onClick={finish}>Finish path</button>
+    <section className={'grid gap-2.5 rounded-[25px] bg-surface p-3.5' + (props.className ? ' ' + props.className : '')} style={{ ...props.style }} aria-label="Vector path editor" data-testid="vector-editor">
+      <div className={toolbarClass} role="toolbar" aria-label="Vector tools">
+        <button className={buttonClass + (tool === 'pen' ? ' ' + buttonActiveClass : '')} type="button" disabled={disabled} aria-pressed={tool === 'pen'} title="Pen (P): click for corner, drag for smooth" onClick={() => { finish(); setTool('pen'); }}>Pen</button>
+        <button className={buttonClass + (tool === 'node' ? ' ' + buttonActiveClass : '')} type="button" disabled={disabled} aria-pressed={tool === 'node'} title="Edit nodes (V)" onClick={() => { finish(); setTool('node'); }}>Nodes</button>
+        <span className="h-5 w-px bg-line" />
+        <button className={buttonClass} type="button" disabled={disabled || !hasSelection} title="Independent handles (C)" onClick={() => convert('corner')}>Corner</button>
+        <button className={buttonClass} type="button" disabled={disabled || !hasSelection} title="Create smooth handles (S)" onClick={() => convert('smooth')}>Smooth</button>
+        <button className={buttonClass} type="button" disabled={disabled || !hasSelection} title="Equal-length mirrored handles" onClick={() => convert('symmetric')}>Symmetric</button>
+        <button className={buttonClass} type="button" disabled={disabled || !hasSelection} title="Clear both handles" onClick={() => apply(removeHandles(latest.current, selection), 'convert')}>Remove handles</button>
+        <button className={buttonClass} type="button" disabled={disabled || !hasSelection} title="Delete selected anchors (Delete)" onClick={remove}>Delete</button>
+        <button className={buttonClass} type="button" disabled={disabled || !activePath} title="Finish open path (Enter or Escape)" onClick={finish}>Finish path</button>
       </div>
       <svg ref={svg} viewBox={`0 0 ${value.width} ${value.height}`} width="100%" tabIndex={disabled ? -1 : 0}
         role="group" aria-label="Vector canvas. P pen, V nodes, arrows move, Shift arrows move ten, Delete removes, C corner, S smooth. Enter or Escape finishes."
         aria-disabled={disabled} data-testid="vector-canvas"
-        style={{ display: 'block', aspectRatio: `${value.width} / ${value.height}`, maxHeight: 620, border: '1px solid var(--border, #d9dce3)', borderRadius: 16, background: 'var(--canvas, #fff)', touchAction: 'none', cursor: tool === 'pen' ? 'crosshair' : 'default' }}
+        className="block max-h-[620px] touch-none rounded-[16px] border border-line bg-[color:var(--page-bg,#fff)]"
+        style={{ aspectRatio: `${value.width} / ${value.height}`, cursor: tool === 'pen' ? 'crosshair' : 'default' }}
         onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={cancelGesture}
         onLostPointerCapture={() => { if (gesture.current) cancelGesture(); }}
         onDoubleClick={doubleClick} onKeyDown={key} onPointerLeave={() => { if (!gesture.current) setCursor(null); }}>
@@ -222,7 +224,7 @@ export function PenToolEditor(props: PenToolEditorProps) {
         {marquee && <rect x={Math.min(marquee.start.x, marquee.end.x)} y={Math.min(marquee.start.y, marquee.end.y)} width={Math.abs(marquee.end.x - marquee.start.x)} height={Math.abs(marquee.end.y - marquee.start.y)}
           fill={ACCENT} fillOpacity={0.08} stroke={ACCENT} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" pointerEvents="none" />}
       </svg>
-      <p style={{ margin: 0, fontSize: 12, opacity: 0.7 }} aria-live="polite">
+      <p className="m-0 text-xs opacity-70" aria-live="polite">
         {tool === 'pen' ? 'Click for corner, drag for smooth. Click first anchor to close. Enter / Escape finishes.' : 'Drag anchors or handles. Shift selects more. Drag empty space to select. Double-click a segment to add. Alt-drag breaks handles.'}
         {hasSelection ? ` ${selection.length} anchor${selection.length === 1 ? '' : 's'} selected.` : ''}
       </p>

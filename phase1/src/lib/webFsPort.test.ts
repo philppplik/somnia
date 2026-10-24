@@ -88,3 +88,13 @@ test('additional media reads stay rooted and return original bytes',async()=>{
  }
  await assert.rejects(port.invoke('read_media',{projectId,path:'asset.heic'}),/Only/);
 });
+
+test('read_project_resource returns base64, MIME and size, and stays rooted',async()=>{
+ const {root,port,projectId}=await setup();
+ root.items.set('site.css',new FakeFile('body{}'));
+ const r=await port.invoke<{mime:string;size:number;data:string}>('read_project_resource',{projectId,path:'site.css'});
+ assert.equal(r.mime,'text/css');assert.equal(r.size,6);assert.equal(atob(r.data),'body{}');
+ await assert.rejects(port.invoke('read_project_resource',{projectId,path:'../site.css'}),/Invalid project path/);
+ await assert.rejects(port.invoke('read_project_resource',{projectId,path:'/site.css'}),/Invalid project path/);
+ await assert.rejects(port.invoke('read_project_resource',{projectId,path:'.git/config'}),/Invalid project path/);
+});

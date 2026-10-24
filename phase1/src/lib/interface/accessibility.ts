@@ -1,0 +1,10 @@
+import type {InterfaceDocument} from './model';
+import {applyInterfaceGesture} from './gesture';
+import {computeInterfaceLayout} from './layout';
+import {owningInstance} from './components';
+import {translateSelection} from './editing';
+export const INTERFACE_ARROW_DELTA:Readonly<Record<string,readonly[number,number]>>={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
+/** Same gesture validation/override semantics as pointer resizing, one transaction per key. */
+export function keyboardInterfaceEdit(doc:InterfaceDocument,ids:readonly string[],key:string,resize=false,large=false){const delta=INTERFACE_ARROW_DELTA[key];if(!delta)return false;const [x,y]=delta,step=large?10:1;if(!resize){translateSelection(doc,[...ids],x*step,y*step);return true;}if(ids.length!==1)throw Error('Select one layer to resize.');const n=doc.nodes.find(n=>n.id===ids[0]);if(!n||n.locked)throw Error('Select an unlocked layer.');const owner=owningInstance(doc,n.id);if(owner&&owner.id!==n.id)throw Error('Instance structure cannot be resized.');const b=computeInterfaceLayout(doc).bounds.get(n.id)!;return applyInterfaceGesture(doc,{id:n.id,revision:doc.revision,startX:0,startY:0,x:b.x,y:b.y,width:b.width,height:b.height,dx:x*step,dy:y*step,resize:true});}
+export function interfaceTreeOrder(doc:InterfaceDocument,pageId:string){const result:string[]=[];const walk=(id:string)=>{result.push(id);doc.nodes.find(n=>n.id===id)?.children.forEach(walk);};doc.pages.find(p=>p.id===pageId)?.children.forEach(walk);return result;}
+export function interfaceTreeTarget(doc:InterfaceDocument,pageId:string,current:string,key:string){const order=interfaceTreeOrder(doc,pageId),index=order.indexOf(current),node=doc.nodes.find(n=>n.id===current);if(key==='Home')return order[0];if(key==='End')return order.at(-1);if(key==='ArrowUp')return order[Math.max(0,index-1)];if(key==='ArrowDown')return order[Math.min(order.length-1,index+1)];if(key==='ArrowLeft')return node?.parentId??current;if(key==='ArrowRight')return node?.children[0]??current;return undefined;}

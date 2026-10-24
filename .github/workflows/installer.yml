@@ -1,0 +1,73 @@
+name: custom-installer
+on:
+  workflow_dispatch:
+  push:
+    paths: ['phase1/installer/**', '.github/workflows/installer.yml']
+jobs:
+  core:
+    runs-on: ubuntu-latest
+    defaults: { run: { working-directory: phase1/installer } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - run: cargo +1.95.0 test --locked -p somnia-installer-core
+      - run: node --test ui/logic.test.mjs
+  windows:
+    # Builds the stock NSIS setup first, measures its real installed size, then embeds it.
+    # Philipp's matrix policy: alpha runs Windows + Linux only.
+    runs-on: windows-latest
+    needs: core
+    defaults: { run: { working-directory: phase1 } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: '24' }
+      - uses: dtolnay/rust-toolchain@stable
+      - run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - run: npm run craft:build
+      - run: npm run documents:build
+      - run: node scripts/sync-version.mjs
+      - name: Build stock NSIS (fallback artifact and installer payload)
+        run: npm run tauri build -- --ci --config src-tauri/tauri.windows-alpha.conf.json --bundles nsis
+      - name: Measure real installed size and read version
+        shell: pwsh
+        run: |
+          $nsis = Get-ChildItem src-tauri/target/release/bundle/nsis/*.exe | Select-Object -First 1
+          $probe = Join-Path $env:RUNNER_TEMP 'somnia-probe'
+          Start-Process -FilePath $nsis.FullName -ArgumentList '/S', "/D=$probe" -Wait
+          $bytes = (Get-ChildItem $probe -Recurse -File | Measure-Object Length -Sum).Sum
+          if (-not $bytes) { throw 'probe install produced no files' }
+          $ver = (Get-Content src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          "SOMNIA_NSIS_PAYLOAD=$($nsis.FullName)" >> $env:GITHUB_ENV
+          "SOMNIA_INSTALLED_BYTES=$bytes" >> $env:GITHUB_ENV
+          "SOMNIA_VERSION=$ver" >> $env:GITHUB_ENV
+          # also record the real names Tauri's NSIS used (shortcut/uninstall-key assumptions of the shell)
+          Get-ChildItem "$env:APPDATA/Microsoft/Windows/Start Menu/Programs" -Recurse -Filter '*omnia*' | ForEach-Object { "start-menu: $($_.FullName)" }
+          Get-ChildItem "$env:USERPROFILE/Desktop" -Filter '*omnia*' | ForEach-Object { "desktop: $($_.FullName)" }
+          Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*' | Where-Object DisplayName -like '*omnia*' | ForEach-Object { "uninstall-key: $($_.PSPath) version=$($_.DisplayVersion)" }
+          Get-ChildItem $probe -Filter '*.exe' | ForEach-Object { "exe: $($_.Name)" }
+      - name: Build Somnia-Setup.exe
+        working-directory: phase1/installer
+        run: cargo +1.95.0 build --release --locked -p somnia-setup
+      - name: Collect artifacts and checksums
+        shell: pwsh
+        working-directory: phase1
+        run: |
+          New-Item -ItemType Directory out-installer -Force | Out-Null
+          Copy-Item installer/target/release/Somnia-Setup.exe out-installer/Somnia-Setup.exe
+          Copy-Item $env:SOMNIA_NSIS_PAYLOAD out-installer/Somnia-Setup-stock-nsis.exe
+          Push-Location out-installer
+          Get-ChildItem *.exe | ForEach-Object { "$((Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower())  $($_.Name)" } | Set-Content SHA256SUMS -Encoding ascii
+          Pop-Location
+      - uses: actions/upload-artifact@v7
+        with:
+          name: somnia-installer-${{ github.sha }}
+          retention-days: 14
+          if-no-files-found: error
+          path: phase1/out-installer/*

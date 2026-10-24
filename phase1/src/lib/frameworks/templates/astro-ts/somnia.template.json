@@ -1,0 +1,11 @@
+{
+  "id": "astro-ts",
+  "framework": "astro",
+  "language": "ts",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

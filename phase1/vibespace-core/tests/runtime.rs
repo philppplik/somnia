@@ -28,6 +28,11 @@ impl engine::ModelTransport for Script {
                 usage: engine::Usage {
                     input_tokens: 2,
                     output_tokens: 3,
+                    cache_read_tokens: Some(900),
+                    cache_write_tokens: Some(30),
+                    cost_usd: Some(0.01),
+                    cost_source: Some(engine::CostSource::ProviderReported),
+                    tokens_unknown: false,
                 },
             })
         } else {
@@ -37,6 +42,7 @@ impl engine::ModelTransport for Script {
                 usage: engine::Usage {
                     input_tokens: 4,
                     output_tokens: 1,
+                    ..Default::default()
                 },
             })
         }
@@ -380,4 +386,151 @@ async fn selected_file_apply_keeps_remaining_changes_ready() {
         rt.snapshot(&id).unwrap().snapshot.review_state,
         ReviewState::Applied
     );
+}
+
+#[tokio::test]
+async fn final_hunk_selection_has_durable_checkpoint_and_new_change_request_is_idempotent() {
+    let (_data, project, rt, studio) = setup();
+    let done = complete(&rt, &studio).await;
+    let id = done.snapshot.run_id;
+    let review = rt.snapshot(&id).unwrap().snapshot.review.unwrap();
+    let metered = rt.snapshot(&id).unwrap().snapshot.usage.unwrap();
+    assert_eq!(metered.input_tokens, 6);
+    assert_eq!(metered.cache_read_tokens, Some(900));
+    assert_eq!(metered.cache_write_tokens, Some(30));
+    assert_eq!(metered.cost_usd, Some(0.01));
+    assert_eq!(
+        metered.cost_source.as_deref(),
+        Some("provider_reported_partial")
+    );
+    assert!(rt.timeline(&id).unwrap().iter().any(|e| e
+        .usage
+        .as_ref()
+        .is_some_and(|u| u.cache_read_tokens == Some(900))));
+    let detail = rt.review_hunks(&id).unwrap();
+    assert_eq!(detail.revision, review.revision);
+    assert!(!detail.files[0].hunks.is_empty());
+    let request = RequestChanges {
+        run_id: id.clone(),
+        review_revision: review.revision.clone(),
+        request_id: uuid::Uuid::new_v4().to_string(),
+        message: "Keep it short".into(),
+    };
+    let next = rt.prepare_request_changes(&request).unwrap();
+    assert_ne!(next.studio_id, studio.studio_id);
+    assert_eq!(
+        rt.prepare_request_changes(&request).unwrap().studio_id,
+        next.studio_id
+    );
+    assert_eq!(
+        std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+        "before"
+    );
+    assert!(rt
+        .timeline(&id)
+        .unwrap()
+        .iter()
+        .any(|e| e.kind == "review.changes_requested"));
+    let revised = rt.snapshot(&id).unwrap().snapshot.review.unwrap();
+    assert!(rt
+        .apply_hunks(HunkApply {
+            run_id: id.clone(),
+            review_revision: "stale".into(),
+            paths: vec![],
+            hunks: vec![]
+        })
+        .is_err());
+    rt.apply_hunks(HunkApply {
+        run_id: id.clone(),
+        review_revision: revised.revision,
+        paths: vec![],
+        hunks: vec![somnia_vibespace_checkpoints::HunkSelection {
+            path: detail.files[0].path.clone(),
+            hunk_ids: vec![detail.files[0].hunks[0].id.clone()],
+        }],
+    })
+    .unwrap();
+    assert_eq!(
+        std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),
+        "after"
+    );
+    let applied = rt.snapshot(&id).unwrap();
+    assert_eq!(applied.snapshot.review_state, ReviewState::Applied);
+    assert!(applied
+        .snapshot
+        .checkpoints
+        .iter()
+        .any(|cp| cp.label == "Before apply" || cp.label.to_lowercase().contains("apply")));
+}
+
+#[tokio::test]
+async fn partial_text_rebuilds_from_persisted_offsets_and_final_replaces_it() {
+ let (_data,_project,rt,studio)=setup();
+ let reply=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(Waiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();
+ let id=reply.snapshot.run_id;
+ rt.store.append_event(&id,"agent.text_delta",&serde_json::json!({"turn":0,"offset":0,"text":"Grüße"}),None).unwrap();
+ rt.store.append_event(&id,"agent.text_delta",&serde_json::json!({"turn":0,"offset":7,"text":" local"}),None).unwrap();
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_streaming");assert_eq!(snapshot.snapshot.messages[0].text,"Grüße local");
+ rt.store.append_event(&id,"agent.message",&serde_json::json!({"text":"Grüße local"}),None).unwrap();
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages.len(),1);assert_eq!(snapshot.snapshot.messages[0].role,"assistant");rt.stop(&id).await.unwrap();
+}
+
+// stop() acknowledges cancellation, not observer persistence. Keep terminal
+// assertions strict, but wait for the event consumer that owns durable state.
+async fn await_stopped(rt:&Arc<Runtime>,id:&str){
+ for _ in 0..100{if rt.store.get_run(id).unwrap().execution==somnia_vibespace_storage::ExecutionState::Stopped{return;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ panic!("stopped state was not persisted within the test deadline");
+}
+struct PartialWaiting;
+#[async_trait]
+impl engine::ModelTransport for PartialWaiting {
+ async fn complete(&self,_:engine::ModelInput)->Result<engine::ModelReply,engine::Failure>{std::future::pending().await}
+ async fn stream_text(&self,_:engine::ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<engine::ModelReply,engine::Failure>{deltas.send("Provisional only".into()).await.map_err(|_|engine::Failure::Model)?;std::future::pending().await}
+}
+#[tokio::test]
+async fn stop_keeps_persisted_partial_incomplete_never_tool_or_final(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100 {if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert_eq!(rt.snapshot(&id).unwrap().snapshot.messages[0].role,"assistant_streaming");rt.stop(&id).await.unwrap();await_stopped(&rt,&id).await;
+ let snapshot=rt.snapshot(&id).unwrap();assert_eq!(snapshot.snapshot.messages[0].role,"assistant_incomplete");assert_eq!(snapshot.snapshot.messages[0].text,"Provisional only");assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}
+
+struct PartialFailure;
+#[async_trait]
+impl engine::ModelTransport for PartialFailure{
+ async fn complete(&self,_:engine::ModelInput)->Result<engine::ModelReply,engine::Failure>{Err(engine::Failure::Model)}
+ async fn stream_text(&self,_:engine::ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<engine::ModelReply,engine::Failure>{deltas.send("Unfinished output".into()).await.map_err(|_|engine::Failure::Model)?;Err(engine::Failure::Model)}
+}
+#[tokio::test]async fn failed_stream_retains_partial_without_project_write_or_apply(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialFailure),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100{let s=rt.snapshot(&id).unwrap();if s.snapshot.execution_state==ExecutionState::Failed{break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ let snapshot=rt.snapshot(&id).unwrap().snapshot;assert_eq!(snapshot.execution_state,ExecutionState::Failed);assert!(snapshot.messages.iter().any(|m|m.role=="assistant_incomplete"&&m.text=="Unfinished output"));assert!(snapshot.review.is_none());assert!(!snapshot.capabilities.apply);assert!(rt.apply(&id,"none",vec!["hello.txt".into()]).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}
+
+#[tokio::test]async fn feedback_successor_is_fresh_idempotent_and_preserves_model_scope_without_partial_replay(){
+ let (_data,project,rt,studio)=setup();let started=rt.start(StartRun{studio_id:studio.studio_id.clone(),request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ for _ in 0..100{if !rt.snapshot(&id).unwrap().snapshot.messages.is_empty(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ let request=RetryFeedback{run_id:id.clone(),request_id:uuid::Uuid::new_v4().to_string(),message:"Use smaller steps".into()};assert!(rt.prepare_retry_feedback(&request).is_err());rt.stop(&id).await.unwrap();await_stopped(&rt,&id).await;
+ let successor=rt.prepare_retry_feedback(&request).unwrap();let again=rt.prepare_retry_feedback(&request).unwrap();assert_eq!(successor.studio_id,again.studio_id);assert_ne!(successor.studio_id,studio.studio_id);assert_eq!(successor.space_id,studio.space_id);assert_eq!(successor.model,studio.model);assert!(successor.goal.contains("Use smaller steps"));assert!(!successor.goal.contains("Provisional only"));assert!(rt.prepare_retry_feedback(&RetryFeedback{message:"different".into(),..request}).is_err());assert_eq!(std::fs::read_to_string(project.path().join("hello.txt")).unwrap(),"before");
+}
+
+#[tokio::test]async fn capped_board_blocks_cloud_before_run_and_reported_threshold_blocks_next_local_request(){
+ let (_data,_project,rt,studio)=setup();rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:100}).unwrap();
+ assert!(rt.check_board_request(&studio.space_id,true).is_err());assert!(rt.check_board_request(&studio.space_id,false).is_ok());
+ let started=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap();let id=started.snapshot.run_id;
+ rt.store.append_event(&id,"agent.usage",&serde_json::json!({"inputTokens":60,"outputTokens":40}),None).unwrap();assert!(rt.check_board_request(&studio.space_id,false).is_err());rt.stop(&id).await.unwrap();
+}
+
+#[tokio::test]async fn enabling_capped_mode_cancels_owned_board_run(){
+ let (_data,_project,rt,studio)=setup();let run=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},Arc::new(PartialWaiting),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap().snapshot.run_id;
+ rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:1000}).unwrap();
+ for _ in 0..100{if rt.store.get_run(&run).unwrap().execution.is_terminal(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert!(rt.store.get_run(&run).unwrap().execution.is_terminal());
+}
+
+#[tokio::test]async fn reported_threshold_is_persisted_before_next_model_call(){
+ let (_data,_project,rt,studio)=setup();rt.save_board_budget(&studio.space_id,&somnia_vibespace_core::storage::BoardBudget{enabled:true,reported_token_stop:1}).unwrap();
+ let script=Arc::new(Script(AtomicUsize::new(0)));let run=rt.start(StartRun{studio_id:studio.studio_id,request_id:uuid::Uuid::new_v4().to_string(),retry_of_run_id:None},script.clone(),engine::ModelConfig::Local{endpoint:"http://127.0.0.1:11434/v1/chat/completions".into(),model:"qwen3.5:9b".into()}).await.unwrap().snapshot.run_id;
+ for _ in 0..100{if rt.store.get_run(&run).unwrap().execution.is_terminal(){break;}tokio::time::sleep(std::time::Duration::from_millis(10)).await;}
+ assert_eq!(script.0.load(Ordering::SeqCst),1);assert_eq!(rt.store.board_reported_tokens(&studio.space_id).unwrap(),5);assert!(rt.check_board_request(&studio.space_id,false).is_err());assert_eq!(rt.snapshot(&run).unwrap().snapshot.last_step.as_deref(),Some("board_reported_usage_stop"));
 }

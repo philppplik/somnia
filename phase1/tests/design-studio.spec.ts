@@ -1,6 +1,7 @@
 import {test,expect} from '@playwright/test';
+import {switchStudio} from './helpers';
 test('design blank / editable layers / undo / native reopen / SVG export / drag / panels',async({page})=>{
- await page.goto('/');await page.getByRole('radio',{name:'Design',exact:true}).click();await page.getByTestId('design-create-blank').click();await page.getByTestId('design-add-rectangle').click();const row=page.getByTestId('design-layer-name').first();await row.dblclick();await page.getByTestId('design-layer-name-input').fill('Card');await page.getByTestId('design-layer-name-input').press('Enter');
+ await page.goto('/');await switchStudio(page,'Design');await page.getByTestId('design-create-blank').click();await page.getByTestId('design-add-rectangle').click();const row=page.getByTestId('design-layer-name').first();await row.dblclick();await page.getByTestId('design-layer-name-input').fill('Card');await page.getByTestId('design-layer-name-input').press('Enter');
  await page.getByTestId('design-add-text').click();await page.getByTestId('design-field-text').fill('Grüße 世界\nMade in Somnia');await page.getByTestId('design-field-text').blur();await page.getByTestId('design-field-x').fill('100');await page.getByTestId('design-field-x').press('Enter');
  await page.screenshot({path:'test-results/design-layout-dark.png',fullPage:true});
  await page.getByTestId('design-undo').click();await expect(page.getByTestId('design-inspector-empty')).toBeVisible();await page.getByTestId('design-redo').click();

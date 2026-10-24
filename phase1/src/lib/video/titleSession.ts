@@ -7,5 +7,5 @@ export function addTitleClip(root:string,time:number,spec:Partial<TitleSpec>={})
  selectTimelineClip(root,clip.id);
  return clip.id;
 }
-export const updateTitle=(root:string,id:string,patch:Partial<TitleSpec>)=>editTimeline(root,clips=>patchTitle(clips,id,patch));
-export const setTitleLength=(root:string,id:string,seconds:number)=>editTimeline(root,clips=>setTitleDuration(clips,id,seconds));
+export const updateTitle=(root:string,id:string,patch:Partial<TitleSpec>,historyKey?:string)=>editTimeline(root,clips=>patchTitle(clips,id,patch),historyKey?{historyKey}:undefined);
+export const setTitleLength=(root:string,id:string,seconds:number,historyKey?:string)=>editTimeline(root,clips=>setTitleDuration(clips,id,seconds),historyKey?{historyKey}:undefined);

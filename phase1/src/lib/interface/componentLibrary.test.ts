@@ -1,0 +1,25 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';import {addNode,deleteNode} from './model';
+import {createComponent,instantiateComponent} from './components';
+import {filterInterfaceComponents,componentUsage,detachAllInstances,previewInstanceUpdates,pruneStaleOverrides,MAX_LIBRARY_MATCHES} from './componentLibrary';
+function scene(){const s=createInterfaceSession();s.start();let cid='',master='',text='',inst='';s.transact(d=>{master=addNode(d,d.pages[0].id,'frame');text=addNode(d,d.pages[0].id,'text',master);cid=createComponent(d,master,'Chip');const c=d.components![0];inst=instantiateComponent(d,cid,c.variants[0].id,d.pages[0].id);});return {s,cid,master,text,inst};}
+test('library filter matches component and variant names case-insensitively and caps results',()=>{const {s,cid}=scene();
+ assert.equal(filterInterfaceComponents(s.get().document!,'chip')[0].id,cid);assert.equal(filterInterfaceComponents(s.get().document!,'CHIP').length,1);assert.equal(filterInterfaceComponents(s.get().document!,'default').length,1);assert.equal(filterInterfaceComponents(s.get().document!,'zzz').length,0);assert.equal(filterInterfaceComponents(s.get().document!,'  ').length,1);
+ s.transact(d=>{for(let i=0;i<33;i++){const m=addNode(d,d.pages[0].id,'frame');createComponent(d,m,`Extra ${i}`);}});
+ assert.equal(filterInterfaceComponents(s.get().document!,'extra').length,MAX_LIBRARY_MATCHES);});
+test('usage groups instances by page and detach-all skips locked instances in one undo',()=>{const {s,cid}=scene();s.transact(d=>{const c=d.components![0];instantiateComponent(d,cid,c.variants[0].id,d.pages[0].id);d.pages.push({id:'page-2',name:'Page 2',children:[]});instantiateComponent(d,cid,c.variants[0].id,'page-2');const roots=d.nodes.filter(n=>n.instance?.componentId===cid);roots[0].locked=true;});
+ const usage=componentUsage(s.get().document!,cid);assert.equal(usage.length,2);assert.equal(usage.reduce((a,u)=>a+u.count,0),3);
+ s.transact(d=>{const detached=detachAllInstances(d,cid);assert.equal(detached,2);});
+ assert.equal(s.get().document!.nodes.filter(n=>n.instance?.componentId===cid).length,1);
+ assert.throws(()=>s.transact(d=>detachAllInstances(d,cid)));
+ s.undo();assert.equal(s.get().document!.nodes.filter(n=>n.instance?.componentId===cid).length,3);});
+test('update preview lists stale overrides after a master edit and pruning applies in one undo',()=>{const {s,cid,master,text,inst}=scene();const slot=s.get().document!.nodes.find(n=>n.id===text)!.componentSlot!;
+ s.transact(d=>{d.nodes.find(n=>n.id===inst)!.instance!.overrides=[{slot,values:{text:'Custom'}}];});
+ s.transact(d=>{deleteNode(d,text);});
+ const preview=previewInstanceUpdates(s.get().document!,cid);assert.equal(preview.total,1);assert.equal(preview.listed[0].instanceId,inst);assert.ok(preview.listed[0].warnings[0].includes('absent'));
+ assert.equal(previewInstanceUpdates(s.get().document!,cid).total,1);
+ s.transact(d=>{assert.equal(pruneStaleOverrides(d,cid),1);});
+ assert.equal(s.get().document!.nodes.find(n=>n.id===inst)!.instance!.overrides.length,0);
+ assert.equal(previewInstanceUpdates(s.get().document!,cid).total,0);
+ assert.throws(()=>s.transact(d=>pruneStaleOverrides(d,cid)));
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===inst)!.instance!.overrides.length,1);});

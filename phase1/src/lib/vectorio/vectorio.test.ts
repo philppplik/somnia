@@ -154,7 +154,7 @@ test('strict import rejects unsupported features and lists them all', () => {
   assert.throws(() => importSvg(src), (e: unknown) => {
     assert.ok(e instanceof SvgImportError);
     const m = e.diagnostics.map((d) => d.message).join('|');
-    for (const k of ['onload', '<text>', '<use>', '<image>', '<defs>', 'gradients', 'CSS classes', 'clip-path', '<style>', '<script>']) assert.ok(m.includes(k), `${k} missing in ${m}`);
+    for (const k of ['onload', '<text>', '<use>', '<image>', 'has no stops', 'CSS classes', 'clip-path', '<style>', '<script>']) assert.ok(m.includes(k), `${k} missing in ${m}`);
     return true;
   });
 });

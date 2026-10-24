@@ -13,10 +13,17 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 uuid = { version = "1", features = ["v4"] }
 
+sqlite-vec = { version = "=0.1.9", optional = true }
+
+[features]
+# Opt-in vector search (sqlite-vec distance functions). FTS5 stays the default and the fallback.
+default = ["vector"]
+vector = ["dep:sqlite-vec"]
+
 [dev-dependencies]
 tempfile = "3"
 
-# NOTE: there is intentionally no `fastembed` / `sqlite-vec` feature in this version.
-# Vector search is reported as `unavailable` in `Capabilities` (see docs/vibespace/storage.md).
+# Embedding models live in the separate `vibespace-embed` crate (fastembed). This crate only holds
+# the `Embedder` trait, the opt-in state and the vectors; it never downloads anything.
 
 [workspace]

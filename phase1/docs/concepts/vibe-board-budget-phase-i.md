@@ -1,0 +1,17 @@
+# Board usage and capped mode phase I
+
+Device-local reported counters only. Input/output tokens and USD costs come from provider usage, never a price table, characters-to-tokens estimate or telemetry upload. Absent remains unknown/pending. Local device electricity/hardware is not priced. Local weights imply no provider inference bill, not free device operation.
+
+Approved conservative first slice: persisted per-board capped mode hard-blocks cloud and unknown LM Studio requests before start and before each subsequent model request. Only the already locality-guarded native Ollama route is eligible. Enabling/saving active policy cancels owned board runs. A SQLite migration stores enabled state and reported token stop threshold. All persisted board runs count, including scheduled/retried runs, not just visible board rows. No automatic reset. Saving while active cancels rather than silently continuing under a changed policy.
+
+The local token threshold is honestly labeled reported usage, NOT a strict token or dollar cap. Providers report after a request; already-running local work and parallel runs may exceed this threshold. The native admission transport persists provider usage before yielding each reply to the engine, cancels active board work at the reported threshold, and denies subsequent inference. Missing counts are unknown, not zero. Saving also revokes active run effect grants. Enabling capped mode disables cloud rather than pretending post-hoc cost reports enforce a dollar reservation. Already-sent requests/charges cannot be recalled. Unknown/malformed persisted usage causes admission failure. No total dollar cap is offered because no verified price/reservation rail exists.
+
+Suggestions for failed/stopped runs are text-only: inspect a verified local model or a smaller local model/shorter task, then explicitly select a fresh Studio. No automatic provider/model switch, cloud fallback or download.
+
+## Roadmap-Delta
+
+Added persistent conservative cloud-blocked board mode, reported local usage stop threshold, native per-request admission/cancellation, run usage transparency and local-model suggestions in five locales. No dependencies or telemetry. Native migration/runtime tests added but not compiled/run in this sandbox. Strict token pre-reservation/exact tokenizer accounting and actual cloud spend reservation are NOT implemented. Native Rust/device/scheduler/parallel cancellation E2E remain release gates. Streaming default stays off.
+
+Base: fresh explicit-refspec fetch of origin/int/beta5 at 3274605d. Prior integrated DS primitives preserved. Browser fixtures validate UI, not production provider calls. Board counter reload is explicit, not background polling.
+
+Validation: 181 Vibe TS/React tests, 2 Playwright browser tests, command manifest and DS ratchet pass. Layer checker reports no new violations but warns that this checkout's TS version is outside its supported transpiler range, so it is not proof of complete analysis. Full tsc remains red on inherited missing three/Studio3D and generated slides WASM assets; no I paths reported. SQLite budget DDL, FK and threshold constraints independently exercised with Python sqlite3. Rust migration, usage decoder and runtime cancellation/admission tests are added only, not run. No cargo/WASM/app E2E in sandbox. Policy and counters live in the user's local database. Unknown historical usage blocks capped requests but does not prevent viewing/changing the policy. No billing or strict token limit claim.

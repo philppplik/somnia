@@ -16,6 +16,10 @@ Each document edit validates the whole result before publishing one history tran
 
 The shared starter opens a native project or starts blank without a picker. The vertical toolbox uses V/H/F/R/T: selection, scroll hand, add artboard, place rectangle and place text. The canvas supports pointer movement, resize, zoom and keyboard undo/delete. Rotated layers use inspector Width/Height for resizing. The right panel supplies artboard settings, layered selection (Ctrl/Cmd/Shift), rename, hide/lock, reorder, duplicate/delete, validated layout/text/appearance fields, align and distribute. Text layout is simple multiline, without auto-wrap or rich text. SVG text baseline is an approximation of browser font metrics. Preview strokes use an inset CSS approximation; SVG uses actual vector strokes.
 
+## Command specs
+
+`src/lib/design/commands.ts` exposes the studio operations as typed command specs (`design.getState`, `design.new`, `design.undo`, `design.redo`, `design.setTool`, `design.addRectangle`, `design.addText`, `design.deleteSelection`, `design.duplicateSelection`, `design.alignSelection`, `design.distributeSelection`, `design.exportProject`, `design.exportSvg`), registered through `registerCommandSpec` while `DesignCanvas` is mounted. `design.getState` is `read` level; the rest are `ui`. Each spec writes the design session history itself (one `editDesign` transaction per document change). Titles use the `cmd.design.*` keys in `src/locales/design/`.
+
 ## Shared integration patch
 
 The separate wiring patch imports `design.ts` from `lib/studios/index.ts` and adds `design.canvas` / `design.inspector` to `components/studios/hosts.tsx`. The manifest registers `registerBlankProjectFactory('design', startDesign)` using the shared blank API. The studio icon is `LayoutTemplate`; the shared pill glyph map must support that name (otherwise its current fallback is Code).

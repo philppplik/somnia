@@ -1,3 +1,4 @@
+import {runCloseGuards} from './closeGuards';
 import {rasterDirty} from '../store/rasterState';
 import {hasDirtyPdfs} from './pdfedit/session';
 import {invoke,isTauri} from '@tauri-apps/api/core';
@@ -8,6 +9,8 @@ import {clearDraft,saveDraft} from './draftSession';
 import {getState} from '../store/appStore';
 import {restoreWindowState} from './windowState';
 import {installFileAdapter} from './fileAdapter';
+import {registerDeployCommands} from './deploy/register';
+import {createTauriDeployBackend} from './deploy/tauriBackend';
 /** Desktop shell: Tauri commands as the storage port. All save, recovery and conflict logic lives in fileAdapter.ts so the web build can share it. */
 export async function installDesktopAdapter(){
  if(!isTauri())return ()=>{};
@@ -19,10 +22,12 @@ export async function installDesktopAdapter(){
   if(!saveDraft({files:{...st.files},activeFile:st.activeFile,openFiles:[...st.openFiles]}))throw Error('The draft is too large for local recovery. Save the project to disk first.');
   await getCurrentWindow().destroy();
  }});
- await getCurrentWindow().onCloseRequested(e=>{const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(hasDirtyPdfs()){e.preventDefault();if(window.confirm('Discard unsaved PDF edits and close Somnia?')){if(!st.isDirty)void getCurrentWindow().destroy();else requestClose(st.storage==='disk'?'disk':'memory');}return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
- return installFileAdapter({
+ await getCurrentWindow().onCloseRequested(e=>{if(runCloseGuards()){e.preventDefault();return;}const st=getState();const dirtyImages=Object.entries(st.rasterDoc).filter(([,d])=>rasterDirty(d));if(dirtyImages.length&&!window.confirm(`Discard unsaved image edits to ${dirtyImages.map(([name])=>name).join(', ')} and close Somnia?`)){e.preventDefault();return;}if(hasDirtyPdfs()){e.preventDefault();if(window.confirm('Discard unsaved PDF edits and close Somnia?')){if(!st.isDirty)void getCurrentWindow().destroy();else requestClose(st.storage==='disk'?'disk':'memory');}return;}if(st.isDirty){e.preventDefault();requestClose(st.storage==='disk'?'disk':'memory');}});
+ const offDeploy=registerDeployCommands(createTauriDeployBackend());
+ const offFiles=await installFileAdapter({
   invoke:(command,args)=>invoke(command,args),
   listen:(event,handler)=>listen(event,handler as never),
   shell:{closeWindow:()=>getCurrentWindow().close(),destroyWindow:()=>getCurrentWindow().destroy()}
  });
+ return ()=>{offDeploy();offFiles();};
 }

@@ -224,3 +224,61 @@ test('key session drops plaintext sync/awareness frames (no downgrade)',async()=
  await sleep(30);
  assert.equal(sess.doc.share.has('evil.html'),false);
  await p;});
+
+test('heartbeat: ping/pong keeps a quiet session alive, a silently dead socket reconnects',async()=>{
+ const {server,factory}=memoryServer();const ends:MemoryServerEnd[]=[];server.onConnection(e=>{ends.push(e);
+  e.transport.connect({onOpen(){},onMessage:b=>{for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
+ const invite='ws://memory/room/abcdefgh12345678';
+ const a=mkClient(invite,mkSession({'a.txt':'hi'}),{transport:factory,syncTimeoutMs:30,heartbeatMs:40,heartbeatDeadMs:150});
+ const b=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30,heartbeatMs:40,heartbeatDeadMs:150});
+ await Promise.all([a.connect(),b.connect()]);
+ // a SmartRelay is not needed for liveness: the two clients answer each other's pings through a blind forwarder
+ await sleep(250);
+ assert.equal(a.snapshot().state,'connected');assert.equal(b.snapshot().state,'connected');
+ // blackhole everything towards a: the socket stays "open" but no frame ever arrives again
+ const endA=ends[0];
+ (endA.transport as {send:(b:Uint8Array)=>void}).send=()=>{};   // a receives nothing more; its own pings still leave
+ await until(()=>a.snapshot().state==='reconnecting',3000);
+ assert.equal(b.snapshot().state,'connected','the peer with live inbound traffic must not flap');
+ a.leave();b.leave();
+});
+
+test('heartbeat disabled with heartbeatMs 0 stays connected without any traffic',async()=>{
+ const {server,factory}=memoryServer();server.onConnection(()=>{});
+ const invite='ws://memory/room/abcdefgh12345678';
+ const a=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30,heartbeatMs:0,heartbeatDeadMs:80});
+ await a.connect();
+ await sleep(200);
+ assert.equal(a.snapshot().state,'connected');
+ a.leave();
+});
+
+test('a document update over the 2 MiB relay cap arrives chunked; the relay never sees a big frame',async()=>{
+ const {server,factory}=memoryServer();const ends:MemoryServerEnd[]=[];const sizes:number[]=[];
+ server.onConnection(e=>{ends.push(e);
+  e.transport.connect({onOpen(){},onMessage:b=>{sizes.push(b.length);if(b.length>=2*1024*1024){e.drop();return;}for(const o of ends)if(o!==e)o.transport.send(b);},onClose(){ends.splice(ends.indexOf(e),1);}});});
+ const invite=`ws://memory/room/abcdefgh12345678#key=${(await newLinkKey()).param}`;
+ const big='x'.repeat(3*1024*1024)+'tail';
+ const a=mkClient(invite,mkSession({'big.txt':big}),{transport:factory,syncTimeoutMs:30});
+ const b=mkClient(invite,mkSession(),{transport:factory,syncTimeoutMs:30});
+ await Promise.all([a.connect(),b.connect()]);
+ // both the initial sync (big seed) and a later big edit must cross intact; wait for content, not the sync flag (it flips on the 30 ms timeout too)
+ const btext=()=>(b as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt')?.toString();
+ await until(()=>btext()===big,8000);
+ assert.equal(btext(),big);
+ assert.ok(Math.max(...sizes)<2*1024*1024,'no frame touches the relay cap');
+ ((a as unknown as {sess:{doc:Y.Doc}}).sess.doc.getMap('files').get('big.txt') as unknown as Y.Text).insert(0,'HEAD-');
+ await until(()=>btext()?.startsWith('HEAD-')??false,8000);
+ a.leave();b.leave();
+});
+
+test('sync chunk frames are validated: bad shape, oversize part, junk after payload',async()=>{
+ const {encodeSyncChunk,decodeSyncChunk}=await import('./protocol');
+ const good=encodeSyncChunk('ab-c',1,3,new Uint8Array(100));
+ assert.deepEqual(decodeSyncChunk(good),{batch:'ab-c',index:1,count:3,payload:new Uint8Array(100)});
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',3,3,new Uint8Array(1))),null,'index >= count');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',0,99,new Uint8Array(1))),null,'count over cap');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('bad batch!',0,1,new Uint8Array(1))),null,'batch id shape');
+ assert.equal(decodeSyncChunk(encodeSyncChunk('ab-c',0,1,new Uint8Array(1024*1024+100))),null,'part over cap');
+ assert.equal(decodeSyncChunk(new Uint8Array([8,0,0])),null,'truncated');
+});

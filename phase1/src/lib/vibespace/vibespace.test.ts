@@ -86,3 +86,20 @@ test('controller enforces consent scope and review conflict gates for any inject
  assert.equal(await c.execute({type:'consent',runId:'run-network',requestId:'request-1',choice:'allow_for_run'}),false);assert.equal(t.calls.length,0);
  await c.connect();assert.equal(await c.execute({type:'review',runId:'run-copy',reviewRevision:'review-1',decision:'apply',paths:['about.html']}),false);assert.equal(t.calls.length,0);c.disconnect();
 });
+
+test('plain-object native rejections keep their stable id and no paths',async()=>{
+ const transport=createFixtureVibeSpaceTransport('test');
+ transport.snapshot=async()=>{throw {id:'SOM-FS-006',code:'vibespace_ownership_or_recovery',message:'Vibe Space is owned by another GUI/CLI; close it before opening'};};
+ const c=new VibeSpaceController(transport);await c.connect();
+ assert.match(c.getSnapshot().error??'',/SOM-FS-006/);
+ assert.match(c.getSnapshot().error??'',/owned by another/);
+ transport.snapshot=async()=>{throw {id:'X-1',message:'C:\\Users\\me\\secret'};};
+ const d=new VibeSpaceController(transport);await d.connect();
+ assert.doesNotMatch(d.getSnapshot().error??'',/Users/);
+ c.disconnect();d.disconnect();
+});
+test('persisted partial transcript snapshots reconcile by sequence without replay or retarget',async()=>{
+ const fixture=fixtureRun({executionState:'running',review:null,reviewState:'none',messages:[{id:'stream-1',role:'assistant_streaming',text:'first',timestampUtc:'2026-10-11T10:00:00Z'}]});const snapshot=fixtureSnapshot();snapshot.studios[0]=fixture;const transport=createFixtureVibeSpaceTransport('test',snapshot);const controller=new VibeSpaceController(transport);await controller.connect();transport.emit(event(2,{...fixture,messages:[{...fixture.messages[0],text:'first second'}]}));transport.emit(event(2,{...fixture,messages:[{...fixture.messages[0],text:'DUPLICATE'}]}));const run=controller.getSnapshot().snapshot!.studios.find(s=>s.runId===fixture.runId)!;assert.equal(run.messages[0].text,'first second');transport.emit(event(3,{...fixture,executionState:'stopped',messages:[{...fixture.messages[0],role:'assistant_incomplete',text:'first second'}]}));assert.equal(controller.getSnapshot().snapshot!.studios[0].messages[0].role,'assistant_incomplete');controller.disconnect();
+});
+
+test('feedback retry creates new fixture run, preserves old partial and rejects active source',async()=>{const snapshot=fixtureSnapshot();const old=snapshot.studios.find(s=>s.executionState==='failed')!;old.messages=[{id:'p',role:'assistant_incomplete',text:'partial old',timestampUtc:'2026-10-14T08:00:00Z'}];const transport=createFixtureVibeSpaceTransport('test',snapshot),controller=new VibeSpaceController(transport);await controller.connect();assert.equal(await controller.execute({type:'retry-feedback',runId:old.runId,message:'Use smaller steps'}),true);const next=controller.getSnapshot().snapshot!;assert.equal(next.studios.find(s=>s.runId===old.runId)?.messages[0].text,'partial old');assert.equal(next.studios.length,snapshot.studios.length+1);assert.equal(next.studios.at(-1)?.messages.length,0);const active=next.studios.find(s=>s.executionState==='running')!;assert.equal(await controller.execute({type:'retry-feedback',runId:active.runId,message:'Should not run'}),false);controller.disconnect();});

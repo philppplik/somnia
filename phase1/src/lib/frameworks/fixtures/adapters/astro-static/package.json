@@ -1,0 +1,10 @@
+{
+  "name": "a",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro check && astro build"
+  },
+  "dependencies": {
+    "astro": "5"
+  }
+}

@@ -141,6 +141,7 @@ impl EffectHandler<Session, Effect> for Runtime {
 }
 struct Infer {
     model: Arc<dyn ModelTransport>,
+    out:mpsc::UnboundedSender<RunEvent>,
 }
 #[async_trait]
 impl Operation<Session, Effect> for Infer {
@@ -166,10 +167,32 @@ impl Inference<Session, Effect> for Infer {
         if s.steps >= s.request.max_steps {
             anyhow::bail!("step_limit");
         }
-        let reply = tokio::select! { biased;
-            _ = emit.cancelled() => return not_applicable(),
-            reply = self.model.complete(ModelInput { config: s.request.model.clone(), messages: s.messages.clone() }) => reply.map_err(|_| anyhow::anyhow!("model"))?,
-        };
+        let (tx,mut rx)=mpsc::channel(1);
+        let future=self.model.stream_text(ModelInput { config:s.request.model.clone(),messages:s.messages.clone() },tx);
+        tokio::pin!(future);
+        let mut offset=0usize;let mut frames=0;let mut provisional=String::new();
+        let reply=loop {tokio::select!{biased;
+            _=emit.cancelled()=>return not_applicable(),
+            Some(text)=rx.recv()=>{
+                frames+=1;if frames>256||text.is_empty() || text.len()>4096 || offset+text.len()>65536 {anyhow::bail!("model");}
+                // The owning runtime persists/publishes text; it is not an effect.
+                let _=self.out.send(RunEvent{run_id:s.request.run_id.clone(),kind:EventKind::TextDelta{turn:s.steps,offset:offset as u32,text:text.clone()}});
+                offset+=text.len();provisional.push_str(&text);
+            },
+            result=&mut future=>{
+                // The final future poll can enqueue a delta and return success/failure
+                // before select polls rx again. Persist already accepted frames first.
+                // Close prevents detached writers from extending this completed turn.
+                rx.close();
+                while let Ok(text)=rx.try_recv(){
+                    frames+=1;if frames>256||text.is_empty()||text.len()>4096||offset+text.len()>65536{anyhow::bail!("model");}
+                    let _=self.out.send(RunEvent{run_id:s.request.run_id.clone(),kind:EventKind::TextDelta{turn:s.steps,offset:offset as u32,text:text.clone()}});
+                    offset+=text.len();provisional.push_str(&text);
+                }
+                break result.map_err(|_|anyhow::anyhow!("model"))?;
+            },
+        }};
+        if offset>0&&(reply.message!=provisional||reply.tool.is_some()){anyhow::bail!("model");}
         if reply.message.len() > 65536
             || reply.tool.as_ref().is_some_and(|t| {
                 t.arguments.to_string().len() > 65536 || t.name.len() > 256 || t.call_id.len() > 256
@@ -292,7 +315,7 @@ impl AgentBackend for GooseBackend {
                 vec![
                     Step::Operation(Arc::new(Tools { port })),
                     Step::Operation(Arc::new(Steer { queue })),
-                    Step::Inference(Arc::new(Infer { model })),
+                    Step::Inference(Arc::new(Infer { model,out:runtime.out.clone() })),
                 ],
                 token.clone(),
             );

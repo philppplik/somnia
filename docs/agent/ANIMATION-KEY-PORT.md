@@ -1,0 +1,21 @@
+# Animation selected-key port: preparation only
+
+Base55a32f61a. Read/propose one existing selected transform key (`anchor`, `position`, `scale`, `rotation`, `opacity`) through the real AnimationSession. Exactly one key, unlocked selected layer, committed document only; live preview, absent or multiple selection refused. Pin native document object identity plus id/revision/active composition/layer/property/tick. Native object identity also catches reopened same-id/revision and ABA. Host inspect/propose permissions are mandatory and rechecked by target capture before stage.
+
+Model supplies value only, not target or edit type. Finite scalar or two-number vector, then real `applyEdit(prop.set)` validates property shape and bounds against the immutable native document. No generic JSON overwrite, expression evaluation, project bytes, runtime registration or execution callback. Typed proposal carries exact before/after/target, review-only/executeAvailable=false, saved=false. Native session is unchanged.
+
+AnimationSession has synchronous snapshot history but dispatch/checkpoint/emit currently do not expose logical origin/history receipts; observer exceptions may occur after commit, and there is no reviewed origin-bound undo guard. Rather than promote execute from history length, this slice is preparation only. Next: implement atomic reviewed commit/receipt and origin-bound undo in AnimationSession, isolate post-commit observer errors, validate readback and newest identity protecting manual edits/ABA/reopen. Never report failure0 for uncertain postcommit states. Prove native owner receipt/recovery/undo before runtime registration.
+
+Real JS session tests cover read/propose immutability, native validator bounds/type, permission denial, reentrant edit/reopen/selection, preview/lock/selection/cancel. Light/Dark synthetic fixture inspected. Native desktop/render/model/save/recovery disk proof is Unknown. No dependencies/cloud/spending.
+
+## Receipt integration on0478f83f6
+
+`createAnimationKeyPort` now exposes host-only `acceptReviewed`/`undoReviewed` methods on its registry. Model definitions remain inspect/propose, never execute. Host explicitly supplies optional execution permission callback; absent grant refuses. Staged proposal has random host reviewId and a private WeakMap retaining exact immutable native document object and reviewed before/after/target. Acceptance requires the original proposal object, exact reviewId/value and unchanged native selection/document after permission callback. Review is consumed before entering native commit, so unknown/postcommit outcomes cannot be retried blindly.
+
+Acceptance calls real AnimationSession.applyReviewed, returning its immutable ReviewedReceipt unchanged. Logical applied1/noop0/null and postCommitErrors are native proof, not inferred from history length. Unknown/null stays unknown; no autosave/model/runtime promotion. Undo requires the exact owner receipt retained by this port and an explicit host undo permission callback; native undoReviewed refuses manual edits/reopen/new history. A synchronous receipt can prove JS owner/history, not desktop render, save or disk recovery quality.
+
+Tests include actual owner apply/undo, exact review/forged proposal/cancel/permission races, observer throw and reentrant mutation unknown/null, manual edit/reopen undo refusal. Separate Light/Dark receipt fixture preserves original prep fixture and tests.
+
+### Detached receipt hardening on1c9e60097
+
+Native ReviewedReceipt only freezes the outer object; vector before/after values can alias native key data. The port now returns a detached frozen copy with frozen vectors and privately maps that copy to the exact native receipt for undo. Consumer mutation cannot alter native current/history values. Copied/fabricated receipts still refuse. Only applied1 receives an undo mapping; unknown/null or no-op cannot present an undo action. Native outcome/error counts remain unchanged. AI origin metadata bounded to80 characters and refuses controls. Cancelled undo permission keeps receipt for later exact authorized undo. Tests cover vector immutability and exact restored original vector, not an assumed default position.

@@ -1,0 +1,20 @@
+---
+import '../styles/style.css';
+const time = new Date().toLocaleTimeString('en-GB', { timeZone: 'UTC' });
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{name}}</title>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">Made with Somnia</p>
+      <h1>Your next idea starts here.</h1>
+      <p>Edit this page in src/pages/index.astro and save. Your preview updates.</p>
+      <p role="status" aria-live="polite">You have a working Astro app. This page was made on the server at {time} UTC.</p>
+    </main>
+  </body>
+</html>

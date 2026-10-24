@@ -1,0 +1,24 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {computeInterfaceLayout} from './layout';
+import {DEFAULT_LAYOUT} from './schema';import {DEFAULT_TEXT_STYLE} from './tokens';
+import {setLocale} from '../i18n';
+function scene(){const s=createInterfaceSession();s.start();let frame='',small='',big='',box='';s.transact(d=>{frame=addNode(d,d.pages[0].id,'frame');small=addNode(d,d.pages[0].id,'text',frame);big=addNode(d,d.pages[0].id,'text',frame);box=addNode(d,d.pages[0].id,'rectangle',frame);(d.textStyles??=[]).push({...DEFAULT_TEXT_STYLE,id:'ts-small',name:'Small',fontSize:12,lineHeight:1.25},{...DEFAULT_TEXT_STYLE,id:'ts-big',name:'Big',fontSize:24,lineHeight:1.5});const n=(id:string)=>d.nodes.find(n=>n.id===id)!;n(small).textStyleId='ts-small';n(big).textStyleId='ts-big';n(box).width=30;n(box).height=10;});s.transact(d=>{d.nodes.find(n=>n.id===frame)!.layout={...DEFAULT_LAYOUT,direction:'row',align:'baseline'};});return {s,frame,small,big,box};}
+test('baseline alignment lines up text baselines and bottoms other layers',()=>{const {s,small,big,box}=scene();const layout=computeInterfaceLayout(s.get().document!);
+ const b=(id:string)=>layout.bounds.get(id)!;const smallBaseline=b(small).y+12*1.25*0.8,bigBaseline=b(big).y+24*1.5*0.8;
+ assert.ok(Math.abs(smallBaseline-bigBaseline)<1e-9,`baselines ${smallBaseline} vs ${bigBaseline}`);
+ assert.ok(Math.abs(b(box).y+b(box).height-bigBaseline)<1e-9,'rectangle bottom sits on the baseline');
+ assert.ok(b(big).y<=b(small).y,'bigger text sits higher or equal');});
+test('baseline falls back to start in columns and grids, other align modes unchanged',()=>{const {s,frame,small}=scene();
+ s.transact(d=>{d.nodes.find(n=>n.id===frame)!.layout={...DEFAULT_LAYOUT,direction:'column',align:'baseline'};});
+ let layout=computeInterfaceLayout(s.get().document!);assert.equal(layout.bounds.get(small)!.y,16);
+ s.transact(d=>{d.nodes.find(n=>n.id===frame)!.layout={...DEFAULT_LAYOUT,direction:'grid',align:'baseline'};});
+ layout=computeInterfaceLayout(s.get().document!);assert.equal(layout.bounds.get(small)!.y,16);
+ s.transact(d=>{d.nodes.find(n=>n.id===frame)!.layout={...DEFAULT_LAYOUT,direction:'row',align:'center'};});
+ layout=computeInterfaceLayout(s.get().document!);assert.ok(layout.bounds.get(small)!.y>16);});
+test('baseline alignment validates and reverts with one undo',()=>{const {s,frame}=scene();
+ assert.equal(s.get().document!.nodes.find(n=>n.id===frame)!.layout!.align,'baseline');
+ const before=s.get();assert.throws(()=>s.transact(d=>{d.nodes.find(n=>n.id===frame)!.layout={...DEFAULT_LAYOUT,direction:'row',align:'sideways' as never};}));assert.equal(s.get(),before);
+ s.undo();assert.equal(s.get().document!.nodes.find(n=>n.id===frame)!.layout,undefined);});
+test('baseline label translates',async()=>{const {translate,getLocale}=await import('../i18n');setLocale('de');try{assert.equal(translate(getLocale(),'interface.baseline'),'Grundlinie');}finally{setLocale('en');}});

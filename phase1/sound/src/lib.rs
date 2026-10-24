@@ -359,3 +359,53 @@ pub fn list_plugins() -> String {
         .collect();
     serde_json::to_string(&v).unwrap_or_else(|_| "[]".into())
 }
+
+/// Apply a bounded built-in insert rack to planar stereo 48 kHz PCM, without quantizing.
+/// Same-length policy: tails are cut at the existing session boundary, never appended silently.
+#[wasm_bindgen]
+pub fn process_rack_pcm(left: &[f32], right: &[f32], rack_json: &str) -> Result<Vec<f32>, JsError> {
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Rack { version: u32, #[serde(rename = "dspRevision")] dsp_revision: String, bypass: bool, slots: Vec<Slot> }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Slot { id: String, #[serde(rename = "pluginId")] plugin_id: String, enabled: bool, params: BTreeMap<String, f32> }
+    if left.len() != right.len() || left.is_empty() || left.len() > 48_000 * 120 || left.iter().chain(right).any(|v| !v.is_finite()) { return Err(JsError::new("Invalid stereo rack PCM")); }
+    if rack_json.len() > 32_000 { return Err(JsError::new("Rack document too large")); }
+    let rack: Rack = serde_json::from_str(rack_json).map_err(|e| JsError::new(&e.to_string()))?;
+    if rack.version != 1 || rack.dsp_revision != "c51e5d5ec52f11c6264b72e26661fa712feb5345" || rack.slots.len() > 8 { return Err(JsError::new("Unsupported rack version or size")); }
+    let mut ids = std::collections::BTreeSet::new();
+    let mut processors = Vec::new();
+    for slot in rack.slots {
+        if slot.id.is_empty() || slot.id.len() > 100 || !ids.insert(slot.id) || slot.params.len() > 32 { return Err(JsError::new("Invalid rack slot")); }
+        let info = soundcraft_dsp::plugin_info(&slot.plugin_id).ok_or_else(|| JsError::new("Unknown rack processor"))?;
+        if info.is_instrument || !info.audiosuite { return Err(JsError::new("Processor cannot run offline")); }
+        let mut p = soundcraft_dsp::create(&slot.plugin_id).ok_or_else(|| JsError::new("Processor unavailable"))?;
+        for (key, value) in slot.params {
+            let param = info.param(&key).ok_or_else(|| JsError::new("Unknown processor parameter"))?;
+            if !value.is_finite() || value < param.min || value > param.max || ((matches!(param.unit, soundcraft_dsp::Unit::Toggle | soundcraft_dsp::Unit::Choice)) && value.fract() != 0.0) { return Err(JsError::new("Processor parameter out of range")); }
+            if !p.set_param(&key, value) { return Err(JsError::new("Processor rejected parameter")); }
+        }
+        if slot.enabled && !rack.bypass { processors.push(p); }
+    }
+    let mut channels = vec![left.to_vec(), right.to_vec()];
+    for mut p in processors { offline::apply_plugin(&mut channels, p.as_mut(), 48_000.0); }
+    if channels.iter().flatten().any(|v| !v.is_finite()) { return Err(JsError::new("Processor produced invalid audio")); }
+    let mut planar = channels.remove(0);planar.extend_from_slice(&channels[0]);Ok(planar)
+}
+
+/// Frozen output loudness facts; code follows the pinned meter, not a conformity claim.
+#[wasm_bindgen]
+pub fn analyze_mix_pcm(left: &[f32], right: &[f32]) -> Result<String, JsError> {
+    if left.len() != right.len() || left.is_empty() || left.len() > 48_000 * 120 || left.iter().chain(right).any(|v| !v.is_finite()) { return Err(JsError::new("Invalid analysis PCM")); }
+    let mut meter = soundcraft_dsp::meter::LoudnessMeter::new(48_000.0, 2);
+    let channels = vec![left.to_vec(), right.to_vec()];
+    meter.process(&channels, left.len());
+    let valid = |value: f32, minimum: usize| -> Option<f32> { if left.len() < minimum || !value.is_finite() || value <= -140.0 { None } else { Some(value) } };
+    serde_json::to_string(&serde_json::json!({
+        "integratedLufs": valid(meter.integrated_lufs(), 19_200),
+        "shortTermLufs": valid(meter.short_term_lufs(), 144_000),
+        "momentaryLufs": valid(meter.momentary_lufs(), 19_200),
+        "truePeakDb": valid(meter.true_peak_db(), 1)
+    })).map_err(|e| JsError::new(&e.to_string()))
+}

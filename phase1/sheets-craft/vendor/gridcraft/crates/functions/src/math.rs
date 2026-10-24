@@ -86,6 +86,16 @@ fn sum(a: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
     num_val(numbers(a)?.iter().sum())
 }
 
+/// PERCENTOF(subset, all): the sum of the numbers in `subset` divided by the sum of the numbers in `all`.
+fn percentof(a: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
+    let part: f64 = numbers(&a[0..1])?.iter().sum();
+    let whole: f64 = numbers(&a[1..2])?.iter().sum();
+    if whole == 0.0 {
+        return Err(CellError::Div0);
+    }
+    num_val(part / whole)
+}
+
 fn sumsq(a: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
     num_val(numbers(a)?.iter().map(|x| x * x).sum())
 }
@@ -1049,6 +1059,7 @@ fn averageif(a: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
 pub(crate) fn specs() -> Vec<FnSpec> {
     vec![
         f!("SUM", 1, VAR, MathTrig, A, "SUM(number1, [number2], ...)", "Adds all the numbers in the arguments.", sum),
+        f!("PERCENTOF", 2, 2, MathTrig, A, "PERCENTOF(subset, total)", "Returns the sum of a subset as a fraction of the sum of the whole data.", percentof),
         f!("SUMSQ", 1, VAR, MathTrig, A, "SUMSQ(number1, [number2], ...)", "Adds the squares of the numbers.", sumsq),
         f!(
             "SUMPRODUCT",
@@ -1286,6 +1297,11 @@ mod tests {
         is_err(ev("SUM", vec![rf(arr(vec![vec![nv(1.0), Value::Error(Div0)]]))]), Div0);
         close(ev("SUM", vec![rf(tv("abc"))]), 0.0);
         close(ev("SUMSQ", vec![n(3.0), n(4.0)]), 25.0);
+        close(ev("PERCENTOF", vec![rf(row(&[1.0, 2.0, 3.0])), rf(row(&[1.0, 2.0, 3.0, 4.0]))]), 0.6);
+        close(ev("PERCENTOF", vec![n(5.0), rf(row(&[5.0, 15.0]))]), 0.25);
+        close(ev("PERCENTOF", vec![rf(arr(vec![vec![nv(1.0), tv("x"), Value::Empty]])), rf(row(&[2.0, 2.0]))]), 0.25);
+        is_err(ev("PERCENTOF", vec![n(1.0), rf(row(&[0.0, 0.0]))]), CellError::Div0);
+        is_err(ev("PERCENTOF", vec![n(1.0)]), CellError::Value);
         close(ev("PRODUCT", vec![rf(r), n(2.0)]), 8.0);
         close(ev("PRODUCT", vec![rf(arr(vec![vec![tv("a")]]))]), 0.0);
         let a1 = arr(vec![vec![nv(3.0), nv(4.0)], vec![nv(8.0), nv(6.0)], vec![nv(1.0), nv(9.0)]]);

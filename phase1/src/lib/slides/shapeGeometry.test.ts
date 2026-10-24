@@ -1,0 +1,166 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,readdirSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+import {unzipSync,zipSync,strFromU8,strToU8} from 'fflate';
+import {readDeckModel,readSlidePart,newSlideFromLayout,readLayouts,type ShapeRef} from './deckPackage';
+import {unionBox,transformGroup,shapesInRect,alignBoxes,distributeBoxes,moveBox,resizeBox,alignBox,resizeBoxAspect,hitTest,containsPoint,overlayRect,limitsOf,stepShape,selectableShapes,rotationDeg} from './shapeGeometry';
+
+const fx=(n:string)=>new Uint8Array(readFileSync(fileURLToPath(new URL('../../../slides-engine/fixtures/'+n,import.meta.url))));
+const base=fx('independent.pptx');
+const sh=(id:number,x:number,y:number,w:number,h:number,extra:Partial<ShapeRef['bounds'] & object>={}):ShapeRef=>({id,name:'s'+id,kind:'text',runCount:0,parentId:null,ph:null,bounds:{x,y,w,h,rot:0,flipH:false,flipV:false,source:'slide',...extra}});
+const size={cx:1000,cy:500};
+
+test('model reads stored bounds in EMU from the real fixture',()=>{
+  const m=readDeckModel(base);
+  assert.deepEqual(m.slideSize,{cx:9144000,cy:5143500});
+  const [a,b]=m.slides[0].shapes;
+  assert.deepEqual(a.bounds,{x:594360,y:640080,w:7955279,h:914400,rot:0,flipH:false,flipV:false,source:'slide'});
+  assert.equal(b.bounds!.y,2011680);
+});
+test('rotation and flips are read; invalid or non-integer geometry becomes null',()=>{
+  const xml=(x:string)=>`<p:sld xmlns:a="a" xmlns:p="p"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/></p:nvGrpSpPr><p:sp><p:nvSpPr><p:cNvPr id="2" name="A"/><p:nvPr/></p:nvSpPr><p:spPr>${x}</p:spPr><p:txBody><a:p><a:r><a:t>x</a:t></a:r></a:p></p:txBody></p:sp></p:spTree></p:cSld></p:sld>`;
+  const r=readSlidePart(xml('<a:xfrm rot="5400000" flipH="1"><a:off x="10" y="20"/><a:ext cx="300" cy="40"/></a:xfrm>'),9).shapes[0].bounds!;
+  assert.deepEqual([r.rot,r.flipH,r.flipV,r.x,r.w],[5400000,true,false,10,300]);
+  for(const bad of ['<a:xfrm><a:off x="1.5" y="2"/><a:ext cx="3" cy="4"/></a:xfrm>','<a:xfrm><a:off x="1" y="2"/><a:ext cx="-3" cy="4"/></a:xfrm>','<a:xfrm><a:off x="x" y="2"/><a:ext cx="3" cy="4"/></a:xfrm>','<a:xfrm><a:off x="1" y="2"/></a:xfrm>','<a:xfrm><a:off x="99999999999" y="2"/><a:ext cx="3" cy="4"/></a:xfrm>',''])
+    assert.equal(readSlidePart(xml(bad),9).shapes[0].bounds,null,bad);
+});
+test('group children are nested and have no usable bounds; the group keeps its own',()=>{
+  const xml='<p:sld xmlns:a="a" xmlns:p="p"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/></p:nvGrpSpPr><p:grpSp><p:nvGrpSpPr><p:cNvPr id="5" name="G"/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="100" y="100"/><a:ext cx="500" cy="300"/><a:chOff x="0" y="0"/><a:chExt cx="50" cy="30"/></a:xfrm></p:grpSpPr><p:sp><p:nvSpPr><p:cNvPr id="6" name="C"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x="5" y="5"/><a:ext cx="10" cy="10"/></a:xfrm></p:spPr></p:sp></p:grpSp></p:spTree></p:cSld></p:sld>';
+  const s=readSlidePart(xml,1).shapes;
+  assert.deepEqual(s.map(x=>[x.id,x.kind,x.parentId]),[[5,'group',null],[6,'other',5]]);
+  assert.deepEqual(s[0].bounds&&[s[0].bounds.x,s[0].bounds.w],[100,500]);assert.equal(s[1].bounds,null);
+  assert.deepEqual(selectableShapes(s).map(x=>x.id),[5]);
+  assert.deepEqual(limitsOf(s[0]),['group']);assert.deepEqual(limitsOf(s[1]),['nested','noBounds']);
+});
+test('placeholders without an xfrm inherit display bounds from the layout',()=>{
+  const layout=readLayouts(base).find(l=>l.supported&&l.placeholders.includes('ctrTitle'))!;
+  const out=newSlideFromLayout(base,layout.part,256);
+  const m=readDeckModel(out),added=m.slides[1].shapes;
+  assert.ok(added.length>0);
+  for(const s of added){assert.ok(s.bounds,s.name);assert.notEqual(s.bounds!.source,'slide');assert.ok(limitsOf(s).includes('inherited'));}
+});
+test('hit test: topmost wins, edges inclusive, outside and invalid points miss',()=>{
+  const shapes=[sh(1,0,0,1000,500),sh(2,100,100,200,100)];
+  assert.equal(hitTest(shapes,size,0.2,0.3)!.id,2);
+  assert.equal(hitTest(shapes,size,0.9,0.9)!.id,1);
+  assert.equal(hitTest(shapes,size,0.1,0.2)!.id,2);
+  for(const [x,y] of [[NaN,0.5],[-0.01,0.5],[0.5,1.01],[Infinity,0]] as const)assert.equal(hitTest(shapes,size,x,y),null);
+  assert.equal(hitTest(shapes,{cx:0,cy:500},0.5,0.5),null);
+  assert.equal(hitTest([{...sh(3,0,0,10,10),bounds:null}],size,0.001,0.001),null);
+});
+test('hit test honours rotation (a 90 degree rotated wide shape becomes tall)',()=>{
+  const b=sh(1,400,200,200,20,{rot:5400000}).bounds!;
+  assert.equal(containsPoint(b,500,150),true);
+  assert.equal(containsPoint(b,430,210),false);
+  assert.equal(containsPoint(b,500,320),false);
+  assert.equal(rotationDeg({rot:-5400000}),270);
+});
+test('nested shapes are never hit; groups are',()=>{
+  const g={...sh(1,0,0,500,500),kind:'group' as const},c={...sh(2,0,0,500,500),parentId:1};
+  assert.equal(hitTest([g,c],size,0.1,0.2)!.id,1);
+});
+test('overlay rect is slide-relative, so it survives zoom',()=>{
+  const r=overlayRect(sh(1,100,50,200,100,{rot:2700000}).bounds!,size);
+  assert.deepEqual([r.left,r.top,r.width,r.height,r.rotateDeg],[10,10,20,20,45]);
+});
+test('keyboard stepping cycles through top-level shapes and wraps',()=>{
+  const s=[sh(1,0,0,1,1),{...sh(2,0,0,1,1),parentId:1},sh(3,0,0,1,1)];
+  assert.equal(stepShape(s,null,1)!.id,1);assert.equal(stepShape(s,null,-1)!.id,3);
+  assert.equal(stepShape(s,1,1)!.id,3);assert.equal(stepShape(s,3,1)!.id,1);assert.equal(stepShape(s,1,-1)!.id,3);
+  assert.equal(stepShape([],null,1),null);assert.equal(stepShape(s,99,1)!.id,1);
+});
+test('limits report rotation, flips and inherited geometry',()=>{
+  assert.deepEqual(limitsOf(sh(1,0,0,1,1)),[]);
+  assert.deepEqual(limitsOf(sh(1,0,0,1,1,{rot:60000,flipV:true,source:'layout'})),['inherited','rotated','flipped']);
+});
+test('real corpus decks: every selectable shape with bounds lies on a finite slide-relative rect',()=>{
+  const dir=fileURLToPath(new URL('../../../slides-engine/corpus/',import.meta.url));let seen=0,rotated=0;
+  for(const f of readdirSync(dir).filter(f=>f.endsWith('.pptx'))){
+    let m;try{m=readDeckModel(new Uint8Array(readFileSync(dir+f)));}catch{continue;}
+    if(!m.slideSize)continue;
+    for(const s of m.slides)for(const x of selectableShapes(s.shapes))if(x.bounds){const r=overlayRect(x.bounds,m.slideSize);assert.ok([r.left,r.top,r.width,r.height].every(Number.isFinite),f);seen++;if(r.rotateDeg)rotated++;}
+  }
+  assert.ok(seen>5);console.log('corpus shapes with bounds:',seen,'rotated:',rotated);
+});
+void zipSync;void unzipSync;void strFromU8;void strToU8;
+
+test('moveBox keeps a corner on the slide and rounds to whole EMU',()=>{
+  const size={cx:9144000,cy:6858000},b={x:100,y:100,w:2000000,h:1000000};
+  assert.deepEqual(moveBox(b,500.4,0,size),{...b,x:600});
+  assert.equal(moveBox(b,-1e9,0,size).x,127000-b.w);
+  assert.equal(moveBox(b,1e9,0,size).x,size.cx-127000);
+  assert.equal(moveBox(b,0,1e9,size).y,size.cy-127000);
+});
+test('resizeBox moves only the dragged edges, stops at 10 pt and at the slide edge',()=>{
+  const size={cx:9144000,cy:6858000},b={x:1000000,y:1000000,w:2000000,h:1000000};
+  assert.deepEqual(resizeBox(b,'se',500000,250000,size),{...b,w:2500000,h:1250000});
+  assert.deepEqual(resizeBox(b,'nw',500000,250000,size),{x:1500000,y:1250000,w:1500000,h:750000});
+  assert.equal(resizeBox(b,'e',-1e9,0,size).w,127000);
+  assert.equal(resizeBox(b,'w',1e9,0,size).x+resizeBox(b,'w',1e9,0,size).w,3000000);
+  assert.equal(resizeBox(b,'e',1e9,0,size).x+resizeBox(b,'e',1e9,0,size).w,size.cx);
+  assert.equal(resizeBox(b,'n',0,-1e9,size).y,0);
+  assert.deepEqual(resizeBox(b,'s',0,0,size),b);
+  const off={x:-500000,y:0,w:2000000,h:1000000};assert.equal(resizeBox(off,'w',-100000,0,size).x,-500000);
+});
+
+test('resizeBoxAspect keeps the ratio, anchors the opposite corner and stops at limits',()=>{
+  const size={cx:9144000,cy:6858000},b={x:2000000,y:2000000,w:2000000,h:1000000};
+  assert.deepEqual(resizeBoxAspect(b,'se',1000000,0,size),{x:2000000,y:2000000,w:3000000,h:1500000});
+  assert.deepEqual(resizeBoxAspect(b,'nw',-1000000,0,size),{x:1000000,y:1500000,w:3000000,h:1500000});
+  assert.deepEqual(resizeBoxAspect(b,'ne',0,-1000000,size),{x:2000000,y:1000000,w:4000000,h:2000000});
+  const tiny=resizeBoxAspect(b,'se',-1e9,-1e9,size);assert.equal(Math.min(tiny.w,tiny.h),127000);assert.ok(Math.abs(tiny.w/tiny.h-2)<0.001);
+  const huge=resizeBoxAspect(b,'se',1e9,1e9,size);assert.ok(huge.w<=size.cx&&huge.h<=size.cy);assert.ok(Math.abs(huge.w/huge.h-2)<0.001);
+  assert.deepEqual(resizeBoxAspect(b,'e',100,0,size),resizeBox(b,'e',100,0,size));
+});
+
+test('alignBox snaps to slide edges and centre without resizing, and clamps oversize boxes',()=>{
+  const size={cx:9144000,cy:6858000},b={x:1234567,y:765432,w:2000000,h:1000001};
+  assert.deepEqual(alignBox(b,'left',size),{...b,x:0});
+  assert.deepEqual(alignBox(b,'right',size),{...b,x:7144000});
+  assert.deepEqual(alignBox(b,'center',size),{...b,x:3572000});
+  assert.deepEqual(alignBox(b,'top',size),{...b,y:0});
+  assert.deepEqual(alignBox(b,'bottom',size),{...b,y:6858000-1000001});
+  assert.equal(alignBox(b,'middle',size).y,Math.round((6858000-1000001)/2));
+  const huge={x:500,y:500,w:size.cx+10,h:size.cy+10};
+  assert.equal(alignBox(huge,'center',size).x,0);assert.equal(alignBox(huge,'right',size).x,0);assert.equal(alignBox(huge,'middle',size).y,0);
+});
+
+test('alignBoxes aligns to the union of the selection and never resizes',()=>{
+  const a={x:100,y:500,w:200,h:100},b={x:1000,y:100,w:400,h:300};
+  assert.deepEqual(alignBoxes([a,b],'left'),[{...a,x:100},{...b,x:100}]);
+  assert.deepEqual(alignBoxes([a,b],'right'),[{...a,x:1200},{...b,x:1000}]);
+  assert.deepEqual(alignBoxes([a,b],'center'),[{...a,x:650},{...b,x:550}]);
+  assert.deepEqual(alignBoxes([a,b],'top'),[{...a,y:100},{...b,y:100}]);
+  assert.deepEqual(alignBoxes([a,b],'bottom'),[{...a,y:500},{...b,y:300}]);
+  assert.deepEqual(alignBoxes([a,b],'middle'),[{...a,y:300},{...b,y:200}]);
+  assert.deepEqual(alignBoxes([],'left'),[]);
+});
+test('distributeBoxes equalises gaps, keeps the outer boxes and input order, and needs three',()=>{
+  const bx=(x:number,w:number)=>({x,y:0,w,h:10});
+  const out=distributeBoxes([bx(900,100),bx(0,100),bx(150,200)],'horizontal');
+  assert.deepEqual(out.map(b=>b.x),[900,0,400]);
+  assert.equal(out[2].x-100,900-(out[2].x+200));// gap 300 both sides
+  const v=distributeBoxes([{x:0,y:0,w:5,h:100},{x:0,y:50,w:5,h:100},{x:0,y:400,w:5,h:100}],'vertical');
+  assert.deepEqual(v.map(b=>b.y),[0,Math.round(0+100+(500-300)/2),400]);
+  assert.throws(()=>distributeBoxes([bx(0,1),bx(5,1)],'horizontal'),/three/);
+});
+
+test('shapesInRect selects fully enclosed top-level shapes in z-order, in any drag direction',()=>{
+  const size={cx:1000,cy:1000};
+  const sh=(id:number,x:number,y:number,w:number,h:number,parentId:number|null=null)=>({id,name:'s',kind:'text' as const,runCount:1,parentId,bounds:{x,y,w,h,rot:0,flipH:false,flipV:false,source:'slide' as const},ph:null});
+  const list=[sh(1,100,100,100,100),sh(2,400,400,100,100),sh(3,150,150,10,10,1),sh(4,900,900,100,100),{...sh(5,0,0,10,10),bounds:null}];
+  assert.deepEqual(shapesInRect(list,size,{x0:0,y0:0,x1:0.6,y1:0.6}).map(s=>s.id),[1,2]);
+  assert.deepEqual(shapesInRect(list,size,{x0:0.6,y0:0.6,x1:0,y1:0}).map(s=>s.id),[1,2]);
+  assert.deepEqual(shapesInRect(list,size,{x0:0,y0:0,x1:0.15,y1:0.15}).map(s=>s.id),[]);
+  assert.deepEqual(shapesInRect(list,size,{x0:NaN,y0:0,x1:1,y1:1}),[]);
+});
+
+test('unionBox and transformGroup translate and scale a group exactly',()=>{
+  const a={x:100,y:100,w:200,h:100},b={x:500,y:300,w:100,h:100};
+  const u=unionBox([a,b]);assert.deepEqual(u,{x:100,y:100,w:500,h:300});
+  assert.deepEqual(transformGroup([a,b],u,{...u,x:150,y:80}),[{...a,x:150,y:80},{...b,x:550,y:280}]);
+  assert.deepEqual(transformGroup([a,b],u,{x:100,y:100,w:1000,h:150}),[{x:100,y:100,w:400,h:50},{x:900,y:200,w:200,h:50}]);
+  assert.deepEqual(transformGroup([a,b],u,u),[a,b]);
+  assert.throws(()=>transformGroup([a],{x:0,y:0,w:0,h:5},u),/no size/);assert.throws(()=>unionBox([]),/No boxes/);
+});

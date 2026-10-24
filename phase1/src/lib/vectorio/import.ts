@@ -1,9 +1,16 @@
+import { parseGuides } from './guides';
+import { parseSwatches } from './swatches';
+import { parseTextElement, TEXT_LIMITS } from './text';
 import { arcToCubics, parsePathData, type Segment } from './pathData';
 import { isIdentity, multiply, parseTransform } from './matrix';
 import { normalizePaint } from './color';
 import { inferKind, r3 } from './nodes';
+import { createGradientResolver, isGradientElement, nodesBox } from './gradientImport';
 import { parseXml, XmlError, type XmlElement } from './xml';
-import { DEFAULT_STYLE, IDENTITY, LIMITS, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
+import { isArrowKind, type ArrowKind } from './arrows';
+import { IMAGE_LIMITS, parseImageElement } from './image';
+import { FX_KEYS, fxStyle, hasFx, parseFxFilter, type FxSpec } from './effects';
+import { BLEND_MODES, DEFAULT_STYLE, IDENTITY, LIMITS, type BlendMode, type Diagnostic, type Matrix, type Point, type Style, type VectorDocument, type VectorNode, type VectorPath } from './types';
 
 
 export interface ImportOptions {
@@ -35,9 +42,12 @@ const opacityOf = (v: string | undefined): number | undefined => {
 };
 const stripNs = (n: string) => (n.startsWith('svg:') ? n.slice(4) : n);
 
-const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'display', 'visibility'];
-const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'pathLength', 'xml:space', 'baseProfile']);
+const STYLE_PROPS = ['fill', 'stroke', 'stroke-width', 'fill-opacity', 'stroke-opacity', 'fill-rule', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'opacity', 'mix-blend-mode', 'filter', 'marker-start', 'marker-end', 'display', 'visibility'];
+/** Editor-group ids are bounded and plain; anything else is ignored so the content just loads ungrouped. */
+const groupIdOf = (v: string | undefined): string | undefined => (v !== undefined && /^[A-Za-z0-9_.:-]{1,64}$/.test(v) ? v : undefined);
+const PLAIN_ATTRS = new Set([...STYLE_PROPS, 'id', 'style', 'transform', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'cx', 'cy', 'r', 'x1', 'y1', 'x2', 'y2', 'points', 'viewBox', 'version', 'preserveAspectRatio', 'xmlns', 'data-name', 'data-vs-group', 'data-vs-group-name', 'data-vs-locked', 'data-vs-guides', 'data-vs-swatches', 'clip-rule', 'pathLength', 'xml:space', 'baseProfile']);
 const ALLOWED = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
+const CLIP_SHAPES = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon']);
 const IGNORED_NO_RENDER = new Set(['title', 'desc', 'metadata']); // contain no geometry; harmless to drop
 
 function declared(el: XmlElement, err: (m: string) => void): Record<string, string> {
@@ -55,20 +65,45 @@ function declared(el: XmlElement, err: (m: string) => void): Record<string, stri
   return out;
 }
 
-function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void): Style {
+function cascade(parent: Style, d: Record<string, string>, err: (m: string) => void, hasGradient: (id: string) => boolean, arrowOf: (id: string) => ArrowKind | undefined = () => undefined, fxOf: (id: string) => FxSpec | undefined = () => undefined): Style {
   const s: Style = { ...parent, dashArray: [...parent.dashArray], opacity: 1 };
   for (const key of ['fill', 'stroke'] as const) {
     const raw = d[key];
     if (raw === undefined || raw.trim() === 'inherit') continue;
     const p = normalizePaint(raw);
     if (p === null) err(`unsupported ${key} value "${raw}"`);
-    else if (p.startsWith('url(')) err(`${key} references ${p}: gradients and patterns are not supported`);
-    else s[key] = p;
+    else if (p.startsWith('url(')) {
+      const ref = /^url\(\s*#([^)\s]+)\s*\)/.exec(p)?.[1];
+      if (ref === undefined || !hasGradient(ref)) err(`${key} references ${p}: only linear and radial gradients defined in the file are supported`);
+      else s[key] = `url(#${ref})`;
+    } else s[key] = p;
   }
   if (d['stroke-width'] !== undefined) s.strokeWidth = Math.max(0, length(d['stroke-width'], s.strokeWidth));
   s.fillOpacity = opacityOf(d['fill-opacity']) ?? s.fillOpacity;
   s.strokeOpacity = opacityOf(d['stroke-opacity']) ?? s.strokeOpacity;
   s.opacity = opacityOf(d.opacity) ?? 1;
+  s.blendMode = 'normal'; // not inherited
+  for (const k of FX_KEYS) delete s[k]; // effects are not inherited
+  if (d.filter !== undefined && d.filter.trim() !== 'none') {
+    const ref = /^url\(\s*#([^)\s]+)\s*\)$/.exec(d.filter.trim())?.[1];
+    const f = ref === undefined ? undefined : fxOf(ref);
+    if (f === undefined) err(`filter "${d.filter}": only the blur and shadow effects this editor writes are supported`);
+    else Object.assign(s, fxStyle(f));
+  }
+  s.arrowStart = 'none'; s.arrowEnd = 'none';
+  for (const [prop, key] of [['marker-start', 'arrowStart'], ['marker-end', 'arrowEnd']] as const) {
+    const raw = d[prop]?.trim();
+    if (raw === undefined || raw === 'none') continue;
+    const kind = /^url\(\s*#([^)\s]+)\s*\)$/.exec(raw)?.[1];
+    const a = kind === undefined ? undefined : arrowOf(kind);
+    if (a === undefined) err(`${prop} "${raw}": only the arrowhead markers this editor writes are supported`);
+    else s[key] = a;
+  }
+  if (d['mix-blend-mode'] !== undefined) {
+    const v = d['mix-blend-mode'].trim().toLowerCase();
+    if ((BLEND_MODES as readonly string[]).includes(v)) s.blendMode = v as BlendMode;
+    else err(`mix-blend-mode "${d['mix-blend-mode']}" is not supported`);
+  }
   if (d['fill-rule'] === 'evenodd' || d['fill-rule'] === 'nonzero') s.fillRule = d['fill-rule'];
   if (['butt', 'round', 'square'].includes(d['stroke-linecap'])) s.lineCap = d['stroke-linecap'] as Style['lineCap'];
   if (['miter', 'round', 'bevel'].includes(d['stroke-linejoin'])) s.lineJoin = d['stroke-linejoin'] as Style['lineJoin'];
@@ -208,7 +243,38 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
   if (rootTf === null) bad(`malformed transform "${root.attrs.transform}"`);
   base = multiply(base, rootTf ?? IDENTITY);
 
+  const grads = createGradientResolver(root, bad, info);
+  const clips = new Map<string, XmlElement>();
+  const collectClips = (e: XmlElement, n = 0): void => {
+    if (n > LIMITS.maxDepth) return;
+    if (stripNs(e.name) === 'clipPath') { if (e.attrs.id !== undefined && clips.size < 500 && !clips.has(e.attrs.id)) clips.set(e.attrs.id, e); return; }
+    for (const c of e.children) collectClips(c, n + 1);
+  };
+  collectClips(root);
+  const arrowMarkers = new Map<string, ArrowKind>();
+  const collectMarkers = (e: XmlElement): void => {
+    if (stripNs(e.name) === 'marker') { const k = e.attrs['data-vs-arrow']; if (e.attrs.id && isArrowKind(k) && k !== 'none') arrowMarkers.set(e.attrs.id, k); }
+    for (const c of e.children) collectMarkers(c);
+  };
+  collectMarkers(root);
+  const fxFilters = new Map<string, FxSpec>();
+  const collectFx = (e: XmlElement, n = 0): void => {
+    if (n > LIMITS.maxDepth) return;
+    if (stripNs(e.name) === 'filter') {
+      const r = parseFxFilter({ ...e, name: 'filter', children: e.children.map((c) => ({ ...c, name: stripNs(c.name) })) });
+      if ('error' in r) bad(r.error);
+      else if (e.attrs.id !== undefined && fxFilters.size < 500 && !fxFilters.has(e.attrs.id)) fxFilters.set(e.attrs.id, r.fx);
+      return;
+    }
+    for (const c of e.children) collectFx(c, n + 1);
+  };
+  collectFx(root);
+  let clipC = 0;
   const paths: VectorPath[] = [];
+  const texts: import('./types').VectorText[] = [];
+  const images: import('./types').VectorImage[] = [];
+  let imgChars = 0;
+  const groupNames: Record<string, string> = {};
   let nodeCount = 0, segCount = 0, idc = 0, compoundC = 0;
   const nextId = () => { if (++nodeCount > LIMITS.maxNodes) fail(`more than ${LIMITS.maxNodes} nodes`); return `n${++idc}`; };
   let pathC = 0;
@@ -218,18 +284,35 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (/^on/i.test(a)) bad(`event attribute "${a}" is not allowed`);
       else if (/href$/i.test(a)) bad(`reference attribute "${a}" is not supported`);
       else if (a.startsWith('xmlns') || a === 'xml:space' || PLAIN_ATTRS.has(a) || a.startsWith('inkscape:') || a.startsWith('sodipodi:')) continue;
-      else if (a === 'clip-path' || a === 'mask' || a === 'filter') bad(`attribute "${a}" is not supported`);
+      else if (a === 'clip-path') continue; // resolved in walk()
+      else if (a === 'mask') bad(`attribute "${a}" is not supported`);
       else if (a === 'class') bad('CSS classes are not supported');
       else info(`attribute "${a}" ignored`);
     }
   }
 
-  function walk(el: XmlElement, parent: Style, m: Matrix, layer: string | undefined, depth: number, hiddenAbove: boolean, groupOpacity: number): void {
+  function walk(el: XmlElement, parent: Style, m: Matrix, layer: string | undefined, depth: number, hiddenAbove: boolean, groupOpacity: number, group?: string): void {
     if (depth > LIMITS.maxDepth) fail(`element depth exceeds ${LIMITS.maxDepth}`);
     const name = stripNs(el.name);
     if (IGNORED_NO_RENDER.has(name)) return;
+    if (name === 'clipPath') return; // read up front, validated where it is used
+    if (name === 'image') {
+      if (depth !== 1) { bad('<image> is only read at the top level of the document (not inside groups)'); return; }
+      if (images.length >= IMAGE_LIMITS.maxImages) { bad(`more than ${IMAGE_LIMITS.maxImages} images`); return; }
+      const im = parseImageElement(el, `i${images.length + 1}`, bad);
+      if (im) { imgChars += im.href.length; if (imgChars > IMAGE_LIMITS.maxTotalChars) bad('images are larger than the total limit'); else images.push(im); }
+      return;
+    }
+    if (name === 'text') {
+      if (depth !== 1) { bad('<text> is only read at the top level of the document (not inside groups)'); return; }
+      if (texts.length >= TEXT_LIMITS.maxTexts) { bad(`more than ${TEXT_LIMITS.maxTexts} text objects`); return; }
+      const t = parseTextElement(el, `t${texts.length + 1}`, bad);
+      if (t) texts.push(t);
+      return;
+    }
     if (!ALLOWED.has(name)) {
-      if (name === 'defs' && el.children.length === 0) return;
+      if (name === 'defs' && el.children.every((c) => isGradientElement(c) || stripNs(c.name) === 'clipPath' || (stripNs(c.name) === 'filter' && fxFilters.has(c.attrs.id ?? '')) || (stripNs(c.name) === 'marker' && arrowMarkers.has(c.attrs.id ?? '')))) return; // gradients are read up front
+      if (isGradientElement(el)) return;
       bad(`<${name}> is not supported`);
       return;
     }
@@ -239,13 +322,46 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     const tf = parseTransform(el.attrs.transform);
     if (tf === null) bad(`malformed transform "${el.attrs.transform}"`);
     const world = multiply(m, tf ?? IDENTITY);
-    const style = cascade(parent, d, bad);
+    const style = cascade(parent, d, bad, grads.has, (id) => arrowMarkers.get(id), (id) => fxFilters.get(id));
+    if ((style.arrowStart !== 'none' || style.arrowEnd !== 'none') && name === 'g') bad('marker-start/marker-end on a group are not supported; set them on the path');
+    if (name === 'g' && hasFx(style)) bad('filter on a group is not supported; set the effect on the shapes');
+    if (name === 'g' && style.blendMode !== 'normal') bad('mix-blend-mode on a group is not supported; set it on the shapes');
     const label = el.attrs['inkscape:label'] ?? el.attrs['data-name'] ?? el.attrs.id;
+    // clip-path: the element becomes a clipping group (editor group + mask shape); groups do not nest
+    let clipEl: XmlElement | undefined;
+    const clipAttr = el.attrs['clip-path'];
+    if (clipAttr !== undefined && clipAttr.trim() !== 'none') {
+      const mm = /^url\(\s*#([A-Za-z][\w:.-]*)\s*\)$/.exec(clipAttr.trim());
+      clipEl = mm ? clips.get(mm[1]) : undefined;
+      if (!clipEl) bad(`clip-path "${clipAttr.slice(0, 60)}" does not reference a supported <clipPath>`);
+      else if (group !== undefined || name === 'svg') { bad('clip-path inside a group (or on the root) is not supported: clipping groups do not nest'); clipEl = undefined; }
+    }
+    const clipGroup = clipEl ? `clip${++clipC}` : undefined;
+    const appendClip = (gid: string | undefined): void => {
+      if (!clipEl || gid === undefined) return;
+      const cm = parseTransform(clipEl.attrs.transform);
+      if (cm === null) { bad(`malformed transform "${clipEl.attrs.transform}" on <clipPath>`); return; }
+      if (clipEl.attrs.clipPathUnits !== undefined && clipEl.attrs.clipPathUnits !== 'userSpaceOnUse') { bad('clip-path with clipPathUnits="objectBoundingBox" is not supported'); return; }
+      if (clipEl.attrs['clip-path'] !== undefined) { bad('a <clipPath> that is itself clipped is not supported'); return; }
+      const kids = clipEl.children.filter((c) => !IGNORED_NO_RENDER.has(stripNs(c.name)));
+      if (kids.length !== 1 || !CLIP_SHAPES.has(stripNs(kids[0].name))) { bad('a <clipPath> must contain exactly one shape (path, rect, circle, ellipse, line, polyline or polygon)'); return; }
+      const before = paths.length;
+      walk(kids[0], { ...DEFAULT_STYLE, dashArray: [] }, multiply(world, cm ?? IDENTITY), undefined, depth + 1, false, 1, gid);
+      const made = paths.splice(before);
+      if (!made.length) { bad('the <clipPath> shape has no drawable contour'); return; }
+      const evenodd = kids[0].attrs['clip-rule'] === 'evenodd';
+      for (const p of made) { p.clip = true; p.style = { fill: 'none', stroke: 'none', ...(evenodd ? { fillRule: 'evenodd' as const } : {}) }; }
+      paths.push(...made);
+    };
     if (name === 'g' || name === 'svg') {
       if (name === 'svg' && depth > 0) { bad('nested <svg> is not supported'); return; }
-      const lay = layer ?? (depth === 1 && name === 'g' ? label : undefined);
+      const own = name === 'g' ? (groupIdOf(el.attrs['data-vs-group']) ?? clipGroup) : undefined;
+      const gname = own !== undefined ? el.attrs['data-vs-group-name']?.trim().slice(0, 80) : undefined;
+      if (own !== undefined && gname && !groupNames[own]) groupNames[own] = gname;
+      const lay = layer ?? (depth === 1 && name === 'g' && own === undefined ? label : undefined);
       const inner = { ...style, opacity: 1 };
-      for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity);
+      for (const c of el.children) walk(c, inner, world, lay, depth + 1, hidden, groupOpacity * style.opacity, own ?? group);
+      appendClip(own);
       return;
     }
     let segments: Segment[] | null = null;
@@ -283,9 +399,20 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
     for (const k of Object.keys(DEFAULT_STYLE) as (keyof Style)[]) {
       if (JSON.stringify(full[k]) !== JSON.stringify(DEFAULT_STYLE[k])) (st as Record<string, unknown>)[k] = full[k];
     }
+    if (hasFx(style)) { // effect sizes are in the element's user space: bake the transform scale like the stroke width
+      for (const k of FX_KEYS) if (style[k] !== undefined) (st as Record<string, unknown>)[k] = typeof style[k] === 'number' && k !== 'shadowOpacity' ? Math.round((style[k] as number) * scale * 1000) / 1000 : style[k];
+    }
     if (groupOpacity !== 1) info('group opacity was multiplied into each child path (overlapping children may differ)');
     const compound = contours.length > 1 ? `c${++compoundC}` : undefined;
+    for (const key of ['fill', 'stroke'] as const) {
+      const v = st[key];
+      if (typeof v === 'string' && v.startsWith('url(#')) {
+        const ref = v.slice(5, -1), resolved = grads.resolve(ref, world, nodesBox(contours));
+        if (resolved === null) st[key] = 'none'; else st[key] = `url(#${resolved})`;
+      }
+    }
     const baseName = label;
+    const locked = el.attrs['data-vs-locked'] === '1';
     for (const c of contours) {
       for (const n of c.nodes) {
         // a handle sitting on its node is a retracted handle: represent it as absent
@@ -297,16 +424,37 @@ export function importSvg(source: string, opts: ImportOptions = {}): ImportResul
       if (Object.keys(st).length) p.style = { ...st, dashArray: st.dashArray ? [...st.dashArray] : undefined } as Partial<Style>;
       if (p.style && p.style.dashArray === undefined) delete p.style.dashArray;
       if (layer !== undefined) p.layer = layer;
+      if (clipGroup !== undefined) p.group = clipGroup; else if (group !== undefined) p.group = group;
       if (compound) p.compound = compound;
       if (baseName !== undefined) p.name = baseName;
       if (hidden) p.hidden = true;
+      if (locked) p.locked = true;
       paths.push(p);
     }
+    appendClip(clipGroup);
   }
   walk(root, { ...DEFAULT_STYLE, dashArray: [] }, base, undefined, 0, false, 1);
   if (strict && diags.some((x) => x.severity === 'error')) {
     throw new SvgImportError(`Unsupported SVG: ${diags.filter((x) => x.severity === 'error').map((x) => x.message).join('; ')}`, diags);
   }
   const doc: VectorDocument = { width: r3(width), height: r3(height), paths };
+  if (grads.gradients.length) doc.gradients = grads.gradients;
+  const liveGroups = new Set(paths.map((p) => p.group));
+  const keptNames = Object.entries(groupNames).filter(([k]) => liveGroups.has(k));
+  if (keptNames.length) doc.groupNames = Object.fromEntries(keptNames);
+  const gAttr = stripNs(root.name) === 'svg' ? root.attrs['data-vs-guides'] : undefined;
+  if (gAttr !== undefined) {
+    const g = parseGuides(gAttr);
+    if (g === null) info('malformed data-vs-guides ignored');
+    else if (g.x.length + g.y.length) doc.guides = g;
+  }
+  if (texts.length) doc.texts = texts;
+  if (images.length) doc.images = images;
+  const sAttr = stripNs(root.name) === 'svg' ? root.attrs['data-vs-swatches'] : undefined;
+  if (sAttr !== undefined) {
+    const sw = parseSwatches(sAttr);
+    if (sw === null) info('malformed data-vs-swatches ignored');
+    else if (sw.length) doc.swatches = sw;
+  }
   return { doc, warnings: diags.filter((x) => x.severity === 'warning') };
 }

@@ -1,0 +1,23 @@
+name: Extension asset pipeline
+on:
+  pull_request:
+    paths: [phase1/extension-assets/**, phase1/src/lib/extensions/assets/**, .github/workflows/extension-assets.yml]
+  push:
+    branches: [ext/asset-pipeline]
+    paths: [phase1/extension-assets/**, phase1/src/lib/extensions/assets/**, .github/workflows/extension-assets.yml]
+permissions:
+  contents: read
+jobs:
+  asset-pipeline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - run: cargo test --locked --manifest-path phase1/extension-assets/Cargo.toml
+      - name: Isolated TypeScript tools (no app WASM prerequisite)
+        run: npm install --prefix /tmp/assets-tools tsx@4.21.0 typescript@7.0.2 @types/node@24.0.0
+      - run: /tmp/assets-tools/node_modules/.bin/tsx --test phase1/src/lib/extensions/assets/assets.test.ts
+      - run: /tmp/assets-tools/node_modules/.bin/tsc --noEmit --strict --skipLibCheck --target ES2022 --moduleResolution bundler --module ESNext --types node --typeRoots /tmp/assets-tools/node_modules/@types phase1/src/lib/extensions/assets/*.ts

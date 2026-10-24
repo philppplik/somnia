@@ -1,0 +1,15 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceDocument,addNode,serializeInterfaceDocument,parseInterfaceDocument} from './model';
+import {createInterfaceSession} from './session';
+import {addVariable,resolveInterfaceValues} from './tokens';
+import {DEFAULT_LAYOUT} from './schema';
+test('a padding token binding resolves uniform padding and follows mode values',()=>{const d=createInterfaceDocument();addNode(d,d.pages[0].id,'frame');const f=d.nodes[0];f.layout={...DEFAULT_LAYOUT,direction:'row'};const id=addVariable(d,'number','Space');d.variables![0].modeValues={dark:40};f.bindings={padding:id};
+ assert.deepEqual(resolveInterfaceValues(d).document.nodes[0].layout!.padding,[16,16,16,16]);
+ f.variableMode='dark';assert.deepEqual(resolveInterfaceValues(d).document.nodes[0].layout!.padding,[40,40,40,40]);
+ assert.deepEqual(resolveInterfaceValues(d,'light').document.nodes[0].layout!.padding,[16,16,16,16]);});
+test('padding bindings survive the snapshot roundtrip and need a layout',()=>{const d=createInterfaceDocument();addNode(d,d.pages[0].id,'frame');const f=d.nodes[0];f.layout={...DEFAULT_LAYOUT,direction:'row'};const id=addVariable(d,'number','Space');f.bindings={padding:id};
+ const copy=parseInterfaceDocument(serializeInterfaceDocument(d));assert.equal(copy.nodes[0].bindings!.padding,id);
+ delete f.layout;assert.throws(()=>parseInterfaceDocument(serializeInterfaceDocument(d)),/Invalid variable binding/);});
+test('binding and unbinding padding is one undo per edit',()=>{const s=createInterfaceSession();s.start();s.transact(d=>{addNode(d,d.pages[0].id,'frame');d.nodes[0].layout={...DEFAULT_LAYOUT,direction:'row'};});const f=s.get().document!.nodes[0].id;let varId='';s.transact(d=>{varId=addVariable(d,'number','Space');});
+ s.transact(d=>{d.nodes[0].bindings={padding:varId};});assert.equal(resolveInterfaceValues(s.get().document!).document.nodes[0].layout!.padding[0],16);
+ s.undo();assert.equal(s.get().document!.nodes[0].bindings,undefined);s.redo();assert.equal(s.get().document!.nodes[0].bindings!.padding,varId);});

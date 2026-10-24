@@ -1,8 +1,9 @@
+import {panelFieldCompact as field} from '../shell/panelStyles';
 import type {SoundParam} from '../../lib/sound/protocol';
 import {formatParam,fromNorm,isDefault,toNorm} from '../../lib/sound/params';
 import {useT} from '../../lib/useT';
 import {Button} from '../ui/button';
-const field='h-7 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs text-ink select-text';
+
 /** One control per plugin parameter. Values equal to the default stay out of the recipe. */
 export function PluginParams({params,values,onChange,onReset}:{params:readonly SoundParam[];values:Record<string,number>;onChange:(id:string,value:number|null)=>void;onReset:()=>void}){
  const {t}=useT();

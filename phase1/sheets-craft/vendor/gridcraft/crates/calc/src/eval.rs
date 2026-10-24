@@ -60,6 +60,16 @@ pub trait Host {
     }
 }
 
+/// Host callback for GETPIVOTDATA: (workbook, sheet, a cell of the PivotTable, data field, (field, item) pairs).
+/// The engine registers it (the calculation engine itself knows nothing about how PivotTables aggregate).
+pub type PivotDataHook = fn(&Workbook, usize, CellRef, &str, &[(String, String)]) -> Value;
+static PIVOT_DATA_HOOK: std::sync::OnceLock<PivotDataHook> = std::sync::OnceLock::new();
+
+/// Registers the GETPIVOTDATA callback (the first registration wins; later ones are ignored).
+pub fn set_pivot_data_hook(f: PivotDataHook) {
+    let _ = PIVOT_DATA_HOOK.set(f);
+}
+
 pub struct Evaluator<'h> {
     pub host: &'h mut dyn Host,
     pub sheet: usize,
@@ -628,6 +638,33 @@ impl<'h> Evaluator<'h> {
                     }
                     _ => err(CellError::NA),
                 }
+            }
+            "GETPIVOTDATA" => {
+                if args.len() < 2 || args.len() % 2 != 0 || args.len() > 2 + 2 * 126 {
+                    return err(CellError::Value);
+                }
+                let field = match self.arg_val(args, 0).unwrap_or_default().scalar().to_text() {
+                    Ok(t) => t,
+                    Err(e) => return err(e),
+                };
+                let area = match self.eval(&args[1]) {
+                    Ev::R(a) => a,
+                    Ev::V(Value::Error(e)) => return err(e),
+                    _ => return err(CellError::Ref),
+                };
+                let Some(first) = area.first() else { return err(CellError::Ref) };
+                let (sheet, at) = (first.sheet, first.range.start);
+                let mut pairs: Vec<(String, String)> = Vec::new();
+                for i in (2..args.len()).step_by(2) {
+                    let f = self.arg_val(args, i).unwrap_or_default().scalar();
+                    let it = self.arg_val(args, i + 1).unwrap_or_default().scalar();
+                    match (f.to_text(), it.to_text()) {
+                        (Ok(f), Ok(it)) => pairs.push((f, it)),
+                        (Err(e), _) | (_, Err(e)) => return err(e),
+                    }
+                }
+                let Some(hook) = PIVOT_DATA_HOOK.get() else { return err(CellError::Ref) };
+                Ev::V(hook(self.host.workbook(), sheet, at, &field, &pairs))
             }
             "OFFSET" => self.offset(args),
             "INDIRECT" => self.indirect(args),
@@ -1358,6 +1395,7 @@ fn is_special(n: &str) -> bool {
             | "ISREF"
             | "ISFORMULA"
             | "FORMULATEXT"
+            | "GETPIVOTDATA"
             | "SHEET"
             | "SHEETS"
             | "OFFSET"
@@ -1395,6 +1433,7 @@ pub const SPECIAL_FUNCTIONS: &[&str] = &[
     "ISREF",
     "ISFORMULA",
     "FORMULATEXT",
+    "GETPIVOTDATA",
     "SHEET",
     "SHEETS",
     "OFFSET",

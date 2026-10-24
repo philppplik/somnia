@@ -1,0 +1,257 @@
+# Studio lifecycle
+
+How Somnia manages studio resources: lifecycle states, checkpoint-based
+suspension, resource budgets, pressure handling and local telemetry.
+Binding concept: [performance-resource-architecture](concepts/performance-resource-architecture.md).
+This page covers the shipped core (branch `perf/lifecycle-core`): coordinator,
+scheduler, budgets, telemetry, settings and the Slides pilot adapter.
+
+## Status on the beta.5 line
+
+The coordinator, budgets, checkpoint store (with IndexedDB spill), memory probe, telemetry and the Settings > Advanced > Performance section are live. Native memory sampling uses the `lifecycle_memory_sample` command (`src-tauri/src/lifecycle_commands.rs`, main window only, read-only).
+
+Adapters registered on this line: **Documents** and **Sheets** (session-safety recovery store, `lib/sessionSafety/lifecycleAdapter.ts`, connected by `lib/sessionSafety/lifecycleWiring.ts`) and **Slides, Photos, Sound, Video, Vector and Design** (see "Resident studio adapters" below). Every adapter registers its factory with `registerLifecycleAdapter` when its session module loads, and the studio manifest resolves it lazily through `lifecycle: () => getRegisteredLifecycleAdapter('<id>')`. `main.tsx` starts the lifecycle manager first, then calls `connectSessionSafetyToLifecycle()`. The Performance section's "clear" button also clears the recovery copies of unsaved Documents and Sheets edits (after a confirmation that names the document count) and the studio checkpoints.
+
+The job scheduler and lease bridge (`lib/jobs`) are now installed by the lifecycle driver, including pressure and live profile budgets. Adapters list their lease resource ids (`studio:<id>`, `photos.engine`, `video.engine`, `video.export`, `sound.playback:<name>`, `<studio>:session:<name>`); studio export/playback/AI callers are not migrated to leases yet, so that work still runs outside admission control.
+
+## Resident studio adapters
+
+Shared helpers live in `lib/lifecycle/recipeKit.ts`: `sealSnapshot` / `verifySnapshot` (checksum over studio id, schema version, revision and a canonical payload serialization that includes typed arrays), `fingerprintOf` (a checksum of the media URL, so no blob URL is stored in a checkpoint), `RecipeStash`, and `createRecipeAdapter` for the media studios. Every `resume` verifies the checksum, studio id and schema version first and refuses a corrupted checkpoint (the manager then keeps it for retry).
+
+| Studio | Module | Checkpoint | Suspend releases | Pins | Unsaved |
+| --- | --- | --- | --- | --- | --- |
+| Slides | `lib/slides/session.ts` | edited package bytes plus undo/redo for dirty decks, viewed slide for clean ones | WASM worker, rendered slide, thumbnails, present cache | presenting, busy, live co-editing session | dirty decks, also while suspended |
+| Photos | `lib/photos/studioSession.ts` | develop settings, undo/redo, saved signature (recipe only) | sessions, frames, source bytes, engine | render in flight, crop in progress, edit gesture | any edited recipe |
+| Sound | `lib/sound/session.ts` | effect settings and pending selection (recipe only) | sessions, rendered WAVs, source bytes, engine | decode or render in flight, scheduled render | any non-neutral recipe |
+| Video | `lib/video/session.ts` | timeline, audio and overlay tracks, selection, undo/redo, format, export options, export range (recipe only) | sessions, source bytes, filmstrip worker, engine | export running, probing | edited or dirty project |
+| Vector | `lib/vectorstudio/session.ts` | document, selection, tool, view, last 50 undo and redo steps | the in-memory session | none (pointer transactions live in the canvas) | dirty document, also while suspended |
+| Design | `lib/design/session.ts` | document, selection, tool, last 50 undo and redo steps | the in-memory session | none | dirty document, also while suspended |
+
+Behavior worth knowing:
+
+- Media studios (Photos, Sound, Video) apply a restored recipe when the same file re-opens: the stash is keyed by document name plus source fingerprint, so a different file re-using the name never inherits an edit. Untouched sessions are not checkpointed; re-opening them is lossless.
+- Slides, Vector and Design hold the only copy of unsaved work, so the checkpoint carries it (bounded history for Vector and Design). While such a document lives only in a checkpoint it still counts as unsaved: the unload warning, the Slides dirty indicators and `hasUnsavedChanges()` keep reporting it, and eviction is refused. Any state change in the studio clears that flag.
+- Slides decks that take part in a live co-editing session pin the studio, because the shared model owns their state. A suspended Slides deck is re-registered synchronously on resume and its engine re-opened from the checkpointed bytes; a deck whose file was closed or replaced meanwhile is dropped.
+- Not captured: Sound's AI-settings undo entries (they reference rendered versions), Vector and Design history beyond 50 steps, and anything that is not structured-clone safe.
+- Tests: `lib/lifecycle/recipeKit.test.ts` and one `lifecycleAdapter.test.ts` per studio.
+
+## States
+
+| State | Meaning |
+| --- | --- |
+| active | Visible studio. Input, render and foreground commands allowed. |
+| warm | Recently used studio. Session and resources retained for fast return; no continuous work. |
+| suspended | Verified checkpoint kept; view-owned workers, timers, decoders and caches released. |
+| evicted | No runtime data. The durable source or recovery checkpoint remains. |
+
+A studio the user never opened is cold: it holds no slot anywhere.
+
+## Transition policy
+
+Implemented by `StudioLifecycleManager` (`phase1/src/lib/lifecycle/manager.ts`):
+
+- One active view, at most one warm studio (none in the low-memory profile).
+- Warm grace: 30 seconds, then suspension. Churned studios (three resumes
+  inside 60 seconds) get a longer grace so rebuild cycles settle.
+- The warm cap suspends older warm studios immediately; the grace applies
+  only to the most recent one.
+- Pressure (tracked bytes at 80% of the envelope) bypasses the grace and
+  suspends warm studios. Exit below 65% held for ten seconds. At 95%,
+  optional admission is blocked (`admissionAllowed()`).
+- Suspension runs the race-safe sequence from the concept: generation bump,
+  pin check, verified checkpoint, revision recheck, resource release.
+  Reactivation during the sequence invalidates it.
+- Resume re-registers sessions synchronously, so the host mount path never
+  rebuilds a dirty session from stale source bytes.
+
+Suspension blockers, checked before every checkpoint:
+
+- Adapter pin reasons (IME composition, pointer transactions, recording,
+  playback, presentation, non-cancellable writes). Pinned studios stay warm
+  and are re-checked after 30 seconds.
+- Active job leases. Lease providers register with
+  `manager.registerJobLeaseProvider(hasLease)`. The job scheduler
+  (`src/lib/jobs/scheduler.ts`) wires
+  `hasLease(resourceId)` and `needsResource(resourceId)` (queued work counts)
+  here. Resource id conventions: `studio:<id>` plus studio-owned ids such as
+  `slides:session:<name>`; the scheduler's own ids (`video.engine`,
+  `video.export`, `photos.engine`, `agent.turn`, `sound.playback:<name>`) are
+  checked through the same providers.
+- A failed or refused checkpoint pins the studio warm, reports a problem and
+  never drops data.
+
+Eviction is refused while a studio holds the sole recoverable copy of
+unsaved edits (`hasUnsavedChanges()`).
+
+## Registry contract
+
+`StudioDef` gains one optional field; manifests compile unchanged without it:
+
+```ts
+lifecycle?: () => StudioLifecycleAdapter;
+```
+
+The adapter hooks (`phase1/src/lib/lifecycle/types.ts`) are all optional:
+`estimateBytes`, `resourceIds`, `pinReasons`, `hasUnsavedChanges`,
+`snapshot`, `suspend`, `resume`, `dispose`. Snapshots are versioned and
+checksummed (`lifecycle/checksum.ts`) and never contain secrets, Blob URLs
+or worker handles. Studios without hooks stay fully resident.
+
+## Pilot: Slides
+
+The Slides studio (`lib/studios/slides.ts`) registers the first adapter,
+built in `lib/slides/session.ts`:
+
+- Authoritative recovery: current edited package bytes plus undo/redo
+  history, per open deck.
+- Suspension releases the WASM worker, rendered slide, thumbnails and the
+  present cache; dirty decks suspend safely because the checkpoint holds the
+  edited bytes and history (checksum-verified before release).
+- Resume recreates the session entry synchronously, reopens the engine from
+  the checkpointed bytes and re-renders the current slide.
+- Presentation mode and in-flight operations pin the studio.
+
+Checkpoints live in the `CheckpointStore` (64 MiB memory budget, the
+concept's suspended bucket). When memory cannot fit a checkpoint, the least
+recently used entries spill to the durable backend (`spill.ts` seam,
+`idbSpill.ts` IndexedDB implementation: local, private, 7-day retention
+pruning, structured-clone payloads only). A checkpoint larger than the whole
+budget goes straight to the spill; refusal is the last resort, so unsaved
+state is never discarded. Resume hydrates spilled checkpoints before
+restore. Settings > Advanced > Performance has a Clear-checkpoints control.
+
+## Media studios: recipe-only checkpoints
+
+Photos, Sound and Video snapshot **recipes, never source bytes** (perf review
+decision 2026-10-13): their sessions are module-global and survive view
+unmounts, but the authoritative state is small - develop settings with undo
+history (Photos), effect settings plus pending selection (Sound), the
+timeline with selection and output format (Video). Source bytes stay with
+the media item and are fetched again on re-open.
+
+Each captured session carries a source fingerprint (the media item URL at
+snapshot time). Resuming only stashes the recipe; it is applied when the
+same file re-opens and the fingerprint still matches. A different file
+re-using the name does not inherit the old edit. Recipes stashed but not
+yet re-opened merge into the next checkpoint, so nothing is lost across
+repeated suspends. What this means in the UI, honestly: a suspended media
+studio re-opens its documents empty and each document's edits reappear when
+that document is opened again - the preview, decode and probe work runs
+fresh.
+
+Two consequences of that design, both deliberate (product decision
+2026-10-13):
+
+- Adapters stash the recipe into their pending maps **at snapshot time**,
+  not at resume time. The code studio renders a `MediaViewer` for the
+  active media item, and its workspace effect re-opens the file as soon as
+  the studio suspends - before `resume()` would have stashed anything.
+  Stashing at snapshot keeps trim, effect and timeline edits intact across
+  that preview-driven re-open instead of resetting them to neutral.
+- That same preview pane means a suspended media studio does not stay
+  down while its media item is still active: the user is looking at the
+  document, so the session is rebuilt and the recipe reapplied. The memory
+  benefit of suspension applies to media studios whose items are not on
+  screen. This is kept on purpose; the alternative (a static poster in
+  place of the live preview) was rejected.
+
+Suspension is refused while work is in flight that no job lease covers:
+debounced renders and gestures (Photos, Sound) and probes or exports
+(Video). Engine leases (photos.engine, video.engine/video.export,
+sound.playback) pin the studio through the job lease bridge independently.
+Sound playback entries are closed through a suspend hook registered by the
+transport, and suspending disposes the DSP/render/decode engines, which is
+where the memory actually is.
+
+## Budgets and profiles
+
+`lifecycle/budgets.ts` carries the concept's bucket table. Normal profile:
+1536 MiB envelope (buckets 1280 MiB plus 256 MiB estimation margin), one
+warm slot, two heavy jobs. Low-memory profile: 768 MiB, no warm slot, one
+heavy job. High profile: candidate expansion, one warm slot. Automatic
+profile selection uses `navigator.deviceMemory` as a hint and falls back to
+normal; these are soft tracked-resource allowances, not OS RSS caps.
+
+## Memory probing
+
+`lifecycle/probe.ts` samples a real memory signal alongside the tracked-byte
+estimate. On desktop it invokes the native command `lifecycle_memory_sample`
+(`src-tauri/src/lifecycle_commands.rs`), which returns
+`{ usedBytes, totalBytes, availableBytes, processRssBytes,
+processPeakRssBytes }` read from the OS: Linux parses `/proc/self/status`
+and `/proc/meminfo`, macOS uses `proc_pid_rusage` plus `host_statistics64`
+and `sysctl`, Windows uses `GetProcessMemoryInfo` and
+`GlobalMemoryStatusEx` - libc and the already-pinned windows-sys only, no
+new dependency. The used/total pair is the system-level ratio; the process
+fields ride along for telemetry. Where the command is missing or fails the
+invoke fails once and is not retried for the session. On web the probe
+falls back to Chrome's `performance.memory` (`usedJSHeapSize` against
+`jsHeapSizeLimit`). Browsers without either source simply contribute no
+signal.
+
+The manager merges the external ratio into the same pressure thresholds
+(enter 80%, exit below 65% held for ten seconds, critical 95%) by taking
+the maximum of estimate and probe: either signal can raise pressure, and
+both must subside before pressure exits. Pressure events carry the
+external ratio in telemetry so an OS-driven suspension is distinguishable
+from an estimate-driven one.
+
+## Settings
+
+Settings > Advanced > Performance:
+
+- "Suspend inactive studios to free memory" (default on). Turning it off
+  restores every suspended studio from its checkpoint, then keeps all
+  studios resident.
+- Resource profile: Automatic / Low memory / Standard / High memory.
+
+Stored in localStorage key `somnia.lifecycle.v1`, read live on every
+transition, so changes apply without restart.
+
+## Telemetry
+
+`LifecycleTelemetry` is a bounded local ring buffer (500 events) with
+monotonic marks and transition, pin, churn, pressure and admission events.
+It records studio ids, counters and durations only: no paths, document
+names, prompts or payload content. `exportDiagnostics()` produces an
+explicit JSON export showing exactly what would be shared. Remote reporting
+is not wired and would need a separate opt-in.
+
+## Wiring
+
+`main.tsx` installs the driver (`lifecycle/integration.ts`): it subscribes
+to the store's `activeStudio`, resolves adapters from manifests and reports
+problems through the app log. Pressure-level changes are published through
+the wiring's `onPressure(level)` callback, matching the job scheduler's
+`setPressure('normal' | 'pressure' | 'critical')` contract. The driver also applies pressure directly to the scheduler, installs its lease provider before activation, and updates the jobs byte bucket and background concurrency from the selected profile. No `main.tsx` callback is required. See [job-scheduler](job-scheduler.md) for ownership, admission and current migration limits.
+`getStudioLifecycle()` exposes the installed manager for the lease-provider
+registration.
+
+## Extension lifecycle
+
+Extension runtimes (`lib/extensions/runtime.ts`) support protocol v2
+suspend/resume (concept section 8):
+
+- Extensions register optional `somnia.lifecycle.onSuspend` /
+  `somnia.lifecycle.onResume` handlers in the worker. `onSuspend` returns
+  serializable state; the host holds it and terminates the worker.
+- Suspension is refused while a command runs or the worker speaks an older
+  protocol: legacy extensions stay resident (pinned). A hung suspend kills
+  the worker with a diagnosis, like any other timeout.
+- Resume recreates the sandboxed worker from the same manifest code with the
+  same CSP and checked API - no new authority - re-activates it, then hands
+  the state back through `onResume`.
+- Running a command auto-resumes a suspended extension (activation by
+  command). Under memory pressure the shell suspends all idle extension
+  runtimes (`suspendIdleExtensions`, wired to the lifecycle pressure signal).
+
+## Honest limits
+
+- Verified with `tsx --test` unit tests (43) and `tsc --noEmit`. The Slides
+  adapter logic is typechecked; its end-to-end suspend/resume cycle needs an
+  E2E run in the web harness or the desktop build, not done here.
+- `Worker.terminate()` and WASM linear-memory release are best-effort:
+  freeing engine objects does not promise immediate RSS reduction.
+- Native memory/pressure probing and the per-studio adapters beyond Slides
+  are later phases of the concept. The IndexedDB spill path is typechecked
+  and covered with a fake backend; it has not run in a real browser here.

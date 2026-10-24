@@ -1,0 +1,2 @@
+/** Undefined means all. Explicit empty means no candidates, never silently all. */
+export function localSearchCandidates(indexed:readonly {id:string}[],focus?:string|readonly string[]):readonly string[]{const ids=focus===undefined?indexed.map(s=>s.id):typeof focus==='string'?[focus]:[...focus];if(ids.length>32||new Set(ids).size!==ids.length||ids.some(id=>typeof id!=='string'||!indexed.some(s=>s.id===id)))throw Error('Source focus outside indexed scope');return Object.freeze(ids);}

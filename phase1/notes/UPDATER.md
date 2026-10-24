@@ -5,7 +5,7 @@ Status: wired, not yet proven. It needs a release built with the signing secrets
 How it works
 - Tauri updater plugin checks `https://github.com/philppplik/somnia/releases/latest/download/latest.json`. The file lists signed installers per platform (Windows NSIS, Linux AppImage). The app verifies every download against the public key in `tauri.conf.json` before installing.
 - Status bar pill "New version X - Update now": in the desktop app it downloads, installs and restarts. On any failure, or when a release has no signed update, it opens the release download page instead.
-- The pill only shows for stable GitHub releases that are newer than this build. `releases/latest` ignores pre-releases, so pre-releases never auto-install.
+- The pill shows releases newer than this build that the selected channel allows (Settings > About). Stable builds only see stable releases; opting into beta or alpha adds prereleases, see Channels. Prerelease pills currently open the download page instead of installing in-app (UpdatePill gate); `installSignedUpdate` itself already handles all channels.
 
 Keys
 - Key pair made with `tauri signer generate`. The public key is in the config. The private key and its password are only in GitHub Actions secrets `TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` and in the owner's vault (backup). They are never committed or sent in chat. If they are lost, existing installs cannot receive updates and a new key plus a manual reinstall is needed.
@@ -37,3 +37,18 @@ CI reads TAURI_SIGNING_PRIVATE_KEY and TAURI_SIGNING_PRIVATE_KEY_PASSWORD (repos
 
 ### Release-script contract
 Asset names must match the URLs `make-latest-json.py` writes: `Somnia-<tag>-x64-setup.exe`, `Somnia-<tag>-amd64.AppImage`, `Somnia-<tag>-macos-<aarch64|x86_64>.app.tar.gz`. The release script (outside this repo) must upload the macOS `.app.tar.gz` under that name. Set `SOMNIA_MACOS_ARCH=x86_64` for Intel builds.
+
+## Channels
+Status: client and release side ported to the beta.5 line (`update_channel.rs`, `updateChannel.ts`, `selfUpdate.ts`, `make-latest-json.py --channels-dir`). Not yet run against a real release; the first beta.6 cut produces the `updater-channels` manifests.
+
+| Channel | Manifest URL | Receives |
+|---|---|---|
+| stable | `releases/latest/download/latest.json` | stable releases |
+| beta | `releases/download/updater-channels/latest-beta.json` | beta, rc and stable releases |
+| alpha | `releases/download/updater-channels/latest-alpha.json` | every release |
+
+- Why a fixed release: `releases/latest` skips pre-releases, and the updater endpoint must be a stable URL. `updater-channels` is a single pre-release that only holds the two rolling manifests; its assets are replaced on every release.
+- Publishing (planned, needs the release-tooling port): `make-latest-json.py <tag> ... --channels-dir DIR` writes the manifests this tag must refresh (`channels_for`). The release script uploads them with `gh release upload updater-channels DIR/* --clobber`. A manifest only ever lists the newest release at or above its channel's stability, so nothing needs deleting.
+- Channel of a tag: no prerelease id is stable, `alpha|nightly|canary|dev` is alpha, any other id (beta, rc) is beta. The same rule exists in `updatePrefs.ts`, `updateChannel.ts` and `make-latest-json.py`; tests keep them aligned.
+- Why custom commands: the stock updater compares against the native version, which `sync-version.mjs` strips to numeric x.y.z (MSI needs that), so `12.2.0-beta.3` would never beat `12.2.0-beta.2`. `check_channel_update` returns the offered version, `src/lib/updateChannel.ts` decides with full SemVer (`shouldInstall`: strictly newer, channel allowed, numeric prerelease ids, final beats its prerelease), then `install_channel_update` installs exactly that version after re-checking the manifest. The signature is still verified against the public key in `tauri.conf.json`.
+- Macs: not notarized, same limits as above.

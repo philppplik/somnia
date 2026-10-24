@@ -1,0 +1,8 @@
+# Interface P57 Delta - Zoom-Navigation (Shift+1/2/0)
+
+- Lib: interfaceZoomFit(bounds, viewport, padding=48, fixedZoom?) in editing.ts - leere Bounds gefiltert, min/max-Union ueber alle Bounds, Zoom geclamped 0.05..4 (3 Nachkommastellen), Scroll zentriert die Ziel-Bounds im Scroll-Container (beruecksichtigt dessen 32px-Padding, clamp >= 0), leere Bounds liefern {zoom: fixedZoom ?? 1, 0, 0}.
+- Canvas: Shift+1 zoomt auf den gesamten Seiteninhalt (alle sichtbaren Root-Nodes der Seite), Shift+2 auf die Auswahl (selectionRoots, Fallback gesamte Seite), Shift+0 auf 100% (Bounds wie Shift+2); Erkennung per e.code Digit0/1/2 (layoutunabhaengig, Shift+Ziffer ist tastaturabhaengig), nur ohne Ctrl/Meta/Alt; Zoom-State wird gesetzt und der Scroll-Container per requestAnimationFrame auf die berechneten Offsets gelegt; Guards gegen Preview/Inputs/Buttons bestehen weiter.
+- Zoom-Select: freiwertig - weicht der aktuelle Zoom von den Presets (.25..2) ab, erscheint er als eigene Option (eine Nachkommastelle), aria-label unveraendert.
+- Cheatsheet: drei neue Eintraege (Zoom auf Inhalt/Auswahl/100%), i18n x5 (en/de/es/fr/pt-BR).
+- Tests: 4 Unit-Tests in p57Zoom.test.ts (Fit-Mathe/Zentrierung beider Achsen, Clamp 0.05..4 + negative Koordinaten, fixedZoom=1 + leere Bounds + Multi-Node-Union, Cheatsheet-Combos + i18n in allen 5 Locales); p53Shortcuts-Coverage um Shift+1/2/0 ergaenzt; CI-Spec `Interface P57 zoom shortcuts fit content, zoom selection and reset to 100%` (Shift+1 aendert den Zoom-Wert im gueltigen Bereich, Shift+2 haelt ihn bei Selektion, Shift+0 -> 1).
+- Kein neues Third-Party-Dependency, kein FigCraft-Import, keine tokens.css/global.css-Aenderung, DS-Budgets unveraendert (kein neues Inline-Style/raw control im TSX).

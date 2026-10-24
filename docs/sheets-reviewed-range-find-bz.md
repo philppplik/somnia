@@ -1,0 +1,9 @@
+# BZ: find within reviewed range
+
+Sheets live selected-range review includes literal find within its bounded frozen displayed-text rows. Search matches text substrings or exact cell address (address always case-insensitive); case option controls displayed text. Empty query shows all reviewed cells, including blanks. Matching-cell count explicitly names reviewed scope, never claims whole workbook search. No navigation, new worker read, raw formula extraction, AI, edits, save/copy/export or persistence.
+
+Child scope is the accepted live-read review: selection/source/mutation drift or discard removes it; query is ephemeral. Existing live-review guards and cancellation unchanged. Limits remain 100 cells, 4096 bytes per text/16384 total; query max256. Overbounds rejected rather than truncated. JS lowercase is not locale/NFC equivalence. Literal formula-looking display text is data, not formula execution. Results are inert plain text.
+
+Validation: 13 find/live-review/cache/panel unit tests, 1 new light/dark browser test and 2 prior live-review browser regression tests pass. Text/address/case/no-match, blank scope, hard limits, script inertness, no second read and drift removal checked. 390px light/dark pixels inspected: boundary/count/search/results readable, wrapped correctly. DS/Layers/Commands/UI-Commands pass, inherited Layers missing-transpiler/87 ignored/4 stale caveat. tsc only inherited missing generated slides WASM module. No deps/budgets changed, $0; synthetic fixture data only, native/Rust/WASM/full desktop E2E CI-only.
+
+Roadmap-Delta: Sheets fresh reviewed selection -> range-local find/text-address matching/counts. Not whole-workbook find; live engine integration still CI/manual. Sheets inference remains unwired, summary unchanged, local semantic Search paused pending integration/CI.

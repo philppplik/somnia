@@ -15,6 +15,8 @@ test('browse: cards, badges, tags and button states',async({page})=>{
  await expect(card(page,'Palette Lint').getByRole('button',{name:'Verified publisher'})).toBeVisible();
  await expect(card(page,'Somnia'.length?'HTML Mail Kit':'').getByRole('button',{name:'Verified publisher'})).toHaveCount(0);
  await expect(card(page,'HTML Mail Kit').getByText('Official',{exact:true})).toBeVisible();
+ await expect(card(page,'HTML Mail Kit').getByRole('button',{name:'Reviewed by Somnia extension review team'})).toBeVisible();
+ await expect(card(page,'Palette Lint').getByRole('button',{name:/Reviewed by/})).toHaveCount(0);
  await expect(card(page,'HTML Mail Kit').getByRole('button',{name:'Installed'})).toBeVisible();
  await expect(card(page,'FTP Deploy').getByText('1 network host')).toBeVisible();
  await expect(card(page,'Link Checker').getByText('Many hosts')).toBeVisible();
@@ -22,7 +24,7 @@ test('browse: cards, badges, tags and button states',async({page})=>{
  await expect(card(page,'CSS Tidy').getByRole('button',{name:'Update'})).toBeVisible();
  await expect(card(page,'Quick Fonts').getByRole('button',{name:'Blocked'})).toBeDisabled();
  await expect(page.getByRole('heading',{name:'Hidden Tool'})).toHaveCount(0);
- await expect(page.getByText('Listings are unreviewed unless the publisher is verified. Listing is not a guarantee of safety.')).toBeVisible();
+ await expect(page.getByText('Listings are unreviewed unless marked reviewed or from a verified publisher. Listing is not a guarantee of safety.')).toBeVisible();
  // verified mark must not be colour only: it has a name, and no score or stars exist anywhere
  await expect(page.locator('.ext-popup')).not.toContainText(/stars?|rating|score|%/i);
 });
@@ -179,6 +181,7 @@ const appEntry=(version='1.0.0',permissions:string[]=[])=>({
  ...appManifest(version,permissions),author:'E2E Publisher',description:'An inert catalog package.',category:'Tools',
  repo:'https://github.com/e2e/store',download:'https://raw.githubusercontent.com/e2e/store/main/package.zip',
  sha256:createHash('sha256').update(appBytes(version,permissions)).digest('hex'),
+ reviewed:true,reviewedBy:'E2E Review',
 });
 async function openAppStore(page:Page){
  await page.goto('/',{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:/Commands/}).waitFor({state:'visible'});await page.keyboard.press('Control+,');
@@ -210,10 +213,12 @@ appTest.describe('real app: catalog store adapter',()=>{
   await expect(page.getByRole('tab',{name:'Access',exact:true})).toHaveAttribute('aria-selected','true');
   const evidence=page.getByRole('region',{name:'Evidence for v1.0.0'});
   await expect(evidence.getByText('Not run',{exact:true})).toHaveCount(5);
-  // The shipping index does not carry publisher verification or review evidence.
+  // The shipping index carries no publisher verification; the maintainer review flag renders as its own mark.
   await expect(page.getByRole('button',{name:'Verified publisher',exact:true})).toHaveCount(0);
+  await expect(page.locator('.ext-popup').getByRole('button',{name:'Reviewed by E2E Review',exact:true})).toBeVisible();
   await page.locator('.ext-popup').getByRole('button',{name:'Install',exact:true}).click();
   await expect(page.locator('.ext-consent')).toBeVisible();expect(downloads).toBe(1);
+  await expect(page.locator('.ext-consent').getByLabel('Reviewed by E2E Review',{exact:true})).toBeVisible();
   expect(await appRegistry(page)).toEqual([]);
   await page.getByRole('button',{name:'Install and enable',exact:true}).click();
   await expect.poll(async()=>(await appRegistry(page)).map((m:{id:string})=>m.id)).toEqual(['e2e.store']);
@@ -250,6 +255,14 @@ appTest.describe('real app: catalog store adapter',()=>{
    await page.getByRole('button',{name:'Try again',exact:true}).click();await expect(card(page,'Store Example')).toBeVisible();
   });
  }
+ appTest('security feed card shows in settings and reports its state honestly',async({page})=>{
+  await page.goto('/',{waitUntil:'domcontentloaded'});await page.getByRole('button',{name:/Commands/}).waitFor({state:'visible'});await page.keyboard.press('Control+,');
+  await page.getByRole('button',{name:'Extensions',exact:true}).click();
+  const card=page.getByRole('region',{name:'Security feed',exact:true});
+  await expect(card).toBeVisible();
+  await expect(card).toContainText('This build has no signed security feed configured');
+  await page.screenshot({path:`${SHOTS}/09-blocklist-settings-light.png`});
+ });
  appTest('report log is opt-in, comes from local activity, and failed private send never claims success',async({page})=>{
   await page.route('https://raw.githubusercontent.com/**',route=>route.fulfill({json:{schemaVersion:1,extensions:[appEntry()]}}));
   // Browser-only run: emulate only the native activity read command, not the extension/store host.

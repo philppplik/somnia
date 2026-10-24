@@ -15,5 +15,5 @@ test('each filter has a labelled strength slider with normalized range and perce
 
 test('neutral reset is disabled and entire panel can be disabled', () => {
   const html = renderToStaticMarkup(<FilterPanel operation={newFilterOperation('b', 'blur', { strength: 0 })} onChange={() => {}} disabled />);
-  assert.match(html, /<fieldset disabled=""/); assert.match(html, /<button type="button" disabled=""/);
+  assert.match(html, /<fieldset disabled=""/); assert.match(html, /<button\b[^>]*type="button"[^>]*disabled=""/);
 });

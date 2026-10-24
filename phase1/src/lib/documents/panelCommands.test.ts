@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {checkMatch,createDocumentPanelCommands,documentPanelReady} from './panelCommands';
+import {CommandDispatcher} from '../commandDispatcher';
+import {studioContextStore} from '../shell/studioContext';
+import {patchDocuments,resetDocuments} from './store';
+import {attachEngine} from './session';
+import type {DocumentsEngine} from './engine';
+test('search result validation rejects stale text, inverted ranges and mid-character offsets',()=>{assert.doesNotThrow(()=>checkMatch('Ä😀cat',{start:6,end:9,expected:'cat'}));for(const p of [{start:6,end:9,expected:'Cat'},{start:7,end:6,expected:''},{start:1,end:2,expected:'Ä'},{start:6,end:50,expected:'cat'}])assert.throws(()=>checkMatch('Ä😀cat',p));});
+test('commands guard foreign, missing, loading and read-only documents; params and origins are validated',async()=>{resetDocuments();const dispatcher=new CommandDispatcher();for(const s of createDocumentPanelCommands())dispatcher.register(s);assert.equal(documentPanelReady(),false);const owner=studioContextStore.claim('documents',{id:'test.docx',kind:'docx',dirty:false,readOnly:false});attachEngine({} as DocumentsEngine);patchDocuments({status:'ready',name:'test.docx',blocks:[{index:0,kind:'para',text:'hello',editable:true}]});assert.equal(documentPanelReady(),true);await assert.rejects(()=>dispatcher.runCommand('documents.setZoom',{zoom:3},{origin:'test'}));await assert.rejects(()=>dispatcher.runCommand('documents.setZoom',{zoom:1},{origin:'agent'}));await dispatcher.runCommand('documents.setZoom',{zoom:1.25},{origin:'test'});owner.report({document:{id:'test.docx',kind:'docx',dirty:false,readOnly:true}});assert.equal(documentPanelReady(true),false);await assert.rejects(()=>dispatcher.runCommand('documents.commitParagraph',{block:0,before:'hello',text:'other'},{origin:'test'}));owner.report({document:{id:'other.docx',kind:'docx',dirty:false,readOnly:false}});assert.equal(documentPanelReady(),false);owner.release();attachEngine(null);resetDocuments();});

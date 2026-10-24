@@ -473,3 +473,41 @@ fn sync_folder_reads_and_writes_only_its_file() {
     assert!(SyncFolder::open(&dir.path().join("missing")).is_err());
     assert!(SyncFolder::open(&dir.path().join("other.txt")).is_err());
 }
+#[test]
+fn reads_project_resources_with_mime_and_stays_inside_the_root() {
+    let (root, _recovery, p) = setup();
+    fs::create_dir(root.path().join("css")).unwrap();
+    fs::write(root.path().join("css/site.css"), "body{}").unwrap();
+    fs::write(root.path().join("app.mjs"), "export{}").unwrap();
+    fs::write(root.path().join("blob.xyz"), [1u8, 2]).unwrap();
+    assert_eq!(
+        p.read_resource("css/site.css").unwrap(),
+        ("text/css".to_string(), b"body{}".to_vec())
+    );
+    assert_eq!(p.read_resource("app.mjs").unwrap().0, "text/javascript");
+    assert_eq!(p.read_resource("blob.xyz").unwrap().0, "application/octet-stream");
+    // Escapes, absolute paths, reserved folders and directories are denied.
+    assert!(matches!(p.read_resource("../a.css"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read_resource("css/../../a.css"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read_resource("/etc/passwd"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read_resource("C:/x.css"), Err(AppError::Denied(_))));
+    assert!(matches!(p.read_resource(".git/config"), Err(AppError::Denied(_))));
+    assert!(p.read_resource("css").is_err());
+    assert!(p.read_resource("missing.css").is_err());
+}
+#[test]
+fn resource_over_the_limit_is_rejected_and_symlinks_are_denied() {
+    let (root, _recovery, p) = setup();
+    let big = vec![0u8; somnia_desktop::service::MAX_RESOURCE_BYTES + 1];
+    fs::write(root.path().join("big.js"), big).unwrap();
+    assert!(matches!(p.read_resource("big.js"), Err(AppError::Limit)));
+    #[cfg(unix)]
+    {
+        let outside = tempfile::tempdir().unwrap();
+        fs::write(outside.path().join("secret.css"), "x").unwrap();
+        std::os::unix::fs::symlink(outside.path().join("secret.css"), root.path().join("link.css")).unwrap();
+        assert!(matches!(p.read_resource("link.css"), Err(AppError::Denied(_))));
+        std::os::unix::fs::symlink(outside.path(), root.path().join("linkdir")).unwrap();
+        assert!(matches!(p.read_resource("linkdir/secret.css"), Err(AppError::Denied(_))));
+    }
+}

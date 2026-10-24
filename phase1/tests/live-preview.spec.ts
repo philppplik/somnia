@@ -1,11 +1,11 @@
 import {test,expect} from './fixtures';
 import {showCode} from './helpers';
 const open=async(page:any)=>{await page.keyboard.press('Control+k');await page.getByRole('combobox',{name:'Search commands'}).fill('live preview');await page.getByRole('option',{name:/live preview/i}).click();};
-test('live preview asks before running scripts, shows errors and refreshes on edit',async({page})=>{await page.goto('/');await showCode(page);
+test('live preview defaults to scripts on without a prompt, shows errors and refreshes on edit',async({page})=>{await page.goto('/');await showCode(page);
  await page.evaluate(()=>(window as any).__somnia.setSource('index.html','<!doctype html><html><head><title>t</title></head><body><h1 id="x">one</h1><script>document.getElementById("x").textContent="ran";throw new Error("boom")</script></body></html>'));
  await open(page);const pane=page.getByLabel('Live preview',{exact:true});
- await expect(pane.getByText('Run scripts in the preview?')).toBeVisible();
- await pane.getByRole('button',{name:'Run scripts'}).click();
+ await expect(pane.getByText('Run scripts in the preview?')).toHaveCount(0);
+ await expect(page.locator('iframe[title="Live preview frame"]')).toHaveAttribute('sandbox','allow-scripts');
  const fr=page.frameLocator('iframe[title="Live preview frame"]');
  await expect(fr.locator('#x')).toHaveText('ran');
  await expect(pane.getByRole('alert',{name:'Preview errors'})).toContainText('boom');

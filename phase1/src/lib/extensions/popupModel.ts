@@ -95,7 +95,7 @@ export function activityTabs(installed:Pick<PopupExtension,'id'|'name'>[],events
 
 export function shortHash(h:string):string{return h.length>16?`${h.slice(0,6)}\u2026${h.slice(-4)}`:h;}
 export const isSha256=(h:unknown):h is string=>typeof h==='string'&&/^[a-f0-9]{64}$/.test(h);
-/** "Matches signed index entry" only when the host reports a real match and the digest is well formed. */
+/** "Matches index entry" only when the host reports a real match and the digest is well formed. */
 export const showsSignedMatch=(s:SourceInfo)=>s.verification==='signed-match'&&isSha256(s.sha256);
 export const installBlocked=(s:SourceInfo)=>s.verification==='invalid';
 

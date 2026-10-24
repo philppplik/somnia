@@ -1,0 +1,7 @@
+# 3D selected-object transform preparation
+
+Base55a32f61a. Typed read/propose only, not runtime registered. Host owns exact scene identity/generation/revision/object id and fresh editable local-transform snapshot. Model supplies exact position/rotation/scale XYZ values only. Rotation in degrees matches Stage.info/setTransform; finite vectors and absolute scale >=1e-6 match observed Stage.setTransform validation. Host native validate callback is mandatory but no production adapter is wired or proven. Synthetic no-op host callbacks are fixtures only.
+
+No mesh/asset data, scene replacement, arbitrary object selection or execute callback. Host permission and post-callback target checks guard retarget/reopen/manual revision changes. Preview marks review-only/executeAvailable=false/saved=false. Unsupported states must be refused by production host, including auto-key/skinning/bones/pins/edit mode if atomic effects are not yet proved.
+
+Stage owns bounded callback history and private revision. Transform applies before history push, may group into manual undo steps, and auto-key can add clip mutations. Need owner exact expected-transform/revision/generation commit, immutable receipt (logical applied delta, readback, origin-bound undo), post-commit observer isolation and atomic auto-key coverage or explicit refusal. Bounded history labels/length are not proof. No real Stage render/native/save/model proof from this prep slice.

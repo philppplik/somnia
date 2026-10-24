@@ -1,0 +1,52 @@
+name: Performance baselines and retention
+# Manual only. The push trigger fires solely when this file changes on perf/baselines,
+# so the workflow is dispatchable from the branch before it reaches the default branch.
+on:
+  push:
+    branches: [perf/baselines]
+    paths: [.github/workflows/perf-retention.yml]
+  workflow_dispatch:
+    inputs:
+      samples:
+        description: Samples per scenario
+        default: '20'
+permissions:
+  contents: read
+jobs:
+  perf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - name: Rust toolchain for WASM engines
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - run: npm run craft:build
+      - run: npm run documents:build
+      - run: node scripts/performance/studios/preflight.mjs
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Retention gate
+        run: npx playwright test -c test/performance/playwright.config.ts
+      - name: Studio baselines
+        if: always()
+        env:
+          SOMNIA_PERF_SAMPLES: ${{ inputs.samples || '20' }}
+        run: node scripts/performance/studios/run.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: perf-baselines
+          path: |
+            phase1/test-results/studio-performance
+            phase1/test-results/retention
+          if-no-files-found: warn

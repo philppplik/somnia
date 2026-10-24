@@ -1,0 +1,4 @@
+.dialog-popup.code-quick-open-popup{top:50%;transform:translate(-50%,-50%);max-height:calc(100dvh - 2rem);overflow-y:auto}
+.code-quick-open-list{list-style:none;margin-bottom:0;padding:0;max-height:min(45vh,24rem);overflow:auto}
+.code-quick-open-row{display:block;width:100%;height:auto;min-height:2rem;text-align:left;font-family:var(--mono);font-size:.75rem;white-space:normal;overflow-wrap:anywhere}
+.code-quick-open-row[aria-selected=true]{background:var(--accent-soft);color:var(--text-primary)}

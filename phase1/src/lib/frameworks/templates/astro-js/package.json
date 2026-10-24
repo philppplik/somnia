@@ -1,0 +1,17 @@
+{
+  "name": "somnia-astro-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build"
+  },
+  "dependencies": {
+    "astro": "7.3.8",
+    "@astrojs/node": "11.1.7"
+  },
+  "devDependencies": {
+    "@babel/parser": "8.0.7"
+  }
+}

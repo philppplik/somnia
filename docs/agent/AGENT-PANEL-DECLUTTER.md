@@ -1,0 +1,11 @@
+# Agent panel: chat and composer
+
+Base e49ae80d6 (wave1 and Photos pilot integrated). The panel now contains chat, composer, a compact provider/model/target indicator and the existing Settings entry. No provider chooser, consent/context checkbox, task selector, local-mode toggle, byte-budget control, receipt detail, diagnostic, search or model setup UI sits in the main panel. Conversational access requests and reviewed proposal accept/reject/undo remain in chat: these are action decisions, not configuration clutter.
+
+AI Settings retains provider/model controls and cloud consent. Privacy & data now owns the ephemeral chat context controls: inspect permission, one-use run disclosure, local-native mode, task, local context choices/templates, budget and receipts. Source search lives under Local. Voice draft utility and limited studio assistant live in context settings, not deleted. The Settings draft uses the same ephemeral composer draft; no prompt is added to persistent preferences. Context/mode controls are locked during work or pending review.
+
+Safety remains fail-closed. Run disclosure is consumed once and bound to project generation, app/native document revision and identity, exact provider/model, target/media/studio, selection, task, context choices and settings revision. It is rechecked after loading the core. Changes invalidate approval, not retarget it. Global cloud consent remains a separate transport gate. New Chat clears pending disclosure. Local mode still refuses non-Ollama providers and no automatic cloud fallback is added. Every edit still requires exact preview acceptance and guarded undo. No cloud/model/native action is performed by this UI slice.
+
+Tests verify no settings controls in chat, controls in Settings, one-use and changed-scope rejection, existing policy/review/history tests and Light/Dark pixels. Global DS inherited Sound failures remain; no allowance was raised. Full desktop/native and real-model tests remain CI/manual work. $0, no dependencies.
+
+The compact indicator describes local-only mode, not verified local inference. Local-weight verification still occurs at every request. Settings checkbox layout was inspected and fixed with scoped CSS so shared input width rules cannot squeeze labels into a narrow column.

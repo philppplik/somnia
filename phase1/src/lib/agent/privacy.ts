@@ -1,4 +1,5 @@
 import { log, describeError } from '../log';
+import { COMPAT_PROVIDERS } from './compatProviders';
 /** Fail-closed network boundary. Call immediately before EVERY provider request/retry. */
 export const AGENT_CONSENT_VERSION = 1;
 export const AGENT_CONSENT_KEY = 'somnia.agent.cloud-consent.v1';
@@ -7,6 +8,7 @@ export const PROVIDER_PRIVACY_POLICIES = [
   {name: 'Anthropic', url: 'https://privacy.claude.com/en/'},
   {name: 'OpenRouter', url: 'https://openrouter.ai/privacy'},
   {name: 'OpenRouter model providers', url: 'https://openrouter.ai/docs/guides/privacy/data-collection'},
+  ...Object.values(COMPAT_PROVIDERS).map(p => p.privacy),
 ] as const;
 export type ProviderTarget = {provider: string; endpoint?: string; processing?: 'local' | 'cloud'};
 export type ConsentRecord = {version: number; grantedAt: string};
@@ -59,7 +61,7 @@ export class AgentPrivacyGate {
     this.notify();
   }
   private revoked = false;
-  private notify(): void { this.listeners.forEach(listener => listener()); }
+  private notify(): void { this.listeners.forEach(listener => {try { listener(); } catch { /* A view cannot change consent or stop other notifications. */ }}); }
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
     return () => { this.listeners.delete(listener); };
@@ -74,10 +76,15 @@ export class AgentPrivacyGate {
     this.cloudRequests.forEach(controller => controller.abort(new AgentConsentRequiredError()));
     this.cloudRequests.clear();
   }
+  private localOnly=false;
+  setLocalOnly(value:boolean){this.localOnly=value;if(value)this.abortCloudRequests();this.notify();}
+  isLocalOnly=()=>this.localOnly;
   assert(target: ProviderTarget): void {
+    if(this.localOnly&&!isLocalOllama(target))throw new AgentConsentRequiredError();
     if (!isLocalOllama(target) && !this.hasConsent()) throw new AgentConsentRequiredError();
   }
   async run<T>(target: ProviderTarget, operation: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    target = {...target};
     this.assert(target);
     const cloud = !isLocalOllama(target);
     const controller = new AbortController();
@@ -104,6 +111,8 @@ export class AgentPrivacyGate {
   }
 }
 export const agentPrivacy = new AgentPrivacyGate();
+// No global cloud traffic before saved preferences have been restored successfully.
+agentPrivacy.setLocalOnly(true);
 export const assertProviderConsent = (target: ProviderTarget): void => agentPrivacy.assert(target);
 export const runWithProviderConsent = <T>(target: ProviderTarget, operation: (signal: AbortSignal) => Promise<T>, signal?: AbortSignal): Promise<T> =>
   agentPrivacy.run(target, operation, signal).catch(error => { logProviderFailure(target, error, signal); throw error; });

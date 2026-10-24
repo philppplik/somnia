@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {localSearchQueryReview as review} from './localSearchQuery';
+test('exact ASCII/multibyte byte bound, not JS maxLength',()=>{assert.equal(review('a'.repeat(4096)).valid,true);assert.equal(review('é'.repeat(2048)).valid,true);assert.deepEqual(review('é'.repeat(2049)),{bytes:4098,valid:false,reason:'oversized'});assert.equal(review('漢'.repeat(1366)).reason,'oversized');});
+test('empty/control/invalid Unicode and valid supplementary characters',()=>{assert.equal(review(' \t\n').reason,'empty');for(const text of ['x\0','x\x7f','x\ud800'])assert.equal(review(text).reason,'invalid');assert.equal(review('😀').valid,true);assert.equal(review('line\nnext\tword').valid,true);});

@@ -14,9 +14,13 @@ import {
   setPdfEditing,
   usePdfSession,
 } from "../../lib/pdfedit/session";
-import { registerCommand } from "../../lib/commands";
+import { registerCommandSpec } from "../../lib/commandBridge";
+import { pdfCommandSpecs } from "../../lib/pdfedit/commands";
 import { installBeforeUnload } from "../../lib/closeFlow";
+import { setPdfExportAdvanced } from "../../lib/pdfedit/exportAdvancedState";
+import { PdfExportAdvanced } from "./PdfExportAdvanced";
 import { hasDirtyPdfs } from "../../lib/pdfedit/session";
+import {NativeButton} from '../ui/native-controls';
 export const pdfButton =
   "cursor-pointer rounded-sm border-0 bg-transparent px-2 py-1.5 text-xs text-ink-2 hover:bg-hover disabled:opacity-40 disabled:cursor-default";
 export function PdfInlineEditor({ item }: { item: MediaItem }) {
@@ -29,36 +33,14 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
     const name = item.name;
     const action = (f: () => Promise<unknown>) =>
       void f().catch((e) => pdfError(name, String(e)));
-    const off = [
-      registerCommand({
-        id: "pdf.saveCopy",
-        title: "PDF: Save edited copy",
-        category: "Project",
-        shortcut: "Mod+Shift+S",
-        run: () => exportPdfCopy(name),
-      }),
-      registerCommand({
-        id: "pdf.page.rotate",
-        title: "PDF: Rotate page clockwise",
-        category: "Tools",
-        enabled: () => !!s?.editing && !s.busy,
-        run: () => editPdf(name, { kind: "rotate", page: (s?.page ?? 1) - 1 }),
-      }),
-      registerCommand({
-        id: "pdf.undo",
-        title: "PDF: Undo",
-        category: "Edit",
-        enabled: () => !!s?.undo.length && !s.busy,
-        run: () => historyPdf(name, "undo"),
-      }),
-      registerCommand({
-        id: "pdf.redo",
-        title: "PDF: Redo",
-        category: "Edit",
-        enabled: () => !!s?.redo.length && !s.busy,
-        run: () => historyPdf(name, "redo"),
-      }),
-    ];
+    const off = pdfCommandSpecs({
+      name,
+      getSession: () => s,
+      exportCopy: exportPdfCopy,
+      openAdvanced: (n) => setPdfExportAdvanced(n),
+      rotate: (n, page) => editPdf(n, { kind: "rotate", page }),
+      history: historyPdf,
+    }).map((spec) => registerCommandSpec(spec));
     const key = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
       const input =
@@ -93,14 +75,14 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
       aria-label="Inline PDF editor"
     >
       <div className="flex shrink-0 flex-wrap items-center gap-1 border-b border-subtle px-3 py-1">
-        <button
+        <NativeButton
           className={pdfButton}
           aria-pressed={s.editing}
           disabled={viewOnly || s.editing || s.busy}
           onClick={() => setPdfEditing(item.name)}
         >
           Edit PDF
-        </button>
+        </NativeButton>
         <span className="text-xs text-ink-3">
           {s.info?.xfa
             ? "XFA · view only"
@@ -115,23 +97,23 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
                     : "Read only"}
         </span>
         <span className="flex-1" />
-        <button
+        <NativeButton
           className={pdfButton}
           aria-label="Undo PDF edit"
           disabled={!s.undo.length || s.busy}
           onClick={() => void historyPdf(item.name, "undo")}
         >
           Undo
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           aria-label="Redo PDF edit"
           disabled={!s.redo.length || s.busy}
           onClick={() => void historyPdf(item.name, "redo")}
         >
           Redo
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton}
           disabled={s.busy}
           onClick={() =>
@@ -141,20 +123,21 @@ export function PdfInlineEditor({ item }: { item: MediaItem }) {
           }
         >
           Save copy{s.dirty ? " *" : ""}
-        </button>
+        </NativeButton>
       </div>
+      <PdfExportAdvanced name={item.name} />
       {s.error && (
         <div
           role="alert"
           className="flex items-center justify-between gap-2 border-b border-subtle p-2 text-xs text-red-600"
         >
           {s.error}
-          <button
+          <NativeButton
             className={pdfButton}
             onClick={() => pdfError(item.name, null)}
           >
             Dismiss
-          </button>
+          </NativeButton>
         </div>
       )}
       <PdfViewer

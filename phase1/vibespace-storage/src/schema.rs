@@ -9,13 +9,18 @@ pub struct Migration {
     pub sql: &'static str,
 }
 
-pub const SCHEMA_VERSION: i64 = 4;
+pub const SCHEMA_VERSION: i64 = 7;
+
+pub const SCHEDULING_SQL: &str = include_str!("migrations/scheduling.sql");
 
 pub const MIGRATIONS: &[Migration] = &[
     Migration { version: 1, sql: V1 },
     Migration { version: 2, sql: "CREATE TABLE native_scope_anchors (space_id TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE, canonical_root TEXT NOT NULL);" },
     Migration { version: 3, sql: "CREATE TABLE artifact_operations (id TEXT PRIMARY KEY NOT NULL, run_id TEXT NOT NULL REFERENCES runs(id), review_revision INTEGER NOT NULL, state TEXT NOT NULL CHECK(state IN ('prepared','committed','aborted')), created_at TEXT NOT NULL); CREATE UNIQUE INDEX idx_one_pending_artifact ON artifact_operations(run_id) WHERE state='prepared';" },
     Migration { version: 4, sql: "ALTER TABLE artifact_operations ADD COLUMN kind TEXT NOT NULL DEFAULT 'apply' CHECK(kind IN ('apply','restore')); UPDATE artifact_operations SET kind='restore' WHERE id LIKE 'restore-%';" },
+    Migration { version: 5, sql: SCHEDULING_SQL },
+    Migration { version: 6, sql: V5_MEMORY_SKILLS },
+    Migration { version: 7, sql: "CREATE TABLE board_budgets(space_id TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE, enabled INTEGER NOT NULL CHECK(enabled IN (0,1)), reported_token_stop INTEGER NOT NULL CHECK(reported_token_stop>0 AND reported_token_stop<=1000000000));" },
 ];
 
 const V1: &str = r#"
@@ -121,6 +126,44 @@ CREATE TRIGGER memory_fts_au AFTER UPDATE ON memory_items BEGIN
     INSERT INTO memory_fts(memory_fts, rowid, title, content) VALUES ('delete', old.seq, COALESCE(old.title,''), old.content);
     INSERT INTO memory_fts(rowid, title, content) VALUES (new.seq, COALESCE(new.title,''), new.content);
 END;
+"#;
+
+/// Package A6 (memory opt-in state + skills registry). Own migration, disjoint from the scheduler's.
+/// Deliberately no vector table here: `memory_embeddings` is created only on explicit opt-in.
+const V5_MEMORY_SKILLS: &str = r#"
+CREATE TABLE memory_vector_settings (
+    space_id     TEXT PRIMARY KEY NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    model_id     TEXT NOT NULL,
+    dims         INTEGER NOT NULL CHECK (dims > 0 AND dims <= 4096),
+    consented_at TEXT NOT NULL
+);
+CREATE TABLE skills (
+    id             TEXT PRIMARY KEY NOT NULL,
+    scope          TEXT NOT NULL CHECK (scope IN ('space','user')),
+    space_id       TEXT REFERENCES spaces(id) ON DELETE CASCADE,
+    name           TEXT NOT NULL,
+    description    TEXT NOT NULL,
+    source_kind    TEXT NOT NULL CHECK (source_kind IN ('local','github','index','builtin')),
+    source_ref     TEXT,
+    pinned_commit  TEXT,
+    trust          TEXT NOT NULL DEFAULT 'unreviewed' CHECK (trust IN ('unreviewed','scanned','verified')),
+    active_version INTEGER NOT NULL,
+    latest_version INTEGER NOT NULL,
+    created_at     TEXT NOT NULL,
+    updated_at     TEXT NOT NULL,
+    CHECK ((scope = 'space') = (space_id IS NOT NULL))
+);
+CREATE UNIQUE INDEX idx_skills_scope_name ON skills(scope, COALESCE(space_id, ''), name);
+CREATE TABLE skill_versions (
+    skill_id     TEXT NOT NULL REFERENCES skills(id) ON DELETE CASCADE,
+    version      INTEGER NOT NULL CHECK (version >= 1),
+    content_hash TEXT NOT NULL,
+    skill_md     TEXT NOT NULL,
+    files_json   TEXT NOT NULL,
+    scan_json    TEXT NOT NULL,
+    created_at   TEXT NOT NULL,
+    PRIMARY KEY (skill_id, version)
+) WITHOUT ROWID;
 "#;
 
 fn latest(migrations: &[Migration]) -> i64 {

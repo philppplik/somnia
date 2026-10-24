@@ -13,6 +13,7 @@ import {buildLines,snapBox,snapPoint,type SnapLine} from '../../lib/svgedit/snap
 import {SvgOptionsBar} from './SvgOptionsBar';
 import {SvgFooter} from './SvgFooter';
 
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const PAD=56;
 interface SnapCtx{box:Box|null;lines:SnapLine[]}
 type Session=
@@ -274,12 +275,12 @@ export function SvgEditor({file,text}:{file:string;text:string}){
         {picked&&p.out&&<><line x1={p.x} y1={p.y} x2={p.out.x} y2={p.out.y} stroke={accent} strokeWidth={1}/><circle data-n={`${ci}:${i}:out`} cx={p.out.x} cy={p.out.y} r={4} fill="var(--bg-panel,#fff)" stroke={accent} strokeWidth={1.5} style={{pointerEvents:'all',cursor:'move'}}/></>}
         <rect data-n={`${ci}:${i}:node`} x={p.x-4.5} y={p.y-4.5} width={9} height={9} rx={p.kind==='corner'?1:4.5} fill={picked?accent:'var(--bg-panel,#fff)'} stroke={accent} strokeWidth={1.5} style={{pointerEvents:'all',cursor:'move'}}/></g>;})}</g>;})}
     </svg>
-    {editing&&root&&(()=>{const b=C.boxOfKey(editing.key);if(!b)return null;const p=boxPx(b);return <input autoFocus className="svg-text-input" style={{left:p.x,top:p.y-2,minWidth:Math.max(80,p.w+16)}} aria-label={t('svg.textContent')} value={editing.value} onChange={e=>setEditing({...editing,value:e.target.value})} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter'){C.setTextContent(editing.key,editing.value);setEditing(null);scroller.current?.focus();}if(e.key==='Escape'){setEditing(null);scroller.current?.focus();}}} onBlur={()=>{if(editing){C.setTextContent(editing.key,editing.value);setEditing(null);}}}/>;})()}
+    {editing&&root&&(()=>{const b=C.boxOfKey(editing.key);if(!b)return null;const p=boxPx(b);return <NativeInput autoFocus className="svg-text-input" style={{left:p.x,top:p.y-2,minWidth:Math.max(80,p.w+16)}} aria-label={t('svg.textContent')} value={editing.value} onChange={e=>setEditing({...editing,value:e.target.value})} onKeyDown={e=>{e.stopPropagation();if(e.key==='Enter'){C.setTextContent(editing.key,editing.value);setEditing(null);scroller.current?.focus();}if(e.key==='Escape'){setEditing(null);scroller.current?.focus();}}} onBlur={()=>{if(editing){C.setTextContent(editing.key,editing.value);setEditing(null);}}}/>;})()}
    </div>
   </div>
   {(draft||ui.tool==='pen')&&<div className="svg-pen-bar" data-testid="svg-pen-bar" role="status">
    <span>{draft?(draft.target?t('svg.pen.continuing'):t('svg.pen.drawing',{n:draft.nodes.length})):t('svg.pen.hint')}</span>
-   {draft&&<><button data-testid="svg-pen-finish" disabled={draft.nodes.length<2} onClick={()=>finishPen(draft.parent,draft.nodes,false)}>{t('svg.pen.finish')}</button><button data-testid="svg-pen-discard" onClick={discardDraft}>{t('svg.pen.discard')}</button></>}</div>}
+   {draft&&<><NativeButton data-testid="svg-pen-finish" disabled={draft.nodes.length<2} onClick={()=>finishPen(draft.parent,draft.nodes,false)}>{t('svg.pen.finish')}</NativeButton><NativeButton data-testid="svg-pen-discard" onClick={discardDraft}>{t('svg.pen.discard')}</NativeButton></>}</div>}
   <SvgFooter size={display?{w:display.w,h:display.h}:null} zoom={zoom} onFit={()=>patchUi({fit:true})}/>
  </section>;
 }

@@ -5,6 +5,7 @@ import type { ImageOperation, Point, Viewport } from '../../lib/image-editor/typ
 import { combineSelections, copySelection, emptySelection, lassoSelection, rectSelection, selectionBounds, selectionCutOp, selectionFillOp, wandSelection, type SelectionMask, type SelectionMode } from '../../lib/imgedit/select';
 import { ImageEditorViewport } from '../ImageEditorViewport';
 import { SelectionOverlay } from './SelectionOverlay';
+import {NativeButton,NativeInput,NativeSelect} from '../ui/native-controls';
 export interface SelectionEditorProps {
   image: HTMLCanvasElement | null;
   revision?:number;
@@ -51,19 +52,19 @@ export function SelectionEditor(p: SelectionEditorProps) {
     clipboard.current = payload; p.onCopy?.(payload); setCopied(true);
   };
   const controls=<fieldset disabled={p.disabled||selecting} aria-label="Selection tools" className="flex flex-wrap items-center gap-2 border-0 p-2 text-xs">
-      <label>Tool <select aria-label="Selection tool" value={tool} onChange={e => { reset(); setTool(e.target.value as Tool); }}>
+      <label>Tool <NativeSelect aria-label="Selection tool" value={tool} onChange={e => { reset(); setTool(e.target.value as Tool); }}>
         <option value="rect">Rectangle</option><option value="lasso">Freehand lasso</option><option value="wand">Magic wand</option>
-      </select></label>
-      <label>Mode <select aria-label="Selection mode" value={mode} onChange={e => setMode(e.target.value as SelectionMode)}>
+      </NativeSelect></label>
+      <label>Mode <NativeSelect aria-label="Selection mode" value={mode} onChange={e => setMode(e.target.value as SelectionMode)}>
         <option value="replace">Replace</option><option value="add">Add</option><option value="subtract">Subtract</option><option value="intersect">Intersect</option>
-      </select></label>
-      {tool === 'wand' && <label>Tolerance <input aria-label="Color tolerance" type="number" min={0} max={255} value={tolerance} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value)) setTolerance(Math.max(0, Math.min(255, value))); }} /></label>}
-      <button type="button" disabled={!hasSelection} onClick={copy}>Copy</button>
-      <button type="button" disabled={!hasSelection||p.allowPixelEdits===false} onClick={() => { copy(); if (valid) p.onCommit(selectionCutOp(valid)); }}>Cut</button>
-      <input type="color" aria-label="Selection fill color" value={color} onChange={e => setColor(e.target.value)} />
-      <label>Alpha <input type="number" aria-label="Selection fill alpha" min={0} max={255} value={alpha} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value)) setAlpha(Math.round(Math.max(0, Math.min(255, value)))); }} /></label>
-      <button type="button" disabled={!hasSelection||p.allowPixelEdits===false} onClick={() => { if (valid) p.onCommit(selectionFillOp(valid, [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16), alpha])); }}>Fill</button>
-      <button type="button" disabled={!valid} onClick={() => { reset(); p.onSelectionChange(null); }}>Deselect</button>
+      </NativeSelect></label>
+      {tool === 'wand' && <label>Tolerance <NativeInput aria-label="Color tolerance" type="number" min={0} max={255} value={tolerance} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value)) setTolerance(Math.max(0, Math.min(255, value))); }} /></label>}
+      <NativeButton type="button" disabled={!hasSelection} onClick={copy}>Copy</NativeButton>
+      <NativeButton type="button" disabled={!hasSelection||p.allowPixelEdits===false} onClick={() => { copy(); if (valid) p.onCommit(selectionCutOp(valid)); }}>Cut</NativeButton>
+      <NativeInput type="color" aria-label="Selection fill color" value={color} onChange={e => setColor(e.target.value)} />
+      <label>Alpha <NativeInput type="number" aria-label="Selection fill alpha" min={0} max={255} value={alpha} onChange={e => { const value = e.target.valueAsNumber; if (Number.isFinite(value)) setAlpha(Math.round(Math.max(0, Math.min(255, value)))); }} /></label>
+      <NativeButton type="button" disabled={!hasSelection||p.allowPixelEdits===false} onClick={() => { if (valid) p.onCommit(selectionFillOp(valid, [parseInt(color.slice(1, 3), 16), parseInt(color.slice(3, 5), 16), parseInt(color.slice(5, 7), 16), alpha])); }}>Fill</NativeButton>
+      <NativeButton type="button" disabled={!valid} onClick={() => { reset(); p.onSelectionChange(null); }}>Deselect</NativeButton>
       <span role="status">{selecting?'Selecting...':copied ? 'Selection copied' : ''}</span>
     </fieldset>;
   return <section aria-label="Image selection editor" style={{ display: 'flex', flexDirection: 'column', width: '100%', height: '100%' }}

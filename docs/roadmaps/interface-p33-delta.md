@@ -1,0 +1,7 @@
+# Interface P33 delta — components polish
+
+Base: P32 commit (stacked; P32 not yet upstream at build time). Scope check first: typed component properties (text/boolean/instance-swap with slot targets, exposed and editable on instances with per-property reset), detach/reset overrides (per instance and bulk in library maintenance), and the local component library browser (search field, variant list, create instance, usage, publish snapshot) all already existed and were kept. One genuine gap was built:
+
+1. **Variants matrix editing**: the variant properties panel now shows a matrix table — one row per variant, one column per variant axis, each cell a dropdown of the axis values. Edits go through a new `setVariantAxisValue` lib function that validates the value belongs to the axis, rejects duplicate variant combinations, locked masters and unknown axes/variants, and applies each cell change as one undo via session transacts. The existing per-variant free-text value fields (which manage the axis value lists) stay below the matrix.
+
+Tests: 341 focused tests green (+4: 3 lib tests, 1 EN/DE render test). Gates: check:ds, check:ui-commands, check:commands, check:layers all pass; tsc clean apart from known upstream studio3d/slides/stage noise. CI-only spec `Interface P33 variants matrix recombines a variant with dropdowns in one undo` added; acceptance paragraph P33 added. Light/dark screenshots inspected (EN light, DE dark: matrix table with Variants/State columns and Default/Dark dropdown rows visible in the variant properties panel).

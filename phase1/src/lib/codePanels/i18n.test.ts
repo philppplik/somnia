@@ -1,0 +1,2 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {CODE_PANEL_CATALOGUES} from './i18n';import {codePanelSpecs} from './commands';
+test('code panel strings and command titles have parity across five locales',()=>{const en=Object.keys(CODE_PANEL_CATALOGUES.en).sort();for(const locale of ['en','de','es','fr','pt-BR']){assert.deepEqual(Object.keys(CODE_PANEL_CATALOGUES[locale]).sort(),en);for(const spec of codePanelSpecs({ready:()=>true,reveal:()=>{},attribute:()=>{},width:()=>{}}))assert.ok(CODE_PANEL_CATALOGUES[locale]['cmd.'+spec.id]);}});

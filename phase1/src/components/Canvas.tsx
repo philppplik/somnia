@@ -1,3 +1,9 @@
+import {useCodeStudioContext} from './studios/code/useCodeStudioContext';
+import {useEffect} from 'react';
+import {mountCodePanelCommands} from '../store/codePanelCommands';
+import {FrameworkDetectedBanner} from './FrameworkDetectedBanner';
+import {FrameworkBuildPanel} from './FrameworkBuildPanel';
+import {detectFramework} from '../lib/frameworks/detect';
 import {RasterEditor,useRasterEditor} from './RasterEditor';
 import type {CodeTheme} from '../lib/appearance';
 import {lazy,Suspense} from 'react';
@@ -28,7 +34,9 @@ function SplitDivider({box,md}:{box:React.RefObject<HTMLDivElement|null>;md?:boo
   onPointerDown={e=>{e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(e.currentTarget.hasPointerCapture(e.pointerId))move(e);}} onDoubleClick={()=>patchState({splitRatio:reset})}
   onKeyDown={e=>{const step=e.shiftKey?0.1:0.02;const dir=horizontal?{ArrowUp:-1,ArrowDown:1}[e.key]:{ArrowLeft:-1,ArrowRight:1}[e.key];if(e.key==='Home'||e.key==='Enter'){e.preventDefault();patchState({splitRatio:reset});return;}if(!dir)return;e.preventDefault();patchState({splitRatio:clamp(state.splitRatio+dir*step*(state.splitSwap?-1:1))});}}/>;
 }
-export function Canvas(){const {t}=useT();const raster=useRasterEditor();
+export function Canvas(){
+ useCodeStudioContext();
+ useEffect(()=>mountCodePanelCommands(),[]);const {t}=useT();const raster=useRasterEditor();
  const box=useRef<HTMLDivElement>(null);
  const state=useAppStore();const media=useMedia();const mdView=useMdSource();const activeMedia=media.items.find(i=>i.name===media.active);
  const mdFile=isMarkdown(state.activeFile)&&!activeMedia;
@@ -37,5 +45,5 @@ export function Canvas(){const {t}=useT();const raster=useRasterEditor();
  if(activeMedia)return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><div className="workspace"><section className="code-pane" aria-label={t('rest.canvas.mediaPreview')}><FileTabs/><MediaViewer item={activeMedia}/></section></div></main>;
  if(!state.coreConnected)return <EmptyState/>;
  const rendered=isRenderedText(state.activeFile);
- return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}>{mdFile&&<FileTabs/>}<div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box} md={mdFile}/>}{state.viewMode!=='code'&&(isSvg(state.activeFile)?<SvgEditor file={state.activeFile} text={state.files[state.activeFile]??''}/>:rendered?<RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/>:state.livePreview?<LivePreview/>:<DesignCanvas/>)}</div></main>;
+ return <main className="center" aria-label={t('rest.canvas.editorWorkspace')}><FrameworkDetectedBanner/><FrameworkBuildPanel/>{mdFile&&<FileTabs/>}<div ref={box} className={`workspace workspace-${state.viewMode}${state.viewMode==='split'?` split-${state.splitLayout}${state.splitSwap?' split-swap':''}`:''}`}>{state.viewMode!=='design'&&code}{state.viewMode==='split'&&<SplitDivider box={box} md={mdFile}/>}{state.viewMode!=='code'&&(isSvg(state.activeFile)?<SvgEditor file={state.activeFile} text={state.files[state.activeFile]??''}/>:rendered?<RenderedPreview file={state.activeFile} text={state.files[state.activeFile]??''}/>:(state.livePreview||detectFramework(state.files))?<LivePreview/>:<DesignCanvas/>)}</div></main>;
 }

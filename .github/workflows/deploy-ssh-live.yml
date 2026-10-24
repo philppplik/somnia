@@ -1,0 +1,87 @@
+name: deploy-ssh-live
+# Manual, dispatch-only engine integration test: real russh transport against a real
+# OpenSSH server on the runner's loopback. Throwaway keys, no external target, no cost.
+on:
+  workflow_dispatch:
+  push:
+    branches: [int/beta6]
+    paths:
+      - 'phase1/src-tauri/src/deploy/ssh_live.rs'
+      - 'phase1/src-tauri/src/deploy/keys.rs'
+      - 'phase1/src-tauri/src/deploy/mod.rs'
+      - '.github/workflows/deploy-ssh-live.yml'
+
+permissions: {}
+
+jobs:
+  engine-vs-openssh:
+    if: ${{ github.event.repository.visibility == 'public' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: phase1
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf xvfb xdotool imagemagick openssh-server
+      - name: Install isolated PhotoCraft WASM toolchain
+        run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          rustup target add wasm32-unknown-unknown --toolchain 1.95.0
+          cargo +1.95.0 install wasm-bindgen-cli --version 0.2.129 --locked
+      - run: npm ci
+      - name: Build headless PhotoCraft assets before frontend/Tauri
+        run: npm run craft:build
+      - name: Build headless WordCraft document engine (Documents Studio)
+        run: npm run documents:build
+      - name: Start throwaway OpenSSH server on loopback
+        run: |
+          set -euo pipefail
+          W="$RUNNER_TEMP/ssh-live"
+          mkdir -p "$W/root"
+          ssh-keygen -t ed25519 -N '' -f "$W/host_ed25519" -q
+          ssh-keygen -t ed25519 -N '' -f "$W/client_ed25519" -q -C somnia-live-test
+          install -m 600 "$W/client_ed25519.pub" "$W/authorized_keys"
+          # Der Runner-Account runner ist per Shadow-Feld '!' gesperrt; sshd mit
+          # UsePAM no lehnt dann jede Authentifizierung ab (account locked).
+          # '*' erlaubt Pubkey-Auth, Passwort-Login bleibt ausgeschlossen.
+          sudo usermod -p '*' runner
+          cat > "$W/sshd_config" <<CFG
+          Port 2222
+          ListenAddress 127.0.0.1
+          HostKey $W/host_ed25519
+          PidFile $W/sshd.pid
+          LogLevel VERBOSE
+          AuthorizedKeysFile $W/authorized_keys
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          PubkeyAuthentication yes
+          UsePAM no
+          X11Forwarding no
+          AllowAgentForwarding no
+          AllowTcpForwarding no
+          PermitTunnel no
+          Subsystem sftp internal-sftp
+          CFG
+          sudo mkdir -p /run/sshd
+          # Produktionsgleiches Release-Root fuer den Volldeploy-Test; gehoert dem
+          # Wegwerf-Runner-Nutzer, kein Eingriff in echte Server.
+          sudo mkdir -p /srv/somnia
+          sudo chown runner:runner /srv/somnia
+          sudo /usr/sbin/sshd -f "$W/sshd_config" -E "$W/sshd.log"
+          sleep 1
+          ssh-keyscan -p 2222 127.0.0.1
+      - name: Engine vs OpenSSH (ignored live suite)
+        env:
+          SOMNIA_SSH_LIVE_ADDR: 127.0.0.1:2222
+          SOMNIA_SSH_LIVE_USER: runner
+          SOMNIA_SSH_LIVE_KEY: ${{ runner.temp }}/ssh-live/client_ed25519
+          SOMNIA_SSH_LIVE_ROOT: ${{ runner.temp }}/ssh-live/root
+        run: cargo test --manifest-path src-tauri/Cargo.toml --no-default-features --locked deploy::ssh_live -- --ignored --nocapture
+      - name: sshd-Log bei Fehlschlag ausgeben
+        if: failure()
+        run: sudo cat "$RUNNER_TEMP/ssh-live/sshd.log" || true

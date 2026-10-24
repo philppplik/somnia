@@ -1,8 +1,8 @@
 import {invoke} from '@tauri-apps/api/core';
 import {listen} from '@tauri-apps/api/event';
 import type {VibeCommand, VibeSpaceTransport, VibeSnapshot,SpaceSummary,StudioSummary,ModelRef} from './types';
-import {canRetry,reviewPathsAllowed,studioControls} from './state';
-import {parseEvent,parseFolderGrant,parseReadProjection,parseStudioSummaries,parseSpaceSummaries,validateCommand} from './validation';
+import {canRetry,canRetryFeedback,reviewPathsAllowed,studioControls,reviewedHunksAllowed} from './state';
+import {parseReviewDetails,parseEvent,parseFolderGrant,parseReadProjection,parseStudioSummaries,parseSpaceSummaries,validateCommand} from './validation';
 
 export const nativeCommands = {
  'create-space':'vibespace_create_space','create-studio':'vibespace_create_studio',
@@ -43,6 +43,12 @@ export function createNativeVibeSpaceTransport(bindings: NativeVibeBindings): Vi
   requiredSequences.clear();invalid=false;return current;
  };
  return {
+  async reviewDetails(runId){
+   const studio=current?.studios.find(s=>s.runId===runId);if(!studio)throw new Error('Load the target run.');
+   const timeline=await io.invoke('vibespace_run_timeline',{request:{runId}});
+   const hunks=studio.review?await io.invoke('vibespace_review_hunks',{request:{runId}}):null;
+   return parseReviewDetails(hunks,timeline);
+  },
   mode:'native',get capabilities(){return capabilities;},snapshot:refresh,
   async chooseFolder(){const grant=await io.invoke('vibespace_choose_folder');return grant===null?null:parseFolderGrant(grant);},
   async subscribe(onEvent,onError){
@@ -59,12 +65,13 @@ export function createNativeVibeSpaceTransport(bindings: NativeVibeBindings): Vi
     const studio=current?.studios.find(s=>s.runId===command.runId);
     if(!studio)throw new Error('Load the target run before acting.');
     const controls=studioControls(studio,false);
-    if(command.type==='stop'&&!controls.stop||command.type==='steer'&&!controls.steer||command.type==='restore'&&!controls.restore||command.type==='retry'&&!(current&&canRetry(current,studio)))throw new Error('This run does not support the requested action.');
+    if(command.type==='stop'&&!controls.stop||command.type==='steer'&&!controls.steer||command.type==='restore'&&!controls.restore||command.type==='retry'&&!(current&&canRetry(current,studio))||command.type==='retry-feedback'&&!canRetryFeedback(studio))throw new Error('This run does not support the requested action.');
     if(command.type==='consent'){
      const consent=studio.pendingConsents.find(c=>c.requestId===command.requestId);
      if(!controls.consent||!consent||command.choice==='allow_for_run'&&!consent.allowForRun)throw new Error('Consent request changed. Reload and review it again.');
     }
     if(command.type==='review'&&(!controls.review||studio.review?.revision!==command.reviewRevision||!reviewPathsAllowed(studio,command.decision,command.paths)))throw new Error('Review changed or contains conflicts. Reload and review it again.');
+    if((command.type==='request-changes'||command.type==='apply-hunks')&&(!controls.review||studio.review?.revision!==command.reviewRevision))throw new Error('Review changed. Reload before acting.');
     if(command.type==='restore'&&!studio.checkpoints.some(c=>c.checkpointId===command.checkpointId&&c.restorable))throw new Error('Checkpoint is not restorable.');
    }
    // Each DTO contains only exact wire fields. Consent cannot change targets or args.
@@ -72,6 +79,14 @@ export function createNativeVibeSpaceTransport(bindings: NativeVibeBindings): Vi
     case 'create-space':await io.invoke(nativeCommands[command.type],{request:{name:command.name,folderGrantId:command.folderGrantId}});break;
     case 'create-studio':parseStudioSummaries([await bindings.createStudio({spaceId:command.spaceId,goal:command.goal,model:command.model})]);break;
     case 'consent':await io.invoke(nativeCommands[command.type],{request:{runId:command.runId,requestId:command.requestId,choice:command.choice}});break;
+    case 'retry-feedback':await io.invoke('vibespace_retry_feedback',{request:{runId:command.runId,requestId:command.commandId,message:command.message}});break;
+    case 'request-changes':await io.invoke('vibespace_request_changes',{request:{runId:command.runId,reviewRevision:command.reviewRevision,requestId:command.commandId,message:command.message}});break;
+    case 'apply-hunks':{
+     const studio=current!.studios.find(s=>s.runId===command.runId)!;
+     const details=parseReviewDetails(await io.invoke('vibespace_review_hunks',{request:{runId:command.runId}}),[]);
+     if(!reviewedHunksAllowed(studio,details,command.paths,command.hunks))throw new Error('Hunk selection changed or conflicts. Reload before applying.');
+     await io.invoke('vibespace_apply_hunks',{request:{runId:command.runId,reviewRevision:command.reviewRevision,paths:command.paths,hunks:command.hunks}});break;
+    }
     case 'review':
      if(!current)throw new Error('Load Vibe Space before reviewing changes.');
      await io.invoke(command.decision==='apply'?'vibespace_apply_run':'vibespace_discard_run',{request:checkedReviewRequest(command,bindings.reviewRequest(command,current))});break;

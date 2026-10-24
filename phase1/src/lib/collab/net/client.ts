@@ -15,7 +15,7 @@
 import * as Y from 'yjs';
 import {MSG_CHAT_SYNC,chatStep1,chatUpdate,handleChatFrame,peekChatSyncType} from '../chatProtocol';
 import type {Awareness} from 'y-protocols/awareness';
-import {MAX_RELAY_FRAME_BYTES,MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
+import {MAX_RELAY_FRAME_BYTES,SYNC_CHUNK_BYTES,MSG_SYNC,MSG_AWARENESS,MSG_IDENTITY,MSG_PING,MSG_PONG,MSG_SYNC_CHUNK,encodeSyncStep1,encodeUpdate,encodeAwareness,encodeIdentity,encodePing,encodePong,encodeSyncChunk,decodeSyncChunk,peekSyncType,readIdentity,handleMessage,MSG_BLOB} from './protocol';
 import type {PublicIdentity,PresencePerson,IdentityMessage} from './protocol';
 import {encryptFrame,decryptFrame,isEncryptedFrame,importLinkKey,linkKeyParam} from './crypto';
 import type {LinkKey} from './crypto';
@@ -63,6 +63,10 @@ export interface CollabClientOptions{
  syncTimeoutMs?:number;
  /** Outbound updates buffered while disconnected. Overflow is safe: sync on reconnect covers it. Default 1000. */
  outboxLimit?:number;
+ /** Liveness probe interval while connected. Default 15000; 0 disables (tests). */
+ heartbeatMs?:number;
+ /** No inbound frame for this long = the connection is silently dead: close and let the reconnect logic run. Default 45000. */
+ heartbeatDeadMs?:number;
  random?:()=>number;    // jitter source, tests
 }
 export interface CollabClientSnapshot{
@@ -100,13 +104,18 @@ export class CollabClient{
  private offAware:()=>void;
  private tf:TransportFactory;
  private sess:CollabSession;
- private o:{maxAttempts:number;baseDelayMs:number;maxDelayMs:number;syncTimeoutMs:number;outboxLimit:number;random?:()=>number};
+ private heartbeatTimer:ReturnType<typeof setInterval>|null=null;
+ private lastActivity=0;
+ private syncChunks=new Map<string,{count:number;parts:Map<number,Uint8Array>;at:number}>();
+ private chunkSeq=0;
+ private o:{maxAttempts:number;baseDelayMs:number;maxDelayMs:number;syncTimeoutMs:number;outboxLimit:number;heartbeatMs:number;heartbeatDeadMs:number;random?:()=>number};
 
  constructor(private invite:string,opts:CollabClientOptions){
   this.sess=opts.session;this.chatDoc=opts.chatDoc;
   if(this.chatDoc){const onChat=(u:Uint8Array,origin:unknown)=>{if(origin!==this&&this.linkKey&&this.open())this.sendFrame(chatUpdate(u));};this.chatDoc.on('update',onChat);this.offChat=()=>this.chatDoc?.off('update',onChat);}
   this.o={maxAttempts:opts.maxAttempts??6,baseDelayMs:opts.baseDelayMs??500,maxDelayMs:opts.maxDelayMs??15_000,
-   syncTimeoutMs:opts.syncTimeoutMs??2_000,outboxLimit:opts.outboxLimit??1_000,random:opts.random};
+   syncTimeoutMs:opts.syncTimeoutMs??2_000,outboxLimit:opts.outboxLimit??1_000,
+   heartbeatMs:opts.heartbeatMs??15_000,heartbeatDeadMs:opts.heartbeatDeadMs??45_000,random:opts.random};
   this.tf=opts.transport??webSocketTransport;
   this.s={state:'idle',mode:opts.mode??'lan-direct',synced:false,chatSynced:false,attempt:0,identity:null,people:[],error:null,
    queued:0,droppedFromQueue:0,security:{e2e:false,keyFingerprint:null,secureChannel:false,insecureRemote:false}};
@@ -154,11 +163,23 @@ export class CollabClient{
   const t=this.transport=this.tf(url);this.ready=false;
   t.connect({
    onOpen:()=>{
-    this.ready=true;
+    this.ready=true;this.lastActivity=Date.now();this.armHeartbeat();
     if(this.managed){this.armSyncTimeout(t);return;}
     this.beginSync(t);},
-   onMessage:bytes=>{void this.onFrame(bytes);},
+   onMessage:bytes=>{this.lastActivity=Date.now();void this.onFrame(bytes);},
    onClose:(code,reason)=>{if(this.transport===t)this.onClose(code,reason);}});}
+
+ /** Ping every heartbeatMs; when nothing came back within heartbeatDeadMs, treat the socket as dead and close it (reconnectable). */
+ private armHeartbeat(){
+  if(this.heartbeatTimer){clearInterval(this.heartbeatTimer);this.heartbeatTimer=null;}
+  if(this.o.heartbeatMs<=0)return;
+  this.heartbeatTimer=setInterval(()=>{
+   const t=this.transport;if(!t||!this.ready)return;
+   if(Date.now()-this.lastActivity>this.o.heartbeatDeadMs){this.lastActivity=Date.now();t.close(4005,'heartbeat timeout');return;}
+   this.sendFrame(encodePing());},this.o.heartbeatMs);
+  // a liveness timer must never hold the process open (tests, node hosts)
+  const t=this.heartbeatTimer as unknown as {unref?:()=>void};t.unref?.();}
+ private stopHeartbeat(){if(this.heartbeatTimer){clearInterval(this.heartbeatTimer);this.heartbeatTimer=null;}}
 
  private beginSync(t:Transport){
     for(const u of this.outbox.splice(0))this.sendFrame(encodeUpdate(u));
@@ -205,6 +226,26 @@ export class CollabClient{
     frame=await decryptFrame(this.linkKey,bytes);}
    else if(this.linkKey)return; // key session: plaintext sync/awareness is a downgrade attempt, drop
    if(this.transport!==transport||!this.open())return;
+   if(frame[0]===MSG_SYNC_CHUNK){
+    const c=decodeSyncChunk(frame);if(!c)return;
+    const now=Date.now();
+    for(const [k,v] of this.syncChunks)if(now-v.at>60_000)this.syncChunks.delete(k);   // stale partial batches go away
+    if(this.syncChunks.size>=8&&!this.syncChunks.has(c.batch))return;                 // bound memory: at most 8 open batches
+    const b=this.syncChunks.get(c.batch)??{count:c.count,parts:new Map(),at:now};
+    if(b.count!==c.count)return;                                                       // batch id reuse with another shape: refuse
+    b.at=now;b.parts.set(c.index,c.payload);this.syncChunks.set(c.batch,b);
+    if(b.parts.size<b.count)return;
+    this.syncChunks.delete(c.batch);
+    const whole=new Uint8Array(b.count*SYNC_CHUNK_BYTES);let len=0;
+    for(let i=0;i<b.count;i++){whole.set(b.parts.get(i)!,i*SYNC_CHUNK_BYTES);len+=b.parts.get(i)!.length;}
+    const assembled=whole.subarray(0,len);
+    if(assembled[0]!==MSG_SYNC)return;
+    const reply=handleMessage(assembled,this.sess.doc,this.sess.awareness,this);
+    if(reply)this.sendFrame(reply);
+    if(!this.s.synced&&peekSyncType(assembled)===1)this.markSynced();
+    return;}
+   if(frame[0]===MSG_PING){this.sendFrame(encodePong());return;}
+   if(frame[0]===MSG_PONG)return;
    if(frame[0]===MSG_CHAT_SYNC){if(!this.linkKey||!this.chatDoc||this.chatDoc.isDestroyed)return;const reply=handleChatFrame(frame,this.chatDoc,this);if(reply)this.sendFrame(reply);if(!this.s.chatSynced&&peekChatSyncType(frame)===1){if(this.chatTimer){clearTimeout(this.chatTimer);this.chatTimer=null;}this.patch({chatSynced:true});}return;}
    if(frame[0]===MSG_BLOB){this.blobHandler?.(frame);return;}
    if(frame[0]!==MSG_SYNC&&frame[0]!==MSG_AWARENESS)return;
@@ -220,6 +261,7 @@ export class CollabClient{
 
  private onClose(code:number,reason:string){
   if(this.s.error?.kind==='expired')return;
+  this.stopHeartbeat();
   this.transport=null;this.ready=false;
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   if(this.chatTimer){clearTimeout(this.chatTimer);this.chatTimer=null;}
@@ -244,13 +286,19 @@ export class CollabClient{
 
  /** Ordered, encrypted send. Sync/awareness frames are encrypted when the link carries a key; identity never is. */
  private sendFrame(frame:Uint8Array){
+  // A document frame over the relay cap is split; the receiver reassembles (Relay-Wire-Contract: 1009 over 2 MiB).
+  if(frame[0]===MSG_SYNC&&frame.length>MAX_RELAY_FRAME_BYTES-1024){
+   const batch=`${this.sess.doc.clientID.toString(36)}-${(this.chunkSeq++).toString(36)}`;
+   const parts=Math.ceil(frame.length/SYNC_CHUNK_BYTES);
+   for(let i=0;i<parts;i++)this.sendFrame(encodeSyncChunk(batch,i,parts,frame.subarray(i*SYNC_CHUNK_BYTES,(i+1)*SYNC_CHUNK_BYTES)));
+   return;}
   // Never let a growing volatile chat snapshot take the project socket down with 1009.
   // Epoch compaction is a follow-up; oversized chat frames stay local rather than claiming delivery.
   if(frame[0]===MSG_CHAT_SYNC&&frame.length>MAX_RELAY_FRAME_BYTES-64)return;
   const t=this.transport;if(!t||!this.ready||(this.managed&&!this.acknowledged))return;
   this.sendChain=this.sendChain.then(async()=>{
    if(!this.ready||this.transport!==t)return;
-   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB||frame[0]===MSG_CHAT_SYNC)?this.linkKey:null;
+   const key=(frame[0]===MSG_SYNC||frame[0]===MSG_AWARENESS||frame[0]===MSG_BLOB||frame[0]===MSG_CHAT_SYNC||frame[0]===MSG_PING||frame[0]===MSG_PONG||frame[0]===MSG_SYNC_CHUNK)?this.linkKey:null;
    const bytes=key?await encryptFrame(key,frame):frame;
    if(this.ready&&this.transport===t)t.send(bytes);});}
 
@@ -267,6 +315,7 @@ export class CollabClient{
 
  leave(){
   this.intentional=true;
+  this.stopHeartbeat();
   if(this.expiryTimer){clearTimeout(this.expiryTimer);this.expiryTimer=null;}
   if(this.timer){clearTimeout(this.timer);this.timer=null;}
   this.transport?.close(1000,'leave');this.transport=null;this.ready=false;

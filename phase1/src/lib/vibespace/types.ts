@@ -12,6 +12,8 @@ interface CommandBase {commandId:string;expectedRevision:number}
 export type VibeCommand=CommandBase & (
  |{type:'create-space';name:string;folderGrantId:string}
  |{type:'create-studio';spaceId:string;goal:string;model:ModelRef}
+ |{type:'apply-hunks';runId:string;reviewRevision:string;paths:string[];hunks:HunkSelection[]}
+ |{type:'request-changes';runId:string;reviewRevision:string;message:string}
  |{type:'stop';runId:string}
  |{type:'start';studioId:string}
  |{type:'steer';runId:string;message:string}
@@ -19,11 +21,18 @@ export type VibeCommand=CommandBase & (
  |{type:'review';runId:string;reviewRevision:string;decision:'apply'|'discard';paths:string[]}
  |{type:'restore';runId:string;checkpointId:string}
  |{type:'retry';runId:string}
+ |{type:'retry-feedback';runId:string;message:string}
 );
 export type VibeIntent=VibeCommand extends infer C ? C extends CommandBase ? Omit<C,keyof CommandBase> : never : never;
 export interface VibeSpaceTransport {
  readonly mode:'native'|'fixture';readonly capabilities:readonly VibeIntent['type'][];
+ reviewDetails?(runId:string):Promise<ReviewDetails>;
  snapshot():Promise<VibeSnapshot>;chooseFolder():Promise<FolderGrant|null>;
  subscribe(onEvent:(event:import('./wire').VibeEvent)=>void,onError:(error:unknown)=>void):Promise<()=>void>;
  execute(command:VibeCommand):Promise<VibeSnapshot>;
 }
+
+export interface TextHunk {id:string;oldStart:number;oldCount:number;newStart:number;newCount:number;diff:string}
+export interface HunkSelection {path:string;hunkIds:string[]}
+export interface TimelineEntry {sequence:number;timestampUtc:string;kind:string;detail:string;usage?:import('./wire').Usage}
+export interface ReviewDetails {revision:string|null;files:{path:string;hunks:TextHunk[]}[];timeline:TimelineEntry[]}

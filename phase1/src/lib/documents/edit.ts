@@ -1,4 +1,8 @@
-export interface DocBlock{index:number;kind:'para'|'table';text?:string;editable:boolean}
+/** `outline` is the heading level 0-8 (Heading 1 = 0) when the paragraph is an outline entry. */
+/** Block ids from here address a paragraph inside a table cell (mirrors CELL_BASE in the engine adapter). */
+export const CELL_BASE=1<<20;
+import type {ImageWrap,ImageAlign} from './protocol';
+export interface DocBlock{index:number;kind:'para'|'table'|'cell';text?:string;editable:boolean;outline?:number|null;/** Cell entries only: body index of the table and the cell's row, cell and paragraph index. */table?:number;row?:number;cell?:number;para?:number;/** Set on a paragraph that ends a section: how the section after it starts. */sectionBreak?:import('./protocol').SectionBreakKind;/** Top-level paragraphs that hold only a picture: its display size in points and alt text. */image?:{w:number;h:number;alt:string;wrap?:ImageWrap;align?:ImageAlign;/** Percent trimmed from the left, top, right and bottom. */crop?:number[]}}
 /** One replacement in UTF-8 byte offsets of the paragraph text it applies to. */
 export interface Hunk{start:number;end:number;text:string}
 /** All hunks of one paragraph, ascending and non-overlapping, applied atomically. */
@@ -57,7 +61,7 @@ export interface SnapStep{before:number;after:number;caretBefore:{block:number;o
 export interface UndoEntry{inverse:TextEdit;snap?:SnapStep}
 export class UndoStack{
  private undoS:UndoEntry[]=[];private redoS:UndoEntry[]=[];
- get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
+ get depth(){return this.undoS.length;}get canUndo(){return this.undoS.length>0;}get canRedo(){return this.redoS.length>0;}
  private mergeAt=-Infinity;
  /** `merge`: consecutive typing in one place within `windowMs` becomes one undo step. */
  push(inverse:TextEdit,merge=false,now=Date.now(),windowMs=1200){
@@ -72,4 +76,11 @@ export class UndoStack{
  pushSnap(snap:SnapStep){this.undoS.push({inverse:{block:snap.caretBefore.block,hunks:[]},snap});this.redoS=[];this.mergeAt=-Infinity;}
  pushRedoEntry(x:UndoEntry){this.redoS.push(x);}pushUndoEntry(x:UndoEntry){this.undoS.push(x);}
  clear(){this.undoS=[];this.redoS=[];}
+ /** Serializable history. Entries that need an engine snapshot id (structural steps) cannot survive a restart: everything at or below such an entry is dropped. */
+ exportJournal():UndoJournal{
+  const keep=(a:UndoEntry[])=>{let i=a.length-1;while(i>=0&&!a[i].snap)i--;return{entries:a.slice(i+1).map(e=>e.inverse),dropped:i+1};};
+  const u=keep(this.undoS),r=keep(this.redoS);return{undo:u.entries,redo:r.entries,truncated:u.dropped>0||r.dropped>0};
+ }
+ importJournal(j:UndoJournal){this.undoS=j.undo.map(inverse=>({inverse}));this.redoS=j.redo.map(inverse=>({inverse}));this.mergeAt=-Infinity;}
 }
+export interface UndoJournal{undo:TextEdit[];redo:TextEdit[];truncated:boolean}

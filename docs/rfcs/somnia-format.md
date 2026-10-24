@@ -5,7 +5,7 @@ Status: draft, not implemented
 Base reviewed: `5c1199c931ff46537a16b50d066f327ebbe30c15`
 Scope: open, local-first persistence across the Somnia studios
 
-Related: [Architecture](../ARCHITECTURE.md), [Image editor core](../IMAGE-EDITOR-CORE-HANDOVER.md), [Vector core](../VECTORCORE.md), [Vector scene adapter](../VECTOR-FLAT-SCENE-ADAPTER.md), [Web/local bridge](../../phase1/notes/ADR-002-web-local-bridge.md).
+Related: [Architecture](../ARCHITECTURE.md), [Image editor core](../handover/image-editor-core.md), [Vector core](../VECTORCORE.md), [Vector scene adapter](../VECTOR-FLAT-SCENE-ADAPTER.md), [Web/local bridge](../../phase1/notes/ADR-002-web-local-bridge.md).
 
 MUST, SHOULD and MAY below define proposed conformance, not shipped behaviour.
 This RFC does not claim existing format support, complete studio models or

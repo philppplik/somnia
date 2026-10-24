@@ -12,3 +12,5 @@
 .versions-history button {color:var(--text-primary); background:var(--bg-elevated); border:1px solid var(--border-default);}
 .versions-history button:hover:not(:disabled) {background:var(--bg-hover);}
 .versions-history button:disabled {opacity:.4;}
+
+.versions-safety {margin-top:16px; padding-top:12px; border-top:1px solid var(--border-default);}

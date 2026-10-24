@@ -100,3 +100,21 @@ test('unsupported mime and engine failures become honest error states',async()=>
  assert.match(getPhotoSession('a.webp')!.error,/JPEG and PNG/);
  closePhoto('a.webp');
 });
+test('handback returns the developed render when the session is live',async()=>{
+ await open();
+ const {handBackPhotoBytes}=await import('./studioSession');
+ const bytes=await handBackPhotoBytes(item.name);
+ assert.ok(bytes.byteLength>0);
+ assert.equal(new TextDecoder().decode(bytes),photoSignature(getPhotoSession(item.name)!.now),'the export path renders the current settings');
+});
+test('handback returns the untouched original when the engine cannot develop the photo',async()=>{
+ setPhotoEngineFactory(()=>({async load(){throw Error('Transparent PNG development is not implemented; use Raster tools');},async renderPhoto(){throw Error('no');},async exportPhoto(){throw Error('no');},dispose(){}}));
+ await openPhoto({...item,name:'alpha.png'});
+ const s=getPhotoSession('alpha.png');
+ assert.equal(s?.status,'error');
+ const {handBackPhotoBytes}=await import('./studioSession');
+ const bytes=await handBackPhotoBytes('alpha.png');
+ const original=await (await fetch(item.url)).arrayBuffer();
+ assert.equal(bytes.byteLength,original.byteLength,'the original survives an engine refusal so the round trip back still works');
+ closePhoto('alpha.png');
+});

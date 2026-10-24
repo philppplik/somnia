@@ -2,24 +2,23 @@
 
 # Somnia
 
-Local-first visual web editor and Dreamweaver successor. Design canvas and code editor on the same source, plus inline editors for images, SVG and PDF. Your files stay on your machine: no account needed, no telemetry. MIT licensed.
+Local-first visual web editor and Dreamweaver successor. Design canvas and code editor on the same source, plus studios for images, vector art, 3D, animation, audio, video and office files. Your files stay on your machine: no account needed, no telemetry. MIT licensed.
 
 ![Somnia tour: design view, split view, command palette, settings](docs/assets/readme/tour.gif)
 
-**Status: beta.** Current pre-release: [v11.3.0-beta.5](https://github.com/philppplik/somnia/releases/tag/v11.3.0-beta.5). It has been checked in a browser against mocked desktop commands and in CI builds, but not on real Windows or macOS desktops yet. Installers are unsigned (SmartScreen warning on Windows, macOS is ad-hoc signed and not notarized).
+**Status: beta.** Current pre-release: [v12.2.0-beta.7](https://github.com/philppplik/somnia/releases/tag/v12.2.0-beta.7). Every release ships from a commit whose full CI matrix is green (frontend e2e, native, Windows, Windows ARM64, macOS, Linux ARM64, CLI). Installers are unsigned for now, so SmartScreen and Gatekeeper can warn. macOS builds are Apple Silicon only.
 
 ## What it does today
 
-- **Design and code on one source.** Edits in either place change the real HTML and CSS, with shared undo. Nothing is regenerated.
-- **Layers, breadcrumbs, inspector, Problems panel** and a command palette (`Ctrl+K`).
+- **Design and code on one source.** Edits in either place change the real HTML and CSS, with shared undo. Nothing is regenerated. Layers, breadcrumbs, inspector, Problems panel and a command palette (`Ctrl+K`).
+- **A studio per craft.** Photos (non-destructive raster editing), Vector (SVG drawing, path booleans, bitmap trace), 3D (models, sculpt, UV tools, GLB export), Animation (keyframes, masks, graphs, GIF/APNG/WebM export), Sound, Video, Documents, Sheets, Slides and an interface builder.
 - **Code editor** with Emmet, auto-close tags, linting, find and replace, Prettier formatting (loaded on demand) and a diff viewer.
-- **Image editor:** inline raster editing with history, layered PhotoCraft documents (WASM), read-only previews for more formats such as TIFF and PSD, batch conversion.
-- **SVG editor:** move, resize, draw, layers and node editing, path booleans, gradients, bitmap trace, snapping, guides, grid, clip and mask.
-- **PDF editor:** work on copies; comments (list, edit, delete), AcroForm field designer (create, place, move, resize, rename, delete). XFA forms stay view-only.
-- **Office preview:** read-only DOCX and XLSX in the file preview.
-- **Settings:** search, a "Modified" view with reset, and per-project overrides in `.somnia/settings.json` (units, image saving, export options).
-- **AI agent (optional):** a native panel that asks before reading or writing each file and shows every change as a preview. OpenRouter and local Ollama models; the GitHub login asks for the `repo` scope to read private repositories and uses it read-only.
-- **Export:** ZIP, folder, single HTML file or Markdown. Themes and an extension SDK (see `docs/extensions/`).
+- **PDF tools:** comments and an AcroForm field designer on copies. XFA forms stay view-only.
+- **Crash-safe sessions.** Documents and Sheets write verified recovery checkpoints while you edit and restore them after a crash. Studios you leave in the background suspend and resume from checkpoints; unsaved work is never evicted silently.
+- **Transcript Hub:** transcribe audio locally with the optional whisper.cpp helper. No cloud fallback.
+- **AI agent (optional):** a native panel that asks before reading or writing each file and shows every change as a preview. OpenRouter, OpenAI, Claude and local Ollama models.
+- **Ship your site:** framework adapters (Vite, Astro, Next, SvelteKit, Nuxt, plain Node) and one-click deploy over SSH/SSL, plus the Somnia CLI for scripting. These are experimental.
+- **Themes and an extension SDK** (see `docs/extensions/`). Export as ZIP, folder, single HTML file or Markdown.
 
 | Design view | Split view |
 | --- | --- |
@@ -27,7 +26,7 @@ Local-first visual web editor and Dreamweaver successor. Design canvas and code 
 | **Command palette** | **Settings** |
 | ![Command palette](docs/assets/readme/03-palette.png) | ![Settings](docs/assets/readme/04-settings.png) |
 
-Screenshots are from the web build with mocked desktop commands.
+Tour and screenshots are real captures from the web build (v12.2.0 beta 7).
 
 Architecture: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Build and release: [docs/BUILD-AND-RELEASE.md](docs/BUILD-AND-RELEASE.md). Roadmap: [docs/ROADMAP.md](docs/ROADMAP.md). Benchmarks: [phase1/notes/BENCHMARKS.md](phase1/notes/BENCHMARKS.md).
 
@@ -37,31 +36,4 @@ Cloud processing requires opt-in. AI changes reach the editor only after review 
 
 ## Download
 
-Get installers from [Releases](https://github.com/philppplik/somnia/releases) (each release lists SHA-256 checksums).
-
-## Repository layout
-
-- `phase1/` - the app (Tauri + web frontend), tests and design notes (`phase1/notes/`)
-- `relay/` - `somnia-relay`, the blind WebSocket relay for collaboration
-- `docs/` - documentation, see [docs/README.md](docs/README.md); `docs/ARCHITECTURE.md` is the technical overview, `docs/extensions/` the extension SDK guide. The project site (`index.html`) also lives here.
-- `proto/` - early prototypes (Phase 0, frozen)
-
-## Develop
-
-```
-cd phase1
-npm ci
-npm run craft:build  # WASM bridges, needs Rust 1.95, the wasm32 target and wasm-bindgen
-npm run dev        # web dev server
-npm run test:core  # unit tests
-npm run bench      # editor-core benchmarks
-npx playwright test
-```
-
-## Contributing
-
-Work in feature branches and open a pull request. CI must be green.
-
-## License
-
-MIT, Copyright Philipp Paulik. See `LICENSE`.
+Get installers from [Releases](https://github.com/philppplik/somnia/releases): Windows (x64 and ARM64), macOS (Apple Silicon) and Linux (x64 and ARM64), plus CLI archives. Every release lists SHA-256 checksums for each file.

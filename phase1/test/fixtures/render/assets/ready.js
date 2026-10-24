@@ -1,0 +1,1 @@
+document.getElementById("result").textContent="Linked script ran";

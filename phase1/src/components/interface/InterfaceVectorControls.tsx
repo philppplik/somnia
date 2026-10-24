@@ -1,0 +1,13 @@
+import {Button} from '../ui/button';
+import {useT} from '../../lib/useT';
+import {interfaceSession,useInterfaceState} from '../../lib/interface/session';
+import {owningInstance,patchInterfaceNode} from '../../lib/interface/components';
+import {Field} from './InterfaceField';
+export function InterfaceVectorControls({nodeId,run}:{nodeId:string;run:(f:()=>void)=>void}){
+ const s=useInterfaceState(),{t}=useT(),doc=s.document!,node=doc.nodes.find(n=>n.id===nodeId)!;if(!['ellipse','line','path','image','frame','rectangle'].includes(node.kind))return null;const disabled=node.locked||!!owningInstance(doc,nodeId);const patch=(change:Parameters<typeof patchInterfaceNode>[2])=>run(()=>interfaceSession.transact(d=>patchInterfaceNode(d,nodeId,change)));
+ return <details className="border-t border-subtle pt-3"><summary className="mb-2 text-xs">{t('interface.vector')}</summary><div className="flex flex-col gap-2">
+ {['ellipse','line','path'].includes(node.kind)&&<><Field name={t('interface.stroke')} value={node.stroke??'#202124'} type="color" disabled={disabled} onCommit={stroke=>patch({stroke})}/><Field name={t('interface.strokeWidth')} value={node.strokeWidth??2} type="number" disabled={disabled} onCommit={v=>patch({strokeWidth:Number(v)})}/></>}
+ {node.path&&<><label className="flex items-center gap-2 text-xs"><input style={{width:14}} type="checkbox" disabled={disabled} checked={node.path.closed} onChange={e=>patch({path:{...node.path!,closed:e.target.checked}})}/>{t('interface.closedPath')}</label>{node.path.points.map((p,i)=><div key={i} className="grid grid-cols-2 gap-2">{(['x','y'] as const).map(axis=><Field key={axis} name={`${i+1} ${axis.toUpperCase()}`} value={p[axis]} type="number" disabled={disabled} onCommit={v=>{const points=structuredClone(node.path!.points);points[i][axis]=Number(v);patch({path:{...node.path!,points}});}}/>)}</div>)}<Button size="compact" disabled={disabled||node.path.points.length>=256} onClick={()=>patch({path:{...node.path!,points:[...node.path!.points,{x:.5,y:.5}]}})}>{t('interface.addPoint')}</Button></>}
+ {node.imageFill&&<><label className="text-xs">{t('interface.imageFit')}<select aria-label={t('interface.imageFit')} className="mt-1 w-full bg-panel p-2" value={node.imageFill.fit} disabled={disabled} onChange={e=>patch({imageFill:{...node.imageFill!,fit:e.target.value as 'cover'|'contain'}})}><option value="cover">{t('interface.cover')}</option><option value="contain">{t('interface.contain')}</option></select></label>{node.kind!=='image'&&<Button size="compact" disabled={disabled} onClick={()=>patch({imageFill:undefined})}>{t('interface.removeImageFill')}</Button>}</>}
+ </div></details>;
+}

@@ -6,7 +6,17 @@
 //!   back Ask, Deny, or an [`ApprovalToken`] bound to exactly that proposal.
 //! * Only the [`UiHandle`] can answer a pending request. Model output has no path to it.
 //! * [`FileExecutor`] re-checks the token against its own arguments at execution time.
-//! * Shell, MCP, desktop and tool network have no enforcement here and are always denied.
+//! * Policy v2: shell runs only through a [`proc::ProcessExecutor`] (OS-isolated, fail-closed;
+//!   elevated arbitrary exec is a separate explicit mode), tool network only through the
+//!   broker-owned [`net::DomainProxy`]. macOS has no process execution ("not available", no
+//!   fallback).
+//! * MCP tool calls have no OS-level enforcement, so the generic propose path still always
+//!   denies them. They run only through the explicit [`mcp::McpRoute`]: its own, stronger
+//!   grant type (digest-bound, stored apart from folder grants), one-time tokens, never a
+//!   silent broker pass. Desktop control is preparation-only through [`computer_use`]; the generic path stays denied.
+//! * Extension/MCP trust (publisher, review, digest, runtime permissions as separate axes,
+//!   pinned minisign catalog, signed sequenced revocations, restricted default) lives in
+//!   [`trust`]. It decides what may be installed or offered; the broker still gates effects.
 //!
 //! ```
 //! use vibespace_policy::*;
@@ -32,14 +42,19 @@ pub mod action;
 pub mod audit;
 pub mod broker;
 pub mod clock;
+pub mod computer_use;
 pub mod digest;
 pub mod error;
 pub mod executor;
 pub mod fs;
 pub mod impact;
+pub mod mcp;
+pub mod net;
+pub mod proc;
 pub mod sanitize;
 pub mod token;
 pub mod transport;
+pub mod trust;
 pub mod ui;
 
 #[cfg(test)]
@@ -52,7 +67,21 @@ pub use clock::{Clock, ManualClock, SystemClock};
 pub use digest::ArgsDigest;
 pub use error::{ConsumeError, PolicyError};
 pub use executor::{ExecError, FileExecutor, FileLimits, IsolatedRoot, WriteReceipt};
+pub use mcp::{McpCallPermit, McpError, McpGrantView, McpRoute, McpToolRef, MAX_CALL_ARGS_BYTES};
 pub use fs::{FsError, IsolationLevel, ISOLATED_MARKER};
+pub use net::{
+    is_public_ip, Domain, DomainProxy, FetchRequest, NetError, NetworkExecutor, ProxyConfig,
+};
+pub use proc::{
+    platform_support, Command, ElevatedSetup, ExecMode, ExecReceipt, ExecSpec, ProcessError,
+    ProcessExecutor, ProcessLauncher, ProcessLimits, ProcessSession, ProcessSupport, SessionIo,
+    SessionProcess,
+};
 pub use token::ApprovalToken;
+pub use trust::{
+    assess_publisher, skill_script_gate, CatalogKey, PinnedCatalog, PinnedDigest, PublisherTrust,
+    ReviewState, Revocation, RevocationList, RevocationSubject, RuntimePermission,
+    RuntimePermissions, SkillScriptGate, TrustError, TrustPosture,
+};
 pub use transport::{ModelTransportPermit, ModelTransportPolicy};
 pub use ui::{ConsentDecisionWire, PendingView};

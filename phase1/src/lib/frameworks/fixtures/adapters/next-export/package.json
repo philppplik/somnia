@@ -1,0 +1,11 @@
+{
+  "name": "a",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build"
+  },
+  "dependencies": {
+    "next": "16",
+    "react": "19"
+  }
+}

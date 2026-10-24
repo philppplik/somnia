@@ -8,7 +8,7 @@ const at=(h:number,m:number,s:number)=>{const d=new Date(today);d.setHours(h,m,s
 const HASH='a41d7e0c3b9f58d2c6e1a7b4093f5d8e2c1b6a97d4e80f3a5c2b1d9e7f6a90bc';
 export const FIXTURE_EXTENSIONS:PopupExtension[]=[
  {id:'example.word-count',name:'Word count',version:'1.2.0',description:'Live word count and reading time.',publisher:'example-dev',badge:null,enabled:true,status:'running',grants:[],contributions:['panels'],lastActivity:null,source:{provider:'GitHub release',repository:'example-dev/word-count',release:'1.2.0',verification:'no-signed-match'},update:{kind:'current'}},
- {id:'example.tidy-html',name:'Tidy HTML',version:'0.9.1',description:'Reformat the open HTML file with one command.',publisher:'example-dev',badge:{criterion:'Publisher identity confirmed by the signed index'},enabled:true,status:'running',
+ {id:'example.tidy-html',name:'Tidy HTML',version:'0.9.1',description:'Reformat the open HTML file with one command.',publisher:'example-dev',badge:{criterion:'Reviewed by Somnia maintainers'},enabled:true,status:'running',
   grants:[{id:'project.read',key:'project.read',control:'toggle',granted:true},{id:'project.write',key:'project.write',control:'toggle',granted:true}],contributions:['commands'],lastActivity:{ts:at(13,2,14),target:'index.html',api:'project.write'},
   about:'<main>\n  <h1>Hello, Somnia</h1>\n</main>',source:{provider:'GitHub release',repository:'example-dev/tidy-html',release:'0.9.1',sha256:HASH,verification:'signed-match'},update:{kind:'consent',version:'0.10.0',added:['network.api.example.com'],keepsRunning:true}},
  {id:'example.coffee-shop-plus',name:'Coffee Shop+',version:'2.0.0',description:'Two extra warm code themes.',publisher:'example-dev',badge:null,enabled:true,status:'running',grants:[],contributions:['themes'],lastActivity:null,source:{provider:'GitHub release',repository:'example-dev/coffee-shop-plus',release:'2.0.0',verification:'no-signed-match'},update:{kind:'current'}},
@@ -37,7 +37,7 @@ export function fixtureHost(over:Partial<ExtensionsPopupHost>={}):ExtensionsPopu
   inspect:async({manifestText})=>manifestText.trim()?({kind:'manifestOnly',id:'example.new',name:'New extension',version:'0.1.0'}):({kind:'empty'}),
   install:async()=>{},
   browse:async()=>({status:'ready',offline:false,fetchedAt:new Date().toISOString(),entries:[
-   {id:'example.svg-optimizer',name:'SVG Optimizer',description:'Smaller SVG files, same artwork.',publisher:'example-dev',badge:{criterion:'Publisher identity confirmed by the signed index'},permissionLabels:['project.read','project.write'],state:'available',verified:true},
+   {id:'example.svg-optimizer',name:'SVG Optimizer',description:'Smaller SVG files, same artwork.',publisher:'example-dev',badge:{criterion:'Reviewed by Somnia maintainers'},permissionLabels:['project.read','project.write'],state:'available',verified:true},
    {id:'example.coffee-shop-plus',name:'Coffee Shop+',description:'Two extra warm code themes.',publisher:'example-dev',badge:null,permissionLabels:[],state:'installed',verified:true},
    {id:'example.github-releases',name:'GitHub releases',description:'See releases from your project panel.',publisher:'example-dev',badge:null,permissionLabels:['project.read'],state:'available',verified:true},
    {id:'example.word-count',name:'Word count',description:'Live word count and reading time.',publisher:'example-dev',badge:null,permissionLabels:[],state:'installed',verified:true},

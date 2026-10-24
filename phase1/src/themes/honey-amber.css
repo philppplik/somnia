@@ -15,7 +15,7 @@
   --text-secondary: #dec9a3;
   --text-tertiary: #c5af89;
   --accent: #f3bc54;
-  --accent-ink: #24190b;
+  --accent-ink: #ffffff;
   /* Filled controls elsewhere use white labels, so keep this darker than --accent. */
   --accent-fill: #965b12;
   --accent-soft: #f3bc5424;
@@ -39,7 +39,7 @@
   --text-primary: #30230d;
   --text-secondary: #604920;
   --text-tertiary: #71562a;
-  --accent: #825008;
+  --accent: #7c4c08;
   --accent-ink: #ffffff;
   --accent-fill: #925912;
   --accent-soft: #ad720b1f;

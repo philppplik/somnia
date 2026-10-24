@@ -1,0 +1,20 @@
+import {test,expect} from './fixtures';
+const PNG='iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGP4z8DwHwAFAAH/iZk9HQAAAABJRU5ErkJggg==';
+test('live preview inlines binary refs (html + css), and the sandboxed iframe renders data: images (large ones included) under the CSP',async({page})=>{await page.goto('/');
+ const out=await page.evaluate(async(png)=>{const m=await import('/src/lib/livePreview.ts');const c=await import('/src/lib/previewAssetCache.ts');const l=await import('/src/lib/livePreviewAssets.ts');
+  const small=Uint8Array.from(atob(png),ch=>ch.charCodeAt(0));const big=new Uint8Array(small.length+3*1024*1024);big.set(small);// trailing bytes after IEND are ignored by decoders
+  const probe='<script>addEventListener("load",function(){var q=function(i){return document.getElementById(i).naturalWidth};var bg=getComputedStyle(document.getElementById("d")).backgroundImage;setTimeout(function(){parent.postMessage({probe:1,a:q("a"),big:q("big"),ext:q("ext"),bg:bg},"*")},300)})</script>';
+  const files={'index.html':'<html><head><link rel="stylesheet" href="css/s.css"></head><body><img id="a" src="img/a.png"><img id="big" src="img/big.png"><img id="ext" src="https://x.test/n.png"><div id="d"></div><video src="img/v.mp4" poster="img/a.png"></video>'+probe+'</body></html>','css/s.css':'#d{width:4px;height:4px;background:url(../img/a.png)}'};
+  const first=m.buildPreview(files,'index.html',true);
+  const cache=new c.PreviewAssetCache();
+  const loader=async(p:string)=>p==='img/a.png'?{bytes:small}:p==='img/big.png'?{bytes:big}:p==='img/v.mp4'?{bytes:new Uint8Array(1000)}:null;
+  const {built,notes}=await l.buildPreviewWithAssets(files,'index.html',true,0,cache,loader);
+  const f=document.createElement('iframe');f.setAttribute('sandbox','allow-scripts');document.body.append(f);
+  const msg=new Promise<any>(r=>addEventListener('message',e=>{if(e.data&&e.data.probe)r(e.data);}));
+  f.srcdoc=built.html;
+  return {firstRefs:first.assetRefs,notes,html:built.html,probe:await msg,urls:[...cache.urls.values()].map(u=>u.slice(0,10))};},PNG);
+ expect(out.firstRefs.sort()).toEqual(['img/a.png','img/big.png','img/v.mp4']);
+ expect(out.notes).toEqual([]);
+ expect(out.html).toContain("media-src data:");expect(out.html).not.toContain('img/a.png');expect(out.html).toContain('https://x.test/n.png');
+ expect(out.urls.every(u=>u.startsWith('data:'))).toBe(true);
+ expect(out.probe.a).toBe(1);expect(out.probe.big).toBe(1);expect(out.probe.ext).toBe(0);expect(out.probe.bg).toContain('url("data:image/png');});

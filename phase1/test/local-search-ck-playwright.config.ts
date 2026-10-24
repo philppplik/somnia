@@ -1,0 +1,1 @@
+import {defineConfig} from '@playwright/test';export default defineConfig({testDir:'../tests',testMatch:'local-search-ck.spec.ts',use:{baseURL:'http://127.0.0.1:1431',viewport:{width:1120,height:1000}},webServer:{command:'../node_modules/.bin/vite --config design-system/vite.config.ts',url:'http://127.0.0.1:1431',reuseExistingServer:false},reporter:'list'});

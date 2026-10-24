@@ -1,13 +1,15 @@
-import {SlidesCanvas} from './slides/SlidesCanvas';
-import {PsdViewer} from './PsdViewer';
-import {SoundWorkspace} from './sound/SoundWorkspace';
-import {VideoWorkspace} from './video/VideoWorkspace';
 import {lazy,Suspense} from 'react';
+const SlidesCanvas=lazy(()=>import('./slides/SlidesCanvas').then(m=>({default:m.SlidesCanvas})));
+const PsdViewer=lazy(()=>import('./PsdViewer').then(m=>({default:m.PsdViewer})));
+const SoundWorkspace=lazy(()=>import('./sound/SoundWorkspace').then(m=>({default:m.SoundWorkspace})));
+const VideoWorkspace=lazy(()=>import('./video/VideoWorkspace').then(m=>({default:m.VideoWorkspace})));
 const PdfInlineEditor=lazy(()=>import('./pdfedit/PdfInlineEditor').then(m=>({default:m.PdfInlineEditor})));
 const DocxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.DocxViewer})));
 const XlsxViewer=lazy(()=>import('./OfficeViewer').then(m=>({default:m.XlsxViewer})));
 import {useEffect,useMemo,useState} from 'react';
 import {Maximize2,Minimize2,ExternalLink} from '../lib/icons';
+import {Button} from './ui/button';
+import {requestStudio} from '../store/appStore';
 import {formatBytes,isMarkdown,isTex,type MediaItem} from '../lib/media';
 import {MarkdownPreview} from './MarkdownPreview';
 import {loadMathEngine,makeSink,useMathEngine} from '../lib/mathRender';
@@ -23,13 +25,17 @@ function FitImage({src,alt,onSize}:{src:string;alt:string;onSize?:(w:number,h:nu
  return <><div className={bar}><span className="truncate" data-testid="media-name">{alt}</span><span className="text-ink-3" data-testid="media-dims">{dim?`${dim[0]} x ${dim[1]} px`:''}</span><span className="flex-1"/>
   <button className={tool} aria-pressed={fit} aria-label={t(fit?'finish2.media.actualAria':'finish2.media.fitAria')} onClick={()=>setFit(!fit)}>{fit?<Maximize2 size={13}/>:<Minimize2 size={13}/>}{t(fit?'finish2.media.actual':'finish2.media.fit')}</button></div>
   <div className="media-stage min-h-0 flex-1 overflow-auto p-4"><div className="grid min-h-full place-items-center"><img src={src} alt={alt} data-testid="media-image" draggable={false} onLoad={e=>{const i=e.currentTarget;setDim([i.naturalWidth,i.naturalHeight]);onSize?.(i.naturalWidth,i.naturalHeight);}} className="media-checker rounded-sm shadow-sm" style={fit?{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}:undefined}/></div></div></>;}
+/** CA2: the inline audio preview offers the full studio, quietly. */
+export function AudioOpenHint(){const {t}=useT();
+ return <div className="flex items-center gap-2 border-b border-subtle px-3 py-1 text-xs" data-testid="audio-open-sound"><span className="flex-1"/>
+  <Button size="compact" variant="ghost" onClick={()=>requestStudio('sound','manual')}>{t('handoff.openInSound')}</Button></div>;}
 /** Preview for an opened PNG, JPEG or PDF. */
-export function MediaViewer({item}:{item:MediaItem}){const {t}=useT();
- if(item.kind==='audio')return <SoundWorkspace key={item.name} item={item} withPanel/>;
+function MediaViewerContent({item}:{item:MediaItem}){const {t}=useT();
+ if(item.kind==='audio')return <div className="flex min-h-0 flex-1 flex-col"><AudioOpenHint/><SoundWorkspace key={item.name} item={item} withPanel/></div>;
  if(item.kind==='video'||item.kind==='video-project')return <VideoWorkspace key={item.name} item={item} withPanel/>;
  if(item.kind==='psd')return <PsdViewer key={item.url} item={item}/>;
  if(item.kind==='pdf')return <Suspense fallback={<div role="status" className="grid flex-1 place-items-center text-xs">Opening PDF…</div>}><PdfInlineEditor key={item.name} item={item}/></Suspense>;
- if(item.kind==='pptx')return <SlidesCanvas/>;
+ if(item.kind==='pptx')return <SlidesCanvas embedded/>;
  if(item.kind==='docx'||item.kind==='xlsx')return <Suspense fallback={null}>{item.kind==='docx'?<DocxViewer item={item}/>:<XlsxViewer item={item}/>}</Suspense>;
  return <section className="canvas-stage flex min-h-0 flex-1 flex-col" aria-label={t('finish2.media.image')}>
   {item.warning&&<p className="px-3 py-2 text-xs text-ink-2" role="note" data-testid="raster-warning">{item.warning}</p>}
@@ -65,3 +71,5 @@ function useDebounced<T>(value:T,ms:number,on:boolean):T{
  const [v,setV]=useState(value);
  useEffect(()=>{if(!on){setV(value);return;}const id=window.setTimeout(()=>setV(value),ms);return()=>window.clearTimeout(id);},[value,ms,on]);
  return on?v:value;}
+
+export function MediaViewer(props:{item:MediaItem}){return <Suspense fallback={null}><MediaViewerContent {...props}/></Suspense>;}

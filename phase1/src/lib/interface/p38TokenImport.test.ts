@@ -1,0 +1,26 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addVariable} from './tokens';
+import {interfaceTokensJSON} from './tokenExport';
+import {importInterfaceTokens} from './tokenImport';
+function source(){const s=createInterfaceSession();s.start();s.transact(d=>{const base=addVariable(d,'color','Brand');d.variables![0].value='#7756e8';d.variables![0].modeValues={dark:'#8866f9'};const gap=addVariable(d,'number','Gap');d.variables![1].value=12;const alias=addVariable(d,'color','Accent');d.variables![2].value='#000000';d.variables![2].alias=base;(d.textStyles??=[]).push({id:'ts-1',name:'Heading',fontFamily:'serif',fontSize:32,lineHeight:1.2,fontWeight:700,fontStretch:'condensed',paragraphSpacing:8,modeValues:{dark:{fontSize:36,lineHeight:1.2,fontWeight:700}}});});return s;}
+test('token JSON round-trips variables, aliases and text styles into a fresh document',()=>{const a=source();const json=interfaceTokensJSON(a.get().document!);
+ const b=createInterfaceSession();b.start();let result!:ReturnType<typeof importInterfaceTokens>;b.transact(d=>{result=importInterfaceTokens(d,json);});
+ assert.deepEqual([result.variables.added,result.variables.updated,result.variables.skipped],[3,0,0]);assert.deepEqual([result.textStyles.added,result.textStyles.updated,result.textStyles.skipped],[1,0,0]);assert.deepEqual(result.warnings,[]);
+ const doc=b.get().document!,brand=doc.variables!.find(v=>v.name==='Brand')!,accent=doc.variables!.find(v=>v.name==='Accent')!;
+ assert.equal(brand.value,'#7756e8');assert.deepEqual(brand.modeValues,{dark:'#8866f9'});assert.equal(accent.alias,brand.id);assert.notEqual(accent.alias,'');
+ const heading=doc.textStyles!.find(t2=>t2.name==='Heading')!;assert.equal(heading.fontStretch,'condensed');assert.equal(heading.paragraphSpacing,8);assert.equal(heading.modeValues!.dark!.fontSize,36);});
+test('re-import is a no-op and a changed file updates in place with one undo',()=>{const a=source();const json=interfaceTokensJSON(a.get().document!);
+ const b=createInterfaceSession();b.start();b.transact(d=>{importInterfaceTokens(d,json);});const afterFirst=b.get();
+ let again!:ReturnType<typeof importInterfaceTokens>;b.transact(d=>{again=importInterfaceTokens(d,json);});assert.equal(again.variables.added+again.variables.updated+again.textStyles.added+again.textStyles.updated,0);assert.equal(b.get().document!.variables!.length,3);
+ const edited=JSON.parse(json);edited.variables.find((v:{name:string})=>v.name==='Gap').value=20;let upd!:ReturnType<typeof importInterfaceTokens>;b.transact(d=>{upd=importInterfaceTokens(d,JSON.stringify(edited));});assert.equal(upd.variables.updated,1);assert.equal(b.get().document!.variables!.find(v=>v.name==='Gap')!.value,20);assert.equal(b.get().document!.variables!.length,3);
+ b.undo();assert.equal(b.get().document!.variables!.find(v=>v.name==='Gap')!.value,12);void afterFirst;});
+test('one undo reverts the whole import',()=>{const a=source();const json=interfaceTokensJSON(a.get().document!);
+ const b=createInterfaceSession();b.start();b.transact(d=>{importInterfaceTokens(d,json);});assert.equal(b.get().document!.variables!.length,3);b.undo();assert.equal(b.get().document!.variables?.length??0,0);assert.equal(b.get().document!.textStyles?.length??0,0);});
+test('invalid entries skip with warnings, bad files fail closed',()=>{const b=createInterfaceSession();b.start();
+ const mixed=JSON.stringify({kind:'somnia-interface-tokens',version:1,variables:[{name:'Good',type:'color',value:'#112233'},{name:'Bad',type:'color',value:'red'},{name:'',type:'number',value:5}],textStyles:[{name:'Broken',fontFamily:'cursive',fontSize:12,lineHeight:1,fontWeight:400}]});
+ let r!:ReturnType<typeof importInterfaceTokens>;b.transact(d=>{r=importInterfaceTokens(d,mixed);});assert.equal(r.variables.added,1);assert.equal(r.variables.skipped,2);assert.equal(r.textStyles.skipped,1);assert.equal(r.warnings.length,3);assert.equal(b.get().document!.variables!.length,1);
+ for(const bad of ['not json',JSON.stringify({kind:'other'}),JSON.stringify({kind:'somnia-interface-tokens',version:2})]){const before=b.get();assert.throws(()=>b.transact(d=>{importInterfaceTokens(d,bad);}));assert.equal(b.get(),before);}});
+test('aliases pointing outside the file resolve locally or drop with a warning',()=>{const b=createInterfaceSession();b.start();b.transact(d=>{const keep=addVariable(d,'color','Keep');d.variables![0].value='#123456';
+ const json=JSON.stringify({kind:'somnia-interface-tokens',version:1,variables:[{id:'ext-1',name:'Local ref',type:'color',value:'#222222',alias:keep},{id:'ext-2',name:'Ghost ref',type:'color',value:'#333333',alias:'missing-id'}]});const r=importInterfaceTokens(d,json);
+ assert.equal(r.warnings.length,1);assert.match(r.warnings[0],/Ghost ref/);const doc=d;assert.equal(doc.variables!.find(v=>v.name==='Local ref')!.alias,keep);assert.equal(doc.variables!.find(v=>v.name==='Ghost ref')!.alias,undefined);});});

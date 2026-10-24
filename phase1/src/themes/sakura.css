@@ -13,11 +13,11 @@
   --text-primary: #34232e;
   --text-secondary: #654b5b;
   --text-tertiary: #735567;
-  --accent: #a33165;
+  --accent: #972d5e;
   --accent-fill: #a33165;
   --accent-ink: #ffffff;
   --accent-soft: #a3316517;
-  --warning: #875500;
+  --warning: #855400;
   --danger: #b42343;
   --canvas-bg: #efdee7;
   --shell-bg: #f1e4eb;
@@ -37,8 +37,8 @@
   --text-secondary: #d9bdcf;
   --text-tertiary: #c9a6bd;
   --accent: #f0a6ca;
+  --accent-ink: #ffffff;
   --accent-fill: #b44172;
-  --accent-ink: #34232e;
   --accent-soft: #f0a6ca24;
   --warning: #e9bf72;
   --danger: #ff9bae;

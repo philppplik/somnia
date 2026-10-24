@@ -1,0 +1,19 @@
+{
+  "name": "somnia-nuxt-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build"
+  },
+  "dependencies": {
+    "nuxt": "4.6.1",
+    "vue": "3.5.44",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "@babel/parser": "8.0.7",
+    "typescript": "7.0.2"
+  }
+}

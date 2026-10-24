@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {Save} from 'lucide-react';
+import {NativeInput} from './ui/native-controls';
 import {Button} from './ui/button';
 import {ConfirmShell,FileCard} from './ConfirmShell';
 import {useAppStore} from '../store/appStore';
@@ -14,7 +15,7 @@ export function SaveDialog(){
   body={<>
    <FileCard name={name} status={t('save.cardStatus',{count:n})}/>
    <label className="dlg-option"><span className="dlg-option-text"><span>{t('save.newFolder')}</span><small>{t('save.newFolderHint',{slug:folderNameFor(s.projectName)})}</small></span>
-    <input type="checkbox" aria-label={t('save.newFolderAria')} checked={sub} disabled={busy} onChange={e=>setSub(e.target.checked)}/></label>
+    <NativeInput type="checkbox" aria-label={t('save.newFolderAria')} checked={sub} disabled={busy} onChange={e=>setSub(e.target.checked)}/></label>
    {d?.error&&<p role="alert" className="dlg-error" data-testid="save-error">{d.error}</p>}
    <button type="button" className="dlg-link" onClick={runDownload} disabled={busy}>{t('save.zip')}</button>
   </>}

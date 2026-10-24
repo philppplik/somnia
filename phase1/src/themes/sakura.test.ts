@@ -32,7 +32,7 @@ for (const mode of ['light', 'dark']) {
       }
     }
     assert.ok(contrast('#ffffff', tokens['accent-fill']) >= 4.5);
-    assert.ok(contrast(tokens['accent'], tokens['accent-ink']) >= 4.5);
+    assert.ok(contrast(tokens['accent-ink'], tokens['accent-fill']) >= 4.5);
     for (const fg of ['accent', 'danger', 'warning']) {
       assert.ok(contrast(tokens[fg], tokens['bg-panel']) >= 4.5, `${fg} on panel`);
     }

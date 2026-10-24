@@ -1,0 +1,11 @@
+{
+  "id": "next-ts",
+  "framework": "next",
+  "language": "ts",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": ".next/standalone"
+}

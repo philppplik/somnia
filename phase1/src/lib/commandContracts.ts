@@ -68,6 +68,15 @@ export type FrontendFatalEntry = import('./diagnostics/ids').SafeLogEvent & {fat
 type Contract<A, R> = { args: A; result: R };
 
 export interface CommandContracts {
+  studio_copy_open: Contract<{snapshot:import('./workspace/handoff').StudioSnapshot},string>;
+  studio_copy_take: Contract<Record<string,never>,import('./workspace/handoff').StudioSnapshot>;
+  studio_copy_export: Contract<{snapshot:import('./workspace/handoff').StudioSnapshot},boolean>;  // ---- Bottom-panel terminal (domain terminal; PTY sessions, main window only) ----
+  terminal_spawn: Contract<{ cwd: string | null; cols: number; rows: number }, import('./terminal/nativeTerminal').TerminalInfo>;
+  terminal_list: Contract<undefined, import('./terminal/nativeTerminal').TerminalInfo[]>;
+  terminal_attach: Contract<{ sessionId: string }, import('./terminal/nativeTerminal').TerminalSnapshot>;
+  terminal_write: Contract<{ sessionId: string; data: string }, null>;
+  terminal_resize: Contract<{ sessionId: string; cols: number; rows: number }, null>;
+  terminal_kill: Contract<{ sessionId: string }, null>;
   drain_open_requests: Contract<undefined, OpenRequestSummary[]>;
   claim_open_request: Contract<{ requestId: string }, ClaimReply>;
   read_by_grant: Contract<{ grant: string }, GrantRead>;
@@ -83,4 +92,49 @@ export interface CommandContracts {
   mark_crash_reports_reviewed: Contract<{ ids: string[] }, null>;
   delete_crash_reports: Contract<{ ids: string[] }, null>;
   record_frontend_fatal: Contract<{ entry: FrontendFatalEntry }, null>;
+  deploy_targets_list: Contract<undefined, import('./deploy/contract').DeployTargetStatus[]>;
+  deploy_target_save: Contract<{ target: import('./deploy/contract').DeployTarget }, null>;
+  deploy_target_delete: Contract<{ targetId: string; deleteKey: boolean }, null>;
+  deploy_plan: Contract<{ targetId: string }, import('./deploy/contract').DeployPlan>;
+  deploy_plan_rollback: Contract<{ targetId: string; releaseId: string }, import('./deploy/contract').DeployPlan>;
+  deploy_confirm_issue: Contract<{ planHash: string }, string>;
+  deploy_publish: Contract<{ targetId: string; planHash: string; token: string }, import('./deploy/contract').DeployOutcome>;
+  deploy_rollback: Contract<{ targetId: string; releaseId: string; planHash: string; token: string }, import('./deploy/contract').DeployOutcome>;
+  deploy_hostkey_probe: Contract<{ targetId: string }, import('./deploy/contract').DeployHostKeyInfo>;
+  deploy_hostkey_trust: Contract<{ targetId: string; fingerprint: string }, null>;
+  deploy_hostkey_replace: Contract<{ targetId: string; oldFingerprint: string; newFingerprint: string; acknowledged: boolean }, null>;
+  deploy_key_create: Contract<{ targetId: string }, string>;
+  deploy_releases: Contract<{ targetId: string }, string[]>;
+  deploy_ftp_password_set: Contract<{ targetId: string; password: string }, null>;
+  deploy_remote_list: Contract<{ targetId: string; path: string }, import('./deploy/contract').DeployRemoteEntry[]>;
+  deploy_key_public: Contract<{ targetId: string }, string>;
+  deploy_live_release: Contract<{ targetId: string }, string | null>;
+  deploy_cancel: Contract<{ targetId: string }, boolean>;
+  deploy_bootstrap_script: Contract<{ targetId: string }, string>;
+  deploy_bootstrap_run: Contract<import('./deploy/setup').DeployBootstrapInput, import('./deploy/setup').DeployBootstrapReport>;
+  deploy_dns_check: Contract<{ targetId: string }, import('./deploy/setup').DeployDnsCheck>;
+  deploy_open_site: Contract<{ targetId: string }, null>;
+  deploy_node_env_keys: Contract<{ targetId: string }, string[]>;
+  deploy_node_env_apply: Contract<{ targetId: string; set: Array<{ key: string; value: string }>; remove: string[] }, string[]>;
+  deploy_node_logs: Contract<{ targetId: string; lines: number }, string[]>;
+  deploy_node_status: Contract<{ targetId: string }, NodeStatusView>;
+  deploy_node_artifact_collect: Contract<{ targetId: string }, NodeArtifactView>;
+}
+
+export interface NodeStatusView {
+  active: string;
+  restarts: number;
+  port: number | null;
+  current: string | null;
+  nodeVersion: string | null;
+  lastHealth: { release: string; status: string; at: number } | null;
+}
+export interface NodeArtifactView {
+  framework: string;
+  entry: string;
+  install: boolean;
+  fileCount: number;
+  totalBytes: number;
+  nodeRange: string | null;
+  buildId: string;
 }

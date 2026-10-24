@@ -1,9 +1,10 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import {useT} from '../lib/useT';
 import {deleteProviderKey,hasProviderKey,loadProviderKey,saveProviderKey,testProviderAuthentication,ProviderAuthError} from '../lib/agent/providerAuth';
-const NAMES={claude:'Claude (Anthropic)',openrouter:'OpenRouter'} as const;
+import {COMPAT_PROVIDERS,isCompatProvider} from '../lib/agent/compatProviders';
+const NAMES={claude:'Claude (Anthropic)',openrouter:'OpenRouter',xai:COMPAT_PROVIDERS.xai.label,meta:COMPAT_PROVIDERS.meta.label,deepseek:COMPAT_PROVIDERS.deepseek.label} as const;
 /** API-key connection for Claude / OpenRouter in Profile > Connections. Same keystore and test path as Agent settings; the key is never shown after saving. */
-export function ProviderKeyConnection({provider}:{provider:'claude'|'openrouter'}){
+export function ProviderKeyConnection({provider}:{provider:keyof typeof NAMES}){
  const {t}=useT();
  const [stored,setStored]=useState<boolean|null>(null),[key,setKey]=useState(''),[busy,setBusy]=useState(false),[msg,setMsg]=useState<{text:string;error:boolean}|null>(null);
  const epoch=useRef(0);
@@ -22,6 +23,7 @@ export function ProviderKeyConnection({provider}:{provider:'claude'|'openrouter'
   <div className="connection-heading"><strong>{name}</strong><span role="status" className="github-badge" data-state={stored?'connected':'disconnected'}>{stored===null?t('github.state.checking'):t(stored?'conn.keyStored':'conn.noKey')}</span></div>
   <label>{t('conn.apiKey')}<input type="password" autoComplete="off" spellCheck={false} maxLength={8192} value={key} disabled={busy} placeholder={stored?t('conn.replacement'):t('conn.enterKey')} onChange={e=>{setKey(e.target.value);setMsg(null);}}/></label>
   <p>{t('conn.keyNote')}</p>
+  {isCompatProvider(provider)&&<p>{t('conn.compatNote',{name:NAMES[provider]})}</p>}
   <div className="github-actions">
    <button type="button" disabled={busy||!key.trim()} onClick={()=>void run('save')}>{t(stored?'conn.testReplace':'conn.testSave')}</button>
    {stored&&<button type="button" disabled={busy} onClick={()=>void run('test')}>{t('conn.testSaved')}</button>}

@@ -186,3 +186,28 @@ bytes ship: encoding is the operating system's (WebCodecs). ffmpeg.wasm was reje
   non-English locales. Fixtures
   (`tests/assets/clip.webm`, `clip.mp4`) are 2-second synthetic clips generated with the local
   ffmpeg binary - test tooling only, nothing of it ships.
+
+## Clip colour correction
+
+Each media, image and freeze clip can carry a colour correction: brightness, contrast and saturation as whole numbers from -100 to 100 (0 = untouched). Inspector > Clip > Colour has one slider per channel and a reset; a drag is one undo step. UI command `video.clip.color` takes any subset of the three channels; all zero clears it.
+
+- Maths: the CSS filter definitions (brightness, then contrast, then saturate). The preview applies them as a CSS filter on the player; the export runs the same formulas as a pixel pass on each fitted frame, so it does not depend on `ctx.filter` (missing in some WebKit builds). Code: `src/lib/video/colorAdjust.ts`.
+- Saved in the `.video-project` file as `color` on the clip and part of the dirty signature. Files written before this change load unchanged.
+- Limits: not keyframed, one correction per clip, no curves or LUTs, titles never carry one. The export pass reads each colour-corrected frame back from the canvas, so exports with corrected clips are slower.
+
+## Picture fade to and from black
+
+Media, image and freeze clips can fade their picture in from black and out to black (Inspector > Clip > Colour block: "Fade from black" and "Fade to black", seconds, 0 to 30). It is separate from the audio fades and from the crossfade into the next clip. UI command `video.clip.picFade` takes `fadeIn` and/or `fadeOut`; 0 clears a side.
+
+- Linear ramp over the clip's timeline length (after speed). If both fades are longer than the clip they shrink together to fit. Code: `src/lib/video/picFade.ts`.
+- Preview: a brightness filter on the player. Export: a black layer at the matching opacity over the fitted frame (no pixel read-back needed for the fade alone).
+- Saved in the `.video-project` file as `picFadeIn` / `picFadeOut`, part of the dirty signature; old files load unchanged. Titles carry none (use the title card background instead).
+
+## Timeline markers
+
+Named points on the timeline for planning cuts and navigating long edits. They are never rendered into the export.
+
+- Inspector > Markers: "Add at playhead", a label field per marker (up to 60 characters) and a remove button. Markers show as small diamonds above the timeline track; clicking one moves the playhead there.
+- UI commands: `video.marker.add` (optional `at` in seconds, default the playhead; optional `label`), `video.marker.rename` (`id`, `label`) and `video.marker.remove` (`id`).
+- Up to 200 markers per project, sorted by time, clamped to the timeline length. Each edit is one undo step; typing in a label coalesces into one step.
+- Saved in the `.video-project` file as `markers` (omitted when empty), part of the dirty signature and of the suspend/restore recipe; old files load unchanged. Code: `src/lib/video/markers.ts`.

@@ -1,0 +1,9 @@
+{
+  "name": "a",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "5"
+  }
+}

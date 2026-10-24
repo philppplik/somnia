@@ -35,6 +35,7 @@ fn reply(tool: bool) -> ModelReply {
         usage: Usage {
             input_tokens: 2,
             output_tokens: 3,
+            ..Default::default()
         },
     }
 }
@@ -473,4 +474,30 @@ async fn policy_and_execution_failures() {
             }))
         );
     }
+}
+
+/// No yield after send: regression for a final poll that queues provisional text
+/// and returns immediately before Infer gets another receiver poll.
+struct SamePollFinal{fail:bool,mismatch:bool}
+#[async_trait]
+impl ModelTransport for SamePollFinal{
+ async fn complete(&self,_:ModelInput)->Result<ModelReply,Failure>{panic!("stream regression must use stream_text")}
+ async fn stream_text(&self,_:ModelInput,deltas:tokio::sync::mpsc::Sender<String>)->Result<ModelReply,Failure>{
+  deltas.send("Unfinished output".into()).await.map_err(|_|Failure::Model)?;
+  if self.fail{return Err(Failure::Model)}
+  let mut final_reply=reply(false);final_reply.message=if self.mismatch{"different"}else{"Unfinished output"}.into();Ok(final_reply)
+ }
+}
+#[tokio::test]
+async fn same_poll_failed_stream_emits_queued_partial_before_failure_never_final_or_tool(){
+ let events=collect(GooseBackend::new(Arc::new(SamePollFinal{fail:true,mismatch:false})).start(request()).await.unwrap()).await;
+ assert_eq!(events,vec![EventKind::Started,EventKind::TextDelta{turn:0,offset:0,text:"Unfinished output".into()},EventKind::Failed(Failure::Model)]);
+}
+#[tokio::test]
+async fn same_poll_success_must_match_queued_partial_before_final_can_be_accepted(){
+ let events=collect(GooseBackend::new(Arc::new(SamePollFinal{fail:false,mismatch:false})).start(request()).await.unwrap()).await;
+ let delta=events.iter().position(|e|matches!(e,EventKind::TextDelta{text,..}if text=="Unfinished output")).unwrap();
+ let final_message=events.iter().position(|e|matches!(e,EventKind::Message(text)if text=="Unfinished output")).unwrap();assert!(delta<final_message);assert_eq!(events.last(),Some(&EventKind::Completed));
+ let mismatch=collect(GooseBackend::new(Arc::new(SamePollFinal{fail:false,mismatch:true})).start(request()).await.unwrap()).await;
+ assert_eq!(mismatch,vec![EventKind::Started,EventKind::TextDelta{turn:0,offset:0,text:"Unfinished output".into()},EventKind::Failed(Failure::Model)]);
 }

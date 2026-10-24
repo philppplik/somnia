@@ -7,6 +7,14 @@ export function parseAddress(address:string):{row:number;col:number}|null{
  const m=/^([A-Za-z]{1,3})([1-9]\d{0,6})$/.exec(address.trim());if(!m)return null;
  let col=0;for(const ch of m[1].toUpperCase())col=col*26+ch.charCodeAt(0)-64;col-=1;const row=Number(m[2])-1;
  return col<MAX_COLS&&row<MAX_ROWS?{row,col}:null;}
+/** "B2" or "B2:C9" (either corner order) -> top-left cell plus the opposite corner, or null for one cell; null overall when it is not an address. */
+export function parseSpan(address:string):{from:{row:number;col:number};to:{row:number;col:number}|null}|null{
+ const parts=address.trim().split(':');if(parts.length>2)return null;
+ const a=parseAddress(parts[0]);if(!a)return null;if(parts.length===1)return {from:a,to:null};
+ const b=parseAddress(parts[1]);if(!b)return null;
+ const from={row:Math.min(a.row,b.row),col:Math.min(a.col,b.col)},to={row:Math.max(a.row,b.row),col:Math.max(a.col,b.col)};
+ return from.row===to.row&&from.col===to.col?{from,to:null}:{from,to};
+}
 /** Plain display text. Number formats from the file are not applied in this first package. */
 const ERRORS:Record<string,string>={Null:'#NULL!',Div0:'#DIV/0!',Value:'#VALUE!',Ref:'#REF!',Name:'#NAME?',Num:'#NUM!',NA:'#N/A',GettingData:'#GETTING_DATA',Spill:'#SPILL!',Calc:'#CALC!',Circ:'#CIRC!'};
 export function displayValue(value:CellValue|undefined):string{
@@ -33,7 +41,7 @@ export function visibleWindow(scrollTop:number,scrollLeft:number,width:number,he
 export function cellText(cell:{text?:string;value:CellValue}|undefined):string{
  if(!cell)return '';return cell.text!==undefined?cell.text:displayValue(cell.value);}
 /** Explicit horizontal alignment from the file wins; General aligns numbers and dates right, errors and booleans centered like spreadsheets do, text left. */
-export function cellAlign(h:'left'|'center'|'right'|'general'|undefined,cell:{value:CellValue;numeric?:boolean}|undefined):'left'|'center'|'right'{
+export function cellAlign(h:'left'|'center'|'right'|'justify'|'general'|undefined,cell:{value:CellValue;numeric?:boolean}|undefined):'left'|'center'|'right'|'justify'{
  if(h&&h!=='general')return h;if(!cell)return 'left';
  if(cell.value.t==='Bool'||cell.value.t==='Error')return 'center';
  return cell.value.t==='Number'||cell.numeric?'right':'left';}

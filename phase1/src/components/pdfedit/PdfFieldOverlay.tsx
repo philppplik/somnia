@@ -17,6 +17,7 @@ import {
   type Rect,
 } from "../../lib/pdfedit/fieldGeometry";
 import type { DesignField } from "../../lib/pdfedit/formDesign";
+import {NativeButton} from '../ui/native-controls';
 interface Geometry {
   page: number;
   transform: number[];
@@ -221,7 +222,7 @@ export function PdfFieldOverlay({
         );
         return (
           <div key={f.name}>
-            <button
+            <NativeButton
               aria-label={`Move field ${f.name}`}
               disabled={s.busy || !f.editable}
               title={f.reason ?? "Drag to move field"}
@@ -239,7 +240,7 @@ export function PdfFieldOverlay({
               }}
             />
             {selected && f.editable && !s.formPlacement && (
-              <button
+              <NativeButton
                 aria-label={`Resize field ${f.name}`}
                 onPointerDown={(e) => start(e, f, true)}
                 disabled={s.busy}

@@ -186,6 +186,19 @@
       ]
     },
     {
+      "name": "check_channel_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "channel"
+      ],
+      "args": [
+        "channel"
+      ]
+    },
+    {
       "name": "choose_file",
       "domain": "fs",
       "status": "native",
@@ -299,6 +312,419 @@
         "path",
         "expectedRevision"
       ]
+    },
+    {
+      "name": "deploy_artifact_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "deploy_bootstrap_run",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "login_user",
+        "login_password",
+        "sudo_password",
+        "privilege"
+      ],
+      "args": [
+        "targetId",
+        "loginUser",
+        "loginPassword",
+        "sudoPassword",
+        "privilege"
+      ]
+    },
+    {
+      "name": "deploy_bootstrap_script",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_cancel",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_confirm_issue",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "plan_hash"
+      ],
+      "args": [
+        "planHash"
+      ]
+    },
+    {
+      "name": "deploy_dns_check",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_ftp_password_set",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "password"
+      ],
+      "args": [
+        "targetId",
+        "password"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_probe",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_replace",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "old_fingerprint",
+        "new_fingerprint",
+        "acknowledged"
+      ],
+      "args": [
+        "targetId",
+        "oldFingerprint",
+        "newFingerprint",
+        "acknowledged"
+      ]
+    },
+    {
+      "name": "deploy_hostkey_trust",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "fingerprint"
+      ],
+      "args": [
+        "targetId",
+        "fingerprint"
+      ]
+    },
+    {
+      "name": "deploy_key_create",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_key_public",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_live_release",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_node_artifact_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_node_build_collect",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "deploy_node_env_apply",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "set",
+        "remove"
+      ],
+      "args": [
+        "targetId",
+        "set",
+        "remove"
+      ]
+    },
+    {
+      "name": "deploy_node_env_keys",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_node_logs",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "lines"
+      ],
+      "args": [
+        "targetId",
+        "lines"
+      ]
+    },
+    {
+      "name": "deploy_node_status",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_open_site",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_plan",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_plan_rollback",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "release_id"
+      ],
+      "args": [
+        "targetId",
+        "releaseId"
+      ]
+    },
+    {
+      "name": "deploy_publish",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "plan_hash",
+        "token"
+      ],
+      "args": [
+        "targetId",
+        "planHash",
+        "token"
+      ]
+    },
+    {
+      "name": "deploy_releases",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id"
+      ],
+      "args": [
+        "targetId"
+      ]
+    },
+    {
+      "name": "deploy_remote_list",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "path"
+      ],
+      "args": [
+        "targetId",
+        "path"
+      ]
+    },
+    {
+      "name": "deploy_rollback",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "release_id",
+        "plan_hash",
+        "token"
+      ],
+      "args": [
+        "targetId",
+        "releaseId",
+        "planHash",
+        "token"
+      ]
+    },
+    {
+      "name": "deploy_target_delete",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target_id",
+        "delete_key"
+      ],
+      "args": [
+        "targetId",
+        "deleteKey"
+      ]
+    },
+    {
+      "name": "deploy_target_save",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "target"
+      ],
+      "args": [
+        "target"
+      ]
+    },
+    {
+      "name": "deploy_targets_list",
+      "domain": "deploy",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "discard_diagnostic_snapshot",
@@ -529,6 +955,32 @@
       ]
     },
     {
+      "name": "git_diff_refs",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "git_fetch",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
       "name": "git_init",
       "domain": "git",
       "status": "native",
@@ -551,6 +1003,58 @@
       ]
     },
     {
+      "name": "git_push_apply",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "git_push_plan",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "git_read_blob",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "blob"
+      ],
+      "args": [
+        "blob"
+      ]
+    },
+    {
+      "name": "git_ref_tree",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "git_ref"
+      ],
+      "args": [
+        "gitRef"
+      ]
+    },
+    {
       "name": "git_restore_as_new_version",
       "domain": "git",
       "status": "native",
@@ -562,6 +1066,15 @@
       "args": [
         "request"
       ]
+    },
+    {
+      "name": "git_safety_list",
+      "domain": "git",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "git_status",
@@ -754,10 +1267,43 @@
       "raw": true
     },
     {
+      "name": "install_channel_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "channel",
+        "expected_version"
+      ],
+      "args": [
+        "channel",
+        "expectedVersion"
+      ]
+    },
+    {
+      "name": "installer_handoff_take",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "is_store_package",
       "domain": "app",
       "status": "native",
       "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "lifecycle_memory_sample",
+      "domain": "lifecycle",
+      "status": "native",
+      "wrapped": true,
       "boundary": "B1",
       "params": [],
       "args": []
@@ -782,6 +1328,282 @@
       ],
       "args": [
         "projectId"
+      ]
+    },
+    {
+      "name": "local_models_delete",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "model",
+        "expected_digest"
+      ],
+      "args": [
+        "baseUrl",
+        "model",
+        "expectedDigest"
+      ]
+    },
+    {
+      "name": "local_models_detect",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_models_discover",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "runtime"
+      ],
+      "args": [
+        "baseUrl",
+        "runtime"
+      ]
+    },
+    {
+      "name": "local_models_disk_check",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "token"
+      ],
+      "args": [
+        "token"
+      ]
+    },
+    {
+      "name": "local_models_disk_choose",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_models_hardware",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_models_pull",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "model",
+        "disk_token"
+      ],
+      "args": [
+        "baseUrl",
+        "model",
+        "diskToken"
+      ]
+    },
+    {
+      "name": "local_models_pull_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_models_pull_next",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_models_read",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "base_url",
+        "operation",
+        "model"
+      ],
+      "args": [
+        "baseUrl",
+        "operation",
+        "model"
+      ]
+    },
+    {
+      "name": "local_models_start",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_voice_download",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "acknowledged"
+      ],
+      "args": [
+        "acknowledged"
+      ]
+    },
+    {
+      "name": "local_voice_helper_install",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "acknowledged",
+        "sha256"
+      ],
+      "args": [
+        "acknowledged",
+        "sha256"
+      ]
+    },
+    {
+      "name": "local_voice_helper_remove",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_poll",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "id"
+      ],
+      "args": [
+        "id"
+      ]
+    },
+    {
+      "name": "local_voice_status",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_storage_remove",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_storage_status",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "local_voice_transcribe",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm",
+        "language"
+      ],
+      "args": [
+        "pcm",
+        "language"
+      ]
+    },
+    {
+      "name": "local_voice_transcribe_file",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm",
+        "language"
+      ],
+      "args": [
+        "pcm",
+        "language"
+      ]
+    },
+    {
+      "name": "local_voice_transcribe_segments",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "pcm",
+        "language"
+      ],
+      "args": [
+        "pcm",
+        "language"
       ]
     },
     {
@@ -839,6 +1661,30 @@
       ]
     },
     {
+      "name": "mcp_grant_revoke",
+      "domain": "agent",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "kind",
+        "grant_id"
+      ],
+      "args": [
+        "kind",
+        "grantId"
+      ]
+    },
+    {
+      "name": "mcp_grants_list",
+      "domain": "agent",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "mcp_server_remove",
       "domain": "agent",
       "status": "native",
@@ -871,10 +1717,12 @@
       "wrapped": false,
       "boundary": "B1",
       "params": [
-        "id"
+        "id",
+        "choice"
       ],
       "args": [
-        "id"
+        "id",
+        "choice"
       ]
     },
     {
@@ -908,12 +1756,14 @@
       "params": [
         "server",
         "tool",
-        "arguments"
+        "arguments",
+        "choice"
       ],
       "args": [
         "server",
         "tool",
-        "arguments"
+        "arguments",
+        "choice"
       ]
     },
     {
@@ -931,6 +1781,19 @@
     },
     {
       "name": "open_external",
+      "domain": "app",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "url"
+      ],
+      "args": [
+        "url"
+      ]
+    },
+    {
+      "name": "open_preview_external",
       "domain": "app",
       "status": "native",
       "wrapped": false,
@@ -964,6 +1827,97 @@
       "params": [],
       "args": [],
       "raw": true
+    },
+    {
+      "name": "preview_close",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "preview_open",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_logs",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id",
+        "after_sequence"
+      ],
+      "args": [
+        "runId",
+        "afterSequence"
+      ]
+    },
+    {
+      "name": "project_run",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id",
+        "kind"
+      ],
+      "args": [
+        "projectId",
+        "kind"
+      ]
+    },
+    {
+      "name": "project_status",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_stop",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "project_stop_all",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
     },
     {
       "name": "provider_http_cancel",
@@ -1057,6 +2011,21 @@
     },
     {
       "name": "read_media",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id",
+        "path"
+      ],
+      "args": [
+        "projectId",
+        "path"
+      ]
+    },
+    {
+      "name": "read_project_resource",
       "domain": "fs",
       "status": "native",
       "wrapped": false,
@@ -1221,6 +2190,37 @@
       ]
     },
     {
+      "name": "runtime_install",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "consent"
+      ],
+      "args": [
+        "consent"
+      ]
+    },
+    {
+      "name": "runtime_remove",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "runtime_status",
+      "domain": "frameworks",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "save_file",
       "domain": "fs",
       "status": "native",
@@ -1368,6 +2368,41 @@
       ]
     },
     {
+      "name": "studio_copy_export",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "snapshot"
+      ],
+      "args": [
+        "snapshot"
+      ]
+    },
+    {
+      "name": "studio_copy_open",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "snapshot"
+      ],
+      "args": [
+        "snapshot"
+      ]
+    },
+    {
+      "name": "studio_copy_take",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
       "name": "studio_mcp_respond",
       "domain": "agent",
       "status": "native",
@@ -1456,6 +2491,776 @@
       ],
       "args": [
         "content"
+      ]
+    },
+    {
+      "name": "terminal_attach",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id"
+      ],
+      "args": [
+        "sessionId"
+      ]
+    },
+    {
+      "name": "terminal_context",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id"
+      ],
+      "args": [
+        "projectId"
+      ]
+    },
+    {
+      "name": "terminal_kill",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id"
+      ],
+      "args": [
+        "sessionId"
+      ]
+    },
+    {
+      "name": "terminal_list",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "terminal_resize",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id",
+        "cols",
+        "rows"
+      ],
+      "args": [
+        "sessionId",
+        "cols",
+        "rows"
+      ]
+    },
+    {
+      "name": "terminal_run",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "project_id",
+        "command",
+        "request_id",
+        "expected_cwd"
+      ],
+      "args": [
+        "projectId",
+        "command",
+        "requestId",
+        "expectedCwd"
+      ]
+    },
+    {
+      "name": "terminal_spawn",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "cwd",
+        "cols",
+        "rows"
+      ],
+      "args": [
+        "cwd",
+        "cols",
+        "rows"
+      ]
+    },
+    {
+      "name": "terminal_status",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "terminal_stop",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "run_id"
+      ],
+      "args": [
+        "runId"
+      ]
+    },
+    {
+      "name": "terminal_write",
+      "domain": "terminal",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "session_id",
+        "data"
+      ],
+      "args": [
+        "sessionId",
+        "data"
+      ]
+    },
+    {
+      "name": "vibespace_acp_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_decide_consent",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_launch",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_prompt",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_session",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_acp_state",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_apply_hunks",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_apply_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_board_budget",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_board_budget_save",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_capabilities",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_choose_folder",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_create_space",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_create_studio",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_decide_consent",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_discard_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_list_spaces",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_list_studios",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_memory_add",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_clear",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_delete",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_list",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_model_cancel",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_model_download",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_model_state",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_review",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_search",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_vector_disable",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_vector_enable",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_memory_vector_status",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_read_snapshot",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_request_changes",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_restore_checkpoint",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_retry_feedback",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_review_hunks",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_run_timeline",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_create",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_list",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [],
+      "args": []
+    },
+    {
+      "name": "vibespace_schedule_preview",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_return_card",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "since_seq"
+      ],
+      "args": [
+        "sinceSeq"
+      ]
+    },
+    {
+      "name": "vibespace_schedule_set_enabled",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "schedule_id",
+        "enabled"
+      ],
+      "args": [
+        "scheduleId",
+        "enabled"
+      ]
+    },
+    {
+      "name": "vibespace_skills_accept_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_skills_get_version",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_skills_install",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_skills_list",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_skills_reject_update",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_skills_uninstall",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_start_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_steer_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
+      ]
+    },
+    {
+      "name": "vibespace_stop_run",
+      "domain": "fs",
+      "status": "native",
+      "wrapped": false,
+      "boundary": "B1",
+      "params": [
+        "request"
+      ],
+      "args": [
+        "request"
       ]
     },
     {

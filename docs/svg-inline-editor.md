@@ -82,7 +82,7 @@ resvg-exact export becomes a requirement.
   webview's own SVG renderer, so fonts and filters match what the editor shows, but output can differ slightly between webviews.
   Tests do not depend on a native backend.
 
-## B5 (pen and path UX, after docs/PEN-PATH-UX-RESEARCH.md)
+## B5 (pen and path UX, after docs/research/pen-path-ux.md)
 
 Scope: the pen and node tools of this editor only. Everything is ordinary `<path d>` editing, no new file format and no
 metadata. Smooth/symmetric/corner is inferred from the handle geometry when a path is read, so a decoupled handle survives

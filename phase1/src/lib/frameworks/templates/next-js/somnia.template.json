@@ -1,0 +1,11 @@
+{
+  "id": "next-js",
+  "framework": "next",
+  "language": "js",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": ".next/standalone"
+}

@@ -1,0 +1,29 @@
+# Lazy hosts and independent jobs
+
+Baseline: int/shell 0b0b641. Studio manifests and panel allowlists remain eager, pure metadata. Every non-Code canvas, inspector, sidebar and shell panel implementation now loads from an explicit source-owned import factory. Registration remains synchronous so concurrent inspector/canvas mounts cannot race registration. Inline Code media previews no longer bypass these boundaries. No view eviction or dirty-state lifetime change is introduced.
+
+## Initial measurement
+
+Run `node scripts/bench-startup-graph.mjs` from phase1. The retained JSON files record ten local trials, including cold first parsing. These numbers measure source-graph discovery/parsing with Babel, **not application or native startup**. Eager local modules fell from 844 to 701; local source bytes fell from 4,166,063 to 3,503,116. Parse p50 fell from 603.9 ms to 491.4 ms on this container. All 11 inactive canvas/workspace implementations left the eager graph. The graph deliberately ignores dynamic imports, external packages and type-only declarations. Production chunk/native startup validation still requires generated craft WASM packages and supported hardware.
+
+118 existing shell/studio/slide tests passed locally. Typecheck currently reports only the absent generated `slides-engine/pkg/somnia_slides.js`. No Rust/native test was run. This is not a release performance certification.
+
+## Job admission and ownership
+
+`lib/jobs/scheduler.ts` owns independent leases. P0 has reserved realtime slots, P1 interactive slots, P2/P3 bounded background slots (normal: two). Queue length defaults to 64, terminal history to 32, tracked byte reservations to 256 MiB. Exclusive dependency keys serialize singleton work; `needsResource(id)` includes queued dependencies while `hasLease(id)` counts running leases. Resource/lifecycle adapters must check both before disposing shared engines. Cancel signals cooperative work; capacity is retained until the operation acknowledges cancellation. This does not preempt synchronous WASM or cap OS memory. Pressure stops maintenance; critical pressure stops new P2 admission. P0 remains admitted subject to shared reservation headroom. Callers need estimates for meaningful memory admission, not zero-byte placeholder claims.
+
+Video P2 exports capture timeline/format and original source references before queueing, copying buffers only after admission. One export uses the singleton at a time. Progress and cancellation are exposed globally through `jobScheduler.list()/subscribe()/cancel(id)` independently of a mounted inspector. Document-close guards refuse closure while export references are outstanding. AI turns own P2 leases with cancellation tied to the turn, not panel visibility. Photo exports use snapshot settings and serialize shared engine load/render operations with P1 preview/activation. Sound playback uses an app-owned audio element and P0 lease; view unmount does not pause it. Closing the media document disposes playback. Video multi-slot playback remains view-owned and is **not yet a background transport**; the scheduler does not pretend otherwise.
+
+Sound/Photos/Video worker clients are loaded with `import()` on first engine request and deduplicated initialization. Existing workers already own WASM or WebCodecs/mediabunny; no generated module or engine is created at metadata discovery. Worker/code definitions can stay cached after use; no memory-release claim follows from lazy imports.
+
+## Lifecycle seam and status
+
+The shell installs `wireJobLeases(manager)` and forwards lifecycle `onPressure` into job admission. Dependency prefix mapping pins `studio:video`/`studio:photos`/`studio:sound` for outstanding jobs; exact `slides:session:<name>` leases are supported for future Slides job adapters. A queued resource counts as needed so suspension cannot dispose the engine just before admission. Global Jobs in the status bar shows bounded live records, progress and cooperative cancel. An acknowledged cancellation removes the live job; a request alone retains its slot until work settles. No document paths/prompts are displayed. UI inspected in real React/Vite/Chrome at 960x540: readable light-theme popover, 42% export progress, AI running and maintenance queued; no browser errors. This isolated harness is not a full-app/native test.
+
+## AI panel ownership follow-up
+
+The old AgentPanel cleanup cancelled every running turn on unmount, which contradicted independent AI job ownership. `AgentChatRuntime` now owns the run, stream sink, chat/proposals and activity state; the panel is an external-store observer. Closing it detaches the observer only. Reopening shows received text and pending proposal/approval rows. Explicit Stop/New chat and provider revision changes still cancel; credential revisions are observed even when no panel is mounted. No permissions/disclosure grants are changed, no proposal auto-applies, and late events after explicit stop are rejected. Chat row retention is bounded with pending review/approval rows protected. Tests use a deterministic provider/Core fixture to prove observer detach, result retention, explicit stop and revision cancellation; no real provider request was made.
+
+## Final local regression run
+
+495 tests selected across shell/studios, lifecycle, jobs, Agent, Video, Sound and Photos: 493 passed, 2 existing WASM-dependent tests skipped, zero failed. New Video integration cases prove a queued export uses its captured timeline/format despite subsequent edits, and queued cancellation never calls the engine or leaks source ownership. Full `tsc --noEmit` still cannot resolve the absent generated Slides worker bridge. No full production build or native launch was run, and local source-parse timing must not be labeled native startup improvement.

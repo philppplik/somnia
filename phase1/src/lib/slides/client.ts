@@ -1,5 +1,6 @@
 import type {SlidesDiagnostics} from './diagnostics';
 import type {TextRun,TextEdit} from './editCopy';
+import type {DeckModel,LayoutInfo,BoundsBox,RunFormat,ShapeBoundsEdit,ArrangeMode,SlideTransition,ShapeStylePatch,TableEdit,ThemeEdit,SlideBackground,FooterEdit,SectionEdit} from './deckPackage';
 import type {DeckSummary,SlidesReply,SlidesRequest} from './protocol';
 type Request=SlidesRequest extends infer R?R extends SlidesRequest?Omit<R,'id'>:never:never;
 export class SlidesClient {
@@ -15,5 +16,42 @@ export class SlidesClient {
  async diagnostics(bytes:Uint8Array){return await this.request({op:'diagnostics',bytes}) as SlidesDiagnostics;}
  async runs(bytes:Uint8Array){return await this.request({op:'runs',bytes}) as TextRun[];}
  async copy(bytes:Uint8Array,edits:TextEdit[]){return await this.request({op:'copy',bytes,edits}) as Uint8Array;}
+ async model(bytes:Uint8Array){return await this.request({op:'model',bytes}) as DeckModel;}
+ async reorder(bytes:Uint8Array,slideId:number,toIndex:number){return await this.request({op:'reorder',bytes,slideId,toIndex}) as Uint8Array;}
+ async slideEdit(bytes:Uint8Array,kind:'duplicate'|'delete',slideId:number){return await this.request({op:'slideEdit',bytes,kind,slideId}) as Uint8Array;}
+ async slideLayout(bytes:Uint8Array,slideId:number,layoutPart:string){return await this.request({op:'slideLayout',bytes,slideId,layoutPart}) as Uint8Array;}
+ async newSlide(bytes:Uint8Array,layoutPart:string,afterSlideId:number|null){return await this.request({op:'newSlide',bytes,layoutPart,afterSlideId}) as Uint8Array;}
+ async shapeBounds(bytes:Uint8Array,slideId:number,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'shapeBounds',bytes,slideId,shapeId,expected,next}) as Uint8Array;}
+ async shapesBounds(bytes:Uint8Array,slideId:number,edits:ShapeBoundsEdit[]){return await this.request({op:'shapesBounds',bytes,slideId,edits}) as Uint8Array;}
+ async styleShapes(bytes:Uint8Array,slideId:number,shapeIds:number[],patch:ShapeStylePatch){return await this.request({op:'style',bytes,slideId,shapeIds,patch}) as Uint8Array;}
+ async insertTable(bytes:Uint8Array,slideId:number,rows:number,cols:number){return await this.request({op:'insertTable',bytes,slideId,rows,cols}) as Uint8Array;}
+ async setFirstNum(bytes:Uint8Array,value:number){return await this.request({op:'firstNum',bytes,value}) as Uint8Array;}
+ async setFooter(bytes:Uint8Array,slideId:number|null,want:FooterEdit){return await this.request({op:'footer',bytes,slideId,want}) as Uint8Array;}
+ async setSlideSize(bytes:Uint8Array,cx:number,cy:number){return await this.request({op:'slideSize',bytes,cx,cy}) as Uint8Array;}
+ async setAllBackgrounds(bytes:Uint8Array,background:{kind:'inherit'}|{kind:'solid';color:string}){return await this.request({op:'backgroundAll',bytes,background}) as Uint8Array;}
+ async setHidden(bytes:Uint8Array,slideId:number,hidden:boolean){return await this.request({op:'hide',bytes,slideId,hidden}) as Uint8Array;}
+ async setDecorative(bytes:Uint8Array,slideId:number,shapeId:number,decorative:boolean){return await this.request({op:'decorative',bytes,slideId,shapeId,decorative}) as Uint8Array;}
+ async setAlt(bytes:Uint8Array,slideId:number,shapeId:number,alt:string|null){return await this.request({op:'alt',bytes,slideId,shapeId,alt}) as Uint8Array;}
+ async editSection(bytes:Uint8Array,edit:SectionEdit){return await this.request({op:'section',bytes,edit}) as Uint8Array;}
+ async replaceText(bytes:Uint8Array,find:string,replacement:string,matchCase:boolean,notes=false){return await this.request({op:'replaceText',bytes,find,replacement,matchCase,notes}) as Uint8Array;}
+ async setBackground(bytes:Uint8Array,slideId:number,background:SlideBackground){return await this.request({op:'background',bytes,slideId,background}) as Uint8Array;}
+ async editLayoutBox(bytes:Uint8Array,layoutPart:string,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'layoutBox',bytes,layoutPart,shapeId,expected,next}) as Uint8Array;}
+ async editMasterBox(bytes:Uint8Array,shapeId:number,expected:BoundsBox,next:BoundsBox){return await this.request({op:'masterBox',bytes,shapeId,expected,next}) as Uint8Array;}
+ async editTheme(bytes:Uint8Array,edit:ThemeEdit){return await this.request({op:'theme',bytes,edit}) as Uint8Array;}
+ async editTable(bytes:Uint8Array,slideId:number,shapeId:number,edit:TableEdit){return await this.request({op:'table',bytes,slideId,shapeId,edit}) as Uint8Array;}
+ async setNotes(bytes:Uint8Array,slideId:number,lines:string[]){return await this.request({op:'notes',bytes,slideId,lines}) as Uint8Array;}
+ async group(bytes:Uint8Array,slideId:number,shapeIds:number[]){return await this.request({op:'group',bytes,slideId,shapeIds}) as Uint8Array;}
+ async ungroup(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'ungroup',bytes,slideId,shapeId}) as Uint8Array;}
+ async setTransition(bytes:Uint8Array,slideId:number,transition:SlideTransition){return await this.request({op:'transition',bytes,slideId,transition}) as Uint8Array;}
+ async arrange(bytes:Uint8Array,slideId:number,shapeIds:number[],mode:ArrangeMode){return await this.request({op:'arrange',bytes,slideId,shapeIds,mode}) as Uint8Array;}
+ async paragraph(bytes:Uint8Array,slideId:number,shapeId:number,format:import('./deckPackage').ParagraphFormat){return await this.request({op:'paragraph',bytes,slideId,shapeId,format}) as Uint8Array;}
+ async formatText(bytes:Uint8Array,slideId:number,shapeId:number,format:RunFormat){return await this.request({op:'formatText',bytes,slideId,shapeId,format}) as Uint8Array;}
+ async addBox(bytes:Uint8Array,slideId:number,label:string){return await this.request({op:'boxEdit',kind:'add',bytes,slideId,label}) as Uint8Array;}
+ async addShape(bytes:Uint8Array,slideId:number,preset:'rect'|'roundRect'|'ellipse'|'triangle'|'rightArrow'|'diamond'){return await this.request({op:'boxEdit',kind:'shape',bytes,slideId,preset}) as Uint8Array;}
+ async removeBox(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'boxEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}
+ async insertPicture(bytes:Uint8Array,slideId:number,image:Uint8Array,alt:string){return await this.request({op:'pictureEdit',kind:'insert',bytes,slideId,image,alt}) as Uint8Array;}
+ async replacePicture(bytes:Uint8Array,slideId:number,shapeId:number,image:Uint8Array){return await this.request({op:'pictureEdit',kind:'replace',bytes,slideId,shapeId,image}) as Uint8Array;}
+ async removePicture(bytes:Uint8Array,slideId:number,shapeId:number){return await this.request({op:'pictureEdit',kind:'remove',bytes,slideId,shapeId}) as Uint8Array;}
+ async layouts(bytes:Uint8Array){return await this.request({op:'layouts',bytes}) as LayoutInfo[];}
  dispose(error=new Error('Slides operation cancelled')){if(this.closed)return;this.closed=true;this.worker.terminate();for(const p of this.pending.values()){clearTimeout(p.timer);p.reject(error);}this.pending.clear();}
 }

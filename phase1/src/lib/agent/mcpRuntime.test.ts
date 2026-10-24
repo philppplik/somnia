@@ -24,7 +24,7 @@ test('an ungranted tool is not registered; a grant registers it and a call needs
  const run=r.run(names[0],{p:'a'},{files:()=>({}),propose:async()=>{}} as never,sig,grants);
  await new Promise(x=>setTimeout(x,5));assert.equal(rt.getSnapshot().pending.length,1);assert.equal(calls.some(c=>c.c==='mcp_tool_call'),false);
  rt.decide(rt.getSnapshot().pending[0].id,true);const out=JSON.parse(await run);assert.equal(out.untrusted,true);
- assert.deepEqual(calls.find(c=>c.c==='mcp_tool_call')?.a,{server:'files',tool:'read_it',arguments:{p:'a'}});
+ assert.deepEqual(calls.find(c=>c.c==='mcp_tool_call')?.a,{server:'files',tool:'read_it',arguments:{p:'a'},choice:'allow_once'});
 });
 test('denial and abort never call the tool',async()=>{
  const {rt,calls}=mk();await rt.start('files');rt.setGranted(tool,true);const r=createEditorToolRegistry({allowExecute:true});const [n]=rt.register(r);
@@ -70,4 +70,39 @@ test('fail-closed: unsupported schema keywords and extra arguments never reach a
  assert.equal(rt.getSnapshot().pending.length,0);assert.equal(calls.includes('mcp_tool_call'),false);
  assert.deepEqual(rt.getSnapshot().activity.map(a=>a.outcome),['invalid','invalid']);
  assert.match(rt.getSnapshot().activity[0].detail??'',/^SOM-AGT-003 /);
+});
+const digest='a'.repeat(64);
+const toolD={...tool,schema_digest:digest};
+const mkB=(opts:{needConsent?:boolean;grants?:unknown}={})=>{const calls:{c:string;a?:Record<string,unknown>}[]=[];let running=false;let grants:unknown=opts.grants??{shell:[],network:[],mcp:[]};
+ const rt=new McpRuntime(async<T,>(c:string,a?:Record<string,unknown>)=>{calls.push({c,a});
+  if(c==='mcp_servers_list')return [{config:{id:'files',command:'/bin/x',args:['--a'],env:{}},running}] as T;
+  if(c==='mcp_server_start'){if(opts.needConsent&&!a?.choice)throw Error('mcp_consent_required');running=true;return [toolD] as T;}
+  if(c==='mcp_tool_call')return 'ok' as T;
+  if(c==='mcp_grants_list')return grants as T;
+  if(c==='mcp_grant_revoke'){grants={shell:[],network:[],mcp:[]};return 1 as T;}
+  return undefined as T;});return {rt,calls};};
+const gctx={files:()=>({}),propose:async()=>{}} as never;const gg={levels:['read','propose','execute'] as const};
+test('consent dialog has three answers: allow for run creates a grant request and refreshes the grants view',async()=>{
+ const {rt,calls}=mkB();await rt.start('files');rt.setGranted(toolD,true);const r=createEditorToolRegistry({allowExecute:true});const [n]=rt.register(r);
+ const run=r.run(n,{p:'a'},gctx,new AbortController().signal,gg);await new Promise(x=>setTimeout(x,5));
+ assert.equal(rt.getSnapshot().pending[0].kind,'call');rt.decide(rt.getSnapshot().pending[0].id,'allow_for_run');await run;
+ assert.deepEqual(calls.find(c=>c.c==='mcp_tool_call')?.a,{server:'files',tool:'read_it',arguments:{p:'a'},choice:'allow_for_run'});
+ await new Promise(x=>setTimeout(x,5));assert.ok(calls.filter(c=>c.c==='mcp_grants_list').length>=2);
+});
+test('an exact broker grant answers without a dialog; a different digest still asks; revoke goes through the broker',async()=>{
+ const {rt,calls}=mkB({grants:{shell:[],network:[],mcp:[{grantId:'g1',server:'files',tool:'read_it',schemaDigest:digest}]}});
+ await rt.start('files');rt.setGranted(toolD,true);const r=createEditorToolRegistry({allowExecute:true});const [n]=rt.register(r);
+ await r.run(n,{p:'a'},gctx,new AbortController().signal,gg);assert.equal(rt.getSnapshot().pending.length,0);
+ assert.deepEqual(calls.find(c=>c.c==='mcp_tool_call')?.a,{server:'files',tool:'read_it',arguments:{p:'a'}});
+ (rt as unknown as {snap:{brokerGrants:{mcp:{schemaDigest:string}[]}}}).snap.brokerGrants.mcp[0].schemaDigest='b'.repeat(64);
+ const r2=createEditorToolRegistry({allowExecute:true});const [n2]=rt.register(r2);const p=r2.run(n2,{p:'a'},gctx,new AbortController().signal,gg);
+ await new Promise(x=>setTimeout(x,5));assert.equal(rt.getSnapshot().pending.length,1);rt.decide(rt.getSnapshot().pending[0].id,false);await assert.rejects(p);
+ await rt.revokeGrant('mcp','g1');assert.deepEqual(calls.find(c=>c.c==='mcp_grant_revoke')?.a,{kind:'mcp',grantId:'g1'});assert.equal(rt.getSnapshot().brokerGrants.mcp.length,0);
+});
+test('starting a server asks when the broker needs consent and passes the answer; deny keeps it stopped',async()=>{
+ const {rt,calls}=mkB({needConsent:true});await rt.refresh();const s=rt.start('files');await new Promise(x=>setTimeout(x,5));
+ const req=rt.getSnapshot().pending[0];assert.equal(req.kind,'start');assert.deepEqual(req.args,{command:'/bin/x',arguments:['--a']});
+ rt.decide(req.id,'allow_for_run');await s;assert.deepEqual(calls.filter(c=>c.c==='mcp_server_start').map(c=>c.a),[{id:'files'},{id:'files',choice:'allow_for_run'}]);assert.equal(rt.getSnapshot().tools.length,1);
+ const b=mkB({needConsent:true});await b.rt.refresh();const s2=b.rt.start('files');await new Promise(x=>setTimeout(x,5));b.rt.decide(b.rt.getSnapshot().pending[0].id,false);await s2;
+ assert.equal(b.rt.getSnapshot().tools.length,0);assert.match(b.rt.getSnapshot().error,/mcp_denied/);
 });

@@ -1,0 +1,3 @@
+const keys=['groupSelection','ungroupSelection','sc.group','sc.ungroup'];
+const labels={en:['Group','Ungroup','Group selection','Ungroup'],de:['Gruppieren','Gruppierung aufheben','Auswahl gruppieren','Gruppierung aufheben'],es:['Agrupar','Desagrupar','Agrupar selección','Desagrupar'],fr:['Grouper','Dissocier','Grouper la sélection','Dissocier le groupe'],'pt-BR':['Agrupar','Desagrupar','Agrupar seleção','Desagrupar']};
+export const INTERFACE_P54_CATALOGUES=Object.fromEntries(Object.entries(labels).map(([locale,values])=>[locale,Object.fromEntries(keys.map((key,i)=>[`interface.${key}`,values[i]]))]));

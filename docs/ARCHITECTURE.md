@@ -81,6 +81,7 @@ The capability also grants a short list of core window and event permissions (li
 | `list_files` | `projectId` | relative paths | Text and media files, depth limit 32, max 20 000 entries. |
 | `read_file` | `projectId, path` | `{content, revision, status}` | Reads one text file (see encoding below) and registers it as a tracked document. |
 | `read_media` | `projectId, path` | bytes | PNG, JPEG or PDF up to 25 MB, for preview. |
+| `read_project_resource` | `projectId, path` | `{mime, size, data}` | Any regular file inside the project root as base64 plus MIME type, max 10 MB, for the live preview resolver (`previewResources.ts`). Same path rules as `read_media`: relative path, no `..`, no symlinks, reserved folders denied. |
 | `hold_autosave` | `projectId, paths` | none | Stops native autosave for these paths until an explicit save. Used by the agent apply path. |
 | `stage_edit` | `projectId, path, content, clientRevision` | `StateEvent` | Journals the editor text, marks the document dirty. |
 | `save_file` | `projectId, path, expectedRevision` | `StateEvent` | Atomic compare-and-replace save. |

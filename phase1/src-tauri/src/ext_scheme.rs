@@ -191,7 +191,10 @@ fn html(csp: &'static str, body: String) -> Response {
 pub fn split_uri(host: Option<&str>, path: &str, query: Option<&str>) -> (String, String, String) {
     let q = query.unwrap_or("").to_owned();
     match host {
-        Some("somnia-ext.localhost") => {
+        // Wry reverses http://somnia-ext.localhost/... to
+        // somnia-ext://localhost/... before invoking the custom protocol handler.
+        // Accept both the browser-facing URI and the actual handler-facing URI.
+        Some("somnia-ext.localhost" | "localhost") => {
             let p = path.trim_start_matches('/');
             let (k, rest) = p.split_once('/').unwrap_or((p, ""));
             (k.to_owned(), format!("/{rest}"), q)
@@ -221,6 +224,64 @@ mod tests {
             split_uri(Some("somnia-ext.localhost"), "/panel/a/p", Some("n=1")),
             ("panel".into(), "/a/p".into(), "n=1".into())
         );
+    }
+
+    /// The rewritten WebView2 URI must reach the same registry entry as the native URI.
+    #[test]
+    fn windows_panel_uri_roundtrip_and_replay_denial() {
+        let r = ExtRegistry::default();
+        let document = "<!doctype html><p>Windows panel roundtrip</p>";
+        let nonce = r.open_panel("acme.tool", "panel-1", document).unwrap();
+        let (kind, path, query) = split_uri(
+            Some("somnia-ext.localhost"), "/panel/acme.tool/panel-1", Some(&format!("n={nonce}")),
+        );
+        let reply = r.serve("GET", &kind, &path, &query);
+        assert_eq!(reply.status, 200);
+        assert_eq!(reply.content_type, "text/html; charset=utf-8");
+        assert_eq!(reply.csp, PANEL_CSP);
+        assert_eq!(reply.body, document.as_bytes());
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 403);
+        // Replay through the alternate URI form must not regain authority either.
+        assert_eq!(r.serve("GET", "panel", "/acme.tool/panel-1", &query).status, 403);
+    }
+
+    #[test]
+    fn windows_worker_uri_roundtrip_and_revocation() {
+        let r = ExtRegistry::default();
+        let nonce = r.open_worker("acme.tool").unwrap();
+        let (kind, path, query) = split_uri(
+            Some("somnia-ext.localhost"), "/worker/acme.tool/host", Some(&format!("n={nonce}")),
+        );
+        let reply = r.serve("GET", &kind, &path, &query);
+        assert_eq!(reply.status, 200);
+        assert_eq!(reply.csp, RELAY_CSP);
+        assert!(String::from_utf8(reply.body).unwrap().contains("new Worker(u)"));
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 403);
+        let nonce = r.open_worker("acme.tool").unwrap();
+        r.close_ext("acme.tool");
+        assert_eq!(r.serve("GET", &kind, &path, &format!("n={nonce}")).status, 403);
+    }
+
+    #[test]
+    fn windows_rewritten_uri_serves_panel_and_worker() {
+        let r = ExtRegistry::default();
+        let n = r.open_panel("acme", "p1", "<p>visible</p>").unwrap();
+        // Wry's revert_uri_work_around preserves /panel/... and changes the
+        // scheme/host from http://somnia-ext.localhost to somnia-ext://localhost.
+        let (kind, path, query) = split_uri(Some("localhost"), "/panel/acme/p1", Some(&format!("n={n}")));
+        let response = r.serve("GET", &kind, &path, &query);
+        assert_eq!(response.status, 200);
+        assert_eq!(response.body, b"<p>visible</p>");
+        assert!(response.csp.contains("sandbox allow-scripts"));
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 403);
+
+        let n = r.open_worker("acme").unwrap();
+        let (kind, path, query) = split_uri(Some("localhost"), "/worker/acme/host", Some(&format!("n={n}")));
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 200);
+        let (kind, path, query) = split_uri(Some("localhost"), "/worker/acme", None);
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 200);
+        let (kind, path, query) = split_uri(Some("localhost"), "/panel/acme/p1/extra", None);
+        assert_eq!(r.serve("GET", &kind, &path, &query).status, 404);
     }
 
     #[test]

@@ -77,6 +77,8 @@ export function usePdfSession(name?: string | null) {
 export const getPdfSession = (name: string) => sessions.get(name);
 export const hasDirtyPdfs = () => [...sessions.values()].some((s) => s.dirty);
 if (typeof window !== "undefined") installBeforeUnload(hasDirtyPdfs);
+export const dirtyPdfNames = () =>
+  [...sessions].filter(([, s]) => s.dirty).map(([n]) => n);
 export const pdfIsDirty = (name: string) => sessions.get(name)?.dirty ?? false;
 registerMediaCloseGuard(
   (name) =>
@@ -278,29 +280,34 @@ export async function historyPdf(name: string, dir: "undo" | "redo") {
     set(name, { busy: false, error: String(e) });
   }
 }
-export async function exportPdfCopy(name: string) {
-  const s = sessions.get(name);
-  if (!s?.bytes || s.busy) return;
-  const blob = new Blob([new Uint8Array(s.bytes)], { type: "application/pdf" });
+/** Writes bytes through the native save grant (Tauri) or a browser download. Returns false when the user cancelled the picker. */
+export async function savePdfBytes(bytes: Uint8Array, suggestedName: string): Promise<boolean> {
   const { isTauri, invoke } = await import("@tauri-apps/api/core");
-  const suggestedName =
-    name.replace(/^.*[\\/]/, "").replace(/\.pdf$/i, "") + "-edited.pdf";
   if (isTauri()) {
     const grant = await invoke<{ token: string } | null>("pdf_save_pick", {
       suggestedName,
     });
-    if (!grant) return;
-    await invoke("pdf_save_write", new Uint8Array(s.bytes), {
+    if (!grant) return false;
+    await invoke("pdf_save_write", new Uint8Array(bytes), {
       headers: { "x-somnia-token": grant.token },
     });
   } else {
-    const url = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array(bytes)], { type: "application/pdf" }),
+    );
     const a = document.createElement("a");
     a.href = url;
     a.download = suggestedName;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
   }
+  return true;
+}
+export async function exportPdfCopy(name: string, fileStem?: string) {
+  const s = sessions.get(name);
+  if (!s?.bytes || s.busy) return;
+  const stem = fileStem || name.replace(/^.*[\\/]/, "").replace(/\.pdf$/i, "");
+  if (!(await savePdfBytes(s.bytes, stem + "-edited.pdf"))) return;
   if (sessions.get(name)?.bytes === s.bytes) set(name, { dirty: false });
 }
 export async function searchPdf(name: string, query: string) {

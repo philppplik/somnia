@@ -1,0 +1,3 @@
+import {useEffect,useState,useSyncExternalStore} from 'react';import {readinessSnapshot,subscribeReadiness,freshReadiness} from '../../lib/agent/localReadinessCache';
+/** A local expiry render timer, never source polling or a probe. */
+export function useLocalReadiness(){const record=useSyncExternalStore(subscribeReadiness,readinessSnapshot,readinessSnapshot),[tick,render]=useState(0);useEffect(()=>{if(!record)return;const age=Math.max(0,Date.now()-record.checkedAt);if(age>=120000)return;const timer=setTimeout(()=>render(n=>n+1),Math.min(60000-age%60000,120000-age));return()=>clearTimeout(timer);},[record,tick]);return {record,fresh:freshReadiness(record)};}

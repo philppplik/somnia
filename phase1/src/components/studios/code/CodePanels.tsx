@@ -1,0 +1,39 @@
+import {useEffect,useMemo,useState} from 'react';
+import {useT} from '../../../lib/useT';
+import {useAppStore} from '../../../store/appStore';
+import {usePanelState} from '../../../store/panelStateStore';
+import type {PanelHostProps,StudioContext} from '../../../lib/shell/types';
+import {codeOutline,filterOutline,fileFacts,interactionAttributes,safeAttribute} from '../../../lib/codePanels/model';
+import {runCodePanelCommand} from '../../../store/codePanelCommands';
+import {isSvg,useMedia} from '../../../lib/media';
+import {SvgInspector} from '../../svgedit/SvgInspector';
+import {ContextSections} from '../../ContextSections';
+import {getContextNode,useUiContext} from '../../../lib/uiContextStore';
+import {ResponsivePanel} from '../../ResponsivePanel';
+import {Button} from '../../ui/button';
+const input='h-8 min-w-0 w-full rounded-sm border border-subtle bg-transparent px-2 text-xs';
+export function CodeOutlinePanel({context}:{context:StudioContext}){
+ const s=useAppStore(),{t}=useT(),[query,setQuery]=usePanelState('code.outline.query','');
+ const rows=useMemo(()=>filterOutline(codeOutline(s.activeFile===s.designFile?s.nodes:[],s.files[s.designFile]??''),query),[s.nodes,s.files,s.activeFile,s.designFile,query]);
+ const selected=context.selection.ids??s.selectedElementIds;
+ return <section className="flex h-full min-h-0 flex-col gap-2 p-3" aria-label={t('code.panel.outline')}><input className={input} aria-label={t('code.panel.filter')} placeholder={t('code.panel.filter')} value={query} onChange={e=>setQuery(e.target.value)}/><div className="min-h-0 flex-1 overflow-auto">{rows.map(n=><button key={n.id} title={`${s.designFile}:${n.line}:${n.col}`} aria-pressed={selected.includes(n.id)||s.selectedElementId===n.id} onClick={()=>void runCodePanelCommand('code.outline.reveal',{id:n.id})} className="flex w-full items-center gap-1 rounded-sm border-0 bg-transparent py-1.5 text-left font-mono text-[11px] text-ink hover:bg-hover aria-pressed:bg-accent-soft" style={{paddingLeft:Math.min(n.depth,8)*10+4}}><span className="min-w-0 flex-1 truncate">{n.label}</span>{n.locked&&<span title={t('code.panel.locked')}>▣</span>}<span className="text-ink-3">{n.line}</span></button>)}{!rows.length&&<p className="text-xs text-ink-3">{t('code.panel.noNodes')}</p>}</div></section>;
+}
+export function CodeResponsivePanel(_props:PanelHostProps){const s=useAppStore(),{t}=useT();return <section className="flex h-full min-h-0 flex-col gap-3 overflow-auto p-3"><label className="text-xs">{t('code.panel.width')}<input className={input} aria-label={t('code.panel.width')} type="number" min={200} max={3840} value={s.viewport} onChange={e=>{const width=Number(e.target.value);if(Number.isInteger(width)&&width>=200&&width<=3840)void runCodePanelCommand('code.preview.width',{width});}}/></label><div className="flex gap-1">{[390,820,1280].map(width=><Button key={width} size="tiny" variant="outline" aria-pressed={s.viewport===width} onClick={()=>void runCodePanelCommand('code.preview.width',{width})}>{width} px</Button>)}</div><ResponsivePanel/></section>;}
+export function CodeDesignSection({context}:{context:StudioContext}){
+ const {t}=useT(),s=useAppStore(),media=useMedia();
+ if(context.studio!=='code')return <p className="p-3 text-xs">{t('code.panel.open')}</p>;
+ // Match the inline SVG canvas gate; Code-only and media previews keep the normal inspector.
+ if(isSvg(s.activeFile)&&s.coreConnected&&!media.active&&s.viewMode!=='code')return <SvgInspector embedded/>;
+ return <ContextSections/>;
+}
+export function CodeInteractionsSection({context}:{context:StudioContext}){
+ const s=useAppStore(),ui=useUiContext(),{t}=useT(),node=getContextNode(context.selection.ids?.[0]??ui.nodeId);
+ const [name,setName]=useState('href'),[value,setValue]=useState('');
+ useEffect(()=>{setValue(node?.attrs[name]??'');},[node?.id,node?.attrs,name]);
+ const selectedOne=context.selection.kind==='one'||context.selection.kind==='none'&&ui.selection.kind!=='multi';
+ if(!node||!selectedOne)return <p className="p-3 text-xs text-ink-3">{t('code.panel.select')}</p>;
+ const rows=interactionAttributes(node),locked=codeOutline(s.nodes,s.files[s.designFile]??'').find(n=>n.id===node.id)?.locked;
+ const editable=!context.document?.readOnly&&!locked&&!context.busy&&s.coreConnected&&s.activeFile===s.designFile&&safeAttribute(name,value);
+ return <section className="space-y-3 p-3 text-xs" aria-label={t('code.panel.interactions')}><div className="font-mono">{`<${node.tag}>`}</div><ul className="m-0 list-none space-y-1 p-0">{rows.map(([key,v])=><li key={key}><button className="w-full rounded-sm border-0 bg-hover p-2 text-left" onClick={()=>{setName(key);setValue(v);}}><span className="font-mono text-accent">{key}</span><span className="block break-all text-ink-2">{v||'""'}</span></button></li>)}</ul>{!rows.length&&<p className="text-ink-3">{t('code.panel.noInteractions')}</p>}<label className="block">{t('code.panel.attribute')}<input className={input} aria-label={t('code.panel.attribute')} value={name} list="code-interaction-attributes" onChange={e=>setName(e.target.value)}/><datalist id="code-interaction-attributes">{['href','target','rel','aria-label','tabindex','role','controls','autoplay','loop','muted','poster','action','method'].map(n=><option key={n} value={n}/>)}</datalist></label><label className="block">{t('code.panel.value')}<input className={input} aria-label={t('code.panel.value')} value={value} onChange={e=>setValue(e.target.value)}/></label><div className="flex flex-wrap gap-1"><Button size="tiny" variant="outline" disabled={!editable} onClick={()=>void runCodePanelCommand('code.attribute.set',{id:node.id,name,value})}>{t('code.panel.apply')}</Button><Button size="tiny" disabled={!editable||node.attrs[name]===undefined} onClick={()=>void runCodePanelCommand('code.attribute.set',{id:node.id,name,value:null})}>{t('code.panel.remove')}</Button></div><p className="text-ink-3">{t('code.panel.scriptWarning')}</p></section>;
+}
+export function CodeSourceSection({context}:{context:StudioContext}){const s=useAppStore(),{t}=useT(),facts=fileFacts(s.files[s.activeFile]??'');return !s.activeFile?<p className="p-3 text-xs">{t('code.panel.open')}</p>:<section className="flex min-h-0 flex-col"><dl className="grid grid-cols-[1fr_auto] gap-2 p-3 text-xs"><dt>{t('code.panel.file')}</dt><dd className="max-w-40 truncate" title={s.activeFile}>{s.activeFile}</dd>{(['lines','characters','bytes'] as const).map(key=><div key={key} className="contents"><dt>{t('code.panel.'+key)}</dt><dd>{facts[key]}</dd></div>)}<dt>{t('status.lineCol',{line:s.cursorLine,col:s.cursorCol})}</dt></dl><CodeOutlinePanel context={context}/></section>;}

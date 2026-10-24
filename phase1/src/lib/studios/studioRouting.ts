@@ -1,5 +1,6 @@
 import {getMedia,subscribeMedia,type MediaKind} from '../media';
 import {getState,requestStudio} from '../../store/appStore';
+import {hasStudio,type StudioId} from './registry';
 import {handlerForStudio,readyHandlersFor,type OpenKind} from './openHandlers';
 /**
  * Navigation routing: when the ACTIVE media tab changes, the shell follows the document's own Studio (replaces the DOCX/PPTX
@@ -11,6 +12,10 @@ const mediaKindToOpen=(k:MediaKind):OpenKind=>k==='video-project'?'video':k;
 export function studioForMedia(kind:MediaKind,current:string):string|null{
  const ready=readyHandlersFor(mediaKindToOpen(kind));if(!ready.length)return null;
  return(handlerForStudio(mediaKindToOpen(kind),current)??[...ready].sort((a,b)=>b.priority-a.priority)[0]).studioId;
+}
+/** Explicit Open from a surface outside the open coordinator (cross-studio handoff): the 'open' source is never vetoed by an earlier manual Studio visit and leaves no manual lock behind. Same source as openIntake's switchStudio. */
+export function switchStudioForExplicitOpen(studioId:StudioId,mediaKey:string):void{
+ if(hasStudio(studioId))requestStudio(studioId,'open',false,mediaKey);
 }
 let last='';let previousStudio:string|null=null;
 export function startStudioRouting(){

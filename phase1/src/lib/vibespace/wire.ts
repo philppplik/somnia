@@ -1,8 +1,9 @@
 /** Mirrors vibespace-core/src/wire.rs v1. No provider/SDK responses or credentials. */
 export interface ModelRef {provider:string;model:string;locality:'local'|'cloud'}
-export interface Usage {inputTokens:number;outputTokens:number;cachedTokens:number;costUsd:number|null;costSource:string|null}
+export interface Usage {inputTokens:number;outputTokens:number;cacheReadTokens:number|null;cacheWriteTokens:number|null;costUsd:number|null;costSource:string|null}
 export interface TranscriptMessage {id:string;role:string;text:string;timestampUtc:string}
-export interface PendingConsent {requestId:string;action:string;scope:string;reason:string;allowForRun:boolean}
+export interface PendingConsent {requestId:string;action:string;scope:string;reason:string;allowForRun:boolean;/** Policy v2 action kind; absent for file consents. */
+kind?:'read'|'write'|'delete'|'shell'|'network'|'mcp'|'desktop'}
 export interface CheckpointSummary {checkpointId:string;label:string;createdAtUtc:string;fileCount:number;restorable:boolean}
 export interface ReviewFile {path:string;change:string;binary:boolean;beforeText:string|null;afterText:string|null;beforeBytes:number;afterBytes:number;currentText:string|null;currentBytes:number;conflict:boolean}
 export interface CheckSummary {name:string;status:string;detail:string|null}

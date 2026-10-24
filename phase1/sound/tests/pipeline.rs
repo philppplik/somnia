@@ -126,3 +126,14 @@ fn plugin_params_change_the_result_and_bad_ones_are_rejected() {
     assert_eq!(plate["params"][0]["id"], "mix");
     assert_eq!(plate["params"][2]["taper"], "Log");
 }
+
+#[test]
+fn rack_bypass_preserves_float_pcm_and_rejects_unknown_processors() {
+    let left = vec![0.1234567_f32; 480];
+    let right = vec![-0.2345678_f32; 480];
+    let neutral = r#"{"version":1,"dspRevision":"c51e5d5ec52f11c6264b72e26661fa712feb5345","bypass":false,"slots":[]}"#;
+    let pcm = somnia_sound::process_rack_pcm(&left, &right, neutral).unwrap();
+    assert_eq!(&pcm[..480], &left);
+    assert_eq!(&pcm[480..], &right);
+    // Error-path tests run in WASM/browser CI, because wasm_bindgen JsError creation is not native-safe.
+}

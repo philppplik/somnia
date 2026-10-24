@@ -14,6 +14,7 @@ import type {
   FieldProperties,
 } from "../../lib/pdfedit/formDesign";
 import { pdfButton } from "./PdfInlineEditor";
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 const input =
   "mt-1 w-full rounded-sm border border-subtle bg-transparent p-1.5";
 const defaults = (page: number): FieldProperties => ({
@@ -77,7 +78,7 @@ function Editor({
       >
         <label>
           Field name
-          <input
+          <NativeInput
             aria-label="Design field name"
             className={input}
             value={fieldName}
@@ -89,7 +90,7 @@ function Editor({
         {!entry && (
           <label>
             Field type
-            <select
+            <NativeSelect
               aria-label="Design field type"
               className={input}
               value={kind}
@@ -106,7 +107,7 @@ function Editor({
               <option value="text">Text field</option>
               <option value="checkbox">Checkbox</option>
               <option value="dropdown">Dropdown</option>
-            </select>
+            </NativeSelect>
           </label>
         )}
         <p className="text-ink-3">
@@ -119,7 +120,7 @@ function Editor({
           {(["x", "y", "width", "height"] as const).map((k) => (
             <label key={k}>
               {k}
-              <input
+              <NativeInput
                 aria-label={`Field ${k}`}
                 type="number"
                 step="1"
@@ -132,7 +133,7 @@ function Editor({
         </div>
         {kind === "checkbox" ? (
           <label className="flex items-center gap-2">
-            <input
+            <NativeInput
               aria-label="Field checked"
               style={{ width: "auto" }}
               type="checkbox"
@@ -145,7 +146,7 @@ function Editor({
           <>
             <label>
               Value
-              <textarea
+              <Textarea
                 aria-label="Field design value"
                 className={input}
                 value={String(p.value)}
@@ -154,7 +155,7 @@ function Editor({
             </label>
             <label>
               Font size
-              <input
+              <NativeInput
                 aria-label="Field font size"
                 type="number"
                 min="4"
@@ -169,7 +170,7 @@ function Editor({
         {kind === "text" && (
           <>
             <label className="flex items-center gap-2">
-              <input
+              <NativeInput
                 aria-label="Field multiline"
                 style={{ width: "auto" }}
                 type="checkbox"
@@ -180,7 +181,7 @@ function Editor({
             </label>
             <label>
               Max length (empty = unlimited)
-              <input
+              <NativeInput
                 aria-label="Field max length"
                 type="number"
                 min="1"
@@ -199,7 +200,7 @@ function Editor({
         {kind === "dropdown" && (
           <label>
             Options (one per line)
-            <textarea
+            <Textarea
               aria-label="Field options"
               className={input + " min-h-20 select-text"}
               value={p.options.join("\n")}
@@ -210,7 +211,7 @@ function Editor({
         <div className="flex flex-wrap gap-3">
           {(["required", "readOnly"] as const).map((k) => (
             <label key={k} className="flex items-center gap-2">
-              <input
+              <NativeInput
                 aria-label={
                   k === "required" ? "Field required" : "Field read only"
                 }
@@ -224,7 +225,7 @@ function Editor({
           ))}
         </div>
         {!entry && (
-          <button
+          <NativeButton
             type="button"
             className={pdfButton + " bg-hover"}
             disabled={!fieldName.trim()}
@@ -238,14 +239,14 @@ function Editor({
             }
           >
             Place on page (click or drag)
-          </button>
+          </NativeButton>
         )}
-        <button
+        <NativeButton
           className={pdfButton + " bg-hover"}
           disabled={!fieldName.trim()}
         >
           {entry ? "Save field properties" : "Create field"}
-        </button>
+        </NativeButton>
       </fieldset>
       {entry?.reason && (
         <p role="note" className="text-ink-3">
@@ -271,14 +272,14 @@ export function PdfFormDesigner() {
         Create text fields, checkboxes and dropdowns, or change an existing
         single-widget field. Save a copy to preserve the original.
       </p>
-      <button
+      <NativeButton
         className={pdfButton + " border border-subtle"}
         aria-pressed={s.formLayout}
         disabled={!s.editing || s.busy}
         onClick={() => layoutPdfFields(s.name, !s.formLayout)}
       >
         {s.formLayout ? "Exit field layout" : "Select / move / resize fields"}
-      </button>
+      </NativeButton>
       {s.formPlacement && (
         <p role="status">
           Click for default size, or drag a rectangle on the page. Escape
@@ -287,7 +288,7 @@ export function PdfFormDesigner() {
       )}
       <label>
         Field properties
-        <select
+        <NativeSelect
           aria-label="Choose field properties"
           className={input}
           value={entry?.name ?? ""}
@@ -299,7 +300,7 @@ export function PdfFormDesigner() {
               {f.name} · {f.kind}
             </option>
           ))}
-        </select>
+        </NativeSelect>
       </label>
       {entry && (
         <FieldActions
@@ -310,12 +311,12 @@ export function PdfFormDesigner() {
         />
       )}
       {entry && (
-        <button
+        <NativeButton
           className={pdfButton + " text-left"}
           onClick={() => selectPdfPage(s.name, entry.properties.page + 1)}
         >
           Show field page {entry.properties.page + 1}
-        </button>
+        </NativeButton>
       )}
       <Editor
         key={`${s.name}:${entry?.name ?? "new"}:${entry?.expected ?? s.page}`}
@@ -342,7 +343,7 @@ function FieldActions({
     <fieldset key={entry.expected} disabled={disabled} className="grid gap-2">
       <label>
         New field name
-        <input
+        <NativeInput
           aria-label="Rename field to"
           className={input}
           value={newName}
@@ -350,7 +351,7 @@ function FieldActions({
         />
       </label>
       <div className="flex gap-2">
-        <button
+        <NativeButton
           className={pdfButton}
           disabled={!newName.trim() || newName === entry.name}
           onClick={() =>
@@ -370,8 +371,8 @@ function FieldActions({
           }
         >
           Rename field
-        </button>
-        <button
+        </NativeButton>
+        <NativeButton
           className={pdfButton + " text-red-600"}
           onClick={() => {
             if (
@@ -387,7 +388,7 @@ function FieldActions({
           }}
         >
           Delete field
-        </button>
+        </NativeButton>
       </div>
     </fieldset>
   );

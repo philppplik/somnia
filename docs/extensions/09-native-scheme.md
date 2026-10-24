@@ -14,6 +14,10 @@ Under the production app CSP the extension worker (Blob URL), its `AsyncFunction
 | `somnia-ext://worker/<ext-id>/host?n=<nonce>` | same host, `/worker/<ext-id>/host?n=` | Trusted same-origin relay document (fallback, see below) |
 | `somnia-ext://panel/<ext-id>/<panel-id>?n=<nonce>` | same host, `/panel/...` | The panel document registered by the frontend, served verbatim |
 
+On Windows, Wry rewrites the browser-facing HTTP URL back to `somnia-ext://localhost/panel/...` (or `/worker/...`) before calling the Rust protocol handler. `split_uri` accepts that `localhost` host as well as the HTTP-facing `somnia-ext.localhost`; the path still contains the document kind. Treating `localhost` as the kind yields an empty 404 for every panel and worker relay. The `windows_rewritten_uri_serves_panel_and_worker` Rust test covers this roundtrip, single-use nonces and malformed paths.
+
+`npx playwright test -c playwright.ext-panel-render.config.ts` verifies the Data Workbench document and MessagePort API under the production host CSP in light and dark. This response model does not replace a Windows/WebView2 application smoke test.
+
 Ids must match `[A-Za-z0-9._-]{1,64}` and not start with `.`. Only `GET`. No redirects, no filesystem access, bounded in-memory table.
 
 ## Commands (editor capability, frontend only)

@@ -440,6 +440,46 @@ fn take_drop(args: &[Arg], take: bool) -> R<Value> {
     from_rows(rows, &Value::Empty)
 }
 
+/// TRIMRANGE(range, [trim_rows], [trim_cols]): removes entirely blank (truly empty) edge rows and columns.
+/// 0 = trim nothing, 1 = leading, 2 = trailing, 3 = both (the default). A range with no content left gives `#CALC!`.
+fn trimrange(args: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
+    let a = arr_arg(args, 0)?;
+    let mode = |i: usize| -> R<i64> {
+        match opt_count(args, i)? {
+            None => Ok(3),
+            Some(m) if (0..=3).contains(&m) => Ok(m),
+            Some(_) => Err(CellError::Value),
+        }
+    };
+    let (tr, tc) = (mode(1)?, mode(2)?);
+    let blank = |v: &Value| matches!(v, Value::Empty);
+    let row_blank = |r: usize| (0..a.cols).all(|c| a.get(r, c).is_none_or(blank));
+    let col_blank = |c: usize| (0..a.rows).all(|r| a.get(r, c).is_none_or(blank));
+    let (mut r0, mut r1, mut c0, mut c1) = (0usize, a.rows, 0usize, a.cols);
+    if tr & 1 != 0 {
+        while r0 < r1 && row_blank(r0) {
+            r0 += 1;
+        }
+    }
+    if tr & 2 != 0 {
+        while r1 > r0 && row_blank(r1 - 1) {
+            r1 -= 1;
+        }
+    }
+    if tc & 1 != 0 {
+        while c0 < c1 && col_blank(c0) {
+            c0 += 1;
+        }
+    }
+    if tc & 2 != 0 {
+        while c1 > c0 && col_blank(c1 - 1) {
+            c1 -= 1;
+        }
+    }
+    let rows: Vec<Vec<Value>> = (r0..r1).map(|r| (c0..c1).map(|c| a.get(r, c).cloned().unwrap_or(Value::Empty)).collect()).collect();
+    from_rows(rows, &Value::Empty)
+}
+
 fn take_fn(args: &[Arg], _c: &mut dyn Ctx) -> R<Value> {
     take_drop(args, true)
 }
@@ -973,6 +1013,7 @@ pub(crate) fn specs() -> Vec<FnSpec> {
             "Breaks a row or column into columns of the given length.",
             wrapcols
         ),
+        f!("TRIMRANGE", 1, 3, Lookup, A, "TRIMRANGE(range, [trim_rows], [trim_cols])", "Removes blank rows and columns from the edges of a range.", trimrange),
         f!("TAKE", 2, 3, Lookup, A, "TAKE(array, rows, [columns])", "Keeps rows or columns from the start (or end) of an array.", take_fn),
         f!("DROP", 2, 3, Lookup, A, "DROP(array, rows, [columns])", "Removes rows or columns from the start (or end) of an array.", drop_fn),
         f!(
@@ -1140,6 +1181,29 @@ mod tests {
         assert_eq!(rows_of(&r), vec![vec![nv(1.0), nv(3.0)], vec![nv(2.0), nv(0.0)]]);
         is_err(ev("WRAPROWS", vec![rf(grid()), n(2.0)]), CellError::Value);
         is_err(ev("WRAPROWS", vec![av(row(&[1.0])), n(0.0)]), CellError::Num);
+    }
+
+    #[test]
+    fn trimrange_removes_blank_edges() {
+        let e = Value::Empty;
+        let g = arr(vec![
+            vec![e.clone(), e.clone(), e.clone(), e.clone()],
+            vec![e.clone(), nv(1.0), e.clone(), nv(2.0)],
+            vec![e.clone(), e.clone(), e.clone(), e.clone()],
+            vec![e.clone(), nv(3.0), tv(""), e.clone()],
+            vec![e.clone(), e.clone(), e.clone(), e.clone()],
+        ]);
+        let r = ev("TRIMRANGE", vec![rf(g.clone())]);
+        assert_eq!(rows_of(&r), vec![vec![nv(1.0), e.clone(), nv(2.0)], vec![e.clone(), e.clone(), e.clone()], vec![nv(3.0), tv(""), e.clone()]]);
+        assert_eq!(rows_of(&ev("TRIMRANGE", vec![rf(g.clone()), n(1.0), n(0.0)])).len(), 4, "leading rows only");
+        assert_eq!(rows_of(&ev("TRIMRANGE", vec![rf(g.clone()), n(2.0), n(0.0)])).len(), 4, "trailing rows only");
+        assert_eq!(rows_of(&ev("TRIMRANGE", vec![rf(g.clone()), n(0.0), n(0.0)])).len(), 5);
+        let c = rows_of(&ev("TRIMRANGE", vec![rf(g.clone()), n(0.0), n(1.0)]));
+        assert_eq!((c.len(), c[0].len()), (5, 3), "leading column only");
+        let c = rows_of(&ev("TRIMRANGE", vec![rf(g.clone()), empty(), n(2.0)]));
+        assert_eq!(c[0].len(), 4, "the last column holds a value so nothing trails");
+        is_err(ev("TRIMRANGE", vec![rf(g.clone()), n(4.0)]), CellError::Value);
+        is_err(ev("TRIMRANGE", vec![rf(arr(vec![vec![Value::Empty, Value::Empty]]))]), CellError::Calc);
     }
 
     #[test]

@@ -1,0 +1,3 @@
+import type {OfficeSummaryLength} from './officeSummaryLength';import {officeLocalSummary} from './officeLocalSummary';import {assertDocumentSelectionCurrent,type DocumentSelectionCapture} from '../documents/selectionCapture';import type {AgentProvider} from './types';
+/** Reviewed selection only, no writes. */
+export function documentLocalSummary(snapshot:DocumentSelectionCapture,recapture:()=>DocumentSelectionCapture,provider:AgentProvider,model:string,signal:AbortSignal,length:OfficeSummaryLength='standard'){return officeLocalSummary('documents',snapshot.text,()=>assertDocumentSelectionCurrent(snapshot,recapture()),provider,model,signal,length);}

@@ -161,3 +161,26 @@ test('stream failure after partial output never retries or drops delivered text'
  await assert.rejects(async()=>{for await(const e of p.stream(req()))events.push(e);});
  assert.equal(calls,1);assert.deepEqual(events,[{type:'text',text:'partial'}]);
 });
+test('keep_alive seconds are optional, include zero and reject unbounded values',async()=>{
+ const bodies:any[]=[];const fetch=async(_u:string,i?:RequestInit)=>{bodies.push(JSON.parse(String(i?.body)));return nd([JSON.stringify({done:true})]);};
+ await collect(new OllamaProvider({fetch:fetch as never,keepAliveSeconds:0}).stream(req()));
+ await collect(new OllamaProvider({fetch:fetch as never,keepAliveSeconds:300}).stream(req()));
+ await collect(new OllamaProvider({fetch:fetch as never}).stream(req()));
+ assert.equal(bodies[0].keep_alive,0);assert.equal(bodies[1].keep_alive,300);assert.equal('keep_alive' in bodies[2],false);
+ for(const value of [-1,86401,0.5])assert.throws(()=>new OllamaProvider({keepAliveSeconds:value}));
+});
+test('stream rejects huge unterminated line and malformed content without uncontrolled accumulation',async()=>{
+ for(const body of ['x'.repeat(1024*1024+1),'null\n','{"message":{"content":42}}\n'])await assert.rejects(collect(mk(async()=>nd([body],65536)).stream(req())),code('protocol'));
+});
+test('abort in delivered chunk drops later lines in the same network chunk',async()=>{
+ const ac=new AbortController(),events:any[]=[];const p=mk(async()=>nd(['{"message":{"content":"first"}}\n{"message":{"content":"late"}}\n{"done":true}\n']));for await(const event of p.stream(req({signal:ac.signal}))){events.push(event);if(event.type==='text')ac.abort();}assert.deepEqual(events,[{type:'text',text:'first'},{type:'finish',reason:'aborted'}]);
+});
+test('explicit local context caps requested output and fails text safety bound before HTTP',async()=>{
+ let sent:any,calls=0;const p=new OllamaProvider({numCtx:1024,fetch:async(_url,init)=>{calls++;sent=JSON.parse(String(init?.body));return nd(['{"done":true}']);}});await collect(p.stream(req({maxOutputTokens:8192})));assert.equal(sent.options.num_predict,256);await assert.rejects(collect(p.stream(req({messages:[{role:'user',content:'😀'.repeat(200)}]}))),(e:any)=>e.detail==='context');assert.equal(calls,1);
+});
+
+test('provider generation nanoseconds are optional reported metadata, never wall time',async()=>{for(const duration of [2e9,0,-1,null,'2']){const provider=new OllamaProvider({fetch:async()=>new Response(JSON.stringify({done:true,eval_count:8,eval_duration:duration})+'\n')});const events=[];for await(const event of provider.stream({model:'fixture',messages:[],tools:[],maxOutputTokens:8,signal:new AbortController().signal}))events.push(event);const usage=events.find(e=>e.type==='usage');assert.equal(usage?.type==='usage'?usage.usage.outputDurationNs:undefined,duration===2e9?2e9:undefined);}});
+test('budget observer cannot retarget caller model/context/tool/limit before direct chat',async()=>{let payload:any;const r:AgentProviderRequest={model:'approved',messages:[{role:'user',content:'original'}],tools:[{name:'inspect',description:'Inspect',parameters:{type:'object'}}],maxOutputTokens:32,signal:new AbortController().signal};const p=new OllamaProvider({maxRetries:0,onContextBudget:()=>{r.model='other';r.messages[0].content='private replacement';r.tools[0].name='retarget';r.maxOutputTokens=999;},fetch:async(_url,init)=>{payload=JSON.parse(String(init?.body));return new Response('{"done":true}\n');}});for await(const _ of p.stream(r)){}assert.equal(payload.model,'approved');assert.equal(payload.messages[0].content,'original');assert.equal(payload.tools[0].function.name,'inspect');assert.equal(payload.options.num_predict,32);});
+test('budget observer cancellation finishes aborted without direct chat, even after caller signal replacement',async()=>{let chat=0;const c=new AbortController(),r:AgentProviderRequest={model:'approved',messages:[{role:'user',content:'original'}],tools:[],maxOutputTokens:32,signal:c.signal};const p=new OllamaProvider({maxRetries:0,onContextBudget:()=>{c.abort();r.signal=new AbortController().signal;},fetch:async()=>{chat++;return new Response('{"done":true}\n');}});const events=[];for await(const e of p.stream(r))events.push(e);assert.equal(chat,0);assert.deepEqual(events,[{type:'finish',reason:'aborted'}]);});
+test('listModels rejects ambiguous and malformed inventory rather than silently dropping rows',async()=>{for(const models of [[null],[{model:'a:1',name:'b:1'}],[{model:42,name:'a:1'}],[{model:'',name:'a:1'}],[{model:'a:1'},{name:'a:1'}],[{model:'a:1',name:42}],[{}],[{model:' '.repeat(2)}]])await assert.rejects(mk(async()=>json({models})).listModels(),code('protocol'),JSON.stringify(models));assert.deepEqual(await mk(async()=>json({models:[]})).listModels(),[]);});
+test('listModels preserves unknown invalid sizes and exact valid single identities',async()=>{const models=await mk(async()=>json({models:[{model:'a:1',size:-1},{name:'b:1',size:'bad'},{model:'c:1',size:4}]})).listModels();assert.deepEqual(models.map(m=>[m.id,m.sizeBytes]),[['a:1',undefined],['b:1',undefined],['c:1',4]]);});

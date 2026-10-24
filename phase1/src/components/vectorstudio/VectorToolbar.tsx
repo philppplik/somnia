@@ -1,4 +1,4 @@
-import {Circle,Minus,MousePointer2,Plus,Redo2,Square,Undo2,ZoomIn} from '../../lib/icons';
+import {Type,Circle,Minus,MousePointer2,Plus,Redo2,Square,Undo2,ZoomIn} from '../../lib/icons';
 import {NodeIcon,PenNibIcon,PolygonIcon,StarIcon} from './icons';
 import {Button} from '../ui/button';
 import {useT} from '../../lib/useT';
@@ -6,7 +6,7 @@ import {redo,setTool,setView,undo,useVectorSession,type VectorTool} from '../../
 const TOOLS:{id:VectorTool;icon:typeof Square;key:string;shortcut:string}[]=[
  {id:'select',icon:MousePointer2,key:'vector.tool.select',shortcut:'V'},{id:'node',icon:NodeIcon,key:'vector.tool.node',shortcut:'A'},{id:'pen',icon:PenNibIcon,key:'vector.tool.pen',shortcut:'P'},
  {id:'rect',icon:Square,key:'vector.tool.rect',shortcut:'R'},{id:'ellipse',icon:Circle,key:'vector.tool.ellipse',shortcut:'E'},{id:'line',icon:Minus,key:'vector.tool.line',shortcut:'L'},
- {id:'polygon',icon:PolygonIcon,key:'vector.tool.polygon',shortcut:'G'},{id:'star',icon:StarIcon,key:'vector.tool.star',shortcut:'S'}];
+ {id:'polygon',icon:PolygonIcon,key:'vector.tool.polygon',shortcut:'G'},{id:'star',icon:StarIcon,key:'vector.tool.star',shortcut:'S'},{id:'text',icon:Type,key:'vector.tool.text',shortcut:'T'}];
 /** Tool strip above the drawing surface: tools, undo/redo and zoom. */
 export function VectorToolbar({onFit}:{onFit:()=>void}){
  const {t}=useT();const s=useVectorSession();

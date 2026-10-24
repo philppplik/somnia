@@ -11,3 +11,33 @@ test('checkForUpdate reports errors and results',async()=>{
  const ok=await checkForUpdate('8',(async()=>({ok:true,json:async()=>[rel('v9')]})) as never);assert.equal(ok.status,'available');
  await assert.rejects(checkForUpdate('8',(async()=>({ok:false,status:403})) as never),/403/);});
 test('patch releases are detected and equal or older are not',()=>{assert.equal(newerRelease('9.5.4',[rel('v9.5.5-alpha')])?.tag,'v9.5.5-alpha');assert.equal(newerRelease('9.5.4',[rel('v9.5.4-alpha'),rel('v9.5.3')]),null);assert.equal(newerRelease('9.5.4',[rel('v9.6.0')])?.tag,'v9.6.0');});
+test('same-core prereleases use full SemVer ordering, not just the numeric tuple',()=>{
+ for(const [current,next] of [['12.2.0-alpha.7','v12.2.0-beta.1'],['12.2.0-beta.2','v12.2.0-beta.3'],['12.2.0-beta.3','v12.2.0-beta.10'],['12.2.0-beta.3','v12.2.0']])assert.equal(newerRelease(current,[rel(next)])?.tag,next);
+ for(const next of ['v12.2.0-beta.3','v12.2.0-beta.2','v12.2.0-alpha.9','v12.1.99'])assert.equal(newerRelease('12.2.0-beta.3',[rel(next)]),null);
+ assert.equal(newerRelease('12.2.0',[rel('v12.2.0-beta.99')]),null);
+ assert.equal(newerRelease('12.2.0-beta.3+build.1',[rel('v12.2.0-beta.3+build.2')]),null);
+ assert.equal(newerRelease('12.2.0-alpha.7',[rel('v12.2.0-beta.10'),rel('v12.2.0-beta.3')])?.tag,'v12.2.0-beta.10');
+ assert.equal(newerRelease('12.2.0-beta.3',[rel('v12.2.0-bogus!'),rel('v99trailing')]),null);
+});
+test('check respects stable, beta and alpha preferences on the same core version',async()=>{
+ const data=[rel('v12.2.0-beta.3',{prerelease:true}),rel('v12.3.0-alpha.1',{prerelease:true}),rel('v12.0.1')];
+ const old=Object.getOwnPropertyDescriptor(globalThis,'localStorage');let channel='stable';
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:()=>JSON.stringify({channel})}});
+ try{
+  const fetcher=(async()=>({ok:true,json:async()=>data})) as never;
+  assert.equal((await checkForUpdate('12.2.0-beta.2',fetcher)).status,'up-to-date');
+  channel='beta';const beta=await checkForUpdate('12.2.0-beta.2',fetcher);assert.equal(beta.status==='available'&&beta.release.tag,'v12.2.0-beta.3');
+  channel='alpha';const alpha=await checkForUpdate('12.2.0-beta.2',fetcher);assert.equal(alpha.status==='available'&&alpha.release.tag,'v12.3.0-alpha.1');
+ }finally{if(old)Object.defineProperty(globalThis,'localStorage',old);else Reflect.deleteProperty(globalThis,'localStorage');}
+});
+
+test('release gate: ordering is independent of feed order and respects numeric identifiers',()=>{
+ const tags=['v12.2.0-alpha.99','v12.2.0-beta.2','v12.2.0-beta.9','v12.2.0-beta.10','v12.2.0'];
+ for(let shift=0;shift<tags.length;shift++){
+  const order=[...tags.slice(shift),...tags.slice(0,shift)].map(t=>rel(t));
+  assert.equal(newerRelease('12.2.0-alpha.7',order)?.tag,'v12.2.0');
+  assert.equal(newerRelease('12.2.0-beta.9',order.filter(r=>r.tag_name!=='v12.2.0'))?.tag,'v12.2.0-beta.10');
+ }
+ assert.equal(newerRelease('12.2.0',[rel('v12.2.0+rebuilt'),rel('v12.2.0-beta.100')]),null);
+ assert.equal(newerRelease('12.2.0-beta.3',[rel('v99.0.0',{draft:true}),rel('v12.2.0-beta.4')])?.tag,'v12.2.0-beta.4');
+});

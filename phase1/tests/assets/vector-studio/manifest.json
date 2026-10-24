@@ -5,6 +5,11 @@
     "paths": 0
   },
   {
+    "file": "gradient-linear.svg",
+    "outcome": "accept",
+    "paths": 1
+  },
+  {
     "file": "primitives.svg",
     "outcome": "accept",
     "paths": 6

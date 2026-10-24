@@ -1,11 +1,13 @@
+import {panelSection as row, panelSlider as input} from '../shell/panelStyles';
 import {useT} from '../../lib/useT';
 import {useMedia} from '../../lib/media';
 import {PHOTO_CONTROLS,type PhotoControl} from '../../lib/photos/studioSettings';
 import {beginPhotoGesture,endPhotoGesture,flipPhoto,previewPhotoSettings,rotatePhoto,usePhotoSession} from '../../lib/photos/studioSession';
 import {Button} from '../ui/button';
 import {RotateCcw,RotateCw,ArrowLeftRight,ArrowUpDown} from '../../lib/icons';
-const row='grid gap-1.5 border-b border-subtle px-3 py-3 text-xs text-ink-2';
-const input='w-full accent-[var(--accent)]';
+import {NativeInput} from '../ui/native-controls';
+
+
 const SECTIONS=['light','color','effects','detail','transform'] as const;
 function Slider({name,control,disabled}:{name:string;control:PhotoControl;disabled:boolean}){
  const {t}=useT();
@@ -16,7 +18,7 @@ function Slider({name,control,disabled}:{name:string;control:PhotoControl;disabl
  const end=()=>endPhotoGesture(name);
  return <label className="grid gap-1">{t(control.label)}
   <span className="flex items-center gap-2">
-   <input type="range" className={input} min={control.min} max={control.max} step={control.step} value={value} disabled={disabled}
+   <NativeInput type="range" className={input} min={control.min} max={control.max} step={control.step} value={value} disabled={disabled}
     aria-label={t(control.label)} data-testid={`photos-slider-${control.key}`}
     onPointerDown={()=>beginPhotoGesture(name)} onChange={e=>change(Number(e.target.value))} onPointerUp={end} onBlur={end} onKeyUp={end}/>
    <span className="w-14 shrink-0 text-right tabular-nums text-ink-3" data-testid={`photos-value-${control.key}`}>{control.format?control.format(value):value}</span>

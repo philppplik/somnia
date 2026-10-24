@@ -25,9 +25,9 @@ export const agentFileTools: readonly AgentToolDefinition[] = [
 const byteLength = (value: string) => new TextEncoder().encode(value).byteLength;
 export class AgentProjectTools {
   private readonly staged = new Map<string, AgentFileProposal>();
-  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean; nativePath?:(path:string)=>boolean }) {}
+  constructor(private readonly access: AgentProjectAccess, private readonly maxFileBytes = 256 * 1024, private readonly maxProposalBytes = 1024 * 1024, private readonly extra?: { registry: AgentToolRegistry; editor?: AgentEditorAccess; grants?: AgentToolGrants; nativeOnly?:boolean; toolNames?:readonly string[]; nativePath?:(path:string)=>boolean }) {}
   /** Tool definitions sent to the model: the three file tools plus any enabled registry tools. */
-  definitions(): AgentToolDefinition[] { return [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; }
+  definitions(): AgentToolDefinition[] { const tools = [...(this.extra?.nativeOnly?[]:agentFileTools), ...(this.extra?.registry.definitions(this.extra.grants) ?? [])]; return this.extra?.toolNames?tools.filter(t=>this.extra!.toolNames!.includes(t.name)):tools; }
   private readableFiles(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [path, text] of Object.entries(this.access.files())) {
@@ -35,13 +35,18 @@ export class AgentProjectTools {
     }
     return out;
   }
+  private assertUnchangedBase(path: string, original: string | null): void {
+    const fresh = this.access.files();
+    if ((Object.hasOwn(fresh, path) ? fresh[path] : null) !== original) throw Error('Editor file changed during permission. Refresh the proposal.');
+  }
   private async stage(path: string, content: string, signal: AbortSignal): Promise<string> {
     if(!this.extra?.nativePath?.(path))validateAgentPath(path);
     const files = this.access.files();
+    const original = Object.hasOwn(files, path) ? files[path] : null;
     const approved = await this.access.authorize?.(path, 'write', signal);
     signal.throwIfAborted();
     if (!approved && (!this.access.allowed(path, 'write') || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
-    const original = Object.hasOwn(files, path) ? files[path] : null;
+    this.assertUnchangedBase(path, original);
     if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');
     const pending = this.staged.get(path);
     if (pending && pending.before !== original) throw Error('Editor file changed since proposal. Generate a new proposal.');
@@ -64,6 +69,7 @@ export class AgentProjectTools {
   clear(): void { this.staged.clear(); }
   async execute(call: AgentToolCall, signal: AbortSignal): Promise<string> {
     signal.throwIfAborted();
+    if(this.extra?.toolNames&&!this.extra.toolNames.includes(call.name))throw Error('Tool is outside the active studio set.');
     let args: Record<string, unknown>;
     try { args = JSON.parse(call.arguments.trim() || '{}'); } catch { throw Error('Tool arguments must be valid JSON.'); }
     if (!args || typeof args !== 'object' || Array.isArray(args)) throw Error('Tool arguments must be an object.');
@@ -86,12 +92,12 @@ export class AgentProjectTools {
     validateAgentPath(path);
     const action = call.name === 'read_file' ? 'read' : 'write';
     if (Object.keys(args).some(k => !['path', ...(action === 'write' ? ['content'] : [])].includes(k))) throw Error('Unexpected tool arguments.');
+    const original = Object.hasOwn(files, path) ? files[path] : null;
     const approved = await this.access.authorize?.(path, action, signal);
     signal.throwIfAborted();
     // Writing an existing file also discloses its base to the proposal/review flow.
     if (!approved && (!this.access.allowed(path, action) || !this.access.allowed(path, 'read'))) throw Error('File access is not authorized.');
-    const exists = Object.hasOwn(files, path);
-    const original = exists ? files[path] : null;
+    this.assertUnchangedBase(path, original);
     if (original !== null && (byteLength(original) > this.maxFileBytes || original.includes('\0'))) throw Error('File is binary or exceeds context limit.');
     const pending = this.staged.get(path);
     if (pending && pending.before !== original) throw Error('Editor file changed since proposal. Generate a new proposal.');

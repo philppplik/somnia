@@ -1,0 +1,3 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {localSearchSourceReview as review} from './localSearchSourceReview';
+test('empty and exact UTF8 raw/chunk bound',()=>{assert.equal(review([]).valid,false);assert.deepEqual(review([{id:'a.md',text:'a'.repeat(262144)}]),{bytes:262144,chunks:128,valid:true});assert.equal(review([{id:'a.md',text:'é'.repeat(131073)}]).valid,false);});
+test('raw invalid/duplicate/source bound and normalized chunks same pipeline',()=>{for(const sources of [[{id:'a.md',text:'x\0'}],[{id:'a.md',text:'x'},{id:'a.md',text:'y'}],Array.from({length:33},(_,i)=>({id:String(i),text:'x'}))])assert.equal(review(sources).valid,false);assert.deepEqual(review([{id:'a.md',text:'e\u0301\r\n'}]),{bytes:5,chunks:1,valid:true});});

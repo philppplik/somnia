@@ -56,6 +56,17 @@ test('manifest entries are validated',()=>{
  for(const [p,v] of [['../a.png',{hash:h,size:1}],['a.html',{hash:h,size:1}],['a.png',{hash:'zz',size:1}],['a.png',{hash:h,size:0}],['a.png',{hash:h,size:26_000_000}],['a.png',{hash:h,size:1.5}],['a.png',null],['a.png','x']] as [string,unknown][])
   assert.equal(parseManifestEntry(p,v),null,String(p)+JSON.stringify(v));});
 
+test('office decks (pptx) are shareable media; the manifest carries them to the guest',async()=>{
+ const {server,factory}=memoryServer();blindRelay(server);const invite=await mkInvite();
+ const host=await peer(factory,invite);
+ const deck=new Uint8Array([0x50,0x4b,0x03,0x04,9,9,9,9]);   // PK zip head, like a real pptx
+ host.media.put('slides/quarterly.pptx',deck);
+ const guest=await peer(factory,invite);
+ await until(()=>guest.media.files.size===1);
+ assert.deepEqual(guest.media.files.get('slides/quarterly.pptx'),deck);
+ await until(()=>guest.blob.snapshot().pending===0);
+ assert.deepEqual(guest.blob.snapshot().failed,[]);});
+
 test('a multi-chunk image and a PDF reach the guest byte-exact through a blind relay, with E2E key',async()=>{
  const {server,factory}=memoryServer();const relay=blindRelay(server);const invite=await mkInvite();
  const host=await peer(factory,invite);

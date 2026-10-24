@@ -28,6 +28,6 @@ export function applyLook(l:Look,root:HTMLElement=document.documentElement,env?:
  const g=resolveGlass({opacity:safe.glassOpacity,blur:safe.glassBlur,frame:safe.glassFrame,panels:safe.glassPanels,code:safe.glassCode},glassEnv(root,env));
  s.setProperty('--glass-blur',`${g.blur}px`);s.setProperty('--glass-frame-alpha',String(g.frameAlpha));s.setProperty('--glass-panel-alpha',String(g.panelAlpha));s.setProperty('--glass-code-alpha',String(g.codeAlpha));
  s.setProperty('--r-outer',`${safe.outerRadius}px`);root.dataset.glassFrame=String(safe.glassFrame);root.dataset.glassPanels=String(safe.glassPanels);root.dataset.glassCode=String(safe.glassCode);
- if(l.accent){s.setProperty('--accent',l.accent);s.setProperty('--accent-soft',`color-mix(in srgb, ${l.accent} 18%, transparent)`);s.setProperty('--accent-ink',textOnAccent(l.accent));}
- else{s.removeProperty('--accent');s.removeProperty('--accent-soft');s.removeProperty('--accent-ink');}
+ if(safe.accent){s.setProperty('--accent',safe.accent);s.setProperty('--accent-fill',safe.accent);s.setProperty('--accent-soft',`color-mix(in srgb, ${safe.accent} 18%, transparent)`);s.setProperty('--accent-ink',textOnAccent(safe.accent));}
+ else{s.removeProperty('--accent');s.removeProperty('--accent-fill');s.removeProperty('--accent-soft');s.removeProperty('--accent-ink');}
  s.setProperty('--ui-zoom',String(l.uiScale/100));s.setProperty('--editor-font-size',`${l.editorFont}px`);s.setProperty('--editor-line-height',String(l.lineHeight));s.setProperty('--gap',GAP[l.density]);}

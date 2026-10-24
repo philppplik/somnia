@@ -28,6 +28,10 @@ export class FilmstripEngine implements ThumbDecoder{
   const r=await this.call({kind:'thumbs',key,times,width,height});
   if(!r.ok||r.kind!=='thumbs')throw new Error('Unexpected filmstrip response');return r.bitmaps;
  }
+ async peaks(key:string,buckets:number):Promise<Float32Array|null>{
+  const r=await this.call({kind:'peaks',key,buckets});
+  if(!r.ok||r.kind!=='peaks')throw new Error('Unexpected filmstrip response');return r.peaks;
+ }
  close(key:string){this.worker.postMessage({id:this.nextId++,kind:'close',key} satisfies FilmRequest);}
  dispose(){this.worker.terminate();this.fail(new Error('Filmstrip engine disposed'));}
 }

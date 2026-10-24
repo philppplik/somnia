@@ -103,6 +103,7 @@ const UNDO_LIMIT: usize = 100;
 
 impl DocState {
     pub fn new(mut wb: Workbook, path: Option<String>, title: String) -> DocState {
+        gridcraft_calc::set_pivot_data_hook(crate::pivot::pivot_data_at);
         let mut calc = Calc::new();
         calc.recalc_all(&mut wb);
         let wb = Arc::new(wb);

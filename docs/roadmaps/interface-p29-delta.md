@@ -1,0 +1,10 @@
+# Interface P29 delta — variables and modes
+
+Base: P28 commit (stacked; P28 not yet upstream at build time). Scope check first: per-frame light/dark variable mode (inherit/light/dark Choice in properties), fill and gap variable bindings (fill doubles as text colour), and the variables/styles panel with per-mode values and aliases all already existed and were kept. Two genuine gaps were built:
+
+1. **Variable collections** (`collection?:string` on `InterfaceVariable`): variables can be assigned to a named collection from the variables panel; the list renders grouped by collection with an uncategorized group last. Lib helpers `setVariableCollection` (trim, 256-char cap, unknown-variable error) and `variableCollections` (sorted unique). Validated in the snapshot schema (whitespace-only rejected); survives the roundtrip. One undo per edit via the session transact.
+2. **Mode preview toggle in the canvas chrome** (NativeSelect: Inherit/default, Light, Dark): ephemeral canvas-local state, like zoom. `resolveInterfaceValues` and `resolvedTextStyle` take an optional forced mode that overrides the frame-ancestry mode for rendering only — bindings, aliases and text-style mode values all follow it. Never touches the document, history or recovery snapshot; resets when the document changes.
+
+Tests: 321 focused tests green (+5: 4 lib tests, 1 EN/DE render test). Gates: check:ds, check:ui-commands, check:commands, check:layers all pass; tsc clean apart from known upstream studio3d/slides/stage noise (run unfiltered this time per integrator note). CI-only spec `Interface P29 variable collections group and the canvas mode preview recolors ephemerally` added (asserts recolor + revision unchanged); acceptance paragraph P29 added. Light/dark screenshots inspected (EN light, DE dark; grouping and footer select visible, bound accent recolors to the dark mode value).
+
+Note: the 7 TS18048 non-null fixes in transitionPresets.test.ts are applied locally but deliberately NOT committed — the integrator already fixed them upstream (f8c0d57a), so the P29 patch leaves that file untouched to avoid a double fix.

@@ -111,3 +111,15 @@ test('store locales: same keys and placeholders in all five languages, no em das
  for(const [l,c] of Object.entries(STORE_CATALOGUES)){assert.deepEqual(Object.keys(c).sort(),Object.keys(en).sort(),l);for(const k of Object.keys(en)){assert.equal(ph(c[k]),ph(en[k]),`${l} ${k}`);assert.equal(/[\u2014\u2013]/.test(c[k]),false,`${l} ${k}`);}}
  for(const l of Object.keys(STORE_CATALOGUES))assert.equal(CATALOGUES[l]['store.install'],STORE_CATALOGUES[l]['store.install']);
 });
+test('reviewed mark: separate fact from publisher verification, never inferred',()=>{
+ const cat=fixtureCatalog();
+ const target=cat.extensions.find(e=>e.id==='pixel-garden.image-optimizer')!;
+ const withReview={...cat,extensions:cat.extensions.map(e=>e.id===target.id?{...e,releases:[{...e.releases[0],review:{reviewer:'Jane'}}]}:e)};
+ const cards=buildCards(withReview,EMPTY_FEED,new Map(),FIXTURE_NOW);
+ const marked=cards.find(c=>c.id==='pixel-garden.image-optimizer')!;
+ assert.equal(marked.reviewed,true);assert.equal(marked.reviewer,'Jane');
+ assert.equal(marked.verified,false,'review does not imply publisher verification');
+ const plain=buildCards(cat,EMPTY_FEED,new Map(),FIXTURE_NOW);
+ const unmarked=plain.find(c=>c.id==='pixel-garden.image-optimizer')!;
+ assert.equal(unmarked.reviewed,false);assert.equal(unmarked.reviewer,null);
+});

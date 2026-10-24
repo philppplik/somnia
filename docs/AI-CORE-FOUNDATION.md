@@ -230,3 +230,7 @@ conflicts, retained-layer refusal and real active-selection refusal.
 - Real providers, Windows/Tauri host dialogs, native file-write completion,
   large tiled images, layer/mask editing and shared raster collaboration remain
   outside this verification. This is a patch delivery, not a stable release.
+
+## Module layering: `ProviderReplay`
+
+`ProviderReplay` (provider-private replay state) is defined in `phase1/src/lib/agent/types.ts`, next to `AgentMessage`, which embeds it. `providerReplay.ts` imports the type from `types.ts` and re-exports it, so existing imports keep working. `types.ts` must not import from `providerReplay.ts`; this removes the `providerReplay.ts <-> types.ts` cycle flagged by `npm run check:layers` (`no-circular`).

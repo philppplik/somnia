@@ -2,7 +2,7 @@ import {useT} from '../lib/useT';
 import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
 import {AlertTriangle,CircleAlert} from '../lib/icons';
 import {useAppStore} from '../store/appStore';
-import {projectProblems} from '../lib/diagnostics';
+import {problemsProviders} from '../lib/problemsProviders';
 import {useMathEngine} from '../lib/mathRender';
 import {canNavigateProblem,navigateProblem,problemsStore} from '../lib/problemsRuntime';
 import type {RuntimeProblem} from '../lib/problemsStore';
@@ -12,10 +12,10 @@ export function ProblemsPanel(){
  const runtime=useSyncExternalStore(problemsStore.subscribe,problemsStore.getSnapshot,problemsStore.getSnapshot);
  useEffect(()=>{const timer=window.setTimeout(()=>setFiles(s.files),300);return()=>window.clearTimeout(timer);},[s.files]);
  const engine=useMathEngine();
- const syntax=useMemo(()=>projectProblems(files).map((p,i):RuntimeProblem=>({...p,studio:'code',key:`syntax:${p.file}:${p.line}:${p.col}:${i}`,source:'syntax',details:'',ts:'',count:1})),[files,engine]);
+ const syntax=useMemo(()=>problemsProviders.collect({files}).map((p):RuntimeProblem=>({...p,details:'',ts:'',count:1})),[files,engine]);
  const problems=[...syntax,...runtime];const errors=problems.filter(p=>p.severity==='error').length;
  const studios=[...new Set(problems.map(p=>p.studio))].sort();
- return <section className="problems-panel !h-auto flex max-h-[30vh] flex-col !p-3" aria-label={t('panels.problems.problems')} data-testid="problems-panel">
+ return <section className="problems-panel !h-auto !border-t-0 flex max-h-[30vh] flex-col !p-3" aria-label={t('panels.problems.problems')} data-testid="problems-panel">
   <div className="flex shrink-0 items-center gap-3"><strong>{t('panels.problems.problems')}</strong><span className="text-[11px] text-ink-3" data-testid="problems-count" role="status">{problems.length===0?t('panels.problems.noProblemsFound'):t('panels.problems.summary',{errors:t('panels.problems.errors',{count:errors}),warnings:t('panels.problems.warnings',{count:problems.length-errors})})}</span><span className="grow"/><button className="border-0 bg-transparent text-[11px] text-ink-2 underline disabled:opacity-40" disabled={!runtime.length&&!problemsStore.getDropped()} onClick={()=>problemsStore.clear()}>{t('problems.clearRuntime')}</button></div>
   <div className="mt-2 min-h-0 overflow-auto text-[11px]">
    {problems.length===0&&<p data-testid="problems-empty">{t('problems.empty')}</p>}

@@ -1,0 +1,1623 @@
+[
+  {
+    "type": "dependency",
+    "from": "src/lib/agentDiff.ts",
+    "to": "src/lib/agent/privacy.ts",
+    "unresolvedTo": "./agent/privacy",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/commands.ts",
+    "to": "src/lib/collab/chatSession.ts",
+    "unresolvedTo": "./collab/chatSession",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/commands.ts",
+    "to": "src/lib/collab/communication.ts",
+    "unresolvedTo": "./collab/communication",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/commands.ts",
+    "to": "src/lib/studios/index.ts",
+    "unresolvedTo": "./studios",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/commands.ts",
+    "to": "src/lib/studios/modes.ts",
+    "unresolvedTo": "./studios/modes",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/confirmService.ts",
+    "to": "src/lib/studios/openIntake.ts",
+    "unresolvedTo": "./studios/openIntake",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/desktopAdapter.ts",
+    "to": "src/lib/pdfedit/session.ts",
+    "unresolvedTo": "./pdfedit/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/fileAdapter.ts",
+    "to": "src/lib/agent/autosaveHold.ts",
+    "unresolvedTo": "./agent/autosaveHold",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/fileAdapter.ts",
+    "to": "src/lib/collab/nativeChatDrop.ts",
+    "unresolvedTo": "./collab/nativeChatDrop",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/design/i18n.ts",
+    "unresolvedTo": "./design/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/extensions/consentLocales.ts",
+    "unresolvedTo": "./extensions/consentLocales",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/extensions/storeLocales.ts",
+    "unresolvedTo": "./extensions/storeLocales",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/photos/i18n.ts",
+    "unresolvedTo": "./photos/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/sound/i18n.ts",
+    "unresolvedTo": "./sound/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/vectorstudio/i18n.ts",
+    "unresolvedTo": "./vectorstudio/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/vibespace/boardI18n.ts",
+    "unresolvedTo": "./vibespace/boardI18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/vibespace/i18n.ts",
+    "unresolvedTo": "./vibespace/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/vibespace/scheduleI18n.ts",
+    "unresolvedTo": "./vibespace/scheduleI18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/i18n.ts",
+    "to": "src/lib/video/i18n.ts",
+    "unresolvedTo": "./video/i18n",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/imageEditorHost.ts",
+    "to": "src/lib/image-editor/export.ts",
+    "unresolvedTo": "./image-editor/export",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/media.ts",
+    "to": "src/lib/sound/format.ts",
+    "unresolvedTo": "./sound/format",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/media.ts",
+    "to": "src/lib/video/format.ts",
+    "unresolvedTo": "./video/format",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/problemsRuntime.ts",
+    "to": "src/lib/studios/registry.ts",
+    "unresolvedTo": "./studios/registry",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/design/model.ts",
+    "unresolvedTo": "./design/model",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/design/session.ts",
+    "unresolvedTo": "./design/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/pdfedit/session.ts",
+    "unresolvedTo": "./pdfedit/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/photos/studioSession.ts",
+    "unresolvedTo": "./photos/studioSession",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/sheets/session.ts",
+    "unresolvedTo": "./sheets/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/slides/session.ts",
+    "unresolvedTo": "./slides/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/vectorstudio/exportFiles.ts",
+    "unresolvedTo": "./vectorstudio/exportFiles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/lib/vectorstudio/session.ts",
+    "unresolvedTo": "./vectorstudio/session",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-core-not-up-to-studios"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/agent/panelBridge.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/agent/photoWorkspace.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/agent/photoWorkspace.ts",
+    "to": "src/store/rasterState.ts",
+    "unresolvedTo": "../../store/rasterState",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/agent/studioMcpHost.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/agent/studioWorkspace.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/alignApply.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/canvasDrag.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/closeFlow.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/collab/appProject.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/collab/communication.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/commands.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/componentActions.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/componentCatalogStore.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/componentLibrary.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/desktopAdapter.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/desktopAdapter.ts",
+    "to": "src/store/rasterState.ts",
+    "unresolvedTo": "../store/rasterState",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/editorBridge.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/extensions/host.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/fileAdapter.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/libraryShareActions.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/mdBridge.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/pdf/verification/demo.tsx",
+    "to": "src/components/pdf/PdfEditInspector.tsx",
+    "unresolvedTo": "../../../components/pdf/PdfEditInspector",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/problemsRuntime.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/projectActions.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/projectSettingsIO.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/saveFlow.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/structureCommands.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/studios/blank.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "dynamic-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/studios/openIntake.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/studios/studioRouting.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/svgedit/controller.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/tableCommands.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/uiContext.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/uiContextStore.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/usePreviewNavigation.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/vectorstudio/geometry.ts",
+    "to": "src/components/vectorstudio/tools/operations.ts",
+    "unresolvedTo": "../../components/vectorstudio/tools/operations",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/vectorstudio/open.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/vectorstudio/session.ts",
+    "to": "src/components/vectorstudio/tools/operations.ts",
+    "unresolvedTo": "../../components/vectorstudio/tools/operations",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsActions.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "dependency",
+    "from": "src/lib/workDocsProviders.ts",
+    "to": "src/store/rasterState.ts",
+    "unresolvedTo": "../store/rasterState",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "lib-not-up"
+    }
+  },
+  {
+    "type": "cycle",
+    "from": "src/components/photos/DevelopPanel.tsx",
+    "to": "src/components/RasterEditor.tsx",
+    "unresolvedTo": "../RasterEditor",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/components/RasterEditor.tsx",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/components/photos/DevelopPanel.tsx",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/a11y.ts",
+    "to": "src/lib/diagnostics.ts",
+    "unresolvedTo": "./diagnostics",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/diagnostics.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/a11y.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/agent/nativeProviderFetch.ts",
+    "to": "src/lib/agent/providerAuth.ts",
+    "unresolvedTo": "./providerAuth",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/agent/providerAuth.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/agent/nativeProviderFetch.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/agent/panelBridge.ts",
+    "to": "src/lib/agent/settings.ts",
+    "unresolvedTo": "./settings",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/agent/settings.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/agent/panelBridge.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/animation/interpolate.ts",
+    "to": "src/lib/animation/model.ts",
+    "unresolvedTo": "./model",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/animation/model.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/modifiers.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/interpolate.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/animation/model.ts",
+    "to": "src/lib/animation/modifiers.ts",
+    "unresolvedTo": "./modifiers",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/animation/modifiers.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/animation/model.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/commandContracts.ts",
+    "to": "src/lib/terminal/nativeTerminal.ts",
+    "unresolvedTo": "./terminal/nativeTerminal",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/terminal/nativeTerminal.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/invokeCmd.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/commandContracts.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/commands.ts",
+    "to": "src/lib/workDocsActions.ts",
+    "unresolvedTo": "./workDocsActions",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/workDocsActions.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/workDocsProviders.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/commands.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/diagnostics.ts",
+    "to": "src/lib/mathProblems.ts",
+    "unresolvedTo": "./mathProblems",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/mathProblems.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/diagnostics.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/documents/edit.ts",
+    "to": "src/lib/documents/protocol.ts",
+    "unresolvedTo": "./protocol",
+    "dependencyTypes": [
+      "local",
+      "type-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/documents/protocol.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      },
+      {
+        "name": "src/lib/documents/edit.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/errorReport.ts",
+    "to": "src/lib/log.ts",
+    "unresolvedTo": "./log",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/log.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/errorReport.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/extensions/manifestV2.ts",
+    "to": "src/lib/extensions/securityPolicy.ts",
+    "unresolvedTo": "./securityPolicy",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/extensions/securityPolicy.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/extensions/manifestV2.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/extensions/nativeScheme.ts",
+    "to": "src/lib/extensions/runtime.ts",
+    "unresolvedTo": "./runtime",
+    "dependencyTypes": [
+      "local",
+      "type-only",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/extensions/runtime.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/extensions/nativeScheme.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/fileAdapter.ts",
+    "to": "src/lib/versionsSession.ts",
+    "unresolvedTo": "./versionsSession",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/versionsSession.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/fileAdapter.ts",
+        "dependencyTypes": [
+          "local",
+          "type-import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/pdfedit/comments.ts",
+    "to": "src/lib/pdfedit/markupProperties.ts",
+    "unresolvedTo": "./markupProperties",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/pdfedit/markupProperties.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/pdfedit/comments.ts",
+        "dependencyTypes": [
+          "local",
+          "type-only",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/projectActions.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/store/appStore.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/index.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/design.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/blank.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/projectActions.ts",
+        "dependencyTypes": [
+          "local",
+          "dynamic-import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/studios/blank.ts",
+    "to": "src/store/appStore.ts",
+    "unresolvedTo": "../../store/appStore",
+    "dependencyTypes": [
+      "local",
+      "dynamic-import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/store/appStore.ts",
+        "dependencyTypes": [
+          "local",
+          "dynamic-import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/index.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/design.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/studios/blank.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  },
+  {
+    "type": "cycle",
+    "from": "src/lib/video/timeline.ts",
+    "to": "src/lib/video/titles.ts",
+    "unresolvedTo": "./titles",
+    "dependencyTypes": [
+      "local",
+      "import"
+    ],
+    "rule": {
+      "severity": "error",
+      "name": "no-circular"
+    },
+    "cycle": [
+      {
+        "name": "src/lib/video/titles.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      },
+      {
+        "name": "src/lib/video/timeline.ts",
+        "dependencyTypes": [
+          "local",
+          "import"
+        ]
+      }
+    ]
+  }
+]

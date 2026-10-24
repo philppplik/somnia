@@ -14,7 +14,7 @@ The layers are:
 4. Feature styles: Agent, SVG, collaboration and variants, loaded after bento in `main.tsx`; other features can import local sheets.
 5. Root inline values applied by `applyLook` and `applyUiPrefs`: accent, gap, geometry, scale, fonts and glass alphas.
 
-CSS specificity and cascade layers still apply within that order. A later filename alone is not proof that a declaration wins. Inline accent can override stylesheet high-contrast accent. Inspect computed styles for the effective state.
+CSS specificity and cascade layers still apply within that order. A later filename alone is not proof that a declaration wins. Inline accent retains the exact seed; high contrast now uses separate fixed action fill/ink roles. Imported normal-mode overrides are excluded from high contrast. Inspect computed styles for the effective state.
 
 ### Naming rules for new work
 
@@ -55,7 +55,9 @@ A dark app does not automatically invert an authored page. User documents own th
 
 The default stylesheet dark accent is `#818cf8` with fill `#6366f1`; default light uses `#4f46e5` for both. Named themes have their own accents. `applyLook` allows a custom six-digit hex accent and derives `--accent-soft` as an 18% color mix and `--accent-ink` by comparing white with `#101014`.
 
-**Important gap:** custom accent currently updates `--accent`, `--accent-soft` and `--accent-ink`, but not `--accent-fill`. The shared primary Button still uses white text and the fill alias. Setting a custom accent therefore does not recolor every filled control. Do not document `--accent-ink` as universally consumed. This is an implementation issue to test before changing the accent contract.
+P0 implementation: custom accent updates `--accent`, `--accent-fill`, `--accent-soft` and
+`--accent-ink`. Primary Button consumes `--action-ink`; high contrast uses its fixed action pair.
+The exact saved `--accent` seed is unchanged. See [contributor token tables](contributor-tokens.md).
 
 Status is not one fully normalized token family. For example, storage dots use emerald/amber utility colors, math status styles define their own success/error/warning palettes, and canvas overlays derive their own semantic colors. Preserve these distinctions when auditing; do not claim a single global success token exists.
 

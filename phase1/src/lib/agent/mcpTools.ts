@@ -1,18 +1,22 @@
 import { AgentToolRegistry, toolSchemaHash } from './toolRegistry';
 import type { AgentToolSpec } from './toolRegistry';
 import type { AgentToolDefinition } from './types';
-import { checkMcpArgs, McpArgsError } from './mcpSchema';
+import { checkMcpArgs, McpArgsError } from '../mcpSchema';
 
 /** Mirrors the Rust McpToolInfo. Everything here comes from an external server: untrusted. */
-export interface McpToolInfo { server: string; name: string; description: string; input_schema: Record<string, unknown> }
+export interface McpToolInfo { server: string; name: string; description: string; input_schema: Record<string, unknown>; /** Hex digest of the tool definition from the Rust host; what an AllowForRun grant is bound to. */ schema_digest?: string }
+/** The user's answer to one consent request. `granted` = an existing digest-bound broker grant already covers the call. */
+export type McpDecision = 'deny' | 'allow_once' | 'allow_for_run' | 'granted';
 export interface McpBridge {
-  call(server: string, tool: string, args: Record<string, unknown>): Promise<string>;
+  /** `choice` is the user's answer for this call; omitted when a broker grant covers it. */
+  call(server: string, tool: string, args: Record<string, unknown>, choice?: Exclude<McpDecision, 'deny' | 'granted'>): Promise<string>;
 }
 /** One finished (or refused) call, for the activity log. Arguments are never stored, only their size. */
 export interface McpCallRecord { at: number; server: string; tool: string; argBytes: number; outcome: 'ok' | 'denied' | 'invalid' | 'error'; ms: number; detail?: string }
 export type McpCallObserver = (record: McpCallRecord) => void;
-/** Called before every single MCP tool call. Must resolve true only after a human decision. */
-export type McpCallApproval = (call: { server: string; tool: string; args: Record<string, unknown> }, signal: AbortSignal) => Promise<boolean>;
+/** Called before every single MCP tool call. Resolves allow only after a human decision, or `granted` when an exact broker grant covers it. `true` means allow once. */
+export type McpCallApproval = (call: { server: string; tool: string; args: Record<string, unknown>; schemaDigest?: string }, signal: AbortSignal, opts?: { forcePrompt?: boolean }) => Promise<boolean | McpDecision>;
+export const MCP_CONSENT_REQUIRED = 'mcp_consent_required';
 /** Granted tools: model-facing name -> schema hash the user approved. */
 export type McpGrants = Readonly<Record<string, string>>;
 
@@ -55,11 +59,25 @@ export function registerMcpTools(registry: AgentToolRegistry, tools: readonly Mc
         if (argBytes > MAX_ARGS_BYTES) { log('invalid', 'arguments too large'); throw Error('MCP tool arguments are too large.'); }
         const checked = checkMcpArgs(args, t.input_schema);
         if (!checked.ok) { const e = new McpArgsError(checked.issues); log('invalid', `${e.errorId} ${checked.issues[0].code}`); throw e; }
-        const ok = await approve({ server: t.server, tool: t.name, args }, signal);
-        signal.throwIfAborted();
-        if (ok !== true) { log('denied'); throw Error('The user did not approve this tool call.'); }
+        const decide = async (forcePrompt: boolean): Promise<McpDecision> => {
+          const d = await approve({ server: t.server, tool: t.name, args, ...(t.schema_digest ? { schemaDigest: t.schema_digest } : {}) }, signal, forcePrompt ? { forcePrompt } : undefined);
+          signal.throwIfAborted();
+          return d === true ? 'allow_once' : d === false ? 'deny' : d;
+        };
+        let decision = await decide(false);
+        if (decision === 'deny') { log('denied'); throw Error('The user did not approve this tool call.'); }
         try {
-          const text = await bridge.call(t.server, t.name, args);
+          const call = (d: Exclude<McpDecision, 'deny'>) => bridge.call(t.server, t.name, args, d === 'granted' ? undefined : d);
+          let text: string;
+          try { text = await call(decision); }
+          catch (e) {
+            // The grant that covered this call was revoked in the meantime: ask the user once, never go around the broker.
+            if (decision === 'granted' && e instanceof Error && e.message.includes(MCP_CONSENT_REQUIRED)) {
+              decision = await decide(true);
+              if (decision === 'deny' || decision === 'granted') { log('denied'); throw Error('The user did not approve this tool call.'); }
+              text = await call(decision);
+            } else throw e;
+          }
           signal.throwIfAborted();
           log('ok');
           return JSON.stringify({ source: 'mcp', server: t.server, tool: t.name, untrusted: true, text });

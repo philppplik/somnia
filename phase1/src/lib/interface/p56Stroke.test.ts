@@ -1,0 +1,26 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode} from './model';
+import {setInterfaceStroke} from './editing';
+import {interfaceLayerCSS,exportInterfaceLayerSVG} from './export';
+import {t,setLocale} from '../i18n';
+function scene(kind:'frame'|'rectangle'|'ellipse'|'text'='rectangle'){const s=createInterfaceSession();s.start();let f='',n='';s.transact(d=>{f=addNode(d,d.pages[0].id,'frame');n=addNode(d,d.pages[0].id,kind,f);});return {s,f,n};}
+test('stroke enables with defaults, updates color and width, disables cleanly, one undo each',()=>{const {s,n}=scene();
+ s.transact(d=>setInterfaceStroke(d,n,true));let node=s.get().document!.nodes.find(x=>x.id===n)!;assert.equal(node.stroke,'#000000');assert.equal(node.strokeWidth,2);
+ s.transact(d=>setInterfaceStroke(d,n,true,'#2255cc',6));node=s.get().document!.nodes.find(x=>x.id===n)!;assert.equal(node.stroke,'#2255cc');assert.equal(node.strokeWidth,6);
+ s.transact(d=>setInterfaceStroke(d,n,true,'#2255cc'));node=s.get().document!.nodes.find(x=>x.id===n)!;assert.equal(node.strokeWidth,6,'color-only edit keeps width');
+ s.transact(d=>setInterfaceStroke(d,n,false));node=s.get().document!.nodes.find(x=>x.id===n)!;assert.equal(node.stroke,undefined);assert.equal(node.strokeWidth,undefined);
+ s.undo();node=s.get().document!.nodes.find(x=>x.id===n)!;assert.equal(node.stroke,'#2255cc');s.clear();});
+test('stroke rejects bad width, bad color, text layers and locked layers',()=>{const {s,n}=scene();
+ assert.throws(()=>s.transact(d=>setInterfaceStroke(d,n,true,undefined,0)),/1\.\.64/);
+ assert.throws(()=>s.transact(d=>setInterfaceStroke(d,n,true,undefined,65)),/1\.\.64/);
+ assert.throws(()=>s.transact(d=>setInterfaceStroke(d,n,true,'red')),/hex/);
+ s.transact(d=>{d.nodes.find(x=>x.id===n)!.locked=true;});
+ assert.throws(()=>s.transact(d=>setInterfaceStroke(d,n,true)),/locked|unavailable/);
+ s.clear();
+ const {s:s2,n:t2}=scene('text');assert.throws(()=>s2.transact(d=>setInterfaceStroke(d,t2,true)),/shapes, images and frames/);s2.clear();});
+test('frame and rectangle strokes export as CSS border, ellipse keeps svg stroke',()=>{const {s,n}=scene('rectangle');s.transact(d=>setInterfaceStroke(d,n,true,'#2255cc',3));
+ const css=interfaceLayerCSS(s.get().document!,n).css;assert.match(css,/border:\s*3px solid #2255cc/);assert.doesNotMatch(css,/stroke-width/);
+ const svg=exportInterfaceLayerSVG(s.get().document!,n).svg;assert.match(svg,/stroke="#2255cc"/);assert.match(svg,/stroke-width="3"/);s.clear();
+ const {s:s2,n:e2}=scene('ellipse');s2.transact(d=>setInterfaceStroke(d,e2,true,'#2255cc',4));const css2=interfaceLayerCSS(s2.get().document!,e2).css;assert.match(css2,/stroke-width:\s*4px/);s2.clear();});
+test('stroke labels are localized in all five locales',()=>{for(const locale of ['en','de','es','fr','pt-BR']){setLocale(locale);assert.ok(t('interface.stroke').length>2,locale);assert.ok(t('interface.strokeWidth').length>2,locale);}setLocale('en');});

@@ -1,0 +1,9 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Schedule fixture</title></head><body><p style="text-align:center;font:14px system-ui">Fixture mode - no native runs or project writes</p><main id="schedule-fixture"></main><script type="module">
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import {ScheduleDialog} from '../src/components/vibespace/ScheduleDialog';
+import {setLocale} from '../src/lib/i18n';
+setLocale('en');window.saved=[];
+const transport={preview:async()=>({description:'Every Monday at 09:00 (Europe/Berlin)',nextFireTimes:[1792393200000,1793001600000,1793606400000],appMustBeOpen:true}),create:async(spec)=>{window.saved.push(spec);return{id:'fixture',spec,enabled:true,nextRunMs:1792393200000};},list:async()=>[],setEnabled:async()=>{}};
+createRoot(document.getElementById('schedule-fixture')).render(React.createElement(ScheduleDialog,{studioId:'studio-fixture',transport,onClose:()=>{}}));
+</script></body></html>

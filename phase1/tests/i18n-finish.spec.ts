@@ -52,7 +52,7 @@ for(const tag of ['en','de','es','fr','pt-BR']){
   await dialog.getByRole('button',{name:t('set.section.code'),exact:true}).click();
   await expect(dialog.getByLabel(t('set.ce.syntax')).locator('option').filter({hasText:'User theme'})).toHaveText('User theme '+t('set.ce.syntax.ext'));
   await page.keyboard.press('Escape');
-  await page.getByRole('button',{name:t('rest.iconRail.extensions'),exact:true}).click();
+  await page.getByRole('toolbar',{name:t('shell.rail.panelsLeft')}).getByRole('button',{name:t('rest.iconRail.extensions'),exact:true}).click();
   fail=true;await popup.getByRole('tab',{name:t('ext.nav.browse'),exact:true}).click();
   await expect(popup.getByRole('heading',{name:t('store.unavailable.rateLimited'),exact:true})).toBeVisible();
   await expect(popup.getByRole('button',{name:t('store.retry'),exact:true})).toBeVisible();
@@ -72,5 +72,13 @@ test('switching locale while settings is open updates visible and accessible tex
   await expect(dialog.getByRole('button',{name:tr(tag,'set.section.general'),exact:true})).toBeVisible();
   await expect(dialog.getByLabel(tr(tag,'redesign.startup'),{exact:true})).toHaveValue('last');
   previous=tag;
+ }
+});
+
+test('Open fallback keys have five-locale parity and matching placeholders',()=>{
+ const keys=Object.keys(catalogues.en).filter(key=>key.startsWith('openRouter.'));expect(keys.length).toBeGreaterThan(0);
+ for(const [tag,cat] of Object.entries(catalogues)){
+  expect(Object.keys(cat).filter(key=>key.startsWith('openRouter.')).sort(),tag).toEqual([...keys].sort());
+  for(const key of keys){expect(cat[key].trim(),`${tag}:${key}`).not.toBe('');expect(cat[key].match(/\{\w+\}/g)??[],`${tag}:${key}`).toEqual(catalogues.en[key].match(/\{\w+\}/g)??[]);}
  }
 });

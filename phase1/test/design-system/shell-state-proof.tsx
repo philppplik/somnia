@@ -1,0 +1,5 @@
+import {useState} from 'react';
+import {StudioEmptyState} from '../../src/components/studios/StudioEmptyState';
+import {StudioStatus} from '../../src/components/studios/StudioStatus';
+import {StudioRecentList} from '../../src/components/studios/StudioRecentList';
+export function ShellStateProof({showRecovery=false}:{showRecovery?:boolean}){const [recent,setRecent]=useState('');return <section data-testid="shell-state-proof" className="grid gap-3 p-3"><StudioEmptyState studio="photos" icon={<span>Photo</span>} testId="photos-state-proof" copy={{headline:'Open a photo',description:'Local JPEG and PNG. Original files stay unchanged.',openLabel:'Open photo',footnote:'Drop a local image.'}} onOpen={()=>Promise.reject(Error('Synthetic open failure'))}/><StudioStatus data-testid="shell-working">Processing locally</StudioStatus>{showRecovery&&<StudioStatus tone="error" live="assertive">Synthetic recovery error</StudioStatus>}<StudioRecentList title="Recent scenes" entries={[{id:'a',label:'Saved scene',metadata:'Local · 1 KB'}]} onOpen={setRecent}/><output data-testid="recent-choice">{recent}</output></section>;}

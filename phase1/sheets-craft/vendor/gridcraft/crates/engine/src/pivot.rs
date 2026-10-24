@@ -1011,6 +1011,97 @@ pub fn compute(wb: &Workbook, pt: &PivotTable, pivot_sheet: usize) -> Result<Out
     Ok(Output { width: g.width as u32, grid: g.rows, row_kinds: g.kinds, body_offset })
 }
 
+// ---------------------------------------------------------------- GETPIVOTDATA
+
+/// GETPIVOTDATA for the PivotTable that contains `at` on `sheet` (`#REF!` when there is none).
+pub fn pivot_data_at(wb: &Workbook, sheet: usize, at: CellRef, data_field: &str, pairs: &[(String, String)]) -> Value {
+    let Some(pt) = wb.sheet(sheet).and_then(|sh| sh.pivots.iter().find(|p| p.last_range.is_some_and(|r| r.contains(at)))) else {
+        return Value::Error(CellError::Ref);
+    };
+    match pivot_data(wb, pt, sheet, data_field, pairs) {
+        Ok(v) => v,
+        Err(e) => Value::Error(e),
+    }
+}
+
+/// The value a PivotTable shows for a data field and (field, item) pairs, aggregated straight from the source rows that
+/// pass the report filters (so it equals the pivot's own number as long as the pivot is refreshed). Fields must be row,
+/// column or filter fields; row and column fields must be given outermost first without gaps. Omitted axes mean the
+/// subtotal or grand total, which must be shown. Values shown as a percentage, rank or running total give `#REF!`.
+pub fn pivot_data(wb: &Workbook, pt: &PivotTable, pivot_sheet: usize, data_field: &str, pairs: &[(String, String)]) -> Result<Value, CellError> {
+    let src = read_source(wb, &pt.source, pivot_sheet).map_err(|_| CellError::Ref)?;
+    let want = data_field.trim();
+    let found = pt
+        .values
+        .iter()
+        .find(|v| v.name.trim().eq_ignore_ascii_case(want))
+        .or_else(|| pt.values.iter().find(|v| v.source_col.trim().eq_ignore_ascii_case(want)))
+        .ok_or(CellError::Ref)?;
+    if found.show_as != PivotShowAs::Normal {
+        return Err(CellError::Ref);
+    }
+    let vcol = src.col(&found.source_col).ok_or(CellError::Ref)?;
+    let fmt_of = |c: usize| src.formats.get(c).cloned().unwrap_or_else(|| "General".into());
+    let group_of = |name: &str| pt.rows.iter().chain(pt.columns.iter()).find(|f| f.source_col.eq_ignore_ascii_case(name)).map(|f| f.date_group);
+    // Requested fields: (source column, grouping, number format, wanted item).
+    let mut wanted: Vec<(usize, PivotDateGroup, String, &str)> = Vec::new();
+    let mut seen: Vec<&str> = Vec::new();
+    for (field, item) in pairs {
+        let name = field.trim();
+        if seen.iter().any(|s| s.eq_ignore_ascii_case(name)) {
+            return Err(CellError::Ref);
+        }
+        seen.push(name);
+        let on_axis = group_of(name).is_some();
+        if !on_axis && !pt.filters.iter().any(|f| f.source_col.eq_ignore_ascii_case(name)) {
+            return Err(CellError::Ref);
+        }
+        let c = src.col(name).ok_or(CellError::Ref)?;
+        wanted.push((c, group_of(name).unwrap_or_default(), fmt_of(c), item.as_str()));
+    }
+    // Each axis: the given fields are a leading run of its fields; fewer than all means a subtotal, none a grand total.
+    let axis_ok = |fields: &[PivotField], grand: bool| -> bool {
+        let given = fields.iter().take_while(|f| seen.iter().any(|s| s.eq_ignore_ascii_case(&f.source_col))).count();
+        let extra = fields.iter().skip(given).any(|f| seen.iter().any(|s| s.eq_ignore_ascii_case(&f.source_col)));
+        !extra && (given == fields.len() || (given == 0 && (grand || fields.is_empty())) || (given > 0 && pt.subtotals))
+    };
+    if !axis_ok(&pt.rows, pt.grand_totals_cols) || !axis_ok(&pt.columns, pt.grand_totals_rows) {
+        return Err(CellError::Ref);
+    }
+    let filters: Vec<(usize, &PivotFilter, PivotDateGroup, String)> = pt
+        .filters
+        .iter()
+        .filter_map(|f| {
+            let c = src.col(&f.source_col)?;
+            Some((c, f, group_of(&f.source_col).unwrap_or_default(), fmt_of(c)))
+        })
+        .collect();
+    let mut acc = Acc::default();
+    let mut hits = 0u64;
+    'rec: for rec in &src.rows {
+        for (c, f, g, fmt) in &filters {
+            if let Some(sel) = &f.selected {
+                let label = item_label(wb, rec.get(*c).unwrap_or(&Value::Empty), *g, fmt);
+                if !sel.iter().any(|s| s.eq_ignore_ascii_case(&label)) {
+                    continue 'rec;
+                }
+            }
+        }
+        for (c, g, fmt, item) in &wanted {
+            let label = item_label(wb, rec.get(*c).unwrap_or(&Value::Empty), *g, fmt);
+            if !label.eq_ignore_ascii_case(item.trim()) {
+                continue 'rec;
+            }
+        }
+        acc.add(rec.get(vcol).unwrap_or(&Value::Empty));
+        hits += 1;
+    }
+    if hits == 0 {
+        return Err(CellError::Ref);
+    }
+    Ok(acc.result(found.func))
+}
+
 // ---------------------------------------------------------------- styling and writing
 
 /// Colours for a PivotTable style name (our own palette, keyed by the familiar

@@ -1,0 +1,4 @@
+[
+ {"id":"documents","label":"Somnia Documents","readySelector":"[data-testid=documents-page] img","fixture":"test/documents/sample.docx","mimeType":"application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+ {"id":"sheets","label":"Somnia Sheets","readySelector":"[data-address=B2]","fixture":"sheets-craft/fixtures/fixture.xlsx","mimeType":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}
+]

@@ -54,7 +54,7 @@ fn outputs_carry_schema_version_and_roundtrip() {
     let back: Space = serde_json::from_value(v).unwrap();
     assert_eq!(back, space);
     let caps = serde_json::to_value(store.capabilities()).unwrap();
-    assert_eq!(caps["vector"]["status"], "unavailable");
+    assert_eq!(caps["vector"]["status"], "opt_in");
     assert_eq!(caps["schemaVersion"], 1);
     let e = Error::NewerSchema {
         found: 5,

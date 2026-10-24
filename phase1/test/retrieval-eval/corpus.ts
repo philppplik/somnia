@@ -1,0 +1,71 @@
+/** Non-private, hand-labelled development corpus. Never production/private input. */
+export const sources=[
+ {id:'en/harbor.md',text:'Harbor cargo schedules: container ships arrive at the port on Tuesday.',topic:0},
+ {id:'de/hafen.md',text:'Hafenfracht: Containerschiffe erreichen den Hafen am Dienstag.',topic:0},
+ {id:'en/alpine.md',text:'Alpine weather: snow closes the mountain trail in winter.',topic:1},
+ {id:'de/berge.md',text:'Bergwetter: Schnee sperrt den Wanderweg im Winter.',topic:1},
+ {id:'en/invoice.md',text:'Invoice reference ZX-42: payment is due after thirty days.',topic:2},
+ {id:'de/rechnung.md',text:'Rechnung ZX-42: Zahlung nach dreißig Tagen fällig.',topic:2},
+ {id:'en/garden.md',text:'Garden watering: tomatoes need water in dry weather.',topic:3},
+ {id:'de/garten.md',text:'Gartenbewässerung: Tomaten brauchen bei Trockenheit Wasser.',topic:3},
+] as const;
+export const queries=[
+ {id:'en-literal-port',locale:'en',text:'Harbor cargo',relevant:['en/harbor.md','de/hafen.md'],topic:0},
+ {id:'de-literal-port',locale:'de',text:'Hafenfracht',relevant:['en/harbor.md','de/hafen.md'],topic:0},
+ {id:'en-paraphrase-port',locale:'en',text:'coastal freight arrivals',relevant:['en/harbor.md','de/hafen.md'],topic:0},
+ {id:'de-paraphrase-port',locale:'de',text:'Ankunft der Seefracht',relevant:['en/harbor.md','de/hafen.md'],topic:0},
+ {id:'en-literal-code',locale:'en',text:'ZX-42',relevant:['en/invoice.md','de/rechnung.md'],topic:2},
+ {id:'de-literal-code',locale:'de',text:'Zahlung',relevant:['en/invoice.md','de/rechnung.md'],topic:2},
+ {id:'en-paraphrase-trail',locale:'en',text:'walking route blocked by winter conditions',relevant:['en/alpine.md','de/berge.md'],topic:1},
+ {id:'de-paraphrase-trail',locale:'de',text:'Winter verhindert die Wanderung',relevant:['en/alpine.md','de/berge.md'],topic:1},
+] as const;
+
+export interface EvalSource{id:string;text:string;topic:number;tags:readonly string[]}
+export interface EvalQuery{id:string;locale:'en'|'de';text:string;relevant:readonly string[];topic:number;tags:readonly string[]}
+// Append to preserve the original eight source/query cases and tie order.
+export const expandedSources:readonly EvalSource[]=[
+ ...sources.map(s=>({...s,tags:['short']})),
+ {id:'en/freight-history.md',text:'Freight archive: harbor cargo was delayed last year, not a current arrival schedule. '+('Historical context. '.repeat(240)),topic:4,tags:['multi-chunk','distractor','temporal']},
+ {id:'de/frachtarchiv.md',text:'Frachtarchiv: Hafenfracht war letztes Jahr verspätet, kein aktueller Ankunftsplan. '+('Historischer Kontext. '.repeat(220)),topic:4,tags:['multi-chunk','distractor','temporal']},
+ {id:'en/payments-policy.md',text:'Invoice policy: ZX-420 is not ZX-42. Refunds require the original receipt.',topic:5,tags:['distractor','near-code','negation']},
+ {id:'de/zahlungsregeln.md',text:'Rechnungsregeln: ZX-420 ist nicht ZX-42. Erstattungen benötigen den Originalbeleg.',topic:5,tags:['distractor','near-code','negation']},
+ {id:'en/garden-port.md',text:'Port garden: volunteers plant tomatoes beside the harbor. This is not a freight schedule.',topic:6,tags:['distractor','lexical-overlap','negation']},
+ {id:'de/hafengarten.md',text:'Hafengarten: Freiwillige pflanzen Tomaten am Hafen. Dies ist kein Frachtplan.',topic:6,tags:['distractor','lexical-overlap','negation']},
+ {id:'en/trail-reopened.md',text:'The alpine trail reopened in spring. Winter closure notices are obsolete.',topic:7,tags:['distractor','temporal']},
+ {id:'de/weg-offen.md',text:'Der Bergweg ist im Frühling wieder offen. Hinweise auf die Wintersperre sind veraltet.',topic:7,tags:['distractor','temporal']},
+ {id:'en/backup.md',text:'Backup recovery checklist. '+('Use a spare test folder. '.repeat(180))+'Restore the snapshot before restarting the service.',topic:8,tags:['multi-chunk','late-evidence']},
+ {id:'de/sicherung.md',text:'Checkliste zur Wiederherstellung. '+('Einen Testordner verwenden. '.repeat(180))+'Snapshot vor dem Neustart des Dienstes wiederherstellen.',topic:8,tags:['multi-chunk','late-evidence']},
+ {id:'en/boundary.md',text:'x'.repeat(2044)+'gate open: inspect the source because this phrase spans a chunk boundary.',topic:9,tags:['boundary','multi-chunk']},
+ {id:'de/grenze.md',text:'x'.repeat(2044)+'Tor offen: Quelle prüfen, diese Phrase liegt über einer Abschnittsgrenze.',topic:9,tags:['boundary','multi-chunk']},
+ {id:'en/cafe.md',text:'Cafe\u0301 queue\r\nThe café closes at dusk. 😀 Tea is available.',topic:10,tags:['unicode','nfc','crlf','emoji']},
+ {id:'de/cafe.md',text:'Cafe\u0301 Warteschlange\r\nDas Café schließt bei Dämmerung. 😀 Tee ist verfügbar.',topic:10,tags:['unicode','nfc','crlf','emoji']},
+ {id:'en/network.md',text:'Network diagnostics: retry a local connection only after explicit review; no automatic cloud fallback.',topic:11,tags:['short','negation']},
+ {id:'de/netzwerk.md',text:'Netzwerkdiagnose: lokale Verbindung nur nach expliziter Prüfung erneut versuchen; kein automatischer Cloud-Fallback.',topic:11,tags:['short','negation']},
+ {id:'en/archive-code.md',text:'Archive code ZX-4Z names a storage shelf, not invoice ZX-42.',topic:12,tags:['distractor','near-code','negation']},
+ {id:'de/archivcode.md',text:'Archivcode ZX-4Z benennt ein Regal, nicht Rechnung ZX-42.',topic:12,tags:['distractor','near-code','negation']},
+ {id:'en/harbor-metaphor.md',text:'A safe harbor for ideas: a writing workshop, no ships or cargo records.',topic:13,tags:['distractor','metaphor']},
+ {id:'de/hafen-metapher.md',text:'Ein sicherer Hafen für Ideen: Schreibwerkstatt, keine Schiffe oder Frachtunterlagen.',topic:13,tags:['distractor','metaphor']},
+ {id:'en/no-answer.md',text:'This document lists unanswered research questions. It has no train timetable.',topic:14,tags:['unanswerable','negation']},
+ {id:'de/keine-antwort.md',text:'Dieses Dokument enthält offene Forschungsfragen. Es gibt keinen Zugfahrplan.',topic:14,tags:['unanswerable','negation']},
+];
+export const expandedQueries:readonly EvalQuery[]=[
+ ...queries.map(q=>({...q,tags:[q.id.includes('paraphrase')?'paraphrase':'literal']})),
+ {id:'en-historical',locale:'en',text:'last year harbor cargo delays',relevant:['en/freight-history.md','de/frachtarchiv.md'],topic:4,tags:['temporal','paraphrase']},
+ {id:'de-historical',locale:'de',text:'Frachtverspätungen im vergangenen Jahr',relevant:['en/freight-history.md','de/frachtarchiv.md'],topic:4,tags:['temporal','paraphrase']},
+ {id:'en-refund',locale:'en',text:'Refunds',relevant:['en/payments-policy.md','de/zahlungsregeln.md'],topic:5,tags:['literal','near-code']},
+ {id:'de-refund',locale:'de',text:'Erstattungen',relevant:['en/payments-policy.md','de/zahlungsregeln.md'],topic:5,tags:['literal','near-code']},
+ {id:'en-volunteers',locale:'en',text:'volunteers',relevant:['en/garden-port.md','de/hafengarten.md'],topic:6,tags:['literal','lexical-overlap']},
+ {id:'de-volunteers',locale:'de',text:'Freiwillige',relevant:['en/garden-port.md','de/hafengarten.md'],topic:6,tags:['literal','lexical-overlap']},
+ {id:'en-spring',locale:'en',text:'trail reopened in spring',relevant:['en/trail-reopened.md','de/weg-offen.md'],topic:7,tags:['temporal','literal']},
+ {id:'de-spring',locale:'de',text:'im Frühling wieder offen',relevant:['en/trail-reopened.md','de/weg-offen.md'],topic:7,tags:['temporal','literal']},
+ {id:'en-late',locale:'en',text:'Restore the snapshot',relevant:['en/backup.md','de/sicherung.md'],topic:8,tags:['late-evidence','literal','multi-chunk']},
+ {id:'de-late',locale:'de',text:'Snapshot vor dem Neustart',relevant:['en/backup.md','de/sicherung.md'],topic:8,tags:['late-evidence','literal','multi-chunk']},
+ {id:'en-boundary',locale:'en',text:'gate open',relevant:['en/boundary.md','de/grenze.md'],topic:9,tags:['boundary','literal']},
+ {id:'de-boundary',locale:'de',text:'Tor offen',relevant:['en/boundary.md','de/grenze.md'],topic:9,tags:['boundary','literal']},
+ {id:'en-nfc',locale:'en',text:'CAFÉ',relevant:['en/cafe.md','de/cafe.md'],topic:10,tags:['unicode','nfc','literal']},
+ {id:'de-nfc',locale:'de',text:'Cafe\u0301',relevant:['en/cafe.md','de/cafe.md'],topic:10,tags:['unicode','nfc','literal']},
+ {id:'en-network',locale:'en',text:'local connection',relevant:['en/network.md','de/netzwerk.md'],topic:11,tags:['literal','negation']},
+ {id:'de-network',locale:'de',text:'lokale Verbindung',relevant:['en/network.md','de/netzwerk.md'],topic:11,tags:['literal','negation']},
+ {id:'en-absent',locale:'en',text:'rail departure at midnight',relevant:[],topic:14,tags:['unanswerable','paraphrase']},
+ {id:'de-absent',locale:'de',text:'Zugabfahrt um Mitternacht',relevant:[],topic:14,tags:['unanswerable','paraphrase']},
+];

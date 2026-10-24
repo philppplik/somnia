@@ -9,7 +9,7 @@ Reads one file from outside the project — only after explicit user consent.
 
 The manifest declaration and consent flow are the stable, tested surface. The
 `somnia.fs` guest bridge belongs to the trusted filesystem service in
-[permissions-security.md](../permissions-security.md): reads are capped at
+[permissions-security.md](../../permissions-security.md): reads are capped at
 512 KiB, authorization takes canonical paths from the trusted resolver, and a
 denial suppresses repeat prompts (three denials suppress all until a new
 session). Targets without the service reject with `E_INCOMPATIBLE_API`.

@@ -1,12 +1,13 @@
+import {allowAgentDocumentInspection} from './helpers';
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 async function setup(page:Page){
- await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
+ await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'},capabilities:['completion','tools']}}));
  await page.goto('/');
  await page.evaluate(async()=>{const {EditorProject}=await import('/packages/editor-core/src/index.ts');const {connectEditorProject,openFileTab,patchState}=await import('/src/store/appStore.ts');connectEditorProject(new EditorProject({'index.html':'<h1>Hello</h1>','other.html':'<p>Private other document</p>'}),{alreadySaved:true});openFileTab('index.html');patchState({viewMode:'code'});});
  await page.getByRole('button',{name:'Open Somnia Agent',exact:true}).click();const panel=page.getByRole('complementary',{name:'Somnia Agent'});
  await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const s=page.getByRole('dialog');await s.getByLabel('Model',{exact:true}).fill('fixture-local');await s.getByRole('button',{name:'Save AI settings',exact:true}).click();await s.getByText('Configuration saved.',{exact:true}).waitFor();await s.getByRole('button',{name:'Close settings',exact:true}).click();
- await panel.getByRole('checkbox',{name:/Allow inspecting/}).check();return panel;
+ await allowAgentDocumentInspection(page);return panel;
 }
 async function proposal(page:Page,panel:ReturnType<Page['getByRole']>,after='<h1>Better</h1>'){
  let round=0;let context:any;
@@ -52,6 +53,6 @@ test('tab switching cannot retarget a run and later manual edit blocks origin un
 test('cloud provider needs run-specific disclosure even with inspection and general cloud consent',async({page})=>{
  let requests=0;await page.route('https://openrouter.ai/api/v1/chat/completions',r=>{requests++;return r.abort();});
  const panel=await setup(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const s=page.getByRole('dialog');await s.getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await s.getByLabel('Model',{exact:true}).fill('fixture/model');await s.getByRole('button',{name:'Save AI settings',exact:true}).click();await s.getByText('Configuration saved.',{exact:true}).waitFor();await s.getByRole('button',{name:'Close settings',exact:true}).click();
- await page.evaluate(async()=>{const {agentPrivacy}=await import('/src/lib/agent/privacy.ts');agentPrivacy.grantExplicitConsent();});
+ await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await s.getByRole('tab',{name:'Privacy & data',exact:true}).click();await s.getByRole('checkbox',{name:/local-native/i}).uncheck();const consent=s.getByRole('checkbox',{name:/I agree to send this data/});await expect(consent).not.toBeChecked();await consent.check();await s.getByRole('button',{name:'Allow cloud AI',exact:true}).click();await expect(s.getByText('Cloud consent is on.',{exact:true})).toBeVisible();await s.getByRole('button',{name:'Close settings',exact:true}).click();
  await panel.getByLabel('Message to Somnia Agent').fill('Improve');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('Confirm disclosure');expect(requests).toBe(0);
 });

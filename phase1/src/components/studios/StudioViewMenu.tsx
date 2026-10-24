@@ -1,4 +1,4 @@
-import {Menu} from '@base-ui/react/menu';
+import {ChromeMenu as Menu} from '../ui/menu';
 import {getStudio} from '../../lib/studios';
 import {studioModes,resolveStudioMode,rememberStudioMode} from '../../lib/studios/modes';
 import {commandEnabled,executeCommand,formatShortcut,listCommands} from '../../lib/commands';

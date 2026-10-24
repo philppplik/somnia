@@ -6,12 +6,13 @@
  *
  * Scope: 'user' = global only. 'project' = a project may override it (units, save mode, publish options; decided by Philipp).
  */
+import { DEFAULT_PREVIEW_SCRIPTS } from './previewScripts';
 import { DEFAULT_WORKFLOW_PREFS } from './workflowPrefs';
 import { DEFAULT_EDITOR_PREFS } from './editorPrefs';
 import { DEFAULT_DOCUMENT_PREFS } from './documentPrefs';
 
 export type SettingScope = 'user' | 'project';
-export type SettingGroup = 'workflowPrefs' | 'editorPrefs' | 'documentPrefs' | 'wrapLines';
+export type SettingGroup = 'workflowPrefs' | 'editorPrefs' | 'documentPrefs' | 'wrapLines' | 'previewScripts';
 export interface SettingEntry {
   readonly id: string;
   /** Settings dialog section name (matches the sidebar item). */
@@ -28,6 +29,7 @@ export interface SettingEntry {
 }
 type Spec = [id: string, section: string, labelKey: string, keywords: string, group: SettingGroup, field: string | undefined, def: unknown, scope?: SettingScope];
 const SPECS: Spec[] = [
+  ['previewScripts', 'Preview', 'settings.previewScripts', 'javascript scripts sandbox live preview', 'previewScripts', undefined, DEFAULT_PREVIEW_SCRIPTS],
   ['workflow.startup', 'General', 'redesign.startup', 'launch open welcome last project start', 'workflowPrefs', 'startup', DEFAULT_WORKFLOW_PREFS.startup],
   ['workflow.documentTitle', 'General', 'redesign.defaultTitle', 'name new document untitled', 'workflowPrefs', 'documentTitle', DEFAULT_WORKFLOW_PREFS.documentTitle],
   ['workflow.confirmDelete', 'General', 'redesign.confirmDelete', 'trash remove ask warning', 'workflowPrefs', 'confirmDelete', DEFAULT_WORKFLOW_PREFS.confirmDelete],

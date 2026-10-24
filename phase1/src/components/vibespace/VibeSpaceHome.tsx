@@ -1,38 +1,92 @@
-import {useEffect,useMemo,useState,useSyncExternalStore} from 'react';
+import {StudioEmptyState} from '../studios/StudioEmptyState';
+import {StudioStatus} from '../studios/StudioStatus';
+import {useEffect,useMemo,useRef,useState,useSyncExternalStore} from 'react';
+import {subscribeVibeModelSettings} from '../../lib/vibespace/settingsRefresh';
+import {StudioScheduleButton} from './StudioScheduleButton';
 import {Plus} from '../../lib/icons';
 import {VibeSpaceController} from '../../lib/vibespace/controller';
-import {studioState} from '../../lib/vibespace/state';
 import type {VibeIntent,VibeSpaceTransport} from '../../lib/vibespace/types';
 import {CreateSpaceForm,CreateStudioForm,studioTemplates} from './CreateForms';
-import {stateLabels,StudioDetail,StudioMetrics} from './StudioDetail';
+import {StudioDetail} from './StudioDetail';
+import {BoardView} from './BoardView';
+import {t} from '../../lib/i18n';
+import {nativeScheduleTransport,readScheduleCursor,storeScheduleCursor,type ReturnCard,type Schedule} from '../../lib/vibespace/schedule';
+import {MemoryPanel} from './MemoryPanel';
+import {SkillsTab} from './SkillsTab';
+import {nativeMemoryTransport,nativeSkillsTransport} from '../../lib/vibespace/memorySkillsTransport';
+import {getLocale} from '../../lib/i18n';
+import {claimVibeShell} from '../../lib/vibespace/shellSession';
+import {registerVibeSpaceCommands} from '../../lib/vibespace/commands';
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {NativeButton} from '../ui/native-controls';
 /** Mount with a stable transport. There is no global fallback and no app-store mutation. */
 export function VibeSpaceHome({transport}:{transport:VibeSpaceTransport}){
  const controller=useMemo(()=>new VibeSpaceController(transport),[transport]);
  const state=useSyncExternalStore(controller.subscribe,controller.getSnapshot,controller.getSnapshot);
  const [spaceId,setSpaceId]=useState(''),[studioId,setStudioId]=useState<string|null>(null),[form,setForm]=useState<'space'|'studio'|null>(null),[template,setTemplate]=useState('');
+ const [spacePanel,setSpacePanel]=useState<'memory'|'skills'|null>(null);
  useEffect(()=>{void controller.connect();return()=>controller.disconnect();},[controller]);
- const snapshot=state.snapshot;const space=snapshot?.spaces.find(s=>s.spaceId===spaceId)??snapshot?.spaces[0];
+ useEffect(()=>{if(transport.mode!=='native')return;return subscribeVibeModelSettings(()=>{void controller.refresh();});},[controller,transport]);
+ const [returnCard,setReturnCard]=useState<ReturnCard|null>(null);
+ useEffect(()=>{
+  if(transport.mode!=='native'||!nativeScheduleTransport.returnCard)return;
+  let alive=true;
+  nativeScheduleTransport.returnCard(readScheduleCursor()).then(card=>{if(alive)setReturnCard(card);}).catch(()=>{});
+  return()=>{alive=false;};
+ },[transport]);
+ const [schedules,setSchedules]=useState<Schedule[]|null>(null),[scheduleError,setScheduleError]=useState(false);
+ useEffect(()=>{
+  if(transport.mode!=='native')return;
+  let alive=true;setScheduleError(false);
+  nativeScheduleTransport.list().then(list=>{if(alive)setSchedules(list);}).catch(()=>{if(alive){setSchedules(null);setScheduleError(true);}});
+  return()=>{alive=false;};
+ },[transport]);
+ const snapshot=state.snapshot;const space=spaceId?snapshot?.spaces.find(s=>s.spaceId===spaceId):snapshot?.spaces[0];
  const studio=snapshot?.studios.find(s=>s.runId===studioId&&s.spaceId===space?.spaceId);
  const busy=state.pending||state.loading||!!state.error;
  const supports=(type:VibeIntent['type'])=>transport.capabilities.includes(type);
- const newStudio=(goal='')=>{setTemplate(goal);setForm('studio');};
+ const formRef=useRef(form);formRef.current=form;
+ const focusForm=()=>requestAnimationFrame(()=>document.querySelector<HTMLTextAreaElement|HTMLInputElement>('.vs-form textarea, .vs-form input')?.focus());
+ const newStudio=(goal='')=>{if(!formRef.current){setTemplate(goal);setForm('studio');if(transport.mode==='native')void controller.refresh();}focusForm();};
+ const studioOpener=useRef(newStudio);studioOpener.current=newStudio;
+ const bridge=useRef<ReturnType<typeof claimVibeShell>|null>(null);
+ const shellContext=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);
+ useEffect(()=>{
+  const b=claimVibeShell();bridge.current=b;
+  const c=studioContextStore.claim('vibespace');shellContext.current=c;
+  const off=registerVibeSpaceCommands({
+   selectSpace:id=>{setSpaceId(id);setStudioId(null);setForm(null);setSpacePanel(null);},
+   openRun:id=>{const r=controller.getSnapshot().snapshot?.studios.find(r=>r.runId===id);if(r){setSpaceId(r.spaceId);setStudioId(id);setForm(null);}},
+   home:()=>{setStudioId(null);setForm(null);setSpacePanel(null);},
+   newSpace:()=>{if(!formRef.current)setForm('space');focusForm();},newStudio:()=>studioOpener.current(),refresh:()=>controller.refresh(),
+  });
+  return()=>{off();b.release();c.release();bridge.current=null;shellContext.current=null;};
+ },[controller]);
+ useEffect(()=>{
+  bridge.current?.report({view:state,spaceId:space?.spaceId??null,runId:studio?.runId??null,native:transport.mode==='native',canCreateSpace:supports('create-space'),canCreateStudio:supports('create-studio')});
+  shellContext.current?.report({busy:state.loading||state.pending,selection:studio?{kind:'one',type:'run',count:1,ids:[studio.runId]}:{kind:'none',count:0,ids:[]},data:{spaceId:space?.spaceId??null,runId:studio?.runId??null,mode:transport.mode},services:{ready:!!snapshot&&!busy,native:transport.mode==='native',space:!!space,usage:!!studio?.usage,checkpoints:!!studio?.checkpoints.length}});
+ },[state,space?.spaceId,studio,transport]);
  return <section className="vs-root" aria-label="Vibe Space" aria-busy={state.loading||state.pending}>
-  <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div><div className="vs-actions"><button type="button" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}><Plus size={15}/>New space</button>{space&&<button type="button" className="vs-primary" disabled={busy||!supports('create-studio')} onClick={()=>newStudio()}><Plus size={15}/>New Studio</button>}</div></header>
-  {transport.mode==='fixture'&&<p className="vs-fixture" role="status">Fixture mode · Test data only. No native actions or project writes.</p>}
-  {state.error&&<div className="vs-error vs-card" role="alert"><strong>Vibe Space needs attention</strong><p data-copyable>{state.error}</p><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><button type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</button></div>}
-  {state.loading&&<p className="vs-muted" role="status">Loading Vibe Space...</p>}
+  <header className="vs-header"><div className="vs-brand"><BotIcon/><h1>Vibe Space</h1></div></header>
+  {transport.mode==='fixture'&&<StudioStatus className="block vs-fixture">Fixture mode · Test data only. No native actions or project writes.</StudioStatus>}
+  {returnCard&&(returnCard.needsYou.length>0||returnCard.failed.length>0||returnCard.misfires.length>0)&&<div className="vs-card vs-error" role="status" data-testid="schedule-return-card"><strong>{t('vs.schedule.returnTitle')}</strong><p>{returnCard.needsYou.length} {t('vs.schedule.returnNeedsYou')} · {returnCard.failed.length} {t('vs.schedule.returnFailed')} · {returnCard.misfires.length} {t('vs.schedule.misfire')}</p><NativeButton type="button" onClick={()=>{storeScheduleCursor(returnCard.lastSeq);setReturnCard(null);}}>{t('vs.schedule.returnDismiss')}</NativeButton></div>}
+  {state.error&&<div className="vs-error vs-card"><strong>Vibe Space needs attention</strong><StudioStatus tone="error" live="assertive" className="block" data-copyable>{state.error}</StudioStatus><p>Actions are disabled until the native state is loaded again. No fallback data is used.</p><NativeButton type="button" disabled={state.pending} onClick={()=>void controller.connect()}>Reload native state</NativeButton></div>}
+  {state.loading&&<StudioStatus className="block vs-muted">Loading Vibe Space...</StudioStatus>}
   {snapshot&&<div className="vs-body">
-   {space&&<nav className="vs-spaces" aria-label="Vibe Spaces">{snapshot.spaces.map(s=><button type="button" key={s.spaceId} aria-current={s.spaceId===space.spaceId?'page':undefined} onClick={()=>{setSpaceId(s.spaceId);setStudioId(null);setForm(null);}}>{s.name}</button>)}</nav>}
+   {space&&<nav className="vs-spaces" aria-label="Vibe Spaces">{snapshot.spaces.map(s=><NativeButton type="button" key={s.spaceId} aria-current={s.spaceId===space.spaceId?'page':undefined} onClick={()=>{setSpaceId(s.spaceId);setStudioId(null);setForm(null);}}>{s.name}</NativeButton>)}</nav>}
    {form==='space'?<CreateSpaceForm busy={busy} onCreate={intent=>controller.execute(intent)} onChoose={()=>controller.chooseFolder()} onClose={()=>setForm(null)}/>:
     form==='studio'&&space?<CreateStudioForm key={`${space.spaceId}:${template}`} space={space} models={snapshot.models} busy={busy} template={template} onCreate={intent=>controller.execute(intent)} onClose={()=>setForm(null)}/>:
-    studio?<StudioDetail key={studio.runId} studio={studio} space={space!} pending={busy} capabilities={transport.capabilities} onAction={intent=>controller.execute(intent)} onBack={()=>setStudioId(null)}/>:
-    !space?<div className="vs-empty"><BotIcon/><h2>A place for focused AI work</h2><p>Create a Vibe Space, choose a folder, then give a Studio a goal. Work stays isolated. You decide what lands.</p><button type="button" className="vs-primary" disabled={busy||!supports('create-space')} onClick={()=>setForm('space')}>Create Vibe Space</button></div>:
-    <><div className="vs-space-head"><h2>{space.name}</h2><p className="vs-muted"><code data-copyable>{space.scopeLabel}</code> · Ask for writes</p></div>
-     {!snapshot.sessions.some(s=>s.spaceId===space.spaceId)?<div className="vs-empty"><h2>What should your first Studio do?</h2><p>Choose a starting point, then review the goal and model before creating it.</p><div className="vs-templates">{studioTemplates.map(t=><button type="button" key={t.title} disabled={busy||!supports('create-studio')} onClick={()=>newStudio(t.goal)}><strong>{t.title}</strong><span>{t.goal}</span></button>)}</div></div>:
-     <div className="vs-board">{snapshot.sessions.filter(s=>s.spaceId===space.spaceId&&s.latestRunId===null).map(session=><section className="vs-card" key={session.studioId}><p className="vs-eyebrow">Draft Studio</p><h3>{session.goal.split('\n')[0].slice(0,100)}</h3><p>{session.model.provider} / {session.model.model}</p><p className="vs-muted">No run yet. Starting creates an isolated copy and checkpoint before work begins.</p><button type="button" className="vs-primary" disabled={busy||!session.canStart||!supports('start')} onClick={()=>void controller.execute({type:'start',studioId:session.studioId})}>Start Studio</button></section>)}{(['needs-you','ready','running','draft','paused','done','stopped','applied','discarded','failed','crashed'] as const).map(group=>{const studios=snapshot.studios.filter(s=>s.spaceId===space.spaceId&&studioState(s)===group);return studios.length>0&&<section className="vs-group" key={group} aria-label={stateLabels[group]}><h3>{stateLabels[group]} <span>{studios.length}</span></h3>{studios.map(s=><button className="vs-studio-card" type="button" key={s.runId} onClick={()=>setStudioId(s.runId)}><strong>{s.goal.split('\n')[0].slice(0,100)}</strong><StudioMetrics studio={s}/><span className="vs-last-step">{s.failure?.message||s.pendingConsents[0]?.reason||s.lastStep||'No step recorded yet.'}</span></button>)}</section>;})}</div>}
+    studio?<StudioDetail transport={transport} key={studio.runId} studio={studio} space={space!} pending={busy} capabilities={transport.capabilities} onAction={intent=>controller.execute(intent)} onBack={()=>setStudioId(null)}/>:
+    !space?<StudioEmptyState studio="vibespace" icon={<BotIcon/>} disabled={busy||!supports('create-space')} onOpen={()=>setForm('space')} testId="vibespace-start"/>:
+    <><div className="vs-space-head"><h2>{space.name}</h2><p className="vs-muted"><code data-copyable>{space.scopeLabel}</code> · Ask for writes</p>{transport.mode==='native'&&<div className="vs-row"><NativeButton type="button" aria-pressed={spacePanel==='memory'} onClick={()=>setSpacePanel(spacePanel==='memory'?null:'memory')}>Memory</NativeButton><NativeButton type="button" aria-pressed={spacePanel==='skills'} onClick={()=>setSpacePanel(spacePanel==='skills'?null:'skills')}>Skills</NativeButton></div>}</div>
+     {transport.mode==='native'&&spacePanel==='memory'&&<MemoryPanel transport={nativeMemoryTransport} spaceId={space.spaceId} locale={getLocale()}/>}
+     {transport.mode==='native'&&spacePanel==='skills'&&<SkillsTab transport={nativeSkillsTransport} spaceId={space.spaceId} locale={getLocale()}/>}
+     {!snapshot.sessions.some(s=>s.spaceId===space.spaceId)?<div className="vs-empty"><h2>What should your first Studio do?</h2><p>Choose a starting point, then review the goal and model before creating it.</p><div className="vs-templates">{studioTemplates.map(t=><NativeButton type="button" key={t.title} disabled={busy||!supports('create-studio')} onClick={()=>newStudio(t.goal)}><strong>{t.title}</strong><span>{t.goal}</span></NativeButton>)}</div></div>:
+     <BoardView space={space} snapshot={snapshot} schedules={transport.mode==='native'?schedules:null} schedulesError={scheduleError} pending={busy} capabilities={transport.capabilities} mode={transport.mode} onAction={intent=>controller.execute(intent)} onOpenRun={runId=>setStudioId(runId)}/>}
     </>}
   </div>}
-  {state.pending&&<p className="vs-pending" role="status">Waiting for native confirmation...</p>}
+  {studio&&transport.mode==='native'&&<StudioScheduleButton studioId={studio.studioId} disabled={busy}/>}
+  {state.pending&&<StudioStatus className="block vs-pending">Waiting for native confirmation...</StudioStatus>}
  </section>;
 }
 /** Existing Vadivam icon convention, exact bot identity required by the product brief. */

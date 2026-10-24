@@ -1,5 +1,25 @@
+import {normalizeTaskModels,type TaskModels} from './taskRouting';
+import {normalizeRouting,type ProviderRouting} from './providerRouting';
 import {invoke,isTauri} from '@tauri-apps/api/core';
 import type {AgentConfiguration} from './panelBridge';
+export interface LocalRuntimePreferences {version:1;offlineOnly?:boolean;numCtx?:number;keepAliveSeconds?:number;studioModels?:Record<string,string>;modelContexts?:Record<string,number>;routing?:ProviderRouting;taskModels?:TaskModels}
+export function normalizeLocalRuntime(value:unknown):LocalRuntimePreferences|undefined {
+ if(value===undefined)return undefined;
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Invalid local runtime preferences');
+ const p=value as Record<string,unknown>;
+ if(Object.keys(p).some(k=>!['version','offlineOnly','numCtx','keepAliveSeconds','studioModels','modelContexts','routing','taskModels'].includes(k))||p.version!==1)throw Error('Invalid local runtime preferences');
+ if(p.offlineOnly!==undefined&&typeof p.offlineOnly!=='boolean')throw Error('Invalid offline mode');
+ for(const [key,min,max] of [['numCtx',1,1048576],['keepAliveSeconds',0,86400]] as const){const n=p[key];if(n!==undefined&&(typeof n!=='number'||!Number.isInteger(n)||n<min||n>max))throw Error('Invalid local runtime option: '+key);}
+ let studioModels:Record<string,string>|undefined;
+ if(p.studioModels!==undefined){
+  if(!p.studioModels||typeof p.studioModels!=='object'||Array.isArray(p.studioModels)||Object.keys(p.studioModels).length>100)throw Error('Invalid studio model choices');
+  studioModels=Object.fromEntries(Object.entries(p.studioModels).map(([id,model])=>{if(!/^[a-zA-Z0-9._-]{1,80}$/.test(id)||typeof model!=='string'||!model.trim()||model!==model.trim()||model.length>512||/[\r\n\0]/.test(model)||/(^|[:\-_/])cloud$/i.test(model))throw Error('Invalid studio model choice');return [id,model];}));
+ }
+ let modelContexts:Record<string,number>|undefined;
+ if(p.modelContexts!==undefined){if(!p.modelContexts||typeof p.modelContexts!=='object'||Array.isArray(p.modelContexts)||Object.keys(p.modelContexts).length>100)throw Error('Invalid model contexts');modelContexts=Object.fromEntries(Object.entries(p.modelContexts).map(([model,n])=>{if(!model||model.length>512||/[\r\n\0]/.test(model)||typeof n!=='number'||!Number.isInteger(n)||n<1||n>1048576)throw Error('Invalid model context');return [model,n];}));}
+ const taskModels=normalizeTaskModels(p.taskModels);const routing=normalizeRouting(p.routing);
+ return {version:1,...(p.offlineOnly!==undefined?{offlineOnly:p.offlineOnly as boolean}:{}),...(taskModels?{taskModels}:{}),...(routing?{routing}:{}),...(modelContexts?{modelContexts}:{}),...(studioModels?{studioModels}:{}),...(p.numCtx!==undefined?{numCtx:p.numCtx as number}:{}),...(p.keepAliveSeconds!==undefined?{keepAliveSeconds:p.keepAliveSeconds as number}:{})};
+}
 export interface CustomPrompt {id:string;name:string;text:string;enabled:boolean}
 const PREFS='somnia.agent.preferences.v1';
 export function normalizePrompts(value:unknown):CustomPrompt[]{
@@ -13,15 +33,18 @@ export function normalizePrompts(value:unknown):CustomPrompt[]{
  });
 }
 export function nonSecretSettings(value:AgentConfiguration){
- if(!['ollama','openrouter','openai','claude'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
- return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts)};
+ if(!['ollama','openrouter','openai','claude','xai','meta','deepseek'].includes(value.provider)||value.model.length>512||/[\r\n\0]/.test(value.model))throw Error('Invalid agent preferences.');
+ const localRuntime=normalizeLocalRuntime(value.localRuntime);
+ return {provider:value.provider,model:value.model,customPrompts:normalizePrompts(value.customPrompts),...(localRuntime?{localRuntime}:{})};
 }
 export async function loadAgentSettings():Promise<AgentConfiguration>{
  const p=isTauri()?await invoke<Record<string,unknown>>('agent_settings_load'):JSON.parse(localStorage.getItem(PREFS)||'{}');
- return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[]} as AgentConfiguration),apiKey:'',allowActiveFile:false};
+ return {...nonSecretSettings({provider:p.provider??'ollama',model:p.model??'',customPrompts:p.customPrompts??[],localRuntime:p.localRuntime} as AgentConfiguration),apiKey:'',allowActiveFile:false};
 }
 export async function saveAgentSettings(value:AgentConfiguration):Promise<void>{
  const p=nonSecretSettings(value);
  if(isTauri())await invoke('agent_settings_save',{settings:{...p,apiKey:''}});
  else localStorage.setItem(PREFS,JSON.stringify(p)); // Browser preview never persists API keys.
 }
+
+export function localContextFor(p:LocalRuntimePreferences|undefined,model:string){return p?.modelContexts?.[model]??p?.numCtx;}

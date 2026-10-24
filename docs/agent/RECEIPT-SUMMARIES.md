@@ -1,0 +1,7 @@
+# Native receipt metadata classifier
+
+Base136c47d6d. receiptSummary.ts is an opt-in pure helper for future ledger/Settings integration, not runtime registered. It returns only outcome/history/readback/undoAvailable/postCommitWarning. No text, value vectors, document identity, origins, native token or bytes are retained.
+
+Animation owner applied0/1/null stays distinct. Docs requires text/afterText and rev/afterRev agreement, logical0/1/null. Slides requires applied1 and verified native readback, native after revision; undo requires caller privately proving exact prior deck because native undo readbackMatches is null. Missing or mismatched evidence becomes unknown/unverified with no undo offer. Postcommit render/listener warnings never invent failure0. Native typed error mutated=false can summarize proven failed0; true/null/unclassified errors remain unknown.
+
+undoAvailable is receipt eligibility only, not permission or guarantee: host explicit undo grant and actual native newest-origin checks still run at action time. Does not enable model execute or bypass review, local/provider/disclosure gates. Callers must pass validated actual owner receipt, never model-authored JSON. Future UI/ledger wiring is separate work. Tests cover outcomes, warnings, undo evidence, private metadata exclusion and native refusal classification. No visual UI changed, dependencies/cloud/spending or save claim.

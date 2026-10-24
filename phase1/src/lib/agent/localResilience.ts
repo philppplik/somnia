@@ -1,0 +1,4 @@
+import type {RuntimeSnapshot} from './localModels';
+/** Fixed UI keys, never raw daemon/native exception strings. */
+export function localPullFailure(error:string|undefined):'disk'|'registry'|'integrity'|'permission'|'generic'{switch(error){case 'Not enough disk space':case 'Not enough disk space for estimated model and headroom':return 'disk';case 'Registry model or variant not found':return 'registry';case 'Model integrity verification failed':return 'integrity';case 'Model storage permission denied':return 'permission';default:return 'generic';}}
+export function connectionState(snapshot:RuntimeSnapshot|null,failed=false):'notChecked'|'running'|'stopped'|'not-found'|'unreachable'|'unavailable'|'inventory-unknown'{return failed?'unreachable':!snapshot?'notChecked':snapshot.state==='running'&&snapshot.inventoryError?'inventory-unknown':snapshot.state;}

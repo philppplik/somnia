@@ -1,0 +1,1 @@
+import {defineConfig} from '@playwright/test';export default defineConfig({testDir:'./tests',testMatch:'d5-setup.spec.ts',use:{baseURL:'http://127.0.0.1:1420',viewport:{width:900,height:1050},launchOptions:{executablePath:'/usr/bin/google-chrome'}},webServer:{command:'npx vite --port 1420 --host 127.0.0.1',url:'http://127.0.0.1:1420',reuseExistingServer:true}});

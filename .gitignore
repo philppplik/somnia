@@ -3,3 +3,21 @@ relay/target
 
 # Packed SDK v2 extension artifacts
 docs/extensions/v2/examples/*.somniax
+phase1/cli-dist
+/phase1/.voice-build/
+/phase1/src-tauri/resources/voice/
+
+# Optional voice helper review build outputs
+phase1/dist-voice/
+
+# Local AI guide text is bundled from docs at build/dev/test startup.
+phase1/src/lib/generated/localAIGuides.ts
+# Standalone installer build output
+phase1/installer/target
+
+phase1/out-installer
+# Android project is generated in CI (tauri android init); never commit it or a keystore
+phase1/src-tauri/gen/
+*.jks
+*.keystore
+keystore.properties

@@ -18,3 +18,19 @@ test('enabled prompts appear on every provider round without replacing base rule
  assert.equal(calls.length,2);for(const r of calls){assert.equal(r.messages[0].content,'Base safety rules');assert.match(r.messages[1].content,/Be concise/);assert.ok(!r.messages.some(m=>m.content.includes('Not sent')));}
  assert.equal(request.messages.length,2);
 });
+test('advanced local preferences are versioned, bounded, non-secret and survive cloud provider selection',()=>{
+ const base={provider:'openrouter' as const,model:'cloud/model',apiKey:'secret',allowActiveFile:true,customPrompts:[]};
+ assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}}),{provider:'openrouter',model:'cloud/model',customPrompts:[],localRuntime:{version:1,numCtx:16384,keepAliveSeconds:0}});
+ for(const localRuntime of [{version:2},{version:1,numCtx:0},{version:1,numCtx:1.2},{version:1,numCtx:1048577},{version:1,keepAliveSeconds:-1},{version:1,keepAliveSeconds:86401},{version:1,apiKey:'secret'}])assert.throws(()=>nonSecretSettings({...base,localRuntime:localRuntime as never}));
+});
+test('studio model overrides are explicit local preferences with bounded identifiers',()=>{
+ const base={provider:'ollama' as const,model:'base',apiKey:'',allowActiveFile:false};
+ assert.deepEqual(nonSecretSettings({...base,localRuntime:{version:1,studioModels:{photos:'gemma:4b',code:'qwen:4b'}}}).localRuntime?.studioModels,{photos:'gemma:4b',code:'qwen:4b'});
+ for(const studioModels of ([{'bad/id':'model'},{code:''},{code:'model\n'}] as Record<string,string>[]))assert.throws(()=>nonSecretSettings({...base,localRuntime:{version:1,studioModels}}));
+});
+test('per-model context defaults round-trip and reject invalid values without changing global preference',()=>{
+ const config={provider:'ollama' as const,model:'qwen3:4b',apiKey:'',allowActiveFile:false,localRuntime:{version:1 as const,numCtx:8192,modelContexts:{'qwen3:4b':16384}}};assert.deepEqual(nonSecretSettings(config).localRuntime,config.localRuntime);for(const n of [0,-1,1.5,NaN,1048577])assert.throws(()=>nonSecretSettings({...config,localRuntime:{...config.localRuntime,modelContexts:{m:n}}}));
+});
+test('per-model context uses exact tag and inherits global without altering it',async()=>{
+ const {localContextFor}=await import('./settings');const p={version:1 as const,numCtx:8192,modelContexts:{'qwen3:4b':16384}};assert.equal(localContextFor(p,'qwen3:4b'),16384);assert.equal(localContextFor(p,'qwen3:8b'),8192);assert.equal(localContextFor(undefined,'qwen3:4b'),undefined);assert.equal(p.numCtx,8192);
+});

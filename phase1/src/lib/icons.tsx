@@ -8,7 +8,15 @@ function make(name:string,html:string):VadivamIcon{
  const Icon=({size=24,strokeWidth=2,absoluteStrokeWidth:_a,...rest}:IconProps)=><svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" data-icon={`vadivam:${name}`} {...rest} dangerouslySetInnerHTML={{__html:html}}/>;
  Icon.displayName=`Vadivam(${name})`;return Icon;}
 
+export const Crosshair=make("crosshair","<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 2v4M12 18v4M2 12h4M18 12h4\"/>");
+export const Spline=make("spline","<circle cx=\"19\" cy=\"5\" r=\"2\"/><circle cx=\"5\" cy=\"19\" r=\"2\"/><path d=\"M5 17A12 12 0 0 1 17 5\"/>");
 export const Aperture=make("aperture","<path d=\"M14.31 8c2.655 2.878 4.47 6.26 5.74 9.94M9.69 8a33.4 33.4 0 0 1 11.48 0M7.38 12a36.5 36.5 0 0 1 5.74-9.94M9.69 16c-2.736-2.814-4.58-6.214-5.74-9.94M14.311 16A33.5 33.5 0 0 1 2.83 16m13.791-4c-1.367 3.632-3.365 6.89-5.74 9.94M22 12a10 10 0 1 1-20.001 0A10 10 0 0 1 22 12\"/>");
+export const Grid3x3=make("grid-3x3","<path d=\"M3 9h18M3 15h18M9 3v18M15 3v18\"/>");
+export const ClipboardPaste=make("clipboard-paste","<path d=\"M15 2H9a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z\"/><path d=\"M8 4H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2\"/><path d=\"M12 11v6\"/><path d=\"m9 14 3 3 3-3\"/>");
+export const ArrowLeft=make("arrow-left","<path d=\"m12 19-7-7 7-7\"/><path d=\"M19 12H5\"/>");
+export const ArrowRight=make("arrow-right","<path d=\"M5 12h14\"/><path d=\"m12 5 7 7-7 7\"/>");
+export const Contrast=make("contrast","<circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 3a9 9 0 0 1 0 18V3z\" fill=\"currentColor\" stroke=\"none\"/>");
+export const Bandage=make("bandage","<rect x=\"3.5\" y=\"8.5\" width=\"17\" height=\"7\" rx=\"3.5\" transform=\"rotate(-45 12 12)\"/><path d=\"M9.5 9.5v.01M12 12v.01M14.5 14.5v.01\"/>");
 export const Frame=make("frame","<path d=\"M22 6H2m20 12H2M6 2v20M18 2v20\"/>");
 export const AlertTriangle=make("triangle-alert","<path d=\"M12 7.5v5.893M12 17v1m-6.682-7.39l-.37.73c-2.425 4.778-3.637 7.167-2.541 8.913C3.502 22 6.214 22 11.637 22h.726c5.424 0 8.135 0 9.23-1.747c1.096-1.745-.115-4.133-2.537-8.905l-.368-.726C15.77 4.874 14.31 2 12 2s-3.766 2.87-6.682 8.61\"/>");
 export const Blocks=make("blocks","<path d=\"M14 4.4A2.4 2.4 0 0 1 16.4 2h3.2A2.4 2.4 0 0 1 22 4.4v3.2a2.4 2.4 0 0 1-2.4 2.4h-3.2A2.4 2.4 0 0 1 14 7.6zM10 14V8a2 2 0 0 0-2-2H4.4A2.4 2.4 0 0 0 2 8.4V14m8 0H2m8 0h6a2 2 0 0 1 2 2v3.6a2.4 2.4 0 0 1-2.4 2.4H10m0-8v8m-8-8v5.6A2.4 2.4 0 0 0 4.4 22H10\"/>");
@@ -112,3 +120,28 @@ export const Table2=make("table-2","<path d=\"M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 
 export const Presentation=make("presentation","<path d=\"M2 3h20\"/><path d=\"M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3\"/><path d=\"m7 21 5-5 5 5\"/>");
 export const Pause=make("pause","<path d=\"M5 5.497v13.037c0 2.016 4.421 1.892 4.421 0V5.497c0-1.949-4.421-1.836-4.421 0m9.579 0v13.037c0 2.016 4.421 1.892 4.421 0V5.497c0-2.015-4.421-1.977-4.421 0\"/>");
 export const Download=make("download","<path d=\"M3 17.005C3 19.203 4.58 22 7.375 22h9.25C19.422 22 21 19.2 21 17M12 2v15m6.5-6.094a12.56 12.56 0 0 0-5.276 4.334L12 17l-1.224-1.76A12.56 12.56 0 0 0 5.5 10.906\"/>");
+
+export const Bot=make("bot",'<path d="M12 6.064h6c2.21 0 4 2.095 4 4.679v6.579C22 19.905 20.21 22 18 22H6c-2.21 0-4-2.095-4-4.678v-6.58C2 8.16 3.79 6.065 6 6.065zm0 0V2.4m3.333-.4a14.1 14.1 0 0 1-6.666 0M8 12v-1.5m8 1.5v-1.5"/><path d="M15.75 16.5A6.27 6.27 0 0 1 12 17.75a6.27 6.27 0 0 1-3.75-1.25"/>');
+export const Camera=make("camera","<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z\"/><circle cx=\"12\" cy=\"13\" r=\"3\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/>");
+export const Brush=make("brush","<path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"m9.06 11.9 8.07-8.06a2.85 2.85 0 1 1 4.03 4.03l-8.06 8.08\"/><path fill=\"none\" stroke=\"currentColor\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M7.07 14.94c-1.66 0-3 1.35-3 3.02 0 1.33-2.5 1.52-2 2.02 1.08 1.1 2.49 2.02 4 2.02 2.2 0 4-1.8 4-4.04a3.01 3.01 0 0 0-3-3.02z\"/>");
+export const Eclipse=make("eclipse","<circle cx=\"12\" cy=\"12\" r=\"10\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"/><path fill=\"currentColor\" d=\"M12 2a10 10 0 0 1 0 20z\"/>");
+export const makeVadivamIcon=make;
+export const AlignLeft=make("align-left","<path d=\"M4 6h16M4 10h10M4 14h16M4 18h10\"/>");
+export const AlignCenter=make("align-center","<path d=\"M4 6h16M7 10h10M4 14h16M7 18h10\"/>");
+export const AlignRight=make("align-right","<path d=\"M4 6h16M10 10h10M4 14h16M10 18h10\"/>");
+export const AlignJustify=make("align-justify","<path d=\"M4 6h16M4 10h16M4 14h16M4 18h16\"/>");
+export const IndentIncrease=make("indent-increase","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M4 9l3 3-3 3\"/>");
+export const IndentDecrease=make("indent-decrease","<path d=\"M4 5h16M12 10h8M12 14h8M4 19h16M7 9l-3 3 3 3\"/>");
+export const ListBullet=make("list-bullet","<path d=\"M10 6h10M10 12h10M10 18h10\"/><circle cx=\"5\" cy=\"6\" r=\"1\"/><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"5\" cy=\"18\" r=\"1\"/>");
+export const ListNumbered=make("list-numbered","<path d=\"M10 6h10M10 12h10M10 18h10M4 5l1-1v4M4 11h2l-2 3h2M4 17h2v1H4.5M4.5 18H6v2H4\"/>");
+export const WandSparkles=make("wand-sparkles","<path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72\"/><path fill=\"currentColor\" d=\"m14 7 3 3\"/><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M5 6v4M19 14v4M10 2v2M7 8H3M21 16h-4M11 3H9\"/>");
+export const Pipette=make("pipette","<path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m12 9-8.414 8.414A2 2 0 0 0 3 18.828v1.344a2 2 0 0 1-.586 1.414A2 2 0 0 1 3.828 21h1.344a2 2 0 0 0 1.414-.586L15 12\"/><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"m18 9 .4.4a1 1 0 1 1-3 3l-3.8-3.8a1 1 0 1 1 3-3l.4.4 3.4-3.4a1 1 0 1 1 3 3z\"/><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" d=\"m2 22 .414-.414\"/>");
+export const Proportions=make("proportions","<rect width=\"20\" height=\"16\" x=\"2\" y=\"4\" rx=\"2\"/><path d=\"M12 9v11\"/><path d=\"M2 9h13a2 2 0 0 1 2 2v9\"/>");
+export const Flag=make("flag","<path d=\"M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528\"/>");
+export const LayoutGrid=make("layout-grid","<rect width=\"7\" height=\"7\" x=\"3\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"3\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"14\" y=\"14\" rx=\"1\"/><rect width=\"7\" height=\"7\" x=\"3\" y=\"14\" rx=\"1\"/>");
+export const SkipForward=make("skip-forward","<path d=\"M21 4v16\"/><path d=\"M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z\"/>");
+export const Rows2=make("rows-2","<rect width=\"18\" height=\"18\" x=\"3\" y=\"3\" rx=\"2\"/><path d=\"M3 12h18\"/>");
+export const Ruler=make("ruler","<path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z\"/><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" d=\"m14.5 12.5 2-2m-7.5 7.5 2-2m-1.5-4.5 2-2m-7.5 7.5 2-2\"/>");
+export const Tag=make("tag","<path d=\"M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z\"/><circle cx=\"7.5\" cy=\"7.5\" r=\".5\" fill=\"currentColor\"/>");
+export const Mic=make("mic","<path d=\"M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z\"/><path d=\"M19 10v2a7 7 0 0 1-14 0v-2\"/><line x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\"/>");
+export const MicOff=make("mic-off","<line x1=\"2\" x2=\"22\" y1=\"2\" y2=\"22\"/><path d=\"M18.89 13.23A7.12 7.12 0 0 0 19 12v-2\"/><path d=\"M5 10v2a7 7 0 0 0 12 5\"/><path d=\"M15 9.34V5a3 3 0 0 0-5.68-1.33\"/><path d=\"M9 9v3a3 3 0 0 0 5.12 2.12\"/><line x1=\"12\" x2=\"12\" y1=\"19\" y2=\"22\"/>");

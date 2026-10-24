@@ -1,13 +1,6 @@
-import type {StudioDef,StudioViewMode} from './registry';
+import type {StudioDef,StudioMode} from './registry';
+export type {StudioMode} from './registry';
 
-/** A mode must point to a real command; switching never creates a document. */
-export interface StudioMode {
- id:string;
- label:string;
- command:string;
- /** Existing Code canvas view, when the mode uses that host. */
- viewMode?:StudioViewMode;
-}
 export type StudioModeMemory=Readonly<Record<string,string>>;
 export const modeKey=(studio:string,document:string)=>JSON.stringify([studio,document]);
 /** Old manifests remain compatible. Studios with no implemented modes show no picker. */

@@ -46,7 +46,7 @@ fn run_from_row(r: &Row<'_>) -> rusqlite::Result<Run> {
     })
 }
 
-fn get_run_conn(c: &Connection, id: &str) -> Result<Run> {
+pub(crate) fn get_run_conn(c: &Connection, id: &str) -> Result<Run> {
     c.query_row(
         &format!("SELECT {RUN_COLS} FROM runs WHERE id=?1"),
         params![id],
@@ -79,7 +79,7 @@ fn valid_kind(kind: &str) -> bool {
 /// Appends one event inside the caller's transaction. The sequence is allocated by
 /// bumping `runs.last_sequence` under the IMMEDIATE write lock, so sequences per run are
 /// strictly increasing and gap-free; a rollback of the transaction rolls the bump back too.
-fn append_event_tx(
+pub(crate) fn append_event_tx(
     tx: &Transaction<'_>,
     run_id: &str,
     kind: &str,

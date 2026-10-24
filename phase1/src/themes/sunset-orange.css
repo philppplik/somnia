@@ -2,7 +2,7 @@
  * Integration: import immediately after tokens.css, before high-contrast rules.
  * Both choices use data-palette="sunset-orange" with their respective data-theme.
  * Editor syntax and document/page colours deliberately remain independent.
- * Existing --accent-ink keeps light-on-fill and dark-on-accent buttons readable.
+ * Filled controls all sit on --accent-fill, so --accent-ink stays white in both modes.
  */
 :root[data-theme=light][data-palette=sunset-orange]:where(:not([data-contrast=high])) {
   --bg-base: #fff0e5;
@@ -15,7 +15,7 @@
   --text-primary: #341e16;
   --text-secondary: #674438;
   --text-tertiary: #785243;
-  --accent: #9a3d0c;
+  --accent: #953b0c;
   --accent-fill: #a84316;
   --accent-ink: #ffffff;
   --accent-soft: #c953181f;
@@ -39,8 +39,8 @@
   --text-secondary: #e2b9a0;
   --text-tertiary: #c69d87;
   --accent: #ffab75;
+  --accent-ink: #ffffff;
   --accent-fill: #a84316;
-  --accent-ink: #241510;
   --accent-soft: #ff905326;
   --warning: #f7c269;
   --danger: #ff9b9d;

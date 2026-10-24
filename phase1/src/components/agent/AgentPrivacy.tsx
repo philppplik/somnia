@@ -3,6 +3,7 @@ import {agentPrivacy, PROVIDER_PRIVACY_POLICIES, type AIProvenance} from '../../
 import {type AgentPrivacyTranslate} from '../../lib/agent/privacyStrings';
 import {t as appTranslate} from '../../lib/i18n';
 import {useT} from '../../lib/useT';
+import {NativeButton,NativeInput} from '../ui/native-controls';
 const agentPrivacyEnglish: AgentPrivacyTranslate = key => appTranslate(key);
 type Props = {t?: AgentPrivacyTranslate};
 function PrivacyPolicies({t = agentPrivacyEnglish}: Props) {
@@ -31,11 +32,11 @@ export function AgentConsentNotice({t = agentPrivacyEnglish, onGranted, showTitl
     <p className="text-sm">{t('agent.privacy.disclosure')}</p>
     <PrivacyPolicies t={t}/>
     <p className="text-xs text-ink-2">{t('agent.privacy.review')}</p>
-    <label className="flex items-start gap-2 text-sm" style={{justifyContent: 'flex-start', gap: 10}}><input style={{width:16, minWidth:16, height:16, flex:"0 0 16px", marginTop:3}} type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)}/><span>{t('agent.privacy.consent')}</span></label>
-    <button type="button" disabled={!checked} className="rounded-lg border border-line px-3 py-2 disabled:opacity-50" onClick={() => {
+    <label className="flex items-start gap-2 text-sm" style={{justifyContent: 'flex-start', gap: 10}}><NativeInput style={{width:16, minWidth:16, height:16, flex:"0 0 16px", marginTop:3}} type="checkbox" checked={checked} onChange={event => setChecked(event.target.checked)}/><span>{t('agent.privacy.consent')}</span></label>
+    <NativeButton type="button" disabled={!checked} className="rounded-lg border border-line px-3 py-2 disabled:opacity-50" onClick={() => {
       if (!checked) return;
       if (agentPrivacy.grantExplicitConsent()) { setFailed(false); onGranted?.(); } else setFailed(true);
-    }}>{t('agent.privacy.enable')}</button>
+    }}>{t('agent.privacy.enable')}</NativeButton>
     {failed && <p role="alert">{t('agent.privacy.saveFailed')}</p>}
     <p className="text-xs text-ink-2">{t('agent.privacy.local')}</p>
   </section>;
@@ -46,7 +47,7 @@ export function AgentPrivacySettings({t = agentPrivacyEnglish}: Props) {
   return <section aria-label={t('agent.privacy.title')} className="space-y-3">
     <h3 className="font-medium">{t('agent.privacy.title')}</h3>
     <p role="status">{t(granted ? 'agent.privacy.enabled' : 'agent.privacy.disabled')}</p>
-    {granted ? <button type="button" className="rounded-lg border border-line px-3 py-2" onClick={() => agentPrivacy.revoke()}>{t('agent.privacy.revoke')}</button> : <AgentConsentNotice t={t} showTitle={false}/>}
+    {granted ? <NativeButton type="button" className="rounded-lg border border-line px-3 py-2" onClick={() => agentPrivacy.revoke()}>{t('agent.privacy.revoke')}</NativeButton> : <AgentConsentNotice t={t} showTitle={false}/>}
     <p className="text-sm text-ink-2">{t('agent.privacy.withdrawal')}</p>
     {granted && <PrivacyPolicies t={t}/>}
   </section>;

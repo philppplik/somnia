@@ -1,0 +1,7 @@
+# Opt-in reviewed receipt ledger adapter
+
+Basebd2b828c1 with prerequisite receipt classifier755562c46. Pure host adapter, not model tool or runtime registration. recordReviewedReceipt requires host original native action and exact review id/pre-action pinned DocumentRef, plus actual native-derived ReceiptSummary. The reference is deliberately the reviewed precommit version, not current postcommit revision. Caller owns native execution, origin/permission/readback evidence; adapter does not grant or re-run it.
+
+Validates exact edit/review/history contract and receipt invariants before recording. Applied1 verified records applied or undone. Unknown/null stays unverified tool-completed, not applied or failed0. No-op0 stays completed; proven failure0 tool-failed. Late result for old run is suppressed by NativeRunLedger. Ledger stores only target ids/path/revision plus review id/history/readback; never receipt text, values, origins, native tokens or save status. postCommitWarning remains available to host through original summary; not silently treated as failure. UI warning display is separate work.
+
+undoAvailable is not permission and not an action. Calling this helper does not enable acceptance/undo controls or broad tools. Tests prove exact validation, metadata shape, unknown/noop/failure classes and stale-run suppression. No visual UI changed, no cloud/dependencies/spending/native/save claim.

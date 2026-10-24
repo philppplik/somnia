@@ -12,7 +12,7 @@ import {migrateLegacy} from '../legacy/migrate';
 import {parseVersionedManifest,legacyApiAdapter} from '../legacy/adapter';
 import {validateWasm} from './wasm';
 const manifest=():ManifestV2=>{const r=validateManifestV2(example);assert.equal(r.ok,true);return (r as {ok:true;manifest:ManifestV2}).manifest;};
-const host:HostCapabilities={somniaVersion:'11.3.0',apiVersion:'2.0.0',protocolVersions:[1],runtimes:['js','wasm']};
+const host:HostCapabilities={somniaVersion:'12.3.0-beta.1',apiVersion:'2.0.0',protocolVersions:[1],runtimes:['js','wasm']};
 const context:ActivationContext={interactive:true,studio:'code',languages:['html'],documentExtensions:['html'],hasProject:true,workspaceTrusted:true,virtualWorkspace:false,projectPaths:['src/index.html'],indexComplete:true};
 const policy:BrokerPolicy={enabled:true,trusted:true,virtual:false,permissions:new Set(['commands','project.read','project.write','selection','ui.notify','storage'])};
 function services():BrokerServices {

@@ -149,6 +149,12 @@ pub enum Origin {
     },
     /// A scheduled run.
     Schedule,
+    /// An external ACP agent process (Claude Code, Codex, goose, ...). Informational like every
+    /// origin: it changes nothing about what is allowed.
+    ExternalAgent {
+        /// Agent display name.
+        name: String,
+    },
 }
 
 /// One requested effect. Built by tool code, never by the user and never accepted from model

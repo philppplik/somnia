@@ -42,7 +42,7 @@ fn allowed_caller(
             ("http", Some("127.0.0.1"), Some(1420))
         ))
 }
-fn gate(window: &WebviewWindow, webview: &Webview) -> Result<()> {
+pub(crate) fn gate(window: &WebviewWindow, webview: &Webview) -> Result<()> {
     let url = webview.url().map_err(failed)?;
     if !allowed_caller(
         window.label(),
@@ -82,7 +82,7 @@ impl CollectionVersion {
 /// Managed once per app. Configured refs are supplied by native setup, not IPC.
 /// Runtime::open performs artifact recovery. The cached result prevents repeat recovery.
 pub struct VibeSpaceState {
-    runtime: OnceLock<std::result::Result<Arc<Runtime>, ()>>,
+    runtime: Mutex<Option<Arc<Runtime>>>,
     version: Arc<Mutex<CollectionVersion>>,
     configured: Vec<w::ModelReference>,
 }
@@ -95,17 +95,32 @@ impl VibeSpaceState {
             provider_config(reference)?;
         }
         Ok(Self {
-            runtime: OnceLock::new(),
+            runtime: Mutex::new(None),
             version: Arc::new(Mutex::new(CollectionVersion::default())),
             configured,
         })
     }
-    fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
-        self.runtime
-            .get_or_init(|| {
-                let data = app.path().app_data_dir().map_err(|_| ())?.join("vibespace");
+    pub(crate) fn runtime(&self, app: &tauri::AppHandle) -> Result<Arc<Runtime>> {
+        // A failed open is never cached: Reload (or a closed second instance) can succeed later.
+        let mut slot = self.runtime.lock().map_err(failed)?;
+        if let Some(runtime) = slot.as_ref() {
+            return Ok(runtime.clone());
+        }
+        let runtime = (|| -> Result<Arc<Runtime>> {
+                let bind_app = app.clone();
+                let data = app.path().app_data_dir().map_err(failed)?.join("vibespace");
                 // Platform gate is compiled natively, never enabled by renderer settings.
-                let runtime = Runtime::open(&data, native_files_enabled()).map_err(|_| ())?;
+                let open = |takeover: bool| {
+                    Runtime::open_owned(&data, native_files_enabled(),
+                        somnia_vibespace_core::ownership::OwnerKind::Gui, takeover)
+                };
+                // The OS lock proves no live owner. A leftover unclean owner record (crash,
+                // kill, installer update) must not lock the GUI out for good: recover once.
+                let runtime = match open(false) {
+                    Err(e) if e.0 == somnia_vibespace_core::runtime::STALE_OWNER_MESSAGE => open(true),
+                    other => other,
+                }
+                .map_err(|e| AppCommandError::new("SOM-FS-006", "vibespace_ownership_or_recovery", e.0, true))?;
                 // Subscribe before commands can start a run. Exactly one publisher per owning state.
                 let mut receiver = runtime.subscribe();
                 let app = app.clone();
@@ -143,16 +158,19 @@ impl VibeSpaceState {
                         }
                     }
                 });
+                // A3 integration: scheduling binds onto the same database and owner.
+                // A failed bind leaves every schedule command fail-closed (unbound);
+                // the runtime itself stays open.
+                let _ = crate::vibespace_schedule_commands::bind(&bind_app, runtime.clone());
                 Ok(runtime)
-            })
-            .as_ref()
-            .cloned()
-            .map_err(failed)
+        })()?;
+        *slot = Some(runtime.clone());
+        Ok(runtime)
     }
     fn changed(&self) -> Result<()> {
         self.version.lock().map_err(failed)?.changed()
     }
-    fn models(&self, app: &tauri::AppHandle) -> Result<Vec<w::ModelReference>> {
+    pub(crate) fn models(&self, app: &tauri::AppHandle) -> Result<Vec<w::ModelReference>> {
         let mut refs = self.configured.clone();
         let path = app
             .path()
@@ -171,10 +189,13 @@ impl VibeSpaceState {
                 model: prefs.model,
                 locality,
             };
-            // Claude/account Responses settings are real but unsupported, not chooser options.
+            // Only refs supported by the native provider adapter become chooser options.
             if provider_config(&reference).is_ok() && !refs.contains(&reference) {
                 refs.push(reference);
             }
+        }
+        if let Some(tasks)=prefs.local_runtime.as_ref().and_then(|p|p.task_models.as_ref()){
+            for model in tasks.values(){let reference=w::ModelReference{provider:"ollama".into(),model:model.clone(),locality:w::ModelLocality::Local};if provider_config(&reference).is_ok()&&!refs.contains(&reference){refs.push(reference);}}
         }
         Ok(refs)
     }
@@ -244,6 +265,20 @@ fn restrict_platform_event(event: &mut w::RunEvent) {
     }
 }
 
+fn provider_kind(reference: &w::ModelReference) -> Result<engine::provider::ProviderKind> {
+    use engine::provider::ProviderKind;
+    match (reference.provider.as_str(), &reference.locality) {
+        ("ollama", w::ModelLocality::Local) => Ok(ProviderKind::Ollama),
+        ("lmstudio", w::ModelLocality::Local) => Ok(ProviderKind::LmStudio),
+        ("openai", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenAi),
+        ("openrouter", w::ModelLocality::Cloud) => Ok(ProviderKind::OpenRouter),
+        ("claude", w::ModelLocality::Cloud) => Ok(ProviderKind::Anthropic),
+        ("xai", w::ModelLocality::Cloud) => Ok(ProviderKind::Xai),
+        ("meta", w::ModelLocality::Cloud) => Ok(ProviderKind::Meta),
+        ("deepseek", w::ModelLocality::Cloud) => Ok(ProviderKind::DeepSeek),
+        _ => Err(error("vibespace_unsupported_provider", true)),
+    }
+}
 fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig> {
     if reference.model.trim().is_empty()
         || reference.model.len() > 256
@@ -252,13 +287,7 @@ fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig>
     {
         return Err(error("vibespace_invalid_model", true));
     }
-    let endpoint = match (reference.provider.as_str(), &reference.locality) {
-        ("ollama", w::ModelLocality::Local) => "http://127.0.0.1:11434/v1/chat/completions",
-        ("lmstudio", w::ModelLocality::Local) => "http://127.0.0.1:1234/v1/chat/completions",
-        ("openai", w::ModelLocality::Cloud) => "https://api.openai.com/v1/chat/completions",
-        ("openrouter", w::ModelLocality::Cloud) => "https://openrouter.ai/api/v1/chat/completions",
-        _ => return Err(error("vibespace_unsupported_provider", true)),
-    };
+    let endpoint = provider_kind(reference)?.default_endpoint();
     Ok(match reference.locality {
         w::ModelLocality::Local => engine::ModelConfig::Local {
             endpoint: endpoint.into(),
@@ -270,9 +299,10 @@ fn provider_config(reference: &w::ModelReference) -> Result<engine::ModelConfig>
         },
     })
 }
-fn resolve(
+pub(crate) fn resolve(
     reference: &w::ModelReference,
 ) -> Result<(Arc<dyn engine::ModelTransport>, engine::ModelConfig)> {
+    if crate::agent_settings::local_only()&&reference.provider!="ollama"{return Err(error("vibespace_local_only",true));}
     let config = provider_config(reference)?;
     let credential = if reference.locality == w::ModelLocality::Cloud {
         let secret = keyring::Entry::new(KEY_SERVICE, &reference.provider)
@@ -286,8 +316,19 @@ fn resolve(
     } else {
         None
     };
-    // HttpModel uses no_proxy(), redirects disabled and no environment credentials.
-    let transport = engine::HttpModel::new(config.clone(), credential, true).map_err(failed)?;
+    // The provider adapter uses no_proxy(), no redirects and no environment credentials.
+    let kind = provider_kind(reference)?;
+    let is_ollama=kind==engine::provider::ProviderKind::Ollama;
+    let selected_model=reference.model.clone();
+    let transport = engine::provider::ProviderModel::new(
+        kind, Some(config.endpoint()), config.model(), credential, true,
+    ).map_err(failed)?
+      .with_cloud_guard(Arc::new(move ||is_ollama||!crate::agent_settings::local_only()))
+      .with_request_guard(Arc::new(move ||{let model=selected_model.clone();Box::pin(async move{
+        // All Ollama Vibe requests need positive evidence, even outside local-only.
+        // LM Studio stays unknown in local-only until its weight evidence is supported.
+        if is_ollama{crate::model_locality::verify_ollama(&model).await}else{!crate::agent_settings::local_only()}
+      })}));
     Ok((Arc::new(transport), config))
 }
 
@@ -710,10 +751,10 @@ pub fn vibespace_capabilities(
             "review",
         ];
         if native_files_enabled() {
-            actions.push("restore");
+            actions.extend(["restore", "apply-hunks"]);
         }
         if transport {
-            actions.extend(["start", "retry"]);
+            actions.extend(["start", "retry", "request-changes", "retry-feedback"]);
         }
         Ok(NativeCapabilities {
             transport,
@@ -915,6 +956,14 @@ mod tests {
                 w::ModelLocality::Cloud,
                 "https://openrouter.ai/api/v1/chat/completions",
             ),
+            (
+                "claude",
+                w::ModelLocality::Cloud,
+                "https://api.anthropic.com/v1/messages",
+            ),
+            ("xai", w::ModelLocality::Cloud, "https://api.x.ai/v1/chat/completions"),
+            ("meta", w::ModelLocality::Cloud, "https://api.meta.ai/v1/chat/completions"),
+            ("deepseek", w::ModelLocality::Cloud, "https://api.deepseek.com/chat/completions"),
         ] {
             let reference = w::ModelReference {
                 provider: provider.into(),
@@ -922,6 +971,11 @@ mod tests {
                 locality: locality.clone(),
             };
             let config = provider_config(&reference).unwrap();
+            assert_eq!(provider_kind(&reference).unwrap().default_endpoint(), endpoint);
+            assert_eq!(
+                provider_kind(&reference).unwrap().is_local(),
+                locality == w::ModelLocality::Local
+            );
             assert_eq!(config.endpoint(), endpoint);
             assert_eq!(config.model(), "explicit-model");
             assert_eq!(
@@ -930,7 +984,7 @@ mod tests {
             );
         }
         for provider in [
-            "claude",
+            "unsupported",
             "responses",
             "openai-responses",
             "https://attacker.invalid",
@@ -943,6 +997,12 @@ mod tests {
             })
             .is_err());
         }
+        assert!(provider_config(&w::ModelReference {
+            provider: "claude".into(),
+            model: "x".into(),
+            locality: w::ModelLocality::Local
+        })
+        .is_err());
         assert!(provider_config(&w::ModelReference {
             provider: "ollama".into(),
             model: "x".into(),
@@ -1028,3 +1088,412 @@ mod tests {
         );
     }
 }
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ReviewRunRead {
+    pub run_id: String,
+}
+sync_command!(
+    vibespace_review_hunks,
+    ReviewRunRead,
+    w::ReviewHunks,
+    false,
+    |runtime, request, _window, _state| { runtime.review_hunks(&request.run_id).map_err(failed) }
+);
+sync_command!(
+    vibespace_run_timeline,
+    ReviewRunRead,
+    Vec<w::TimelineEntry>,
+    false,
+    |runtime, request, _window, _state| { runtime.timeline(&request.run_id).map_err(failed) }
+);
+sync_command!(
+    vibespace_apply_hunks,
+    w::HunkApply,
+    (),
+    true,
+    |runtime, request, _window, _state| {
+        require_native_files()?;
+        runtime.apply_hunks(request).map_err(failed)
+    }
+);
+#[tauri::command]
+pub async fn vibespace_request_changes(
+    window: WebviewWindow,
+    webview: Webview,
+    state: State<'_, VibeSpaceState>,
+    request: w::RequestChanges,
+) -> Result<w::SnapshotReply> {
+    let label = window.label().to_string();
+    crate::cmd::cmd_async("vibespace_request_changes", Some(&label), async {
+        gate(&window, &webview)?;
+        let runtime = state.runtime(window.app_handle())?;
+        // Validate provider readiness BEFORE creating the durable successor.
+        let old = runtime.snapshot(&request.run_id).map_err(failed)?.snapshot;
+        if !state.models(window.app_handle())?.contains(&old.model) {
+            return Err(error("vibespace_model_not_configured", true));
+        }
+        let reference = old.model;
+        let (transport, config) = tauri::async_runtime::spawn_blocking(move || resolve(&reference))
+            .await
+            .map_err(failed)??;
+        gate(&window, &webview)?;
+        let studio = runtime.prepare_request_changes(&request).map_err(failed)?;
+        let mut reply = runtime
+            .start(
+                w::StartRun {
+                    studio_id: studio.studio_id,
+                    request_id: request.request_id,
+                    retry_of_run_id: None,
+                },
+                transport,
+                config,
+            )
+            .await
+            .map_err(failed)?;
+        restrict_platform_snapshot(&mut reply.snapshot);
+        state.changed()?;
+        Ok(reply)
+    })
+    .await
+}
+// ---------------------------------------------------------------------------------------------
+// Package A6: memory (opt-in vector search) and skills (data only). Appended block.
+// Nothing here downloads by itself: the model download needs the exact size acknowledged, and the
+// vector index exists only after an explicit per-space opt-in. Skills are stored, never executed.
+// ---------------------------------------------------------------------------------------------
+use somnia_vibespace_embed as embed;
+use somnia_vibespace_skills as skills;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// True only when this build links the ONNX backend (`vibespace-fastembed` feature).
+const EMBEDDER_COMPILED: bool = cfg!(feature = "vibespace-fastembed");
+
+#[tauri::command]
+pub async fn vibespace_retry_feedback(
+    window: WebviewWindow,
+    webview: Webview,
+    state: State<'_, VibeSpaceState>,
+    request: w::RetryFeedback,
+) -> Result<w::SnapshotReply> {
+    let label = window.label().to_string();
+    crate::cmd::cmd_async("vibespace_retry_feedback", Some(&label), async {
+        gate(&window, &webview)?;
+        let runtime = state.runtime(window.app_handle())?;
+        // Validate provider readiness BEFORE creating the durable successor.
+        let old = runtime.snapshot(&request.run_id).map_err(failed)?.snapshot;
+        if !state.models(window.app_handle())?.contains(&old.model) {
+            return Err(error("vibespace_model_not_configured", true));
+        }
+        let reference = old.model;
+        let (transport, config) = tauri::async_runtime::spawn_blocking(move || resolve(&reference))
+            .await
+            .map_err(failed)??;
+        gate(&window, &webview)?;
+        let studio = runtime.prepare_retry_feedback(&request).map_err(failed)?;
+        let mut reply = runtime
+            .start(
+                w::StartRun {
+                    studio_id: studio.studio_id,
+                    request_id: request.request_id,
+                    retry_of_run_id: None,
+                },
+                transport,
+                config,
+            )
+            .await
+            .map_err(failed)?;
+        restrict_platform_snapshot(&mut reply.snapshot);
+        state.changed()?;
+        Ok(reply)
+    })
+    .await
+}
+// ---------------------------------------------------------------------------------------------
+// Package A6: memory (opt-in vector search) and skills (data only). Appended block.
+// Nothing here downloads by itself: the model download needs the exact size acknowledged, and the
+// vector index exists only after an explicit per-space opt-in. Skills are stored, never executed.
+// ---------------------------------------------------------------------------------------------
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MemorySearchRequest {
+    pub space_id: String,
+    pub query: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct MemoryReviewRequest {
+    pub space_id: String,
+    pub memory_id: String,
+    pub approve: bool,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SpaceOnly {
+    pub space_id: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct VectorEnableRequest {
+    pub space_id: String,
+    pub acknowledged: bool,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct NoArgs {}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ModelDownloadRequest {
+    pub acknowledged_bytes: u64,
+}
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelStateReply {
+    pub model_id: String,
+    /// missing | ready | downloading | error
+    pub status: String,
+    pub total_bytes: u64,
+    pub downloaded_bytes: u64,
+    pub error: Option<String>,
+}
+
+struct DownloadState {
+    running: bool,
+    downloaded: u64,
+    error: Option<String>,
+    cancel: Arc<AtomicBool>,
+}
+fn download_state() -> &'static Mutex<DownloadState> {
+    static S: OnceLock<Mutex<DownloadState>> = OnceLock::new();
+    S.get_or_init(|| {
+        Mutex::new(DownloadState { running: false, downloaded: 0, error: None, cancel: Arc::new(AtomicBool::new(false)) })
+    })
+}
+fn model_store(window: &WebviewWindow) -> Result<embed::ModelStore> {
+    let dir = window.app_handle().path().app_data_dir().map_err(failed)?.join("models");
+    Ok(embed::ModelStore::new(dir))
+}
+fn model_reply(window: &WebviewWindow) -> Result<ModelStateReply> {
+    let spec = embed::e5_small();
+    let store = model_store(window)?;
+    let st = download_state().lock().map_err(failed)?;
+    let (status, downloaded) = if st.running {
+        ("downloading", st.downloaded)
+    } else if store.status(&spec) == embed::ModelStatus::Ready {
+        ("ready", spec.total_bytes())
+    } else if st.error.is_some() {
+        ("error", 0)
+    } else {
+        ("missing", 0)
+    };
+    Ok(ModelStateReply {
+        model_id: spec.id.clone(),
+        status: status.to_string(),
+        total_bytes: spec.total_bytes(),
+        downloaded_bytes: downloaded,
+        error: st.error.clone(),
+    })
+}
+
+#[cfg(feature = "vibespace-fastembed")]
+fn embedder(window: &WebviewWindow) -> Option<Arc<embed::embedder::E5Embedder>> {
+    static E: OnceLock<Mutex<Option<Arc<embed::embedder::E5Embedder>>>> = OnceLock::new();
+    let cell = E.get_or_init(|| Mutex::new(None));
+    let mut g = cell.lock().ok()?;
+    if g.is_none() {
+        // Loading never downloads: a missing model leaves this None and search falls back to FTS.
+        *g = embed::embedder::E5Embedder::load(&model_store(window).ok()?, &embed::e5_small()).ok().map(Arc::new);
+    }
+    g.clone()
+}
+#[cfg(feature = "vibespace-fastembed")]
+fn spawn_index(window: &WebviewWindow, runtime: Arc<Runtime>, space_id: String) {
+    static BUSY: AtomicBool = AtomicBool::new(false);
+    if BUSY.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let window = window.clone();
+    std::thread::spawn(move || {
+        if let Some(e) = embedder(&window) {
+            while let Ok(n) = runtime.store.vector_index_pending(&space_id, &*e, 32) {
+                if n == 0 {
+                    break;
+                }
+            }
+        }
+        BUSY.store(false, Ordering::SeqCst);
+    });
+}
+#[cfg(not(feature = "vibespace-fastembed"))]
+fn spawn_index(_window: &WebviewWindow, _runtime: Arc<Runtime>, _space_id: String) {}
+
+fn vector_reply(mut s: db::VectorStatus) -> db::VectorStatus {
+    s.compiled_in = s.compiled_in && EMBEDDER_COMPILED;
+    s
+}
+
+sync_command!(
+    vibespace_memory_search,
+    MemorySearchRequest,
+    db::HybridResponse,
+    false,
+    |runtime, request, window, _state| {
+        #[cfg(feature = "vibespace-fastembed")]
+        let emb = embedder(window);
+        #[cfg(feature = "vibespace-fastembed")]
+        let emb_ref: Option<&dyn db::Embedder> = emb.as_deref().map(|e| e as &dyn db::Embedder);
+        #[cfg(not(feature = "vibespace-fastembed"))]
+        let emb_ref: Option<&dyn db::Embedder> = {
+            let _ = window;
+            None
+        };
+        runtime
+            .store
+            .search_memory_hybrid(&request.space_id, &request.query, &db::SearchOptions::default(), emb_ref)
+            .map_err(failed)
+    }
+);
+sync_command!(vibespace_memory_review, MemoryReviewRequest, bool, true, |runtime, request, _window, _state| {
+    runtime.store.review_memory(&request.space_id, &request.memory_id, request.approve).map_err(failed)
+});
+sync_command!(vibespace_memory_clear, SpaceOnly, usize, true, |runtime, request, _window, _state| {
+    runtime.store.delete_all_memory(&request.space_id).map_err(failed)
+});
+sync_command!(vibespace_memory_vector_status, SpaceOnly, db::VectorStatus, false, |runtime, request, window, _state| {
+    let s = runtime.store.vector_status(&request.space_id).map_err(failed)?;
+    if s.enabled && s.indexed < s.total {
+        spawn_index(window, runtime.clone(), request.space_id.clone());
+    }
+    Ok(vector_reply(s))
+});
+sync_command!(vibespace_memory_vector_enable, VectorEnableRequest, db::VectorStatus, true, |runtime, request, window, _state| {
+    if !request.acknowledged || !EMBEDDER_COMPILED {
+        return Err(error("vibespace_vector_not_allowed", true));
+    }
+    let spec = embed::e5_small();
+    if model_store(window)?.status(&spec) != embed::ModelStatus::Ready {
+        return Err(error("vibespace_model_missing", true));
+    }
+    let s = runtime
+        .store
+        .vector_enable(db::VectorOptIn { space_id: request.space_id.clone(), model_id: spec.id.clone(), dims: spec.dims, acknowledged: true })
+        .map_err(failed)?;
+    spawn_index(window, runtime.clone(), request.space_id);
+    Ok(vector_reply(s))
+});
+sync_command!(vibespace_memory_vector_disable, SpaceOnly, db::VectorStatus, true, |runtime, request, _window, _state| {
+    runtime.store.vector_disable(&request.space_id).map(vector_reply).map_err(failed)
+});
+sync_command!(vibespace_memory_model_state, NoArgs, ModelStateReply, false, |_runtime, _request, window, _state| {
+    model_reply(window)
+});
+sync_command!(vibespace_memory_model_download, ModelDownloadRequest, ModelStateReply, false, |_runtime, request, window, _state| {
+    let spec = embed::e5_small();
+    // The consent token only exists for the exact size the UI showed.
+    let consent = embed::DownloadConsent::acknowledge(&spec, request.acknowledged_bytes)
+        .map_err(|_| error("vibespace_download_consent_mismatch", true))?;
+    let store = model_store(window)?;
+    {
+        let mut st = download_state().lock().map_err(failed)?;
+        if st.running {
+            return model_reply(window);
+        }
+        st.running = true;
+        st.downloaded = 0;
+        st.error = None;
+        st.cancel = Arc::new(AtomicBool::new(false));
+    }
+    let cancel = download_state().lock().map_err(failed)?.cancel.clone();
+    std::thread::spawn(move || {
+        let result = store.download(&spec, embed::model::HF_BASE, consent, &cancel, &mut |p| {
+            if let Ok(mut st) = download_state().lock() {
+                st.downloaded = p.downloaded;
+            }
+        });
+        if let Ok(mut st) = download_state().lock() {
+            st.running = false;
+            st.error = match result {
+                Ok(()) | Err(embed::DownloadError::Cancelled) => None,
+                Err(_) => Some("vibespace_download_failed".to_string()),
+            };
+        }
+    });
+    model_reply(window)
+});
+sync_command!(vibespace_memory_model_cancel, NoArgs, ModelStateReply, false, |_runtime, _request, window, _state| {
+    if let Ok(st) = download_state().lock() {
+        st.cancel.store(true, Ordering::SeqCst);
+    }
+    model_reply(window)
+});
+
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillsInstallRequest {
+    /// `space` | `user`
+    pub scope: String,
+    pub space_id: Option<String>,
+    /// The renderer may only install `local` skills in this release. github/index need a fetch path
+    /// with its own consent; builtin is app-owned.
+    pub source: String,
+    pub source_ref: Option<String>,
+    pub skill_md: String,
+    pub files: Vec<db::skills::SkillFile>,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillIdRequest {
+    pub id: String,
+}
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SkillVersionRequest {
+    pub id: String,
+    pub version: i64,
+}
+
+sync_command!(vibespace_skills_list, SpaceOnly, Vec<db::skills::SkillSummary>, false, |runtime, request, _window, _state| {
+    runtime.store.list_skills(Some(&request.space_id)).map_err(failed)
+});
+sync_command!(vibespace_skills_install, SkillsInstallRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    if request.source != "local" {
+        return Err(error("vibespace_skill_source_not_allowed", true));
+    }
+    let scope = match request.scope.as_str() {
+        "space" => db::skills::SkillScope::Space,
+        "user" => db::skills::SkillScope::User,
+        _ => return Err(error("vibespace_skill_scope_invalid", true)),
+    };
+    skills::install_from_files(
+        &runtime.store,
+        scope,
+        request.space_id.as_deref(),
+        db::skills::SkillSource::Local,
+        request.source_ref.as_deref(),
+        None,
+        &request.skill_md,
+        request.files,
+        None,
+    )
+    .map_err(failed)
+});
+sync_command!(vibespace_skills_get_version, SkillVersionRequest, Option<db::skills::SkillVersion>, false, |runtime, request, _window, _state| {
+    runtime.store.get_skill_version(&request.id, request.version).map_err(failed)
+});
+sync_command!(vibespace_skills_accept_update, SkillIdRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    runtime.store.accept_skill_update(&request.id).map_err(failed)
+});
+sync_command!(vibespace_skills_reject_update, SkillIdRequest, db::skills::SkillSummary, true, |runtime, request, _window, _state| {
+    runtime.store.reject_skill_update(&request.id).map_err(failed)
+});
+sync_command!(vibespace_skills_uninstall, SkillIdRequest, bool, true, |runtime, request, _window, _state| {
+    runtime.store.uninstall_skill(&request.id).map_err(failed)
+});
+
+#[derive(Deserialize)]#[serde(rename_all="camelCase",deny_unknown_fields)]
+pub struct BoardBudgetRequest{pub space_id:String,pub budget:db::BoardBudget}
+#[tauri::command]pub async fn vibespace_board_budget(window:WebviewWindow,webview:Webview,state:State<'_,VibeSpaceState>,request:SpaceOnly)->Result<serde_json::Value>{
+ gate(&window,&webview)?;let runtime=state.runtime(window.app_handle())?;let budget=runtime.store.board_budget(&request.space_id).map_err(failed)?;let reported_tokens=runtime.store.board_reported_tokens(&request.space_id).ok();Ok(serde_json::json!({"budget":budget,"reportedTokens":reported_tokens}))
+}
+#[tauri::command]pub async fn vibespace_board_budget_save(window:WebviewWindow,webview:Webview,state:State<'_,VibeSpaceState>,request:BoardBudgetRequest)->Result<()>{gate(&window,&webview)?;state.runtime(window.app_handle())?.save_board_budget(&request.space_id,&request.budget).map_err(failed)}

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,existsSync} from 'node:fs';
 import {zipSync,strToU8} from 'fflate';
-import {DocumentsCore} from './core';
+import {DocumentsCore,type DocSessionLike} from './core';
 import {DocumentsEngine,type WorkerLike} from './engine';
 import {inspectDocx} from './inspect';
 import {utf16ToUtf8Offset,utf8ToUtf16Offset,stepBoundary} from './text';
@@ -130,7 +130,8 @@ test('real engine: hit test, caret and selection rectangles agree',{skip:!haveWa
  const hit=(core.handle({id:3,kind:'hit',page:car.page,x:car.x,y:car.top+car.height/2}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;
  assert.deepEqual([hit.block,hit.off,hit.editable],[1,5,true]);
  const rects=(core.handle({id:4,kind:'rects',block:1,a:0,b:4}).res as Extract<DocumentsResponse,{kind:'rects'}>).rects;assert.ok(rects.length>0&&rects[0][3]>0);
- const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;assert.deepEqual([tbl.block,tbl.editable],[null,false]);
+ const tbl=(core.handle({id:5,kind:'hit',page:0,x:90,y:155}).res as Extract<DocumentsResponse,{kind:'hit'}>).hit!;// Table cells are editable since cell editing landed: the hit addresses the first cell paragraph (ids from 1<<20), not a read-only block.
+ assert.deepEqual([tbl.block,tbl.editable],[1<<20,true]);
 });
 test('real engine: split, merge and snapshot restore through the core; tables and bad offsets refused',{skip:!haveWasm},async()=>{
  const core=await realCore();core.handle({id:1,kind:'open',bytes:ab(fixture('sample.docx'))});
@@ -152,4 +153,16 @@ test('randomised: diffEdit/applyEdit/inverseOf round-trip on mixed Unicode (seed
   assert.ok(e,JSON.stringify([a,b]));assert.equal(applyEdit(a,e),b,JSON.stringify([a,b]));assert.equal(applyEdit(b,inverseOf(a,e)),a,JSON.stringify([a,b]));
   for(let j=1;j<e.hunks.length;j++)assert.ok(e.hunks[j].start>=e.hunks[j-1].end);
  }
+});
+test('replaceChecked is validated before the engine and returns the worker read-back',()=>{
+ const calls:string[]=[];
+ const S=class{constructor(_b?:Uint8Array){}free(){}paginate(){return 1;}page_info(){return '{"pages":[],"cacheHits":0,"cacheMisses":0}';}text(){return '';}
+  replace_checked(b:number,e:string,j:string){calls.push(`${b}|${e}|${j}`);if(e==='stale')throw new Error('stale: the paragraph changed since it was read');return e+'!';}};
+ const k=new DocumentsCore(S as unknown as new(b:Uint8Array)=>DocSessionLike);k.handle({id:1,kind:'open',bytes:new Uint8Array(4)} as never);
+ const go=(r:object)=>{try{return k.handle({id:2,kind:'replaceChecked',...r} as never).res;}catch(e){return{ok:false as const,error:String(e)};}};
+ const h=[{start:0,end:1,text:'x'}];
+ for(const bad of [{block:-1,expected:'a',hunks:h},{block:1.5,expected:'a',hunks:h},{block:0,expected:3,hunks:h},{block:0,expected:'a',hunks:[]},{block:0,expected:'a',hunks:[{start:2,end:1,text:'x'}]},{block:0,expected:'a',hunks:[{start:0,end:1,text:3}]},{block:0,expected:'a'.repeat(1_000_001),hunks:h}])assert.equal((go(bad) as {ok:boolean}).ok,false,JSON.stringify(bad).slice(0,60));
+ assert.equal(calls.length,0);
+ const ok=go({block:0,expected:'abc',hunks:h}) as {ok:boolean;kind?:string;text?:string};assert.deepEqual([ok.ok,ok.kind,ok.text],[true,'replaced','abc!']);
+ assert.equal(calls[0],'0|abc|[[0,1,"x"]]');
 });

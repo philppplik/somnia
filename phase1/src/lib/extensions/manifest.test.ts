@@ -23,3 +23,19 @@ test('accentPalettes are validated and normalized',()=>{
  for(const bad of [{id:'Bad Id',label:'X',light:'#075d96',dark:'#80d4ff'},{id:'x',label:'',light:'#075d96',dark:'#80d4ff'},{id:'x',label:'X',light:'#123',dark:'#80d4ff'},{id:'x',label:'X',light:'red',dark:'#80d4ff'},{id:'x',label:'X',light:'#075d96'},{id:'x',label:'X',light:'#075d96',dark:'url(javascript:alert(1))'}]){
   const r=validateManifest({...base,contributes:{accentPalettes:[bad]}});assert.equal(r.ok,false,JSON.stringify(bad));}
 });
+
+test('openOffers are validated against namespace, declared command, kinds and priority cap',()=>{
+ const good={id:'acme.hello.open',kinds:['text','svg'],command:'acme.hello.say',capability:'preview',priority:10,title:'Open in Hello'};
+ const ok=validateManifest({...base,contributes:{...base.contributes,openOffers:[good]}});
+ assert.equal(ok.ok,true);if(ok.ok){const o=ok.manifest.contributes.openOffers?.[0];assert.equal(o?.id,'acme.hello.open');assert.deepEqual([...(o?.kinds??[])],['text','svg']);assert.equal(o?.command,'acme.hello.say');}
+ for(const [bad,re] of [
+  [{...good,id:'other.open'},/namespace/],
+  [{...good,command:'acme.hello.nope'},/declared/],
+  [{...good,capability:'execute'},/capability/],
+  [{...good,priority:100},/priority/],
+  [{...good,priority:1.5},/priority/],
+  [{...good,kinds:['exe']},/kinds/],
+  [{...good,kinds:[]},/kinds/],
+  [{...good,title:'x'.repeat(121)},/title/],
+ ] as const){const r=validateManifest({...base,contributes:{...base.contributes,openOffers:[bad]}});assert.equal(r.ok,false,re.source);if(!r.ok)assert.match(r.errors.join(' '),re);}
+});

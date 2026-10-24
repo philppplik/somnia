@@ -63,6 +63,9 @@ impl PendingView {
             Origin::Extension { name } => Origin::Extension {
                 name: crate::sanitize::sanitize_text(name, 80),
             },
+            Origin::ExternalAgent { name } => Origin::ExternalAgent {
+                name: crate::sanitize::sanitize_text(name, 80),
+            },
             o => o.clone(),
         };
         Self {

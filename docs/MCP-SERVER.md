@@ -40,15 +40,53 @@ currently active studio document (same scope as the agent panel's pinned documen
 provenance `mcp` and are reviewed and applied exactly like agent proposals. The server answers with an
 empty tool set while no compatible document is open.
 
-## Tests
+## Wiring and validation
 
-`npx tsx --test src/lib/agent/studioMcpServer.test.ts`
+The gateway is wired, not a transport draft: `desktop.rs` manages `StudioMcp` and registers
+`studio_mcp_start`, `studio_mcp_stop`, `studio_mcp_status` and `studio_mcp_respond`.
+`main.tsx` installs the WebView host and unwraps Tauri event payloads before forwarding them.
+Nothing listens until the user starts the server in Settings. Stopping clears the displayed
+port/token and pending responses; a new start creates a new token.
 
-## Rust drafts (CI to verify)
+Run these commands from `phase1/`:
 
-Added unverified, with unit tests that CI must run (`cargo test -p somnia mcp_`; no cargo was available when written):
+```sh
+npx tsx --test src/lib/agent/studioMcpServer.test.ts src/lib/agent/studioMcpHost.test.ts
+cargo test --locked --manifest-path src-tauri/Cargo.toml --no-default-features mcp_
+cargo test --locked --manifest-path src-tauri/Cargo.toml --features desktop mcp_
+npx playwright test tests/studio-mcp-server.spec.ts
+```
 
-- `src-tauri/src/mcp_gateway.rs`: the loopback HTTP transport described above. Not started by anything yet.
-- `src-tauri/src/mcp_health.rs`: restart policy for servers that exit by themselves (1, 2, 4, 8, 16 s, then gives up; a run of 60 s resets the count; a user Stop is never restarted). Not wired into `McpHost`.
-- `src-tauri/src/mcp_http.rs`: MCP client over HTTP (https, or http to localhost; JSON or SSE replies). Not wired into the server list or UI yet.
-- `Cargo.toml`: tokio feature `io-util` added for the gateway.
+The Phase 1 validation workflow runs the headless Rust tests in the native and Windows jobs,
+including the real loopback gateway and health-policy tests. Its Linux native job also runs the
+explicit desktop `mcp_` suite, which compiles the WebView bridge and HTTP client and exercises
+bridge response correlation, notification replies, stopped status and pending-response cleanup.
+The frontend job runs the browser spec as part of `npm run test:e2e`.
+
+Coverage boundaries:
+
+- Rust gateway tests open real TCP sockets. They check loopback binding, missing/wrong tokens,
+  method/path/length/body guards, fragmented request bodies, byte-preserving forwarding,
+  notification HTTP 202, listener shutdown and token rotation.
+- Protocol/host Node tests check read/propose-only exposure, schema validation, activity records,
+  disabled requests, empty document scopes and malformed messages.
+- The Playwright spec uses the production Settings UI, host, source builder and Tauri listener.
+  It mocks desktop IPC, including the real Tauri event envelope shape (event ID and correlation
+  ID are distinct). It checks user start/stop, initialize/list/read round trips, rejected unknown
+  tools, notifications, parse errors and token replacement. It does not open a native TCP listener
+  or a Tauri WebView. Its token is a test value, not a security test.
+
+These separate checks do not replace a native end-to-end test connecting an external MCP client
+to a running desktop window. Desktop tests require the platform Tauri build libraries; on Linux
+that includes WebKitGTK/GTK development packages installed by the native CI job.
+
+## Separate MCP client modules
+
+`mcp_health.rs` contains the tested restart/backoff policy (1, 2, 4, 8, 16 seconds, then gives up;
+a healthy 60-second run resets the count; user Stop is never restarted). The policy is not wired
+into `McpHost`, so these tests do not mean automatic restart is enabled.
+
+`mcp_http.rs` is the separate desktop MCP **client**, not the loopback server. It accepts HTTPS
+URLs only and routes connections through the broker-owned domain proxy. Its tests cover URL
+restrictions and SSE response selection. Do not configure this client with the local gateway's
+HTTP URL. The module is not wired into the server list/UI yet.

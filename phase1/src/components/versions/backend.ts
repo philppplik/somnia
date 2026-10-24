@@ -3,6 +3,11 @@ let current:GitBackend|null=null;
 /** The app (or tests) registers the backend. Nothing is registered until package A's commands exist. */
 export const setGitBackend=(b:GitBackend|null)=>{current=b;};
 export const getGitBackend=()=>current;
+import type {GitRefsBackend} from '../../lib/git/refs/contract';
+let currentRefs:GitRefsBackend|null=null;
+/** Registered ref-level backend (tests, web preview fakes). The desktop app falls back to the Tauri adapter. */
+export const setGitRefsBackend=(b:GitRefsBackend|null)=>{currentRefs=b;};
+export const getGitRefsBackend=()=>currentRefs;
 /** Tauri implementation of the contract. Command names and arg shapes come from docs/git/CONTRACT.md. */
 export function createTauriGitBackend(invoke:<T>(cmd:string,args?:Record<string,unknown>)=>Promise<T>):GitBackend{
  return{detect:()=>invoke('git_detect'),status:()=>invoke('git_status'),

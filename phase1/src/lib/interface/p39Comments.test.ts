@@ -1,0 +1,23 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {createInterfaceSession} from './session';
+import {addNode,deleteNode} from './model';
+import {addInterfaceComment,removeInterfaceComment,setInterfaceCommentResolved,interfaceComments} from './comments';
+import {MAX_INTERFACE_COMMENTS} from './commentsCore';
+function scene(){const s=createInterfaceSession();s.start();let frame='',rect='';s.transact(d=>{frame=addNode(d,d.pages[0].id,'frame');rect=addNode(d,d.pages[0].id,'rectangle',frame);d.nodes.find(n=>n.id===rect)!.name='Chip';});return {s,frame,rect};}
+test('comments add, resolve and delete with one undo each',()=>{const {s,rect}=scene();let id='';s.transact(d=>{id=addInterfaceComment(d,rect,'Check the focus ring here.');});
+ assert.equal(s.get().document!.comments!.length,1);assert.equal(interfaceComments(s.get().document!)[0].layerName,'Chip');assert.equal(interfaceComments(s.get().document!,'open').length,1);assert.equal(interfaceComments(s.get().document!,'resolved').length,0);
+ s.transact(d=>setInterfaceCommentResolved(d,id,true));assert.equal(interfaceComments(s.get().document!,'open').length,0);assert.equal(interfaceComments(s.get().document!,'resolved').length,1);
+ s.undo();assert.equal(interfaceComments(s.get().document!,'open').length,1);
+ s.transact(d=>setInterfaceCommentResolved(d,id,true));s.transact(d=>setInterfaceCommentResolved(d,id,false));assert.equal(interfaceComments(s.get().document!,'open').length,1);
+ s.transact(d=>removeInterfaceComment(d,id));assert.equal(s.get().document!.comments,undefined);s.undo();assert.equal(s.get().document!.comments!.length,1);});
+test('comment validation rejects bad input and fails closed on corrupt data',()=>{const {s,rect}=scene();
+ assert.throws(()=>s.transact(d=>{addInterfaceComment(d,rect,'   ');}));assert.throws(()=>s.transact(d=>{addInterfaceComment(d,'missing','Hi');}));assert.throws(()=>s.transact(d=>{addInterfaceComment(d,rect,'x'.repeat(2001));}));assert.equal(s.get().document!.comments,undefined);
+ for(const bad of [[{id:'a',nodeId:rect,text:'ok',createdAt:1},{id:'a',nodeId:rect,text:'dup',createdAt:2}],[{id:'b',nodeId:rect,text:'',createdAt:1}],[{id:'b',nodeId:rect,text:'ok',createdAt:-1}],[{id:'b!',nodeId:rect,text:'ok',createdAt:1}]]){const before=s.get();assert.throws(()=>s.transact(d=>{d.comments=bad as never;}));assert.equal(s.get(),before);}});
+test('comments survive layer deletion as removed-layer entries and stay capped',()=>{const {s,rect}=scene();let id='';s.transact(d=>{id=addInterfaceComment(d,rect,'Temporary note.');});
+ s.transact(d=>deleteNode(d,rect));const list=interfaceComments(s.get().document!);assert.equal(list.length,1);assert.equal(list[0].missing,true);assert.equal(list[0].layerName,'');
+ s.undo();assert.equal(interfaceComments(s.get().document!)[0].layerName,'Chip');
+ const before=s.get();assert.throws(()=>s.transact(d=>{d.comments=Array.from({length:MAX_INTERFACE_COMMENTS+1},(_,i)=>({id:`c${i}`,nodeId:rect,text:'x',createdAt:i})) as never;}));assert.equal(s.get(),before);
+ s.transact(d=>{for(let i=0;i<MAX_INTERFACE_COMMENTS-1;i++)d.comments!.push({id:`c${i}`,nodeId:rect,text:'x',createdAt:i});});assert.throws(()=>s.transact(d=>{addInterfaceComment(d,rect,'over the cap');}));void id;});
+test('comments list sorts newest first and filters by state',()=>{const {s,rect,frame}=scene();s.transact(d=>{addInterfaceComment(d,rect,'First');});s.transact(d=>{const id2=addInterfaceComment(d,frame,'Second');setInterfaceCommentResolved(d,id2,true);});
+ const all=interfaceComments(s.get().document!,'all');assert.ok(all.length===2);assert.ok(all[0].createdAt>=all[1].createdAt);
+ assert.deepEqual(interfaceComments(s.get().document!,'resolved').map(c=>c.text),['Second']);});

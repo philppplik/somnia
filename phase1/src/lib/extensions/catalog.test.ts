@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {webcrypto,createHash} from 'node:crypto';
 import {readFileSync} from 'node:fs';
 import {zipSync,strToU8} from 'fflate';
-import {classifyFetchError,validateCatalog,rawGithubURL,fetchCatalog,reviewCatalogPackage,installReviewedPackage,CATALOG_URL,type CatalogEntry} from './catalog';
+import {classifyFetchError,validateCatalog,rawGithubURL,fetchCatalog,isReviewed,reviewCatalogPackage,installReviewedPackage,CATALOG_URL,type CatalogEntry} from './catalog';
 import {loadExtensions,setExtensionEnabled,enabledIds} from './registry';
 import {parsePackageZip} from './packageInstall';
 const manifest={id:'acme.theme',name:'Theme',version:'1.0.0',apiVersion:1,permissions:[]};
@@ -57,6 +57,23 @@ test('shipped index and package match the pinned hash',()=>{
   assert.equal(m.contributes.accentPalettes.length,7);for(const p of m.contributes.accentPalettes){assert.match(p.light,/^#[0-9a-f]{6}$/);assert.match(p.dark,/^#[0-9a-f]{6}$/);}}
 });
 
+test('reviewed flag: default false, strict boolean, reviewedBy needs reviewed',()=>{
+ const base=wrap([{...manifest,author:'Acme',description:'Theme',repo:'https://github.com/acme/theme',download:'https://raw.githubusercontent.com/acme/theme/v1/package.zip',sha256:'a'.repeat(64)}]);
+ const mk=(extra:object)=>wrap([{...(base.extensions[0] as object),...extra}]);
+ assert.equal(validateCatalog(base)[0].reviewed,false);
+ assert.equal(isReviewed(validateCatalog(base)[0]),false);
+ assert.equal(isReviewed(validateCatalog(mk({reviewed:true,reviewedBy:'Somnia maintainers'}))[0]),true);
+ assert.throws(()=>validateCatalog(mk({reviewed:'true'})));
+ assert.throws(()=>validateCatalog(mk({reviewed:1})));
+ assert.throws(()=>validateCatalog(mk({reviewedBy:'Somnia maintainers'})));
+ assert.throws(()=>validateCatalog(mk({reviewed:false,reviewedBy:'Somnia maintainers'})));
+ assert.throws(()=>validateCatalog(mk({reviewed:true,reviewedBy:''})));
+});
+test('shipped first-party entries are marked reviewed, hash match alone is not',()=>{
+ const root=new URL('../../../../docs/extensions/catalog/',import.meta.url);
+ const list=validateCatalog(JSON.parse(readFileSync(new URL('index.json',root),'utf8')));
+ assert.equal(list.length,12);for(const e of list){assert.equal(isReviewed(e),true,e.id);assert.equal(e.author,'Somnia');}
+});
 test('malformed ZIP and hostile download identity fail without replacing installed data',async()=>{
  const before=JSON.stringify(loadExtensions());const bad=strToU8('not a zip');serve(bad);await assert.rejects(reviewCatalogPackage(entry(bad)),/Invalid ZIP/);
  const bytes=zip({...manifest,apiVersion:99});serve(bytes);await assert.rejects(reviewCatalogPackage(entry(bytes)),/apiVersion/);

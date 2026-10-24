@@ -1,5 +1,10 @@
+import { normalizeImages } from './image';
+import { normalizeGuides } from './guides';
+import { normalizeSwatches } from './swatches';
+import { normalizeTexts } from './text';
 import type { NodeKind, Point, VectorDocument, VectorNode, VectorPath } from './types';
 import { DEFAULT_STYLE } from './types';
+import { pruneGradients } from './gradient';
 
 export const r3 = (n: number): number => { const v = Math.round(n * 1000) / 1000; return Object.is(v, -0) ? 0 : v; };
 
@@ -18,9 +23,10 @@ export function inferKind(x: number, y: number, i?: Point, o?: Point): NodeKind 
 /** Round to the canonical 3 decimals and re-infer node kinds. Export output always equals what this produces. */
 export function normalizeDoc(doc: VectorDocument): VectorDocument {
   const pt = (p?: Point): Point | undefined => (p ? { x: r3(p.x), y: r3(p.y) } : undefined);
-  return {
+  const pruned = pruneGradients(doc);
+  const result: VectorDocument = {
     width: r3(doc.width), height: r3(doc.height),
-    paths: doc.paths.map((p): VectorPath => {
+    paths: pruned.paths.map((p): VectorPath => {
       const out: VectorPath = {
         id: p.id, closed: p.closed,
         nodes: p.nodes.map((n): VectorNode => {
@@ -45,11 +51,27 @@ export function normalizeDoc(doc: VectorDocument): VectorDocument {
       }
       if (p.layer !== undefined) out.layer = p.layer;
       if (p.compound !== undefined) out.compound = p.compound;
+      if (p.group !== undefined) out.group = p.group;
       if (p.name !== undefined) out.name = p.name;
       if (p.hidden) out.hidden = true;
+      if (p.locked) out.locked = true;
+      if (p.clip && p.group !== undefined) out.clip = true;
       return out;
     }),
   };
+  if (pruned.gradients) result.gradients = pruned.gradients;
+  const live = new Set(doc.paths.map((p) => p.group));
+  const names = Object.entries(doc.groupNames ?? {}).map(([k, v]) => [k, String(v).trim().slice(0, 80)] as const).filter(([k, v]) => v && live.has(k));
+  if (names.length) result.groupNames = Object.fromEntries(names);
+  const im = normalizeImages(doc.images);
+  if (im) result.images = im;
+  const tx = normalizeTexts(doc.texts);
+  if (tx) result.texts = tx;
+  const sw = normalizeSwatches(doc.swatches);
+  if (sw) result.swatches = sw;
+  const gd = normalizeGuides(doc.guides);
+  if (gd) result.guides = gd;
+  return result;
 }
 
 /** Does the segment from a to b (a.out, b.in) have curve handles? */

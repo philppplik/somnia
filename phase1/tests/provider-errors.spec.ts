@@ -1,12 +1,12 @@
 import {test,expect} from './fixtures';
 
 async function configure(page:import('@playwright/test').Page){
- await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
+ await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'},capabilities:['completion','tools']}}));
  await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();
  const panel=page.getByRole('complementary',{name:'Somnia Agent'});
  await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
  const S=page.getByRole('dialog');await S.getByLabel('Model',{exact:true}).fill('fixture-local');
- await S.getByRole('button',{name:'Save AI settings',exact:true}).click();await S.getByText('Configuration saved.',{exact:true}).waitFor();await S.getByRole('button',{name:'Close settings',exact:true}).click();await panel.getByRole('checkbox',{name:/Allow inspecting the active (Code(\/Photo)?|studio) document/}).check();return panel;
+ await S.getByRole('button',{name:'Save AI settings',exact:true}).click();await S.getByText('Configuration saved.',{exact:true}).waitFor();await S.getByRole('tab',{name:'Privacy & data',exact:true}).click();await S.getByRole('checkbox',{name:'Allow inspecting the active document and selection. Edits still need preview acceptance.',exact:true}).check();await S.getByRole('button',{name:'Close settings',exact:true}).click();return panel;
 }
 test('partial provider failure remains visible and retry uses the retained prompt',async({page})=>{
  let calls=0;const prompts:string[]=[];

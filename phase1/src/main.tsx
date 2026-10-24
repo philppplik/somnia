@@ -1,3 +1,4 @@
+import {installImportedTheme} from './lib/importedTheme';
 import {problemsStore,reportCommandProblem,installProblemsFetch} from './lib/problemsRuntime';
 import {heldAgentPaths} from './lib/agent/autosaveHold';
 import {newBlankFile} from './lib/projectActions';
@@ -15,10 +16,12 @@ import './styles/agent.css';
 import './styles/svg-editor.css';
 import './styles/collab-chat.css';
 import './styles/variants.css';
+import './styles/publish.css';
 import './styles/extensions-popup.css';
 import './styles/extensions-store.css';
 import {isTauri} from '@tauri-apps/api/core';
-import {setStoreManaged} from './lib/updates';
+import {setStoreManaged,setSeedReady} from './lib/updates';
+import {seedFromInstaller} from './lib/installerHandoff';
 import {initLocale} from './lib/i18n';
 import {installGlobalErrorHandlers,setNoticeSink,reportError,logInfo,recentLog,reportAclDenied} from './lib/log';
 import {copyErrorReport} from './lib/diagnostics/hostStore';
@@ -29,6 +32,8 @@ import {installNativeIntake} from './lib/intake/installNativeIntake';
 import {setCommandReporter} from './lib/invokeCmd';
 import {restoreNativeDialogs} from './lib/nativeDialogs';
 import {ErrorBoundary} from './components/ErrorBoundary';
+const stopImportedTheme=installImportedTheme();
+if(import.meta.hot)import.meta.hot.dispose(stopImportedTheme);
 problemsStore.start();
 const stopProblemsFetch=installProblemsFetch();
 if(import.meta.hot)import.meta.hot.dispose(()=>{problemsStore.stop();stopProblemsFetch();});
@@ -48,7 +53,7 @@ initLocale();
 import {installDesktopAdapter} from './lib/desktopAdapter';
 import {installFileAdapter} from './lib/fileAdapter';
 import {createWebFsPort,webFsSupported} from './lib/webFsPort';
-import {registerCommand} from './lib/commands';
+import {attachKeyboardShortcuts,registerCommand} from './lib/commands';
 import {installBeforeUnload,requestClose} from './lib/closeFlow';
 import {readDraft,saveDraft,clearDraft} from './lib/draftSession';
 import {patchState,getState,subscribe} from './store/appStore';
@@ -57,6 +62,9 @@ import {applyUiPrefs} from './lib/uiPrefs';
 import {invoke as tauriInvoke} from '@tauri-apps/api/core';
 import {installMcpRuntime} from './lib/agent/mcpRuntime';
 import {McpApprovalDialog} from './components/agent/McpApprovalDialog';
+import {installStudioLifecycle} from './lib/lifecycle/integration';
+import {connectSessionSafetyToLifecycle} from './lib/sessionSafety/lifecycleWiring';
+import {hasStudio,getStudio} from './lib/studios/registry';
 if(isTauri())void installMcpRuntime(tauriInvoke as never).refresh();
 // Somnia as MCP server: the Rust gateway forwards JSON-RPC to the WebView; the host owns the protocol server.
 if(isTauri())void (async()=>{
@@ -64,7 +72,8 @@ if(isTauri())void (async()=>{
   import('./lib/agent/studioMcpHost'),import('./lib/agent/panelBridge'),import('./lib/agent/studioTarget'),import('./lib/media'),import('@tauri-apps/api/event')]);
  void installStudioMcpHost({
   invoke:tauriInvoke as never,
-  listen:listen as never,
+  // Tauri hands the callback an envelope {event,id,payload}; the host wants the payload ({id,message}).
+  listen:(event:string,cb:(payload:{id:number;message:string})=>void|Promise<void>)=>listen<{id:number;message:string}>(event,e=>{void cb(e.payload);}),
   source:createStudioMcpSource,
   target:()=>({path:activeStudioDocument(getState(),getMedia()).path}),
   version:typeof __APP_VERSION__!=='undefined'?__APP_VERSION__:'dev',
@@ -89,10 +98,18 @@ applyUiPrefs(getState().uiPrefs);
 setNoticeSink(text=>patchState({notice:text}));
 logInfo('app','Somnia started',{desktop:isTauri()});
 startStudioRouting();
+// Studio lifecycle (docs/studio-lifecycle.md): active/warm/suspended transitions, then connect session safety
+// (recovery-backed Documents/Sheets adapters) to the running host. Order matters: the host must exist before adapters register.
+{const disposeLifecycle=installStudioLifecycle({subscribe,getActiveStudio:()=>getState().activeStudio,resolveAdapter:id=>{try{return hasStudio(id)?getStudio(id).lifecycle?.():undefined;}catch{return undefined;}},onProblem:message=>reportError('lifecycle',message)});const disconnectSafety=connectSessionSafetyToLifecycle();if(import.meta.hot)import.meta.hot.dispose(()=>{disconnectSafety();disposeLifecycle();});}
+// Shortcuts are bound at module start, not in an App effect: the effect only runs after the first commit, so a keypress right after page load (slow CPU, CI) was dropped.
+{const detachShortcuts=attachKeyboardShortcuts();if(import.meta.hot)import.meta.hot.dispose(detachShortcuts);}
+if(isTauri())setSeedReady(seedFromInstaller(c=>tauriInvoke<import('./lib/installerHandoff').Handoff|null>(c)).catch(e=>reportError('startup.installer-handoff',e,{level:'warn'})));
 createRoot(document.getElementById('root')!).render(<StrictMode><ErrorBoundary label="Somnia" onFatal={disposeDiagnosticsSurface}><App/><McpApprovalDialog/></ErrorBoundary></StrictMode>);
 
 if(!isTauri())installBeforeUnload(()=>getState().isDirty&&getState().storage!=='disk');
 if(import.meta.env.DEV)(window as unknown as {__somnia:object}).__somnia={patch:patchState,recentLog,copyErrorReport,requestClose,setSource:(file:string,text:string)=>applyOperations([{type:'replaceSource',file,text}] as never)};
+// Dev/test control hook (plan 2.2): the flag is statically replaced by Vite, so release bundles drop this import entirely.
+if(import.meta.env.VITE_SOMNIA_CONTROL==='1'&&!isTauri())void import('./dev/installWebControl').then(m=>m.installWebControl());
 if(isTauri())document.documentElement.dataset.shell='desktop';
 if(isTauri())void import('./lib/extensions/selftestApp').then(m=>m.maybeRunNativeSelftest()).catch(()=>{/* self-test is CI-only */});
 // LAN-Direct hosting is a desktop feature: register the Rust host with the collab engine only inside Tauri.

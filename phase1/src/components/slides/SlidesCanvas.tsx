@@ -1,16 +1,54 @@
+import {SlidesDesignGroup} from './SlidesDesignGroup';
+import {SlidesTableEditor} from './SlidesTableEditor';
+import {SlidesPictureHandoffHost} from './SlidesPictureHandoff';
+import {registerHandoffCommands} from '../../lib/handoff/commands';
+import {SlidesNotesEditor} from './SlidesNotesEditor';
+import {SlidesTextCompare} from './SlidesTextCompare';import {SlidesTextOutline} from './SlidesTextOutline';import {getSlidesSessionState,showSlide} from '../../lib/slides/session';import {SlidesRehearsal} from './SlidesRehearsal';import {useSlidesPanelText} from '../../lib/slides/panelI18n';
+import {SlidesPresentView} from './SlidesPresentView';
+import {studioContextStore} from '../../lib/shell/studioContext';
+import {useSlideTextSelection} from '../../lib/slides/panelSelection';
+import {selectedRun} from '../../lib/slides/panelModel';
 import {StudioEmptyState} from '../studios/StudioEmptyState';
 import {createBlankProject} from '../../lib/studios/blank';
 import {Presentation} from '../../lib/icons';
-import {useRef} from 'react';
+import {useMemo,useRef} from 'react';
+import {readHiddenSlides} from '../../lib/slides/deckPackage';
+import {pacedSlides} from '../../lib/slides/rehearsalPacing';
+import {SlidesTextToolbar} from './SlidesTextToolbar';
+import {SlidesShapeOverlay,useValidShape,describeShape} from './SlidesShapeOverlay';
 import {useState} from 'react';
 import {FileTabs} from '../FileTabs';
+import {SlidesExportPopover} from './SlidesExportPopover';
 import {useEffect} from 'react';
 import {registerCommandScope} from '../../lib/commands';
-import {openSlides,closeSlides,useSlidesSession,slidesHistory,saveSlidesCopy} from '../../lib/slides/session';
+import {registerSlidesCommands,slidesScopedCommand} from '../../lib/slides/commands';
+import {openSlides,closeSlides,useSlidesSession,slidesHistory,saveSlidesCopy,collabHistoryState} from '../../lib/slides/session';
+import {getCollab,onSessionChange} from '../../lib/collab/session';
+import {peerSlides,type PeerSlidePresence} from '../../lib/collab/office/slidesPresence';
 import {Button} from '../ui/button';
-export function SlidesCanvas(){const s=useSlidesSession();const intake=useRef<HTMLInputElement>(null);const [intakeError,setIntakeError]=useState('');useEffect(()=>registerCommandScope(id=>{if(id==='edit.undo'||id==='edit.redo')return {id,title:id==='edit.undo'?'Undo slide text':'Redo slide text',category:'Edit',enabled:()=>!s.busy&&(id==='edit.undo'?s.undo.length:s.redo.length)>0,run:()=>slidesHistory(id==='edit.undo'?'undo':'redo')};if(id==='project.save')return {id,title:'Save presentation copy',category:'Project',enabled:()=>!!s.working&&!s.busy,run:saveSlidesCopy};if(id.startsWith('edit.')||id.startsWith('view.')||id.startsWith('split.')||id==='project.save')return {id,title:'Unavailable in read-only Slides preview',category:'View',enabled:()=>false,run:()=>{}};}),[s]);return <main className="center flex min-h-0 flex-col overflow-hidden rounded-[var(--r-panel)] bg-panel" aria-label="Slides Studio">
- <FileTabs/><div className={s.name||s.busy?"flex shrink-0 items-center gap-3 border-b border-subtle px-4 py-3":"hidden"}><label className="cursor-pointer rounded-lg bg-hover px-3 py-2 text-sm">Open PPTX<input ref={intake} aria-label="Open PPTX" type="file" accept=".pptx" className="sr-only" onChange={e=>{const f=e.target.files?.[0];if(f)void openSlides(f).then(setIntakeError);e.target.value='';}}/></label><span className="min-w-0 flex-1 truncate text-sm text-ink-2">{s.name||'Slides'}</span>{s.name&&<><Button variant="outline" disabled={s.busy||!s.undo.length} onClick={()=>void slidesHistory('undo')}>Undo text</Button><Button variant="outline" disabled={s.busy||!s.redo.length} onClick={()=>void slidesHistory('redo')}>Redo text</Button><Button variant="outline" disabled={s.busy||!s.working} onClick={()=>void saveSlidesCopy()}>Save a copy</Button></>}{s.name&&<Button variant="outline" onClick={()=>{closeSlides();setIntakeError('');}}>Close presentation</Button>}</div>
- {s.name&&<div className="border-b border-subtle px-4 py-2 text-xs text-ink-3">PPTX text editing alpha. Save a new copy. Your original stays unchanged. Fonts, animations and complex objects may differ. Browser downloads keep the dirty flag until you close; check the saved copy.</div>}
- <div className="flex min-h-0 flex-1"><section aria-label="Slide preview" aria-busy={s.busy} className="flex min-w-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto bg-shell p-6">{s.image?<img src={s.image} alt={`Slide ${s.index+1}`} className="max-h-full max-w-full object-contain shadow-sm"/>:!s.busy&&<StudioEmptyState studio="slides" icon={<Presentation/>} onOpen={()=>intake.current?.click()} onCreate={()=>createBlankProject('slides')}/>}{s.busy&&<p role="status" className="text-sm">Rendering presentation...</p>}{(s.error||intakeError)&&<p role="alert" className="max-w-lg rounded-lg bg-panel p-3 text-sm text-red-600">{s.error||intakeError}</p>}</section></div>
- {s.summary&&<footer className="border-t border-subtle px-4 py-2 text-xs text-ink-2">Slide {s.index+1} of {s.summary.slides} · {s.summary.widthPt} × {s.summary.heightPt} pt · {s.dirty?'Unsaved text changes':'Original unchanged'}</footer>}
+import {PeerSwatch} from '../collab/PeerSwatch';
+/** Embedded Code previews use the parent canvas's shared tab strip. */
+export function SlidesCanvas({embedded=false}:{embedded?:boolean}={}){const s=useSlidesSession();const paced=useMemo(()=>{try{return s.working&&s.summary?pacedSlides(readHiddenSlides(s.working),s.summary.slides):undefined;}catch{return undefined;}},[s.working,s.summary]);const t=useSlidesPanelText();const imageRef=useRef<HTMLImageElement>(null);const shape=useValidShape();const selected=useSlideTextSelection();const owner=useRef<ReturnType<typeof studioContextStore.claim>|null>(null);useEffect(()=>{owner.current=studioContextStore.claim('slides');return()=>{owner.current?.release();owner.current=null;};},[s.source]);useEffect(()=>{const run=selectedRun(s,selected);owner.current?.report({document:s.source?{id:s.source,kind:'pptx',dirty:s.dirty,readOnly:!s.diagnostics?.editable}:undefined,busy:s.busy,mode:s.presenting?'present':'design',selection:run?{kind:'one',type:'textRun',count:1,ids:[`${run.slide}:${run.run}`]}:shape?{kind:'one',type:'shape',count:1,ids:[`${shape.selection.slideId}:${shape.selection.shapeId}`]}:s.summary?{kind:'one',type:'slide',count:1,ids:[String(s.index)]}:{kind:'none',count:0,ids:[]},data:{slideIndex:s.index,slideCount:s.summary?.slides??0,presenting:s.presenting},services:{textEditing:!!s.diagnostics?.editable}});},[s,selected,shape]);const intake=useRef<HTMLInputElement>(null);const [intakeError,setIntakeError]=useState('');
+ const [peers,setPeers]=useState<PeerSlidePresence[]>([]);
+ useEffect(()=>{let off:(()=>void)|null=null;let offS:(()=>void)|null=null;
+  const wire=()=>{off?.();off=null;const c=getCollab();
+   if(!c){setPeers([]);return;}
+   const sync=()=>setPeers(s.name?peerSlides(c.awareness,s.name):[]);
+   c.awareness.on('change',sync);off=()=>c.awareness.off('change',sync);sync();};
+  wire();offS=onSessionChange(wire);
+  return()=>{off?.();offS?.();};},[s.name]);
+ const ch=collabHistoryState();useEffect(()=>{const offSpecs=registerSlidesCommands();const offHandoff=registerHandoffCommands();const offScope=registerCommandScope(id=>{const scoped=slidesScopedCommand(id);if(scoped)return scoped;if(id.startsWith('edit.')||id.startsWith('view.')||id.startsWith('split.')||id==='project.save')return {id,title:'Unavailable in read-only Slides preview',category:'View',enabled:()=>false,run:()=>{}};});return()=>{offScope();offSpecs();offHandoff();};},[]);return <main className="center flex min-h-0 flex-col overflow-hidden rounded-[var(--r-panel)] bg-panel" aria-label="Slides Studio">
+ {s.presenting&&<SlidesPresentView/>}
+ {!embedded&&<FileTabs/>}{!embedded&&<SlidesExportPopover/>}<div className={s.name||s.busy?"flex shrink-0 items-center gap-3 border-b border-subtle px-4 py-3":"hidden"}><label className="cursor-pointer rounded-lg bg-hover px-3 py-2 text-sm">Open PPTX<input ref={intake} aria-label="Open PPTX" type="file" accept=".pptx" className="sr-only" onChange={e=>{const f=e.target.files?.[0];if(f)void openSlides(f).then(setIntakeError);e.target.value='';}}/></label><span className="min-w-0 flex-1 truncate text-sm text-ink-2">{s.name||'Slides'}</span>{s.name&&<><Button variant="outline" disabled={s.busy||(ch?!ch.canUndo:!s.undo.length)} onClick={()=>void slidesHistory('undo')}>Undo text</Button><Button variant="outline" disabled={s.busy||(ch?!ch.canRedo:!s.redo.length)} onClick={()=>void slidesHistory('redo')}>Redo text</Button><Button variant="outline" disabled={s.busy||!s.working} onClick={()=>void saveSlidesCopy()}>Save a copy</Button></>}{s.name&&<Button variant="outline" onClick={()=>{closeSlides();setIntakeError('');}}>Close presentation</Button>}</div>
+ {s.name&&<div className="border-b border-subtle px-4 py-2 text-xs text-ink-3">PPTX text editing alpha. Save a new copy. Your original stays unchanged. Fonts, animations and complex objects may differ. {t('slides.present.static')} Browser downloads keep the dirty flag until you close; check the saved copy.</div>}
+ {s.name&&s.model&&!s.presenting&&<SlidesTextToolbar/>}
+ <div className="flex min-h-0 flex-1"><section aria-label="Slide preview" aria-busy={s.busy} className="relative flex min-w-0 flex-1 flex-col items-center justify-center gap-4 overflow-auto bg-shell p-6">{s.image?<><img ref={imageRef} src={s.image} alt={`Slide ${s.index+1}`} className="max-h-full max-w-full object-contain shadow-sm"/><SlidesShapeOverlay image={imageRef}/></>:!s.busy&&<StudioEmptyState studio="slides" icon={<Presentation/>} onOpen={()=>intake.current?.click()} onCreate={()=>createBlankProject('slides')}/>}{s.busy&&<p role="status" className="text-sm">Rendering presentation...</p>}{shape&&<p role="status" className="max-w-lg text-xs text-ink-2">{(shape.more.length?t('slides.multiSelected',{count:shape.more.length+1}):describeShape(shape.shape,t))}</p>}{(s.error||intakeError)&&<p role="alert" className="max-w-lg rounded-lg bg-panel p-3 text-sm text-red-600">{s.error||intakeError}</p>}</section></div>
+ {s.summary&&<details className="max-h-96 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.compare.title')}</summary><SlidesTextCompare key={s.source} source={s.source} total={s.summary.slides} runs={s.runs} busy={s.busy} current={()=>{const live=getSlidesSessionState();return {source:live.source,total:live.summary?.slides??0,runs:live.runs,busy:live.busy};}}/></details>}
+ {s.name&&s.model&&!s.presenting&&<SlidesTableEditor/>}
+ {s.name&&s.model&&!s.presenting&&<SlidesPictureHandoffHost/>}
+ {s.name&&s.model&&!s.presenting&&<SlidesDesignGroup/>}
+ {s.name&&s.model&&!s.presenting&&<details open className="shrink-0 border-t border-subtle"><summary className="px-4 py-2">{t('slides.notes.title')}</summary><SlidesNotesEditor/></details>}
+ {s.summary&&<details className="max-h-96 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.outline.title')}</summary><SlidesTextOutline key={s.source} source={s.source} total={s.summary.slides} runs={s.runs} busy={s.busy} current={()=>{const live=getSlidesSessionState();return {source:live.source,total:live.summary?.slides??0,runs:live.runs,busy:live.busy};}} navigate={showSlide}/></details>}
+ {s.summary&&s.summary.slides<=10000&&<details className="max-h-80 shrink-0 overflow-auto border-t border-subtle"><summary className="px-4 py-2">{t('slides.rehearsal.title')}</summary><SlidesRehearsal key={s.source} index={s.index} total={s.summary.slides} paced={paced} busy={s.busy}/></details>}
+ {s.summary&&<footer className="border-t border-subtle px-4 py-2 text-xs text-ink-2">Slide {s.index+1} of {s.summary.slides} · {s.summary.widthPt} × {s.summary.heightPt} pt · {s.dirty?'Unsaved text changes':'Original unchanged'}{peers.map(p=><PeerSwatch key={p.clientId} testId="slides-peer" className="ml-3 rounded-sm px-1" bg={p.user.colorLight} color={p.user.color}>{p.user.name} · {p.slide+1}</PeerSwatch>)}</footer>}
  </main>;}

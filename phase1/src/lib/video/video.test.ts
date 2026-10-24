@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {sniffVideo,VIDEO_FILE} from './format';
-import {exportName} from './recipe';
-import {clipRanges,fullClip,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,splitAt,timelineDuration,type TimelineClip} from './timeline';
+import {cappedFps,exportName,resolveOutputSize,sanitizeExportOptions} from './recipe';
+import {clipFadeGain,clipRanges,cropOf,fadeInOf,fadeOutOf,flipOf,hasCrop,rotationOf,fullClip,isFreeze,isNeutralTimeline,locate,moveClip,rippleDelete,sanitizeClips,setClipEdge,setClipFades,setClipSpeed,sliceTimeline,splitAt,timelineDuration,type TimelineClip} from './timeline';
 import {probeVideo} from './pipeline';
 import {addTimelineClip,closeVideo,deleteTimelineClip,exportVideo,getVideoSession,moveTimelineClip,openVideo,resetTimeline,runVideoExport,setTimelineClipGain,setVideoEngineFactory,setVideoFormat,splitTimelineAt,toggleTimelineClipMute,trimTimelineClip} from './session';
 import type {VideoEngineLike,VideoResult} from './engine';
@@ -161,4 +161,159 @@ test('blank Video starts with zero clips and no decoder, accepts clips, exports 
  deleteTimelineClip(name,getVideoSession(name)!.clips[0].id);assert.equal(getVideoSession(name)?.clips.length,0,'last clip can be deleted from a blank project');
  await addTimelineClip(name,source);resetTimeline(name);assert.deepEqual(getVideoSession(name)?.clips,[],'reset never invents a source clip for the project');
  closeMedia(name);closeMedia(source.name);assert.equal(getVideoSession(name),null);
+});
+
+test('image clips: sanitize fixes the shape, split halves the duration, edges and speed stay off',()=>{
+ const img:TimelineClip={id:'i',source:'photo.png',in_s:2,out_s:90_000,gain:0.3,muted:true,speed:2,kind:'image'};
+ const clean=sanitizeClips([img],{});
+ assert.deepEqual(clean,[{id:'i',source:'photo.png',in_s:0,out_s:3600,gain:1,muted:false,speed:2,kind:'image'}] as TimelineClip[],'sanitized (clamped)');
+ const stills:TimelineClip[]=[{id:'a',source:'a.png',in_s:0,out_s:10,gain:1,muted:false,kind:'image',crossfade_s:1}];
+ const split=splitAt(stills,4)!;
+ assert.deepEqual(split.map(c=>[c.in_s,c.out_s,c.kind,c.crossfade_s]),[[0,4,'image',0],[0,6,'image',1]],'both halves keep in 0; the crossfade moves to the second half');
+ assert.equal(splitAt([{id:'b',source:'b.png',in_s:0,out_s:0.08,gain:1,muted:false,kind:'image'}],0.05),null,'too-short halves refuse');
+ const after=setClipEdge(stills,'a','in',3);
+ assert.deepEqual(after,stills,'image clips keep in 0 (duration changes go through setImageClipLength)');
+});
+
+test('range export slicing: media windows shift, stills shrink, cut fades die, interior fades survive',()=>{
+ const a:TimelineClip={id:'a',source:'a.mp4',in_s:10,out_s:20,gain:1,muted:false,crossfade_s:1};
+ const b:TimelineClip={id:'b',source:'b.png',in_s:0,out_s:6,gain:1,muted:false,kind:'image'};
+ const c2:TimelineClip={id:'c',source:'c.mp4',in_s:0,out_s:4,gain:1,muted:false,speed:2};
+ const clips=[a,b,c2]; // a: 0-10, b: 10-16, c: 16-18 (2 timeline s at 2x)
+ const sliced=sliceTimeline(clips,5,14);
+ assert.deepEqual(sliced.map(c=>[c.source,c.in_s,c.out_s,c.crossfade_s]),[
+  ['a.mp4',15,20,1],['b.png',0,5,0]],'a keeps its fade into b (the fade zone overlaps b by 1 s); the cut through b becomes a hard cut');
+ assert.equal(timelineDuration(sliced),9);
+ const inside=sliceTimeline(clips,16.5,17.5);
+ assert.deepEqual(inside.map(c=>[c.in_s,c.out_s]),[[3,4]],'sped clip (15-17 on the timeline): source window moves at 2x and clamps to the clip end');
+ assert.deepEqual(sliceTimeline(clips,3,3),[],'empty range');
+ assert.deepEqual(sliceTimeline(clips,50,60),[],'outside the timeline');
+ const full=sliceTimeline(clips,0,18);
+ assert.equal(full.length,3);
+ assert.equal(full[0].crossfade_s,1,'uncut fade survives');
+});
+
+test('clip flips: sanitize keeps the four real values and drops junk and none',()=>{
+ const mk=(flip:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,flip:flip as never});
+ assert.deepEqual(sanitizeClips([mk('h')],{'a.mp4':5})[0].flip,'h');
+ assert.deepEqual(sanitizeClips([mk('hv')],{'a.mp4':5})[0].flip,'hv');
+ assert.equal(sanitizeClips([mk('none')],{'a.mp4':5})[0].flip,undefined);
+ assert.equal(sanitizeClips([mk('diagonal')],{'a.mp4':5})[0].flip,undefined);
+ assert.equal(flipOf(mk('v')),'v');
+ assert.equal(flipOf(mk(undefined)),'none');
+});
+
+test('timeline: clip audio fades clamp into the clip length and strip on stills',()=>{
+ const clip={...fullClip('a.mp4',10),fadeIn:3,fadeOut:4};
+ const clean=sanitizeClips([clip],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(clean),fadeOutOf(clean)],[3,4],'fades inside the length survive');
+ const over=sanitizeClips([{...clip,fadeIn:8,fadeOut:8}],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(over),fadeOutOf(over)],[8,2],'fadeOut caps at duration minus fadeIn');
+ const zero=sanitizeClips([{...clip,fadeIn:0,fadeOut:0}],{'a.mp4':10})[0];
+ assert.equal(zero.fadeIn,undefined,'zero fades are dropped');
+ const sped=sanitizeClips([{...clip,speed:2,fadeIn:9,fadeOut:9}],{'a.mp4':10})[0];
+ assert.deepEqual([fadeInOf(sped),fadeOutOf(sped)],[5,0],'fades clamp to the sped timeline length');
+ const title=sanitizeClips([{id:'t1',kind:'title',source:'',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2,title:{text:'T',size:32,color:'#ffffff',background:'#000000'}}],{})[0];
+ assert.equal(title.fadeIn,undefined,'titles carry no fades');
+ const img=sanitizeClips([{id:'i1',kind:'image',source:'p.png',in_s:0,out_s:5,gain:1,muted:false,fadeIn:2}],{})[0];
+ assert.equal(img.fadeIn,undefined,'image clips carry no fades');
+});
+
+test('timeline: clipFadeGain is an equal-power envelope over the clip range',()=>{
+ const c={...fullClip('a.mp4',10),fadeIn:2,fadeOut:2};
+ assert.equal(clipFadeGain(c,0,10,5),1,'untouched in the middle');
+ assert.equal(clipFadeGain(c,0,10,0),0,'silent at the head');
+ assert.ok(Math.abs(clipFadeGain(c,0,10,1)-Math.SQRT1_2)<1e-9,'half the fade-in is equal power');
+ assert.ok(clipFadeGain(c,0,10,10)<1e-9,'silent at the tail');
+ assert.ok(Math.abs(clipFadeGain(c,0,10,9)-Math.SQRT1_2)<1e-9,'half the fade-out is equal power');
+ const plain=fullClip('a.mp4',10);
+ assert.equal(clipFadeGain(plain,0,10,0),1,'no fades means unity');
+});
+
+test('timeline: setClipFades + a faded clip is no longer neutral',()=>{
+ const clips=[fullClip('a.mp4',10)];
+ const faded=setClipFades(clips,clips[0].id,1,2);
+ assert.deepEqual([fadeInOf(faded[0]),fadeOutOf(faded[0])],[1,2]);
+ assert.equal(isNeutralTimeline(faded,'a.mp4',10),false,'fades make the timeline edited');
+ assert.equal(isNeutralTimeline(clips,'a.mp4',10),true,'untouched stays neutral');
+});
+
+test('timeline: freeze frame shape, sanitize, split, trim and slicing',()=>{
+ const fz={...fullClip('a.mp4',10),freeze:2,in_s:0,out_s:4,speed:2,fadeIn:1};
+ const clean=sanitizeClips([fz],{'a.mp4':10})[0];
+ assert.ok(isFreeze(clean));
+ assert.deepEqual([clean.in_s,clean.out_s,clean.freeze],[0,4,2],'still shape, frame kept');
+ assert.equal(clean.speed,undefined,'freeze has no speed');
+ assert.equal(clean.fadeIn,undefined,'freeze has no audio fades');
+ const clamped=sanitizeClips([{...fz,freeze:99}],{'a.mp4':10})[0];
+ assert.ok(clamped.freeze!<10,'frame clamps into the source');
+ // locate/blendAt report the frozen frame, constantly
+ const located=locate([clean],2.5)!;
+ assert.equal(located.sourceTime,2,'constant frame mid-clip');
+ // split halves the hold, same frame on both sides
+ const halves=splitAt([clean],2)!;
+ assert.equal(halves.length,2);
+ assert.deepEqual([halves[0].freeze,halves[1].freeze],[2,2]);
+ assert.ok(Math.abs(halves[0].out_s+halves[1].out_s-4)<1e-9,'durations add up');
+ // trim: in edge refused, out edge sets the hold length
+ const trimmed=setClipEdge([clean],clean.id,'out',7);
+ assert.equal(trimmed[0].out_s,7);
+ assert.equal(setClipEdge([clean],clean.id,'in',3)[0].in_s,0,'freeze in edge stays 0');
+ // speed is refused
+ assert.equal(setClipSpeed([clean],clean.id,4)[0].speed,undefined);
+ // range slicing shrinks the hold and keeps the frame
+ const sliced=sliceTimeline([clean],1,3);
+ assert.deepEqual([sliced[0].in_s,sliced[0].out_s,sliced[0].freeze],[0,2,2]);
+ // a frozen clip is an edit
+ assert.equal(isNeutralTimeline([clean],'a.mp4',10),false);
+});
+
+test('recipe: export fps cap sanitizes and caps without upsampling',()=>{
+ assert.deepEqual(sanitizeExportOptions({fps:30}).fps,30);
+ assert.equal(sanitizeExportOptions({}).aspect,'source','aspect defaults to source');
+ assert.equal(sanitizeExportOptions({aspect:'9:16'}).aspect,'9:16');
+ assert.equal(sanitizeExportOptions({aspect:'3:2' as '9:16'}).aspect,'source','junk aspects fall back to source');
+ assert.equal(sanitizeExportOptions({fps:23}).fps,null,'unsupported rates fall back to source');
+ assert.equal(sanitizeExportOptions({fps:null}).fps,null);
+ assert.equal(sanitizeExportOptions(undefined).fps,null,'default keeps the native rate');
+ assert.equal(cappedFps(60,30),30,'cap lowers the rate');
+ assert.equal(cappedFps(24,30),24,'never upsamples');
+ assert.equal(cappedFps(29.97,30),29.97,'fractional native rate survives');
+ assert.equal(cappedFps(null,30),30,'unknown source falls back to the cap');
+ assert.equal(cappedFps(null,null),30,'unknown both falls back to 30');
+ assert.equal(cappedFps(50,null),50,'no cap keeps native');
+});
+
+test('clip rotation: sanitize keeps right angles and drops junk and zero',()=>{
+ const mk=(rotation:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,rotation:rotation as never});
+ assert.deepEqual(sanitizeClips([mk(90)],{'a.mp4':5})[0].rotation,90);
+ assert.deepEqual(sanitizeClips([mk(270)],{'a.mp4':5})[0].rotation,270);
+ assert.equal(sanitizeClips([mk(0)],{'a.mp4':5})[0].rotation,undefined);
+ assert.equal(sanitizeClips([mk(45)],{'a.mp4':5})[0].rotation,undefined);
+ assert.equal(sanitizeClips([mk(90)],{'a.mp4':5})[0].hasOwnProperty('rotation'),true);
+ assert.equal(rotationOf(mk(180)),180);
+ assert.equal(rotationOf(mk(undefined)),0);
+ assert.equal(rotationOf(mk(45)),0);
+});
+
+test('clip crop: normalize clamps edges and axis pairs; sanitize keeps or drops it',()=>{
+ assert.deepEqual(cropOf({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.1,top:0,right:0.2,bottom:0}}),{left:0.1,top:0,right:0.2,bottom:0});
+ const over=cropOf({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.8,top:0,right:0.8,bottom:2}});
+ assert.ok(over.left+over.right<=0.9+1e-9,'an axis never removes more than 90%');
+ assert.ok(over.bottom<=0.9);
+ assert.ok(!hasCrop({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false}));
+ assert.ok(hasCrop({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:{left:0.1,top:0,right:0,bottom:0}}));
+ const mk=(crop:unknown):TimelineClip=>({id:'a',source:'a.mp4',in_s:0,out_s:2,gain:1,muted:false,crop:crop as never});
+ assert.deepEqual(sanitizeClips([mk({left:0.25,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,{left:0.25,top:0,right:0,bottom:0});
+ assert.equal(sanitizeClips([mk({left:0,top:0,right:0,bottom:0})],{'a.mp4':5})[0].crop,undefined,'all-zero crop is dropped');
+ assert.equal(sanitizeClips([mk({left:'much'})],{'a.mp4':5})[0].crop,undefined,'junk edges are dropped');
+});
+
+test('resolveOutputSize: scale first, then shrink into the target aspect, always even',()=>{
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'source'),{width:1920,height:1080});
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'9:16'),{width:608,height:1080},'landscape narrows into portrait');
+ assert.deepEqual(resolveOutputSize(1080,1920,1,'16:9'),{width:1080,height:608},'portrait shortens into landscape');
+ assert.deepEqual(resolveOutputSize(1920,1080,1,'1:1'),{width:1080,height:1080});
+ assert.deepEqual(resolveOutputSize(1920,1080,0.5,'4:5'),{width:432,height:540},'scale applies before the aspect fit');
+ assert.deepEqual(resolveOutputSize(1279,719,1,'9:16'),{width:404,height:720},'odd sources round to even dimensions');
 });

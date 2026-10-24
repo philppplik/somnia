@@ -1,20 +1,33 @@
 /** Studios describe editor workspaces. Document buffers/history remain in editor-core. */
 export type StudioId = string;
 export type StudioViewMode = 'design'|'split'|'code';
+/** A mode must point to a real command; switching never creates a document. */
+export interface StudioMode {
+ id:string;
+ label:string;
+ command:string;
+ /** Existing Code canvas view, when the mode uses that host. */
+ viewMode?:StudioViewMode;
+}
 export interface FormatClaim {ext:string;mime?:string;priority:number}
 export interface RailItem<T extends string=string> {id:T;label:string;icon:string;global?:boolean}
 export interface StudioCommand {id:string;label:string}
 export interface StudioTool {id:string;command:string}
 export interface StudioDef {
- modes?:readonly import('./modes').StudioMode[];
+ modes?:readonly StudioMode[];
  id:StudioId;label:string;icon:string;order:number;formats:readonly FormatClaim[];
  shell:{leftRail:readonly RailItem<'layers'|'files'|'search'|'assets'|'components'|'css'|'versions'>[];rightRail:readonly RailItem<'design'|'prototype'|'code'>[];
-  header:{menus:readonly ('Project'|'Edit'|'View'|'Insert'|'Tools'|'Help')[];views:readonly {mode:StudioViewMode;icon:string;command:string}[]};
+  header:{menus:readonly ('Project'|'Edit'|'View'|'Insert'|'Tools'|'Help')[];views:readonly {mode:StudioViewMode;icon:string;command:string}[];/** Optional hero action. No field keeps the Publish button. */heroAction?:import('../shell/types').HeroActionDef};
   sidebar?:string;bottomBar:{viewportPresets:readonly {width:number;icon:string;label:string}[];slots:readonly string[]};inspector:string;tools:readonly StudioTool[]};
  commands:readonly StudioCommand[];shortcuts:Readonly<Record<string,string>>;menus:{view:readonly string[]};canvas:string;
  agent:{tools:readonly string[];contextProviders:readonly string[];quickActions:readonly string[]};
  /** Adapter hook: preserves the existing context derivation, rather than guessing document state. */
  deriveContext:<T>(context:T)=>T;
+ /** Optional lifecycle hooks (docs/studio-lifecycle.md). Studios without them stay fully resident. */
+ lifecycle?:()=>import('../lifecycle/types').StudioLifecycleAdapter|undefined;
+ /** Shell v2 manifest (optional until the studio is migrated, M2-M6). Old manifests compile unchanged. */
+ shellV2?:import('../shell/types').StudioShellDef;
+ agentV2?:import('../shell/types').StudioAgentDefV2;
 }
 const registry=new Map<StudioId,StudioDef>();
 export function registerStudio(studio:StudioDef):()=>void {

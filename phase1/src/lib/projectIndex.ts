@@ -1,9 +1,10 @@
+import {isFrameworkSource} from './frameworks/detect';
 /** Eager model guardrails, shared by folder indexing and reads. No paths are silently truncated. */
 export const MAX_PROJECT_DOCUMENTS=2048;
 export const MAX_PROJECT_FILES=20_000;
 export const MAX_PROJECT_DEPTH=32;
 export const MAX_PROJECT_TEXT_BYTES=64*1024*1024;
-export const isEditablePath=(path:string)=>/\.(html?|css|js|json|svg|txt|md)$/i.test(path);
+export const isEditablePath=(path:string)=>isFrameworkSource(path);
 export interface ProjectRow{path:string;name:string;depth:number;dir:boolean}
 export function indexProjectRows(paths:readonly string[]):ProjectRow[]{
  const rows:ProjectRow[]=[];const seen=new Set<string>();

@@ -1,0 +1,3 @@
+const keys=['exportSlice','exportSliceInvalid','exportSliceShort'];
+const labels={en:['Slice region','Slice region needs four integers: x, y, width, height.','slice'],de:['Slice-Bereich','Slice-Bereich braucht vier Ganzzahlen: x, y, Breite, Höhe.','Slice'],es:['Región de recorte','La región de recorte necesita cuatro enteros: x, y, ancho, alto.','recorte'],fr:['Zone de découpe','La zone de découpe exige quatre entiers : x, y, largeur, hauteur.','découpe'],'pt-BR':['Região de recorte','A região de recorte precisa de quatro inteiros: x, y, largura, altura.','recorte']};
+export const INTERFACE_P40_CATALOGUES=Object.fromEntries(Object.entries(labels).map(([locale,values])=>[locale,Object.fromEntries(keys.map((key,i)=>[`interface.${key}`,values[i]]))]));

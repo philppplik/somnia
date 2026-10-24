@@ -5,6 +5,7 @@ import {
   normalizeAdjustParams, removePoint, type AdjustParams, type SliderKey,
 } from '../../lib/imageedit/adjust';
 
+import {NativeButton,NativeInput} from '../ui/native-controls';
 export interface AdjustPanelProps {
   params: AdjustParams;
   /** Called on every slider/curve tick with the FULL params (atomic). Drive live preview from it. */
@@ -75,7 +76,7 @@ function CurveEditor({ params, onChange, onCommit, disabled }: AdjustPanelProps)
   return (
     <svg
       ref={ref} width={S} height={S} viewBox={`0 0 ${S} ${S}`} role="group" aria-label={t('imageedit.adjust.curves')}
-      data-testid="adjust-curve" style={{ touchAction: 'none', borderRadius: 12, background: 'var(--surface, #F8F9FB)' }}
+      data-testid="adjust-curve" style={{ touchAction: 'none', borderRadius: 12, background: 'var(--bg-surface, #F8F9FB)' }}
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
     >
       <line x1={0} y1={S} x2={S} y2={0} stroke="currentColor" opacity={0.15} />
@@ -109,7 +110,7 @@ export function AdjustPanel(props: AdjustPanelProps) {
               <span>{label}</span>
               <output>{k === 'hue' ? `${params[k]}°` : params[k].toFixed(2)}</output>
             </span>
-            <input
+            <NativeInput
               type="range" min={r.min} max={r.max} step={r.step} value={params[k]} disabled={disabled}
               aria-label={label} data-testid={`adjust-${k}`}
               onChange={(e) => set(k, Number(e.currentTarget.value))}
@@ -122,10 +123,10 @@ export function AdjustPanel(props: AdjustPanelProps) {
       })}
       <div style={{ fontSize: 12 }}>{t('imageedit.adjust.curves')}</div>
       <CurveEditor {...props} />
-      <button
+      <NativeButton
         type="button" disabled={disabled || isNeutralAdjust(params)} data-testid="adjust-reset"
         onClick={() => { const n = normalizeAdjustParams(DEFAULT_ADJUST_PARAMS); onChange(n); onCommit?.(n); }}
-      >{t('imageedit.adjust.reset')}</button>
+      >{t('imageedit.adjust.reset')}</NativeButton>
     </div>
   );
 }

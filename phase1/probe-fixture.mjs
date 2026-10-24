@@ -1,0 +1,14 @@
+import {chromium} from '@playwright/test';
+import {spawn} from 'child_process';
+const dev=spawn('npm',['run','dev'],{cwd:process.cwd(),stdio:'pipe'});
+let up=false;
+dev.stdout.on('data',d=>{if(d.toString().includes('Local'))up=true;});
+for(let i=0;i<60&&!up;i++)await new Promise(r=>setTimeout(r,1000));
+const b=await chromium.launch();const p=await b.newPage();
+p.on('console',m=>{if(m.type()==='error')console.log('CONSOLE_ERR:',m.text().slice(0,500));});
+p.on('pageerror',e=>console.log('PAGE_ERR:',String(e).slice(0,500)));
+await p.goto('http://127.0.0.1:1420/scripts/vibespace-review/fixture.html');
+await p.waitForTimeout(12000);
+console.log('ROOT_HTML_LEN:', (await p.locator('#root').innerHTML()).length);
+console.log('BUTTONS:', await p.getByRole('button').count());
+await b.close();dev.kill('SIGTERM');

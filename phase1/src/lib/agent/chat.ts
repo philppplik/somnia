@@ -8,7 +8,7 @@ export type ChatItem =
  | {id:string;kind:'approval';approval:AgentApproval}
  | {id:string;kind:'usage';text:string}
  | {id:string;kind:'stopped';text:string}
- | {id: string; kind: 'error'; text: string; retryable?: boolean};
+ | {id: string; kind: 'error'; text: string; detail?:import('./errors').AgentErrorDetail;retryable?: boolean};
 export interface ChatState {items: ChatItem[]; busy: boolean; seq: number}
 export const initialChat: ChatState = {items: [], busy: false, seq: 0};
 export type ChatAction =
@@ -39,9 +39,10 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
    }
    if (e.type === 'proposal') return {...s, items: [...settle(s.items), {id: next(s), kind: 'diff', proposal: e.proposal, state: 'pending'}], seq: s.seq + 1};
    if (e.type === 'approval') return {...s,items:[...settle(s.items),{id:next(s),kind:'approval',approval:e.approval}],seq:s.seq+1};
+   if(e.type==='provenance')return {...s,items:[...s.items,{id:next(s),kind:'usage',text:`AI: ${e.provider} / ${e.model}`}],seq:s.seq+1};
    if (e.type === 'usage') return {...s,items:[...s.items,{id:next(s),kind:'usage',text:`Tokens: ${e.inputTokens??'?'} in / ${e.outputTokens??'?'} out. Cost: ${e.costUsd===undefined?'unknown':`$${e.costUsd}`}`}],seq:s.seq+1};
    if (e.type === 'done') return {...s, items: settle(s.items), busy: false};
-   return {items: [...settle(s.items,'error'), {id: next(s), kind: 'error', text: e.message + (s.busy && s.items.some(i => i.kind === 'agent' && i.streaming) ? ' The partial response above was kept, but is incomplete. Retry starts the request again; provider costs may still occur.' : ''), retryable: e.retryable}], busy: false, seq: s.seq + 1};
+   return {items: [...settle(s.items,'error'), {id: next(s), kind: 'error', text: e.message + (s.busy && s.items.some(i => i.kind === 'agent' && i.streaming) ? ' The partial response above was kept, but is incomplete. Retry starts the request again; provider costs may still occur.' : ''), retryable: e.retryable,detail:e.detail}], busy: false, seq: s.seq + 1};
   }
   case 'stop': return s.busy ? {...s, items: [...settle(s.items,'stopped'), {id:next(s),kind:'stopped',text:'Generation stopped. No changes from this turn were applied.'}], busy:false,seq:s.seq+1} : s;
   case 'resolve': return {...s, items: s.items.map(i => i.kind === 'diff' && i.proposal.id === a.proposalId ? {...i, state: a.state} : i)};

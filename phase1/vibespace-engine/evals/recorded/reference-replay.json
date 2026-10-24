@@ -1,0 +1,308 @@
+{
+ "_note": "SYNTHETIC reference replay, not captured from a live model. It exercises the harness (2 deliberate misses). Replace with a captured Qwen3.5-9B run via eval_runner --live-local.",
+ "replies": {
+  "Create notes/todo.md with a short todo list for tomorrow.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-01",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"notes/todo.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Add a one-line description to README.md.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-02",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"README.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Show me what is in src/main.rs.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-03",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.rs\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Open budget.csv and tell me the total.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-04",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"budget.csv\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Save the intro paragraph into draft/intro.txt.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-05",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"draft/other.txt\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Read CHANGELOG.md.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_en-06",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"CHANGELOG.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Lege notizen/aufgaben.md mit einer kurzen Aufgabenliste für morgen an.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_de-01",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"notizen/aufgaben.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Füge der README.md eine Beschreibung in einer Zeile hinzu.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_de-02",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"README.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Zeig mir, was in src/main.rs steht.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_de-03",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"src/main.rs\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Öffne budget.csv und nenne mir die Summe.": {
+   "choices": [
+    {
+     "message": {
+      "content": "Die Summe ist 42."
+     }
+    }
+   ]
+  },
+  "Speichere den Einleitungsabsatz in entwurf/einleitung.txt.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_de-05",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"write_file\", \"arguments\": {\"path\": \"entwurf/einleitung.txt\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Lies die CHANGELOG.md.": {
+   "choices": [
+    {
+     "message": {
+      "content": null,
+      "tool_calls": [
+       {
+        "id": "call_de-06",
+        "function": {
+         "name": "somnia_propose_effect",
+         "arguments": "{\"name\": \"read_file\", \"arguments\": {\"path\": \"CHANGELOG.md\"}}"
+        }
+       }
+      ]
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "What does 'idempotent' mean? Answer in one sentence.": {
+   "choices": [
+    {
+     "message": {
+      "content": "It means repeating an operation gives the same result."
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Thanks, that is all for now.": {
+   "choices": [
+    {
+     "message": {
+      "content": "You are welcome."
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Was bedeutet 'idempotent'? Antworte in einem Satz.": {
+   "choices": [
+    {
+     "message": {
+      "content": "Wiederholtes Ausführen ergibt dasselbe Ergebnis."
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  },
+  "Danke, das war's fürs Erste.": {
+   "choices": [
+    {
+     "message": {
+      "content": "Gern geschehen."
+     }
+    }
+   ],
+   "usage": {
+    "prompt_tokens": 120,
+    "completion_tokens": 30
+   }
+  }
+ }
+}

@@ -1,10 +1,11 @@
+import {allowAgentDocumentInspection} from './helpers';
 import {test,expect} from './fixtures';
 import type {Page} from '@playwright/test';
 const open=async(page:Page)=>{await page.goto('/');await page.getByRole('button',{name:'Open Somnia Agent'}).click();return page.getByRole('complementary',{name:'Somnia Agent'});};
 const saveAI=async(page:Page)=>{const s=page.getByRole('dialog');await s.getByRole('button',{name:'Save AI settings',exact:true}).click();await s.getByText('Configuration saved.',{exact:true}).waitFor();await s.getByRole('button',{name:'Close settings',exact:true}).click();};
 const tab=(page:Page,name:string)=>page.getByRole('dialog').getByRole('tab',{name,exact:true}).click();
 async function model(page:Page){
- await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'}}}));
+ await page.route('http://127.0.0.1:11434/api/show',r=>r.fulfill({json:{model_info:{architecture:'fixture'},capabilities:['completion','tools']}}));
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();
  const settings=page.getByRole('dialog');await settings.getByLabel('Model', {exact:true}).fill('fixture-local');await settings.getByRole('button',{name:'Save AI settings',exact:true}).click();await settings.getByText('Configuration saved.',{exact:true}).waitFor();await settings.getByRole('button',{name:'Close settings',exact:true}).click();return panel;
 }
@@ -24,8 +25,8 @@ test('opener sits at bottom of rail and toggles the panel',async({page})=>{await
  await page.screenshot({path:'tests/artifacts/agent-panel-integrated.png'});
  await page.getByRole('button',{name:'Collapse panel'}).click();await expect(page.getByRole('complementary',{name:'Somnia Agent'})).toHaveCount(0);
 });
-test('chips fill input only; no unimplemented references; bottom gradient only',async({page})=>{const panel=await open(page);
- await panel.getByRole('button',{name:'Help me design a landing page'}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Help me design a landing page');
+test('chips fill input only; no unimplemented references; bottom gradient only',async({page})=>{let inferenceCalls=0;await page.route('http://127.0.0.1:11434/api/chat',r=>{inferenceCalls++;return r.abort();});const panel=await open(page);
+ const chips=panel.getByRole('list',{name:'Draft suggestions'});await expect(chips.getByRole('button')).toHaveCount(2);await chips.getByRole('button',{name:'Explain selected code',exact:true}).click();await expect(panel.getByLabel('Message to Somnia Agent')).toHaveValue('Explain selected code');await expect(panel.getByLabel('Message to Somnia Agent')).toBeFocused();expect(inferenceCalls).toBe(0);
  await expect(panel.getByRole('button',{name:'Stop'})).toHaveCount(0);await expect(panel.getByText('Use @ to refer')).toHaveCount(0);await expect(panel.locator('.ag-bar')).toHaveCount(1);
 });
 test('real session stages native HTML, asks permission, accepts complete preview without save and origin undo reverts',async({page})=>{
@@ -45,7 +46,7 @@ test('stop cancels a real provider run without review; streaming state visible',
  await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send'})).toBeVisible();await page.waitForTimeout(1500);await expect(panel.locator('.ag-review')).toHaveCount(0);
 });
 test('cloud consent modal explicit and shortcut works',async({page})=>{await page.goto('/');await expect(page.getByRole('button',{name:'Open Somnia Agent'})).toBeVisible();await page.keyboard.press('Control+Alt+a');const panel=page.getByRole('complementary',{name:'Somnia Agent'});await expect(panel).toBeVisible();
- await panel.getByRole('button',{name:'Cloud data consent',exact:true}).click();const modal=page.getByRole('dialog');await expect(modal.getByRole('button',{name:'Allow cloud AI',exact:true})).toBeDisabled();
+ await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const modal=page.getByRole('dialog');await modal.getByRole('tab',{name:'Privacy & data',exact:true}).click();await expect(modal.getByRole('button',{name:'Allow cloud AI',exact:true})).toBeDisabled();
  await expect(modal.getByRole('checkbox',{name:/I agree/})).not.toBeChecked();await page.screenshot({path:'tests/artifacts/agent-consent-integrated.png'});await modal.getByRole('button',{name:'Close settings',exact:true}).click();await expect(modal).toHaveCount(0);
 });
 test('unconfigured core fails honestly instead of demo reply',async({page})=>{const panel=await open(page);await panel.getByLabel('Message to Somnia Agent').fill('Hi');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toContainText('Choose a provider and model');await expect(panel.locator('.ag-review')).toHaveCount(0);});
@@ -53,13 +54,13 @@ test('true NDJSON text streaming is labelled and cancellable',async({page})=>{
  const {createServer}=await import('node:http');const server=createServer((req,res)=>{
   res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Headers','content-type');
   if(req.method==='OPTIONS'){res.end();return;}
-  if(req.url==='/api/show'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({model_info:{architecture:'fixture'}}));return;}
+  if(req.url==='/api/show'){res.setHeader('Content-Type','application/json');res.end(JSON.stringify({model_info:{architecture:'fixture'},capabilities:['completion','tools']}));return;}
   res.setHeader('Content-Type','application/x-ndjson');res.write(JSON.stringify({message:{content:'This is streamed AI text. '},done:false})+'\n');
   const timer=setTimeout(()=>res.end(JSON.stringify({message:{content:'Finished.'},done:true})+'\n'),2500);res.on('close',()=>clearTimeout(timer));
  });
  await new Promise<void>((resolve,reject)=>{server.once('error',reject);server.listen(11434,'127.0.0.1',resolve);});
  try{
-  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('stream-fixture');await saveAI(page);await panel.getByRole('checkbox',{name:/Allow inspecting/}).check();
+  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('stream-fixture');await saveAI(page);await allowAgentDocumentInspection(page);
   await panel.getByLabel('Message to Somnia Agent').fill('Explain streaming');await panel.getByRole('button',{name:'Send',exact:true}).click();
   await expect(panel.getByText('This is streamed AI text.',{exact:false})).toBeVisible();await expect(panel.locator('.ag-caret')).toBeVisible();await expect(panel.getByRole('button',{name:'Stop'})).toBeVisible();
   await page.screenshot({path:'tests/artifacts/agent-streaming-integrated.png'});await panel.getByRole('button',{name:'Stop'}).click();await expect(panel.getByRole('button',{name:'Send',exact:true})).toBeVisible();
@@ -71,8 +72,8 @@ test('declining file access never exposes an applicable proposal',async({page})=
 });
 test('OpenRouter never starts inference without explicit cloud consent',async({page})=>{
  let requests=0;await page.route('https://openrouter.ai/api/v1/chat/completions',r=>{requests++;return r.abort();});
- const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('fixture/model');await page.getByRole('dialog').getByLabel('API key').fill('fixture-not-a-real-key');await saveAI(page);await panel.getByRole('checkbox',{name:/Allow inspecting/}).check();
- await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toBeVisible();expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toHaveCount(0);
+ const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();await page.getByRole('dialog').getByRole('combobox',{name:'Provider',exact:true}).selectOption('openrouter');await page.getByRole('dialog').getByLabel('Model',{exact:true}).fill('fixture/model');await page.getByRole('dialog').getByLabel('API key').fill('fixture-not-a-real-key');await saveAI(page);await allowAgentDocumentInspection(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();const settings=page.getByRole('dialog');await settings.getByRole('tab',{name:'Privacy & data',exact:true}).click();await settings.getByRole('checkbox',{name:/Local-native mode/}).uncheck();const disclosure=settings.getByRole('checkbox',{name:/Disclose the next run/});await expect(disclosure).not.toBeChecked();await disclosure.check();await expect(disclosure).toBeChecked();await expect(settings.getByRole('checkbox',{name:/I agree to send this data/})).not.toBeChecked();await settings.getByRole('button',{name:'Close settings',exact:true}).click();
+ await panel.getByLabel('Message to Somnia Agent').fill('Hello cloud');await panel.getByRole('button',{name:'Send',exact:true}).click();await expect(panel.getByRole('alert')).toContainText(/consent/i);expect(requests).toBe(0);await expect(panel.getByRole('region',{name:'Review native AI proposal'})).toHaveCount(0);
 });
 test('saved model and custom prompts survive reload; preview never stores API key',async({page})=>{
  const panel=await open(page);await panel.getByRole('button',{name:'Agent configuration',exact:true}).click();

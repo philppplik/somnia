@@ -93,10 +93,18 @@ test('Sheets Studio selects ranges, copies and cuts as TSV, pastes blocks and cl
  await expect(cell(page,'A12')).toHaveText('p');await expect(cell(page,'B12')).toHaveText('q r');await expect(cell(page,'A13')).toHaveText('s');await expect(cell(page,'B13')).toHaveText('t');
  await expect(page.getByTestId('sheets-dirty')).toBeVisible();
  await page.screenshot({path:'test-results/sheets-range.png'});
- // Cut removes the range; Delete clears it too.
+ // Cut is Excel-style: the engine keeps the block (and formula references) until the paste moves it as one undo step.
  await cell(page,'A12').click();await cell(page,'B13').click({modifiers:['Shift']});
  const cut=await clip('cut');expect(cut).toBe('p\tq r\r\ns\tt');
+ // The engine clipboard registers asynchronously; the paste moves the block only after it is there.
+ await expect.poll(()=>page.evaluate(async()=>{const m=await import('/src/lib/sheets/sheetsStore.ts');return m.getSheetsSelection()?.clip?.cut??null;})).toBe(true);
+ await cell(page,'D12').click();await clip('paste',cut);
+ await expect(cell(page,'D12')).toHaveText('p');await expect(cell(page,'E12')).toHaveText('q r');await expect(cell(page,'D13')).toHaveText('s');await expect(cell(page,'E13')).toHaveText('t');
  await expect(cell(page,'A12')).toHaveText('');await expect(cell(page,'B13')).toHaveText('');
+ // Delete clears a range outright.
+ await cell(page,'D12').click();await cell(page,'E13').click({modifiers:['Shift']});
+ await page.keyboard.press('Delete');
+ await expect(cell(page,'D12')).toHaveText('');await expect(cell(page,'E13')).toHaveText('');
 });
 test('Sheets Studio asks before closing a workbook with unsaved edits',async({page})=>{
  await page.goto('/');await expect(page.locator('[data-storage]')).toBeVisible();

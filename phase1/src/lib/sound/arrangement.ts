@@ -1,0 +1,191 @@
+import {emptyRack,validateRack,type EffectRack} from './rack';
+/** Dependency-free Sound session document. Time is integer session-rate frames, not pixels. */
+export const ARRANGE_LIMITS={tracks:8,clips:128,sources:32,seconds:120,sourceFrames:12_000_000,history:50,tailSeconds:10,gainPoints:32} as const;
+export interface AudioSourceRef{id:string;name:string;frames:number;sampleRate:number;channels:1|2}
+/** One gain automation point: clip-local frame and level in dB. Points are sorted, unique per position, linear in dB between points. */
+/** Shape of the segment that starts at a point and runs to the next one. Absent means linear; the last point's shape is unused. */
+export type CurveShape='linear'|'hold'|'ease';
+export const CURVE_SHAPES:readonly CurveShape[]=['linear','hold','ease'];
+export interface GainPoint{at:number;db:number;shape?:CurveShape}
+export interface PanPoint{at:number;pan:number;shape?:CurveShape}
+/** Strict, canonical shape parse: linear is stored as an absent key so v14 documents round-trip unchanged. */
+const shapeKey=(shape:CurveShape|undefined):{shape?:CurveShape}=>shape&&shape!=='linear'?{shape}:{};
+export function parseCurveShape(v:unknown):{shape?:CurveShape}{if(v===undefined||v==='linear')return{};if(v==='hold'||v==='ease')return{shape:v};return fail('curve shape');}
+/** Progress 0..1 through a segment, mapped by its shape. hold keeps the left value until the right point is reached. */
+export function shapeProgress(shape:CurveShape|undefined,u:number):number{return shape==='hold'?(u>=1?1:0):shape==='ease'?u*u*(3-2*u):u;}
+/** Shape of the segment containing `at` (the segment that starts at or before it), undefined outside the point span. */
+export function curveShapeAt(c:{at:number;shape?:CurveShape}[],at:number):CurveShape|undefined{for(let i=c.length-2;i>=0;i--)if(c[i].at<=at)return c[i].shape;return undefined;}
+/** name: free label for organisation (bounces, freezes); empty falls back to the source name. */
+/** rate: playback speed (0.25-4); tape-style, so pitch shifts with rate. Fades and the gain curve stay in clip-local frames. */
+export interface ArrangeClip{id:string;sourceId:string;start:number;offset:number;length:number;gainDb:number;fadeIn:number;fadeOut:number;gainCurve:GainPoint[];muted:boolean;pan:number;panCurve:PanPoint[];fadeShape:'linear'|'equalPower';name:string;rate:number}
+/** gainCurve: volume automation in session frames, added to the fader (dB); flat outside the outermost points. panCurve: pan automation, added to the static pan and clamped to -1..1. */
+export interface ArrangeTrack{id:string;name:string;gainDb:number;pan:number;mute:boolean;solo:boolean;rack:EffectRack;clips:ArrangeClip[];gainCurve:GainPoint[];panCurve:PanPoint[]}
+export interface ArrangeMarker{id:string;name:string;frame:number}
+/** tailFrames: explicit bounded effect tail appended past the last clip so reverb/delay can ring out; 0 keeps the B1 session boundary. bpm: musical tempo for the beat grid and snapping; the mix itself is tempo-agnostic. */
+export interface Arrangement{version:15;masterRack:EffectRack;masterCurve:GainPoint[];name:string;sampleRate:48000;sources:AudioSourceRef[];tracks:ArrangeTrack[];markers:ArrangeMarker[];loop:{start:number;end:number}|null;tailFrames:number;bpm:number}
+export function emptyArrangement(name='Untitled session'):Arrangement{return{version:15,masterRack:emptyRack(),masterCurve:[],name,sampleRate:48000,sources:[],tracks:[],markers:[],loop:null,tailFrames:0,bpm:120};}
+const fail=(s:string):never=>{throw Error(`Invalid Sound session: ${s}`);};
+const object=(v:unknown,keys:string[],optional:string[]=[]):Record<string,unknown>=>{if(!v||typeof v!=='object'||Array.isArray(v))return fail('object expected');const o=v as Record<string,unknown>;if(Object.keys(o).some(k=>!keys.includes(k)&&!optional.includes(k))||keys.some(k=>!Object.hasOwn(o,k)))return fail('unknown or missing field');return o;};
+const text=(v:unknown,max=160):string=>typeof v==='string'&&v.trim().length>0&&v.length<=max&&!/[\x00-\x1f]/.test(v)?v:fail('text');
+const clipName=(v:unknown,max=160):string=>typeof v==='string'&&v.length<=max&&!/[\x00-\x1f]/.test(v)?v:fail('text');
+const number=(v:unknown,min:number,max:number,integer=false):number=>typeof v==='number'&&Number.isFinite(v)&&v>=min&&v<=max&&(!integer||Number.isSafeInteger(v))?v:fail('number');
+const list=(v:unknown,max:number):unknown[]=>Array.isArray(v)&&v.length<=max?v:fail('list limit');
+/** Strict bounded parsing: persisted documents and UI commands use the same validator. */
+export function validateArrangement(raw:unknown):Arrangement{
+ // Migrate A's neutral v1 document without altering clips, timing or audio settings.
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===1){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop']);raw={...old,version:2,masterRack:emptyRack(),tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(v=>({...object(v,['id','name','gainDb','pan','mute','solo','clips']),rack:emptyRack()}))};}
+ // v2 adds a neutral empty tail; audio settings, clips and timing are untouched.
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===2){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack']);raw={...old,version:3,tailFrames:0};}
+ // v4 adds a neutral empty gain curve per clip; nothing audible changes.
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===3){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:4,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),gainCurve:[]}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===4){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:5,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),muted:false}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===5){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:6,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),pan:0}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===6){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:7,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),fadeShape:'linear'}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===7){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames']);raw={...old,version:8,bpm:120};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===8){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:9,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),name:''}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===9){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:10,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),gainCurve:[]}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===10){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:11,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),panCurve:[]}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===11){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:12,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),rate:1}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===12){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:13,tracks:list(old.tracks,ARRANGE_LIMITS.tracks).map(t=>({...(t as Record<string,unknown>),clips:(t as {clips:unknown[]}).clips.map(c=>({...(c as Record<string,unknown>),panCurve:[]}))}))};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===13){const old=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','tailFrames','bpm']);raw={...old,version:14,masterCurve:[]};}
+ if(raw&&typeof raw==='object'&&(raw as {version?:unknown}).version===14)raw={...(raw as Record<string,unknown>),version:15};
+ const o=object(raw,['version','name','sampleRate','sources','tracks','markers','loop','masterRack','masterCurve','tailFrames','bpm']);if(o.version!==15||o.sampleRate!==48000)return fail('version or sample rate');
+ const masterCurve=list(o.masterCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db'],['shape']);return{at:number(p.at,0,48000*ARRANGE_LIMITS.seconds,true),db:number(p.db,-60,12),...parseCurveShape(p.shape)};}).sort((a,b)=>a.at-b.at);
+ if(masterCurve.some((p,i)=>i>0&&p.at===masterCurve[i-1].at))return fail('duplicate automation point');
+ const ids=new Set<string>();const id=(v:unknown)=>{const s=text(v,100);if(ids.has(s))return fail('duplicate identity');ids.add(s);return s;};
+ const sources=list(o.sources,ARRANGE_LIMITS.sources).map(v=>{const s=object(v,['id','name','frames','sampleRate','channels']);return{id:id(s.id),name:text(s.name),frames:number(s.frames,1,ARRANGE_LIMITS.sourceFrames,true),sampleRate:number(s.sampleRate,8000,192000,true),channels:number(s.channels,1,2,true) as 1|2};});
+ if(sources.reduce((n,s)=>n+s.frames*s.channels,0)>ARRANGE_LIMITS.sourceFrames)return fail('source memory budget');
+ const max=48000*ARRANGE_LIMITS.seconds;let count=0;
+ const tracks=list(o.tracks,ARRANGE_LIMITS.tracks).map(v=>{const t=object(v,['id','name','gainDb','pan','mute','solo','clips','rack','gainCurve','panCurve']);if(typeof t.mute!=='boolean'||typeof t.solo!=='boolean')return fail('track flags');
+  const gainCurve=list(t.gainCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db'],['shape']);return{at:number(p.at,0,max,true),db:number(p.db,-60,12),...parseCurveShape(p.shape)};}).sort((a,b)=>a.at-b.at);
+  if(gainCurve.some((p,i)=>i>0&&p.at===gainCurve[i-1].at))return fail('duplicate automation point');
+  const panCurve=list(t.panCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','pan'],['shape']);return{at:number(p.at,0,max,true),pan:number(p.pan,-1,1),...parseCurveShape(p.shape)};}).sort((a,b)=>a.at-b.at);
+  if(panCurve.some((p,i)=>i>0&&p.at===panCurve[i-1].at))return fail('duplicate automation point');
+  const clips=list(t.clips,ARRANGE_LIMITS.clips).map(v=>{if(++count>ARRANGE_LIMITS.clips)return fail('clip limit');const c=object(v,['id','sourceId','start','offset','length','gainDb','fadeIn','fadeOut','gainCurve','muted','pan','panCurve','fadeShape','name','rate']);if(c.fadeShape!=='linear'&&c.fadeShape!=='equalPower')return fail('fade shape');if(typeof c.muted!=='boolean')return fail('clip flags');const source=sources.find(s=>s.id===c.sourceId);if(!source)return fail('missing source reference');
+   const start=number(c.start,0,max-1,true),offset=number(c.offset,0,max,true),length=number(c.length,1,max,true),rate=number(c.rate,0.25,4);if(start+length>max||offset+length*rate>Math.floor(source.frames*48000/source.sampleRate))return fail('clip outside source or timeline');
+   const curve=list(c.gainCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','db'],['shape']);return{at:number(p.at,0,length,true),db:number(p.db,-60,12),...parseCurveShape(p.shape)};}).sort((a,b)=>a.at-b.at);
+   if(curve.some((p,i)=>i>0&&p.at===curve[i-1].at))return fail('duplicate automation point');
+   const panCurve=list(c.panCurve,ARRANGE_LIMITS.gainPoints).map(v=>{const p=object(v,['at','pan'],['shape']);return{at:number(p.at,0,length,true),pan:number(p.pan,-1,1),...parseCurveShape(p.shape)};}).sort((a,b)=>a.at-b.at);
+   if(panCurve.some((p,i)=>i>0&&p.at===panCurve[i-1].at))return fail('duplicate automation point');
+   return{id:id(c.id),sourceId:source.id,start,offset,length,gainDb:number(c.gainDb,-60,12),fadeIn:number(c.fadeIn,0,length,true),fadeOut:number(c.fadeOut,0,length,true),gainCurve:curve,muted:c.muted,pan:number(c.pan,-1,1),panCurve,fadeShape:c.fadeShape as ArrangeClip['fadeShape'],name:clipName(c.name),rate};
+  });return{id:id(t.id),name:text(t.name),gainDb:number(t.gainDb,-60,12),pan:number(t.pan,-1,1),mute:t.mute,solo:t.solo,rack:validateRack(t.rack),clips,gainCurve,panCurve};
+ });
+ const markers=list(o.markers,128).map(v=>{const m=object(v,['id','name','frame']);return{id:id(m.id),name:text(m.name),frame:number(m.frame,0,max,true)};});
+ let loop:Arrangement['loop']=null;if(o.loop!==null){const r=object(o.loop,['start','end']);loop={start:number(r.start,0,max-1,true),end:number(r.end,1,max,true)};if(loop.end<=loop.start)return fail('loop range');}
+ return{version:15,masterRack:validateRack(o.masterRack),masterCurve,name:text(o.name),sampleRate:48000,sources,tracks,markers,loop,tailFrames:number(o.tailFrames,0,48000*ARRANGE_LIMITS.tailSeconds,true),bpm:number(o.bpm,20,300)};
+}
+export const serializeArrangement=(s:Arrangement)=>JSON.stringify(validateArrangement(s));
+export const parseArrangement=(text:string):Arrangement=>{if(text.length>256_000)throw Error('Sound session document is too large');return validateArrangement(JSON.parse(text));};
+export const arrangementEnd=(s:Arrangement)=>Math.max(0,...s.tracks.flatMap(t=>t.clips.map(c=>c.start+c.length)));
+export const sourceTimelineFrames=(s:AudioSourceRef)=>Math.floor(s.frames*48000/s.sampleRate);
+export const newTrack=(id:string,name:string):ArrangeTrack=>({id,name,gainDb:0,pan:0,mute:false,solo:false,rack:emptyRack(),clips:[],gainCurve:[],panCurve:[]});
+export const newClip=(id:string,source:AudioSourceRef,start=0):ArrangeClip=>({id,sourceId:source.id,start,offset:0,length:sourceTimelineFrames(source),gainDb:0,fadeIn:0,fadeOut:0,gainCurve:[],muted:false,pan:0,panCurve:[],fadeShape:'linear',name:'',rate:1});
+/** Toggling the loop: clears an active one; otherwise loops the selected output range, or the whole session when no range is set. */
+export const loopToggle=(current:Arrangement['loop'],range:{start:number;end:number}|null,sessionEnd:number):{start:number;end:number}|null=>current?null:range??(sessionEnd>0?{start:0,end:sessionEnd}:null);
+/** The automated level (dB) at a clip-local frame: constant outside the outermost points, linear in dB between points. */
+/** Shapes a normalized fade position (0 silent, 1 full). linear: x; equalPower: sin(x*pi/2), so equal-power crossfades sum to unity power. */
+export const fadeShapeAt=(shape:ArrangeClip['fadeShape'],x:number)=>shape==='equalPower'?Math.sin(Math.max(0,Math.min(1,x))*Math.PI/2):Math.max(0,Math.min(1,x));
+/** The automated level (dB) at a frame on any gain curve: constant outside the outermost points, linear in dB between points. */
+export const curveDbAt=(c:GainPoint[],at:number)=>{if(!c.length)return 0;if(at<=c[0].at)return c[0].db;for(let i=1;i<c.length;i++)if(at<=c[i].at){const a=c[i-1],b=c[i];return a.db+(b.db-a.db)*shapeProgress(a.shape,(at-a.at)/(b.at-a.at));}return c[c.length-1].db;};
+/** The automated pan offset at a frame: constant outside the outermost points, linear between them; added to the static pan and clamped to -1..1 at render time. */
+export const curvePanAt=(c:PanPoint[],at:number)=>{if(!c.length)return 0;if(at<=c[0].at)return c[0].pan;for(let i=1;i<c.length;i++)if(at<=c[i].at){const a=c[i-1],b=c[i];return a.pan+(b.pan-a.pan)*shapeProgress(a.shape,(at-a.at)/(b.at-a.at));}return c[c.length-1].pan;};
+export const gainCurveAt=(clip:ArrangeClip,local:number)=>curveDbAt(clip.gainCurve,local);
+/** Moves one automation point to a new frame (clamped to the curve's span) and keeps the list sorted; rejects landing on an existing point. */
+export function retimeCurvePoint<T extends {at:number}>(points:T[],index:number,at:number,max:number):T[]{
+ if(!Number.isSafeInteger(index)||index<0||index>=points.length)throw Error('No such automation point');
+ const target=Math.max(0,Math.min(max,Math.round(at)));
+ if(points.some((p,i)=>i!==index&&p.at===target))throw Error('A point already exists at that time');
+ return points.map((p,i)=>i===index?{...p,at:target}:p).sort((a,b)=>a.at-b.at);
+}
+/** History owns deep copies; failed mutations never change the document or history. */
+export class ArrangementHistory{
+ private current:Arrangement;private past:Arrangement[]=[];private future:Arrangement[]=[];revision=0;
+ constructor(initial:Arrangement){this.current=validateArrangement(initial);}
+ get snapshot(){return validateArrangement(this.current);}
+ get canUndo(){return this.past.length>0;}get canRedo(){return this.future.length>0;}
+ change(edit:(draft:Arrangement)=>void){const next=this.snapshot;edit(next);const valid=validateArrangement(next);if(serializeArrangement(valid)===serializeArrangement(this.current))return false;this.past.push(this.current);if(this.past.length>ARRANGE_LIMITS.history)this.past.shift();this.current=valid;this.future=[];this.revision++;return true;}
+ undo(){const previous=this.past.pop();if(!previous)return false;this.future.push(this.current);this.current=previous;this.revision++;return true;}
+ redo(){const next=this.future.pop();if(!next)return false;this.past.push(this.current);this.current=next;this.revision++;return true;}
+ replace(next:Arrangement){const valid=validateArrangement(next);this.current=valid;this.past=[];this.future=[];this.revision++;}
+}
+/** Finds a staggered overlap between a clip and a neighbour on its track: the earlier clip ends strictly inside the later one. Containment and mere touching return null - no honest crossfade region exists there. */
+export function findCrossfadePair(s:Arrangement,clipId:string){const {track,clip}=findArrangeClip(s,clipId);for(const other of track.clips){if(other.id===clip.id)continue;const earlier=clip.start<other.start?clip:other,later=clip.start<other.start?other:clip,eEnd=earlier.start+earlier.length,lEnd=later.start+later.length;if(earlier.start<later.start&&later.start<eEnd&&eEnd<lEnd)return{earlier,later,overlap:eEnd-later.start};}return null;}
+/** Complementary equal-power fades over the overlap: constant power for the pair. */
+export function applyCrossfade(s:Arrangement,clipId:string){const pair=findCrossfadePair(s,clipId);if(!pair)throw Error('No staggered overlap on this track');pair.earlier.fadeOut=pair.overlap;pair.earlier.fadeShape='equalPower';pair.later.fadeIn=pair.overlap;pair.later.fadeShape='equalPower';return pair;}
+/** Peak over the clip's used source region, from the cached min/max waveform columns of the source. rate stretches the used region. */
+export function clipRegionPeak(peaks:ArrayLike<number>,offset:number,length:number,totalTimelineFrames:number,rate=1):number{
+ if(!Number.isSafeInteger(offset)||!Number.isSafeInteger(length)||length<1||totalTimelineFrames<1)throw Error('Invalid clip region');
+ const cols=Math.floor(peaks.length/2);if(cols<1)throw Error('No waveform peaks');
+ const from=Math.max(0,Math.floor(offset/totalTimelineFrames*cols)),to=Math.min(cols,Math.ceil((offset+length*rate)/totalTimelineFrames*cols));
+ let peak=0;for(let c=from;c<to;c++)peak=Math.max(peak,Math.abs(peaks[c*2]),Math.abs(peaks[c*2+1]));
+ return peak;
+}
+/** Gain in dB that brings a region peak to the target, clamped to the clip gain range. Silent regions are rejected instead of blasting gain into noise. */
+export function normalizeGainDb(peak:number,targetDb=0):number{
+ if(!Number.isFinite(peak)||peak<=0)throw Error('Clip region is silent');
+ if(!Number.isFinite(targetDb)||targetDb<-60||targetDb>12)throw Error('Invalid normalize target');
+ return Math.round(Math.max(-60,Math.min(12,targetDb-20*Math.log10(peak)))*10)/10;
+}
+/** Field patch that trims the clip start to a frame inside it: the source offset follows the cut and the gain curve re-bases with the interpolated cut level at 0. Same rule as split: the cut edge starts clean (fade-in 0), the outer fade clamps to the new length. */
+export function trimStartPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const cut=frame-clip.start,length=clip.length-cut;
+ const gainCurve=clip.gainCurve.length?[{at:0,db:gainCurveAt(clip,cut),...shapeKey(curveShapeAt(clip.gainCurve,cut))},...clip.gainCurve.filter(p=>p.at>cut).map(p=>({...p,at:p.at-cut}))]:[];
+ const panCurve=clip.panCurve.length?[{at:0,pan:curvePanAt(clip.panCurve,cut),...shapeKey(curveShapeAt(clip.panCurve,cut))},...clip.panCurve.filter(p=>p.at>cut).map(p=>({...p,at:p.at-cut}))]:[];
+ return{start:frame,offset:clip.offset+cut*clip.rate,length,fadeIn:0,fadeOut:Math.min(clip.fadeOut,length),gainCurve,panCurve};}
+/** Field patch that trims the clip end: same rule as split - the cut edge ends clean (fade-out 0), the fade-in clamps and the gain curve ends on the interpolated cut level. */
+export function trimEndPatch(clip:ArrangeClip,frame:number){if(!Number.isSafeInteger(frame)||frame<=clip.start||frame>=clip.start+clip.length)throw Error('Trim point must be inside the clip');const length=frame-clip.start;
+ const gainCurve=clip.gainCurve.length?[...clip.gainCurve.filter(p=>p.at<length),{at:length,db:gainCurveAt(clip,length)}]:[];
+ const panCurve=clip.panCurve.length?[...clip.panCurve.filter(p=>p.at<length),{at:length,pan:curvePanAt(clip.panCurve,length)}]:[];
+ return{length,fadeIn:Math.min(clip.fadeIn,length),fadeOut:0,gainCurve,panCurve};}
+export function findArrangeClip(s:Arrangement,id:string){for(const track of s.tracks){const clip=track.clips.find(c=>c.id===id);if(clip)return{track,clip};}throw Error('Audio clip no longer exists');}
+/** Cuts a time range out of the whole session: clips crossing a boundary split at it (split fade/curve rules), material inside the range is removed and everything after shifts left to close the gap. Markers inside the range are removed, later markers and a fully later loop shift with the timeline; a loop intersecting the cut is cleared. */
+export function cutSessionRange(s:Arrangement,start:number,end:number,nextId:()=>string){
+ if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start<0||end<=start||end>arrangementEnd(s))throw Error('Invalid cut range');
+ const cut=end-start;
+ for(const track of s.tracks){
+  for(const clip of [...track.clips])if(end>clip.start&&end<clip.start+clip.length)splitArrangeClip(s,clip.id,end,nextId());
+  for(const clip of [...track.clips])if(start>clip.start&&start<clip.start+clip.length)splitArrangeClip(s,clip.id,start,nextId());
+  track.clips=track.clips.filter(c=>!(c.start>=start&&c.start+c.length<=end));
+  for(const clip of track.clips)if(clip.start>=end)clip.start-=cut;
+ }
+ s.markers=s.markers.filter(m=>!(m.frame>=start&&m.frame<end));
+ for(const m of s.markers)if(m.frame>=end)m.frame-=cut;
+ if(s.loop){if(s.loop.start>=end)s.loop={start:s.loop.start-cut,end:s.loop.end-cut};else if(s.loop.end>start)s.loop=null;}
+}
+/** Playhead jump target for marker navigation: the nearest marker before/after the frame; with none on that side, the session boundary (0 or the end). */
+export function markerJump(s:Arrangement,frame:number,dir:1|-1):number{
+ if(!Number.isSafeInteger(frame))throw Error('Invalid frame');
+ const frames=s.markers.map(m=>m.frame).sort((a,b)=>a-b);
+ if(dir===1){const next=frames.find(f=>f>frame);return next??arrangementEnd(s);}
+ const prev=[...frames].reverse().find(f=>f<frame);return prev??0;
+}
+/** Clipboard payload: the clip, its origin track and a full copy of its source reference, so a paste into another session can restore the source. */
+export interface ClipBoardEntry{clip:ArrangeClip;trackId:string;source:AudioSourceRef}
+/** Pastes a clipboard clip, restoring its source reference when the session lost it (cross-session paste). The source audio must already be uploaded under the same id. Track lookup happens first, so a missing target rejects before anything changes. */
+export function restorePaste(s:Arrangement,entry:ClipBoardEntry,frame:number,newId:string,targetTrackId?:string){
+ const track=s.tracks.find(t=>t.id===(targetTrackId??entry.trackId));if(!track)throw Error('Target track no longer exists');
+ if(!s.sources.some(src=>src.id===entry.clip.sourceId))s.sources.push({...entry.source});
+ track.clips.push({...JSON.parse(JSON.stringify(entry.clip)),id:newId,start:frame});
+}
+/** Per-clip normalize gains for a selection, two-pass: a missing peak or a silent clip rejects the whole batch unchanged. */
+export function normalizeSelection(s:Arrangement,ids:string[],peaks:Record<string,Float32Array>,targetDb=0):void{
+ if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
+ const jobs=ids.map(cid=>{const {clip}=findArrangeClip(s,cid);const source=s.sources.find(src=>src.id===clip.sourceId)!;const p=peaks[source.id];if(!p)throw Error('Source waveform peaks are not available yet');return{clip,source,p};});
+ const gains=jobs.map(j=>normalizeGainDb(clipRegionPeak(j.p,j.clip.offset,j.clip.length,Math.floor(j.source.frames*48000/j.source.sampleRate),j.clip.rate),targetDb));
+ jobs.forEach((j,i)=>{j.clip.gainDb=gains[i];});
+}
+/** Deletes the given clips and closes their gaps on the same track: every later clip shifts left by the total deleted length that fully precedes it. Markers and the session length stay untouched. */
+export function rippleDeleteClips(s:Arrangement,ids:string[]){
+ if(!ids.length||ids.some(v=>typeof v!=='string'))throw Error('No clips selected');
+ for(const id of ids)findArrangeClip(s,id);
+ for(const track of s.tracks){
+  const gone=track.clips.filter(c=>ids.includes(c.id)).map(c=>({start:c.start,end:c.start+c.length})).sort((a,b)=>a.start-b.start);
+  if(!gone.length)continue;
+  track.clips=track.clips.filter(c=>!ids.includes(c.id));
+  for(const clip of track.clips){let shift=0;for(const g of gone)if(g.end<=clip.start)shift+=g.end-g.start;clip.start-=shift;}
+ }
+}
+/** A split preserves source position, gain and outer fades. Fades intersecting the split are shortened. */
+export function splitArrangeClip(s:Arrangement,id:string,frame:number,rightId:string){const {track,clip}=findArrangeClip(s,id);const left=frame-clip.start;if(!Number.isSafeInteger(frame)||left<=0||left>=clip.length)throw Error('Split must be inside the clip');const oldLength=clip.length;track.clips.push({...clip,id:rightId,start:frame,offset:clip.offset+left*clip.rate,length:oldLength-left,fadeIn:0,fadeOut:Math.min(clip.fadeOut,oldLength-left)});clip.length=left;clip.fadeIn=Math.min(clip.fadeIn,left);clip.fadeOut=0;
+ // Automation points live on the clip-local clock: both halves carry the cut's interpolated level at the boundary.
+ if(clip.gainCurve.length){const cutDb=gainCurveAt(clip,left),right=track.clips[track.clips.length-1];right.gainCurve=[{at:0,db:cutDb,...shapeKey(curveShapeAt(clip.gainCurve,left))},...clip.gainCurve.filter(p=>p.at>left).map(p=>({...p,at:p.at-left}))];clip.gainCurve=[...clip.gainCurve.filter(p=>p.at<left),{at:left,db:cutDb}];}
+ if(clip.panCurve.length){const cutPan=curvePanAt(clip.panCurve,left),right=track.clips[track.clips.length-1];right.panCurve=[{at:0,pan:cutPan,...shapeKey(curveShapeAt(clip.panCurve,left))},...clip.panCurve.filter(p=>p.at>left).map(p=>({...p,at:p.at-left}))];clip.panCurve=[...clip.panCurve.filter(p=>p.at<left),{at:left,pan:cutPan}];}}

@@ -1,0 +1,31 @@
+import React from 'react';
+import {createRoot} from 'react-dom/client';
+import '../../src/styles/global.css';
+import '../../src/styles/bento.css';
+import {SlidesOverviewPanel,SlidesOutlinePanel,SlidesTextPanel,SlidesDeckPanel,SlidesDiagnosticsPanel} from '../../src/components/slides/shellPanels';
+import {addMediaFile} from '../../src/lib/media';
+import {ensureSlides} from '../../src/lib/slides/session';
+import {SlidesClient} from '../../src/lib/slides/client';
+import {readRuns,makeEditedCopy} from '../../src/lib/slides/editCopy';
+import {diagnosePptx} from '../../src/lib/slides/diagnostics';
+import {registerSlidesCommands} from '../../src/lib/slides/commands';
+import {InspectorPanel} from '../../src/components/shell/InspectorPanel';
+import {slidesStudio} from '../../src/lib/studios/slides';
+import {slidesPanels,slidesInspector} from '../../src/lib/slides/panelDefinitions';
+import {registerStudioPanels} from '../../src/components/studios/registerStudioPanels';
+import {slidesPanelHosts,slidesInspectorHosts} from '../../src/components/slides/shellPanels';
+import {EMPTY_STUDIO_CONTEXT} from '../../src/lib/shell/types';
+// Visual harness only. Text/diagnostics/edit/save use real OOXML operations;
+// renderer is a clearly separate local test double because WASM is unavailable.
+let data:Uint8Array=new Uint8Array();
+window.Worker=class {onmessage=null;onerror=null;postMessage(){}terminate(){}} as unknown as typeof Worker;
+Object.assign(SlidesClient.prototype,{open:async(bytes:Uint8Array)=>{data=bytes;return {slides:2,widthPt:720,heightPt:405};},runs:async(bytes:Uint8Array)=>readRuns(bytes),diagnostics:async(bytes:Uint8Array)=>diagnosePptx(bytes),read:async(index:number)=>({index,texts:readRuns(data).filter(r=>r.slide===index).map(r=>r.text)}),copy:async(bytes:Uint8Array,edits:any)=>makeEditedCopy(bytes,edits),memory:async()=>({wasmBytes:2000000}),render:async()=>{const c=document.createElement('canvas');c.width=180;c.height=101;const ctx=c.getContext('2d')!;ctx.fillStyle='#edf0ff';ctx.fillRect(0,0,180,101);ctx.fillStyle='#6752d5';ctx.fillRect(10,15,100,8);ctx.fillStyle='#808a99';ctx.fillRect(10,40,140,5);return new Uint8Array(await(await new Promise<Blob>(r=>c.toBlob(b=>r(b!)))).arrayBuffer());}});
+slidesStudio.shellV2={panels:slidesPanels,inspector:slidesInspector};
+registerStudioPanels(slidesStudio,{panels:slidesPanelHosts,sections:slidesInspectorHosts});
+registerSlidesCommands();
+const context={...EMPTY_STUDIO_CONTEXT,studio:'slides',document:{id:'preview',kind:'pptx',dirty:false,readOnly:false}};
+const panels=[['Slides',SlidesOverviewPanel],['Text outline',SlidesOutlinePanel],['Slide properties',InspectorPanel]] as const;
+createRoot(document.getElementById('root')!).render(<div style={{display:'flex',gap:12,padding:12,background:'var(--bg-shell)',minHeight:'100vh'}}>{panels.map(([name,Component])=><aside key={name} style={{width:320,background:'var(--bg-panel)',borderRadius:25,overflow:'auto'}}><h2 style={{padding:'16px 12px 0',fontWeight:600}}>{name}</h2><Component panelId={name} context={context}/></aside>)}</div>);
+const bytes=await(await fetch('/slides-engine/fixtures/independent.pptx')).arrayBuffer();
+// Fixture served from an explicitly copied test-only public path.
+await addMediaFile(new File([bytes],'preview.pptx'),'preview.pptx');await ensureSlides('preview.pptx');

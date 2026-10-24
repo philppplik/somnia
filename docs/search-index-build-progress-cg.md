@@ -1,0 +1,9 @@
+# CG: owned index-build progress workspace
+
+Search displays selected-text preparation, verified local embedding batches and final index validation stages with completed/total chunks and source count. The progress bar reports only completed verified chunks, not ready state/quality or time remaining. All chunks complete does not bypass final vector/source/lifecycle validation. Cancel clears progress/vectors/results; no resume or automatic rebuild.
+
+Existing prepared embedding adapter emits completed counts after each batch; session validates integer/monotonic/exact-total progress and forwards only from its current owned non-aborted generation. Source drift/cancel/replacement cannot emit late progress or ready acceptance. Optional callback preserves existing adapters; no callback means zero completed until final validation, not invented intermediate progress. Actual embedding checks and budgets unchanged.
+
+Validation:15 progress/session/adapter unit tests and1 new light/dark delayed-progress browser test plus2 CC regressions pass. Production prepared adapter with stubbed embeddings exercises35 chunks across32+3 batch boundary; delayed fixture checks progress while not ready, cancel/late resolution/no acceptance and rebuild. 390px light/dark stage workspace pixels inspected: count/bar/cancel boundary readable. DS/Layers/Commands/UI-Commands pass; inherited Layers missing-transpiler/87 ignored/4 stale. tsc only inherited missing generated slides WASM module. Synthetic data/stubbed inference only, no real model/download/private data, Native/Rust/WASM/full desktop E2E CI-only; no deps/budgets, $0.
+
+Roadmap-Delta: selected-source search -> visible bounded owned build stages/batch progress. Search-only citations/optional embeddinggemma/memory-only/no answers/persistence/cloud remain unchanged. Real download/daemon/CSP/quality/cancel acceptance gates open. Parent-directed stale-remote own-chain base retained for git am -3/reject-merge.

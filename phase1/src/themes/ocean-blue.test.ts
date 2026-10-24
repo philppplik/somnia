@@ -13,7 +13,7 @@ for(const mode of ['light','dark']){
         assert.ok(contrastRatio(values[fg],values[bg])>=4.5,`${fg} on ${bg}: ${contrastRatio(values[fg],values[bg])}`);
       }
     }
-    assert.ok(contrastRatio(values['--accent-ink'],values['--accent'])>=4.5);
+    assert.ok(contrastRatio(values['--accent-ink'],values['--accent-fill'])>=4.5);
     assert.ok(contrastRatio('#ffffff',values['--accent-fill'])>=4.5);
     assert.ok(contrastRatio(values['--border-default'],values['--bg-panel'])>=3);
   });

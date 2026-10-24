@@ -10,6 +10,7 @@ import {
 } from '../../lib/git/variantsFlow';
 import { ConflictResolver } from './ConflictResolver';
 
+import {NativeInput} from '../ui/native-controls';
 /** What the panel says when an action cannot start. Pure so it renders in tests. */
 export function Notice({ n, onSaveVersion }: { n: GuardBlock | Dirty | FlowError | { kind: 'text'; key: string }; onSaveVersion?: () => void }) {
   const { t } = useT();
@@ -72,6 +73,9 @@ export function VariantsList(p: VariantsListProps) {
 
 export interface VariantsTabProps {
   deps: VariantsDeps;
+  /** Agent Board handoff. Uses this existing Combine flow, not a second merge path. */
+  initialCombineTarget?: string;
+  beforeCombine?: () => void;
   /** The project files on disk changed (switch, combine, abort): reload them in the editor. */
   onDiskChanged(): void;
   /** Jump to the Changes tab so the user can save a version first. */
@@ -82,7 +86,7 @@ export interface VariantsTabProps {
 
 type Pending = GuardBlock | Dirty | FlowError | { kind: 'text'; key: string } | null;
 
-export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged }: VariantsTabProps) {
+export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged, initialCombineTarget, beforeCombine }: VariantsTabProps) {
   const { t } = useT();
   const [variants, setVariants] = useState<GitVariant[]>([]);
   const [busy, setBusy] = useState(false);
@@ -133,12 +137,14 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged 
     if (r.kind === 'deleted') { setDel(null); changed(); }
   });
   const doPreview = (v: GitVariant) => run(async () => {
+    try { beforeCombine?.(); } catch { return setNotice({kind:'text',key:'board.error.stale'}); }
     const r = await previewCombine(deps, v.name);
     if (r.kind === 'error') return setNotice(r);
     setPreview(r.preview);
   });
   const doStart = () => run(async () => {
     if (!preview) return;
+    try { beforeCombine?.(); } catch { setPreview(null); return setNotice({kind:'text',key:'board.error.stale'}); }
     const r = await startCombine(deps, preview);
     if (r.kind === 'guard' || r.kind === 'dirty' || r.kind === 'error') { setPreview(null); return setNotice(r); }
     setPreview(null);
@@ -158,24 +164,32 @@ export function VariantsTab({ deps, onDiskChanged, onSaveVersion, onRepoChanged 
     setResolver(null); onDiskChanged(); changed();
   });
 
+  useEffect(() => {
+    if (!initialCombineTarget) return;
+    let active = true;
+    try { beforeCombine?.(); } catch { setNotice({kind:'text',key:'board.error.stale'}); return; }
+    void previewCombine(deps,initialCombineTarget).then(r=>{if(active){if(r.kind==='preview')setPreview(r.preview);else setNotice(r);}});
+    return()=>{active=false;};
+  }, [deps, initialCombineTarget]);
+
   return (
     <div className="vt-root">
       <form className="vt-new" onSubmit={e => { e.preventDefault(); void create(true); }}>
         <label htmlFor="vt-new-name">{t('variants.new.label')}</label>
         <div className="vt-new-row">
-          <input id="vt-new-name" type="text" value={newName} maxLength={100} placeholder={t('variants.new.placeholder')} onChange={e => setNewName(e.target.value)} />
+          <NativeInput id="vt-new-name" type="text" value={newName} maxLength={100} placeholder={t('variants.new.placeholder')} onChange={e => setNewName(e.target.value)} />
           <Button type="submit" variant="primary" disabled={busy || !newName.trim()}><Plus size={14} aria-hidden="true" />{t('variants.new.start')}</Button>
         </div>
         <p className="vt-hint">{t('variants.new.hint')}</p>
       </form>
       {notice && <Notice n={notice} onSaveVersion={onSaveVersion} />}
-      <VariantsList variants={variants} busy={busy} onOpen={doOpen} onCombine={doPreview} onRename={v => setRename({ v, value: v.name })} onDelete={setDel} />
+      <VariantsList variants={initialCombineTarget?variants.filter(v=>v.name===initialCombineTarget):variants} busy={busy} onOpen={doOpen} onCombine={doPreview} onRename={v => setRename({ v, value: v.name })} onDelete={setDel} />
 
       <Dialog open={!!rename} onOpenChange={o => { if (!o) setRename(null); }}>
         <DialogContent className="dlg-popup" aria-label={t('variants.rename.title')}>
           <div className="dlg-body">
             <DialogTitle>{t('variants.rename.title')}</DialogTitle>
-            <input type="text" aria-label={t('variants.rename.title')} value={rename?.value ?? ''} maxLength={100} onChange={e => rename && setRename({ ...rename, value: e.target.value })} />
+            <NativeInput type="text" aria-label={t('variants.rename.title')} value={rename?.value ?? ''} maxLength={100} onChange={e => rename && setRename({ ...rename, value: e.target.value })} />
           </div>
           <footer className="dlg-foot"><Button className="dlg-cancel" onClick={() => setRename(null)}>{t('dialogs.cancel')}</Button><span className="dlg-spacer" /><Button variant="primary" disabled={busy || !rename?.value.trim()} onClick={() => void doRename()}>{t('variants.rename.confirm')}</Button></footer>
         </DialogContent>

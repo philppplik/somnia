@@ -1,0 +1,49 @@
+.agent-settings .local-models { display: grid; gap: 12px; min-width: 0; }
+.agent-settings .local-models-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.agent-settings .local-models-runtime, .agent-settings .local-models-list li { border: 1px solid var(--border-default); border-radius: var(--r-control); padding: 12px; overflow-wrap: anywhere; }
+.agent-settings .local-models-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.agent-settings .local-models-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.agent-settings .local-models p { margin: 0; }
+.agent-settings > .tabs-root { height: auto; gap: 16px; flex: none; }
+.agent-settings > .tabs-root > .tabs-list { flex-wrap: wrap; height: auto; }
+.agent-settings > .tabs-root .tabs-content { overflow: visible; flex: none; }
+
+.agent-settings .local-model-actions { display: grid; gap: 12px; }
+.local-model-confirm { padding: 20px; display: grid; gap: 14px; overflow-wrap: anywhere; max-height: 85vh; overflow-y: auto; }
+.local-model-confirm input[type=checkbox] { width: auto; margin-right: 8px; }
+
+.agent-settings .local-model-advice { display: grid; gap: 10px; }
+
+.local-runtime-discovery[open] { display: grid; gap: 10px; }
+.local-runtime-discovery label { display: grid; gap: 6px; }
+
+.local-runtime-discovery input[type=checkbox] { width: auto; justify-self: start; }
+.local-vision-text { white-space: pre-wrap; }
+.local-vision-destination { margin-right: 8px; margin-bottom: 8px; }
+.local-tool-reasons { padding-left: 18px; list-style: disc; }
+.local-tool-reasons-nested { list-style: circle; }
+.local-ai-health { display: grid; gap: 10px; min-width: 0; }
+.local-ai-health dl { display: grid; grid-template-columns: minmax(80px,auto) minmax(0,1fr); gap: 6px 12px; margin: 0; }
+.local-ai-health dd { margin: 0; overflow-wrap: anywhere; }
+.local-ai-health ul { list-style: disc; padding-left: 20px; }
+
+.local-setup-steps { list-style: decimal; padding-left: 22px; display: grid; gap: 8px; }
+
+.agent-settings .local-comparison-results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 12px; }
+.agent-settings .local-comparison-results pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.agent-settings .local-comparison-choice { display: flex; align-items: center; gap: 6px; }
+.agent-settings .local-comparison-choice input[type=checkbox] { width: auto; }
+.local-pull-progress-bar { width: 100%; appearance: none; height: 6px; border: 0; border-radius: var(--r-control); overflow: hidden; background: var(--bg-hover); color: var(--accent); }
+.local-pull-progress-bar::-webkit-progress-bar { background: var(--bg-hover); }
+.local-pull-progress-bar::-webkit-progress-value { background: var(--accent); }
+.local-pull-progress-bar::-moz-progress-bar { background: var(--accent); }
+.local-search-panel { min-width: 0; overflow-wrap: anywhere; }
+.local-search-panel fieldset { display: grid; gap: 8px; min-width: 0; }
+.local-search-panel pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
+.local-search-citation { border: 1px solid var(--border-default); border-radius: var(--r-control); padding: 10px; }
+.local-search-citation button { white-space: normal; height: auto; text-align: left; }
+.local-search-panel fieldset label { display: flex; align-items: center; gap: 8px; }
+.local-search-panel fieldset input[type=checkbox] { width: auto; }
+.local-search-panel fieldset [data-slot=field] { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.local-search-phrase-evidence { background: var(--accent-soft); color: inherit; border-bottom: 2px solid var(--accent); }

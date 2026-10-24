@@ -20,6 +20,7 @@ const WRAPPED = new Map([
   ['build_diagnostic_zip', 'B1'], ['write_diagnostic_zip', 'B1'], ['discard_diagnostic_snapshot', 'B1'],
   ['list_crash_reports', 'B1'], ['mark_crash_reports_reviewed', 'B1'], ['delete_crash_reports', 'B1'],
   ['record_frontend_fatal', 'B1'],
+  ['lifecycle_memory_sample', 'B1'],
 ]);
 
 // Parameters injected by Tauri (never part of the JS call).
@@ -32,6 +33,8 @@ export const PLANNED = [
 ];
 
 const DOMAIN_RULES = [
+  [/^terminal_/, 'terminal'],
+  [/^(runtime_|project_run$|project_stop|project_status$|project_logs$|preview_open$|preview_close$)/, 'frameworks'],
   [/^(drain_open_requests|claim_open_request|read_by_grant|ack_open_request|release_candidate|retry_open_item|get_intake_policy|set_intake_policy)$/, 'intake'],
   [/^(build_diagnostic_zip|write_diagnostic_zip|discard_diagnostic_snapshot|list_crash_reports|mark_crash_reports_reviewed|delete_crash_reports|record_frontend_fatal)$/, 'diagnostics'],
   [/^git_/, 'git'],
@@ -39,7 +42,9 @@ const DOMAIN_RULES = [
   [/^(agent_settings_|agent_key_|mcp_|studio_mcp_)/, 'agent'],
   [/^(ext_|extension_activity_)/, 'ext'],
   [/^(provider_http_|collab_lan_)/, 'net'],
-  [/^(selftest_|log_|set_window_background|open_external|is_store_package|open_startup_file)/, 'app'],
+  [/^deploy_/, 'deploy'],
+  [/^lifecycle_/, 'lifecycle'],
+  [/^(selftest_|log_|set_window_background|open_external|open_preview_external|is_store_package|open_startup_file)/, 'app'],
   [/.*/, 'fs'],
 ];
 const domainOf = (n) => DOMAIN_RULES.find(([re]) => re.test(n))[1];
@@ -67,6 +72,10 @@ function nativeSignatures() {
   const sigs = new Map();
   for (const f of readdirSync(srcDir).filter((x) => x.endsWith('.rs'))) {
     const text = readFileSync(join(srcDir, f), 'utf8');
+    // sync_command! emits a wrapped Tauri handler with one typed request.
+    for (const m of text.matchAll(/sync_command!\(\s*([a-z0-9_]+)\s*,\s*([^,]+),/g)) {
+      sigs.set(m[1], {file:f, params:[{name:'window',type:'WebviewWindow'},{name:'webview',type:'Webview'},{name:'state',type:"State<'_, VibeSpaceState>"},{name:'request',type:m[2].trim()}]});
+    }
     const re = /#\[tauri::command\][^]*?(?:pub\s+)?(?:async\s+)?fn\s+([a-z0-9_]+)\s*(?:<[^>]*>)?\s*\(([^]*?)\)\s*(?:->|\{)/g;
     for (const m of text.matchAll(re)) {
       const params = splitTop(m[2]).map((p) => {

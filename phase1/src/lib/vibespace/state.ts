@@ -1,3 +1,4 @@
+import {hasPartialStream} from './streamPresentation';
 import type {Studio,VibeEvent,VibeSnapshot,StudioState} from './types';
 import {parseSnapshot,parseEvent} from './validation';
 export interface VibeViewState {snapshot:VibeSnapshot|null;loading:boolean;pending:boolean;error:string|null}
@@ -35,7 +36,7 @@ export function studioControls(studio:Studio,pending:boolean){
  const active=['running','claimed','paused'].includes(studio.executionState);
  return {stop:active&&studio.capabilities.stop&&!pending,steer:active&&studio.capabilities.steer&&!pending,
  consent:active&&!!studio.pendingConsents.length&&!pending,
- review:['ready','conflict'].includes(studio.reviewState)&&!!studio.review&&!pending,
+ review:['ready','conflict'].includes(studio.reviewState)&&studio.executionState==='done'&&!hasPartialStream(studio)&&!!studio.review&&!pending,
  restore:!active&&studio.capabilities.restore&&!pending,
  retry:['failed','crashed'].includes(studio.executionState)&&!!studio.failure?.retryable&&!pending};
 }
@@ -60,3 +61,11 @@ export function costLabel(studio:Studio):string|null{
  if(studio.model.locality==='local'||cost===null||cost===undefined||!Number.isFinite(cost)||cost<=0)return null;
  return `USD ${cost.toFixed(cost<0.01?4:2)}`;
 }
+
+export function reviewedHunksAllowed(studio:Studio,details:import('./types').ReviewDetails,paths:string[],hunks:import('./types').HunkSelection[]):boolean {
+ if(details.revision!==studio.review?.revision||!studio.capabilities.apply||!studioControls(studio,false).review||studio.review.conflicts.length||!paths.length&&!hunks.length)return false;
+ if(new Set([...paths,...hunks.map(h=>h.path)]).size!==paths.length+hunks.length)return false;
+ return paths.every(p=>studio.review!.files.some(f=>f.path===p&&!f.conflict))&&hunks.every(s=>{const f=details.files.find(f=>f.path===s.path);return studio.review!.files.some(f=>f.path===s.path&&!f.conflict)&&!!f&&s.hunkIds.length>0&&new Set(s.hunkIds).size===s.hunkIds.length&&s.hunkIds.every(id=>f.hunks.some(h=>h.id===id));});
+}
+
+export function canRetryFeedback(studio:Studio):boolean{return ['failed','crashed','stopped'].includes(studio.executionState)&&studio.reviewState==='none'&&!studio.review;}

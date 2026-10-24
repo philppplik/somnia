@@ -1,5 +1,5 @@
 import type {DesignNodeView,DesignNodePatch} from './panelContract';
-import {createArtboard,uid,type DesignNode} from './model';
+import {createArtboard,createNode,uid,type DesignNode} from './model';
 import {editDesign,getDesignState,selectArtboard,selectDesignNode,setDesignTool} from './session';
 import type {DesignToolId} from './panelContract';
 export function designRows():DesignNodeView[]{const s=getDesignState();const a=s.document?.artboards.find(a=>a.id===s.artboardId);return [...a?.nodes??[]].reverse().map(n=>({...n,type:n.kind,visible:!n.hidden,depth:0}));}
@@ -9,3 +9,11 @@ export function reorderDesignNode(id:string,direction:1|-1){const {artboardId}=g
 export function deleteDesignNodes(ids:readonly string[]){const {artboardId}=getDesignState();editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===artboardId?{...a,nodes:a.nodes.filter(n=>!ids.includes(n.id)||n.locked)}:a)}));selectDesignNode(null);}
 export function duplicateDesignNodes(ids:readonly string[]){const {artboardId}=getDesignState();editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===artboardId?{...a,nodes:[...a.nodes,...a.nodes.filter(n=>ids.includes(n.id)&&!n.locked).map(n=>({...n,id:uid(),name:`${n.name} copy`,x:Math.min(32768,n.x+16),y:Math.min(32768,n.y+16)} as DesignNode))]}:a)}));}
 export function chooseDesignTool(tool:DesignToolId){if(tool==='frame'){const s=getDesignState();if(!s.document||s.document.artboards.length>=100)return;const board=createArtboard(`Artboard ${s.document.artboards.length+1}`);editDesign(doc=>({...doc,artboards:[...doc.artboards,board]}));selectArtboard(board.id);setDesignTool('select');}else setDesignTool(tool);}
+
+/** Adds a rectangle/text layer to the active artboard as ONE undo step, selects it and hands back to the select tool. Returns the new layer id, or null without an open artboard. */
+export function addDesignNode(kind:DesignNode['kind'],at?:{x?:number;y?:number}):string|null{
+ const s=getDesignState();const board=s.document?.artboards.find(a=>a.id===s.artboardId);if(!board)return null;
+ const node={...createNode(kind,board.nodes.length),...(at?.x!==undefined?{x:at.x}:{}),...(at?.y!==undefined?{y:at.y}:{})};
+ editDesign(doc=>({...doc,artboards:doc.artboards.map(a=>a.id===board.id?{...a,nodes:[...a.nodes,node]}:a)}));
+ selectDesignNode(node.id);setDesignTool('select');return node.id;
+}

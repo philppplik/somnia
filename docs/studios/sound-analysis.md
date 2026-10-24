@@ -1,0 +1,11 @@
+# Sound output analysis (B2)
+
+The output panel shows facts for the current full rendered mix revision, never an invented live animation. Every session edit clears this report and audition/export output. Its spectrum is computed from actual output PCM in the mix worker: 4096-point radix-2 FFT, Hann window, stereo power average, first 4096 samples, 48 kHz, labelled log-frequency axis and amplitude dB. Opposite stereo phases do not cancel through a mono sum. Zero-padding short input is explicit in the implementation. This is a frozen first-window spectrum, not a whole-track spectral average or a live playhead analyser.
+
+Sample peak comes from actual output samples. Optional rebuilt Sound WASM adds the existing pinned meter's gated integrated, final momentary, final short-term and maximum true-peak figures through `analyze_mix_pcm`. This meter is labelled **unverified**, not broadcast-certified. Short-term requires three seconds; momentary/integrated require 400 ms; silence/no gated energy and too-short input use null/unavailable, not a -144 LUFS pseudo-measurement. True peak is never substituted with sample peak. If the built analysis module is absent, the real spectrum/sample peak still work and loudness/true peak are explicitly unavailable.
+
+The bridge uses the already pinned DSP crate. No dependency or native permission change. Rust compilation, built meter runtime and independent BS.1770-style reference vectors remain CI/native checks, not passed by the TypeScript tests. Do not describe those meters as standards-conformant yet. The render report analyses exactly the PCM that becomes the audition/export float WAV.
+
+Tests establish FFT calibration for bin-centred tones, half-amplitude dB, phase-inverted stereo power, silence and non-finite rejection. They do not establish Rust-meter correctness. The browser fixture harness verifies the real mix worker and spectrum panel with missing WASM labelled accurately. Full-page light/dark/narrow screenshots are inspected at delivery.
+
+Roadmap-Delta B2: actual frozen stereo spectrum and revision-bound output report, plus a pinned Rust loudness/true-peak bridge with explicit unavailable and unverified states. Mastering targets are B3; no recording or Stage C.

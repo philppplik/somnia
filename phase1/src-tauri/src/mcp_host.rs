@@ -5,14 +5,20 @@
 //! - the child process gets a cleared environment with only a few neutral variables plus
 //!   the explicit `env` entries from the approved config;
 //! - tool results are capped and every call has a timeout;
-//! - nothing starts on its own: the caller starts a server after the user enabled it.
+//! - nothing starts on its own: the caller starts a server after the user enabled it;
+//! - there is NO direct process spawn here: a stdio server starts only through
+//!   `McpBroker::spawn_stdio` (broker consent + sandbox) and is attached as a transport. The
+//!   child-process transport of rmcp is not compiled in, so a direct path cannot come back by accident.
+use crate::mcp_broker::{Choice, McpBroker, StopGuard};
 use rmcp::model::{CallToolRequestParams, ContentBlock};
 use rmcp::service::RunningService;
-use rmcp::transport::{ConfigureCommandExt, IntoTransport, TokioChildProcess};
+use rmcp::transport::IntoTransport;
 use rmcp::{RoleClient, ServiceExt};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use std::collections::{BTreeMap, HashMap};
+use std::sync::Arc;
+use vibespace_policy as policy;
 use std::path::Path;
 use std::time::Duration;
 use tokio::sync::Mutex;
@@ -38,6 +44,25 @@ pub struct McpToolInfo {
     pub name: String,
     pub description: String,
     pub input_schema: Value,
+    /// Hex digest of name + description + schema: what an `AllowForRun` MCP grant is bound to.
+    #[serde(default)]
+    pub schema_digest: String,
+}
+
+/// Digest pinning one exact tool definition. A changed description or schema changes it.
+pub fn tool_schema_digest(name: &str, description: &str, schema: &Value) -> policy::ArgsDigest {
+    policy::ArgsDigest::builder(policy::ActionKind::Mcp, "tool-definition")
+        .part("name", name.as_bytes())
+        .part("description", description.as_bytes())
+        .part("schema", schema.to_string().as_bytes())
+        .finish()
+}
+
+impl McpToolInfo {
+    pub fn new(server: &str, name: String, description: String, input_schema: Value) -> Self {
+        let schema_digest = tool_schema_digest(&name, &description, &input_schema).to_hex();
+        Self { server: server.to_string(), name, description, input_schema, schema_digest }
+    }
 }
 
 pub fn validate_config(cfg: &McpServerConfig) -> Result<(), String> {
@@ -93,27 +118,32 @@ pub fn upsert_server(list: &mut Vec<McpServerConfig>, cfg: McpServerConfig) -> R
 
 type Client = RunningService<RoleClient, ()>;
 
+struct Entry {
+    client: Client,
+    /// Kills the sandboxed process tree when the entry is dropped (None for in-memory transports).
+    _guard: Option<StopGuard>,
+}
+
 #[derive(Default)]
 pub struct McpHost {
-    clients: Mutex<HashMap<String, Client>>,
+    clients: Mutex<HashMap<String, Entry>>,
+    /// Tool definitions as last listed, for the digest binding of tool calls.
+    digests: std::sync::Mutex<HashMap<(String, String), policy::ArgsDigest>>,
 }
 
 impl McpHost {
     pub fn new() -> Self { Self::default() }
 
-    /// Spawn an approved stdio server and connect to it.
-    pub async fn start(&self, cfg: &McpServerConfig) -> Result<(), String> {
+    /// Start an approved stdio server THROUGH THE BROKER: `propose_exec` consent, sandboxed
+    /// session, then attach. Fails closed (stable error code) when consent is missing/denied or
+    /// the platform cannot isolate. `choice` is the user's answer relayed from the trusted editor.
+    pub async fn start_via_broker(&self, broker: Arc<McpBroker>, cfg: &McpServerConfig, choice: Option<Choice>) -> Result<(), String> {
         validate_config(cfg)?;
         let cfg2 = cfg.clone();
-        let cmd = tokio::process::Command::new(&cfg.command).configure(move |c| {
-            c.args(&cfg2.args).env_clear();
-            for k in ["PATH", "HOME", "USERPROFILE", "SystemRoot", "TEMP", "TMP", "LANG"] {
-                if let Ok(v) = std::env::var(k) { c.env(k, v); }
-            }
-            for (k, v) in &cfg2.env { c.env(k, v); }
-        });
-        let transport = TokioChildProcess::new(cmd).map_err(|e| format!("Could not start server: {e}"))?;
-        self.attach(&cfg.id, transport).await
+        let server = tokio::task::spawn_blocking(move || broker.spawn_stdio(&cfg2, choice))
+            .await
+            .map_err(|_| "mcp_spawn_failed".to_string())??;
+        self.attach_guarded(&cfg.id, server.io, Some(server.guard)).await
     }
 
     /// Connect over any transport (used for tests and future HTTP).
@@ -122,35 +152,67 @@ impl McpHost {
         T: IntoTransport<RoleClient, E, A>,
         E: std::error::Error + Send + Sync + 'static,
     {
+        self.attach_guarded(id, transport, None).await
+    }
+
+    async fn attach_guarded<T, E, A>(&self, id: &str, transport: T, guard: Option<StopGuard>) -> Result<(), String>
+    where
+        T: IntoTransport<RoleClient, E, A>,
+        E: std::error::Error + Send + Sync + 'static,
+    {
         let client = tokio::time::timeout(START_TIMEOUT, ().serve(transport))
             .await
             .map_err(|_| "Server did not answer in time.".to_string())?
             .map_err(|e| format!("Server handshake failed: {e}"))?;
-        if let Some(old) = self.clients.lock().await.insert(id.to_string(), client) {
-            let _ = old.cancel().await;
+        if let Some(old) = self.clients.lock().await.insert(id.to_string(), Entry { client, _guard: guard }) {
+            let _ = old.client.cancel().await;
         }
         Ok(())
     }
 
     pub async fn tools(&self, id: &str) -> Result<Vec<McpToolInfo>, String> {
         let g = self.clients.lock().await;
-        let c = g.get(id).ok_or("Server is not running.")?;
+        let c = &g.get(id).ok_or("Server is not running.")?.client;
         let list = tokio::time::timeout(CALL_TIMEOUT, c.list_all_tools())
             .await
             .map_err(|_| "Tool listing timed out.".to_string())?
             .map_err(|e| format!("Tool listing failed: {e}"))?;
-        Ok(list.into_iter().take(MAX_TOOLS).map(|t| McpToolInfo {
-            server: id.to_string(),
-            name: t.name.to_string(),
-            description: t.description.map(|d| d.chars().take(2000).collect()).unwrap_or_default(),
-            input_schema: Value::Object((*t.input_schema).clone()),
-        }).collect())
+        let infos: Vec<McpToolInfo> = list.into_iter().take(MAX_TOOLS).map(|t| McpToolInfo::new(
+            id,
+            t.name.to_string(),
+            t.description.map(|d| d.chars().take(2000).collect()).unwrap_or_default(),
+            Value::Object((*t.input_schema).clone()),
+        )).collect();
+        self.remember_digests(id, &infos);
+        Ok(infos)
+    }
+
+    pub(crate) fn remember_digests(&self, server: &str, tools: &[McpToolInfo]) {
+        if let Ok(mut m) = self.digests.lock() {
+            m.retain(|(s, _), _| s != server);
+            for t in tools {
+                if let Some(d) = policy::ArgsDigest::from_hex(&t.schema_digest) { m.insert((server.to_string(), t.name.clone()), d); }
+            }
+        }
+    }
+
+    /// Call one tool THROUGH THE BROKER: `McpRoute::propose_call` (digest-bound grant or the
+    /// user's relayed answer), one-time token, then the call under the permit. The tool must
+    /// have been listed (that is where its schema digest comes from).
+    pub async fn call_via_broker(&self, broker: &McpBroker, id: &str, tool: &str, args: Map<String, Value>, choice: Option<Choice>) -> Result<String, String> {
+        let digest = self.digests.lock().ok().and_then(|m| m.get(&(id.to_string(), tool.to_string())).copied()).ok_or("mcp_unknown_tool")?;
+        let canonical = serde_json::to_vec(&Value::Object(args.clone())).map_err(|_| "mcp_invalid_arguments".to_string())?;
+        let (permit, _) = broker.authorize_call(id, tool, digest, &canonical, choice)?;
+        match self.call(id, tool, args).await {
+            Ok(out) => { permit.complete_ok(out.len() as u64); Ok(out) }
+            Err(err) => { permit.complete_failed("call_failed"); Err(err) }
+        }
     }
 
     /// Call one tool. Output is text only, capped; errors reported by the server come back as Err.
     pub async fn call(&self, id: &str, tool: &str, args: Map<String, Value>) -> Result<String, String> {
         let g = self.clients.lock().await;
-        let c = g.get(id).ok_or("Server is not running.")?;
+        let c = &g.get(id).ok_or("Server is not running.")?.client;
         let mut p = CallToolRequestParams::new(tool.to_string());
         p.arguments = Some(args);
         let r = tokio::time::timeout(CALL_TIMEOUT, c.call_tool(p))
@@ -174,7 +236,7 @@ impl McpHost {
     }
 
     pub async fn stop(&self, id: &str) {
-        if let Some(c) = self.clients.lock().await.remove(id) { let _ = c.cancel().await; }
+        if let Some(c) = self.clients.lock().await.remove(id) { let _ = c.client.cancel().await; }
     }
     pub async fn running(&self) -> Vec<String> {
         let mut v: Vec<String> = self.clients.lock().await.keys().cloned().collect();

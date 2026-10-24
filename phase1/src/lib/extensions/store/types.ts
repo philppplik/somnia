@@ -26,6 +26,10 @@ export interface AssetInventory {
 export interface Provenance {artifactSha256: string; repositoryId: number; commit: string; workflowIdentity: string; attestation: DigestRef}
 export interface Release {
  id: string; version: string; channel: 'stable' | 'prerelease'; state: ReleaseState;
+ /** Present only when the source index explicitly marks this exact release as maintainer-reviewed
+  * (catalog `reviewed: true`). Never inferred from hashes, publisher or install state. The reviewer
+  * says WHO looked at the listing; it never says the code is safe. */
+ review?: {reviewer: string};
  packageFormat: 2; manifest: 'somnia-extension.toml'; engine: 'sandboxed'; apiVersion: number; minSomnia: string;
  source: {repositoryId: number; url: string; commit: string; extensionPath: string};
  artifact: DigestRef & {githubAssetId: number; url: string; filename: string; expandedBytes: number; fileCount: number; largestFileBytes: number};

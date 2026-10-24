@@ -1,0 +1,11 @@
+{
+  "id": "nuxt-js",
+  "framework": "nuxt",
+  "language": "js",
+  "output": "node",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": ".output"
+}

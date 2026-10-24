@@ -7,6 +7,7 @@ import type {
 } from "../../lib/pdf/model";
 import { pdfEditText } from "../../lib/pdf/locales";
 import "./pdf-edit.css";
+import {NativeButton,NativeInput,NativeSelect,Textarea} from '../ui/native-controls';
 export interface PdfEditInspectorProps {
   document: PdfEditDocument;
   locale: string;
@@ -58,12 +59,12 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
       <h2>{t("title")}</h2>
       <p className="pdf-edit-hint">{t("original")}</p>
       <div className="pdf-edit-actions">
-        <button disabled={disabled || !p.canUndo} onClick={p.onUndo}>
+        <NativeButton disabled={disabled || !p.canUndo} onClick={p.onUndo}>
           {t("undo")}
-        </button>
-        <button disabled={disabled || !p.canRedo} onClick={p.onRedo}>
+        </NativeButton>
+        <NativeButton disabled={disabled || !p.canRedo} onClick={p.onRedo}>
           {t("redo")}
-        </button>
+        </NativeButton>
       </div>
       {(localError || p.error) && (
         <p role="alert" className="pdf-edit-error">
@@ -75,7 +76,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
         {p.document.pages.map((page, i) => (
           <div className="pdf-edit-page" key={page.sourcePage}>
             <div className="pdf-edit-actions">
-              <input
+              <NativeInput
                 type="checkbox"
                 aria-label={`${t("selected")} ${i + 1}`}
                 checked={chosen.includes(page.sourcePage)}
@@ -88,7 +89,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                   )
                 }
               />
-              <button
+              <NativeButton
                 className={
                   page.sourcePage === p.activeSourcePage
                     ? "pdf-edit-active"
@@ -103,18 +104,18 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                 <small>
                   ({page.sourcePage + 1}) · {page.rotation}°
                 </small>
-              </button>
+              </NativeButton>
             </div>
             <div className="pdf-edit-actions">
-              <button
+              <NativeButton
                 disabled={disabled}
                 onClick={() =>
                   command({ kind: "rotate", sourcePage: page.sourcePage })
                 }
               >
                 {t("rotate")}
-              </button>
-              <button
+              </NativeButton>
+              <NativeButton
                 disabled={disabled || p.document.pages.length === 1}
                 onClick={() => {
                   if (window.confirm(t("deleteConfirm")))
@@ -122,25 +123,25 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                 }}
               >
                 {t("remove")}
-              </button>
-              <button
+              </NativeButton>
+              <NativeButton
                 disabled={disabled || i === 0}
                 onClick={() => move(i, -1)}
                 aria-label={`${t("up")} ${i + 1}`}
               >
                 ↑
-              </button>
-              <button
+              </NativeButton>
+              <NativeButton
                 disabled={disabled || i === p.document.pages.length - 1}
                 onClick={() => move(i, 1)}
                 aria-label={`${t("down")} ${i + 1}`}
               >
                 ↓
-              </button>
+              </NativeButton>
             </div>
           </div>
         ))}
-        <button
+        <NativeButton
           disabled={disabled || !chosen.length}
           onClick={() =>
             p.onExtract(
@@ -151,7 +152,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
           }
         >
           {t("extract")}
-        </button>
+        </NativeButton>
       </section>
       <section>
         <h3>{t("annotations")}</h3>
@@ -179,7 +180,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
           <fieldset disabled={disabled}>
             <label>
               {t("annotations")}
-              <select
+              <NativeSelect
                 value={kind}
                 onChange={(e) => {
                   const k = e.target.value as typeof kind;
@@ -194,11 +195,11 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                     </option>
                   ),
                 )}
-              </select>
+              </NativeSelect>
             </label>
             <label>
               {t("text")}
-              <textarea
+              <Textarea
                 value={text}
                 maxLength={20000}
                 required={kind === "freeText"}
@@ -209,7 +210,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
               {(["x", "y", "width", "height"] as const).map((k) => (
                 <label key={k}>
                   {t(k)}
-                  <input
+                  <NativeInput
                     type="number"
                     required
                     step=".1"
@@ -225,7 +226,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
             <div className="pdf-edit-grid">
               <label>
                 {t("color")}
-                <input
+                <NativeInput
                   type="color"
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
@@ -233,7 +234,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
               </label>
               <label>
                 {t("opacity")}
-                <input
+                <NativeInput
                   type="number"
                   required
                   min={5}
@@ -246,7 +247,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
             {kind === "freeText" && (
               <label>
                 {t("fontSize")}
-                <input
+                <NativeInput
                   type="number"
                   required
                   min={1}
@@ -256,7 +257,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                 />
               </label>
             )}
-            <button type="submit">{t("add")}</button>
+            <NativeButton type="submit">{t("add")}</NativeButton>
           </fieldset>
         </form>
         {p.document.annotations
@@ -267,13 +268,13 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                 {t(a.kind)}
                 {a.text && `: ${a.text}`}
               </span>
-              <button
+              <NativeButton
                 disabled={disabled}
                 aria-label={`${t("remove")} ${t(a.kind)}`}
                 onClick={() => command({ kind: "annotation.remove", id: a.id })}
               >
                 {t("remove")}
-              </button>
+              </NativeButton>
             </div>
           ))}
       </section>
@@ -300,21 +301,21 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                 {f.name}
                 {f.required ? " *" : ""}
                 {f.kind === "checkbox" ? (
-                  <input
+                  <NativeInput
                     type="checkbox"
                     disabled={blocked}
                     checked={value === true}
                     onChange={(e) => set(e.target.checked)}
                   />
                 ) : f.kind === "text" ? (
-                  <textarea
+                  <Textarea
                     disabled={blocked}
                     maxLength={f.maxLength}
                     value={typeof value === "string" ? value : ""}
                     onChange={(e) => set(e.target.value)}
                   />
                 ) : f.kind === "dropdown" && f.editable ? (
-                  <input
+                  <NativeInput
                     type="text"
                     disabled={blocked}
                     value={
@@ -327,7 +328,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                     onChange={(e) => set(e.target.value || null)}
                   />
                 ) : supported ? (
-                  <select
+                  <NativeSelect
                     multiple={f.kind === "optionlist" && f.multiSelect}
                     disabled={blocked}
                     value={
@@ -357,7 +358,7 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
                         {o}
                       </option>
                     ))}
-                  </select>
+                  </NativeSelect>
                 ) : (
                   <span>{t("unsupported")}</span>
                 )}
@@ -366,27 +367,27 @@ export function PdfEditInspector(p: PdfEditInspectorProps) {
               {f.kind === "optionlist" && f.multiSelect && (
                 <small>{t("options")}</small>
               )}
-              <button
+              <NativeButton
                 disabled={
                   blocked || !Object.hasOwn(p.document.fieldValues, f.name)
                 }
                 onClick={() => command({ kind: "field.reset", name: f.name })}
               >
                 {t("reset")}
-              </button>
+              </NativeButton>
             </div>
           );
         })}
       </section>
       <footer>
         <p className="pdf-edit-hint">{t("pending")}</p>
-        <button
+        <NativeButton
           className="pdf-edit-export"
           disabled={disabled}
           onClick={p.onExport}
         >
           {p.busy ? t("busy") : t("export")}
-        </button>
+        </NativeButton>
       </footer>
     </aside>
   );

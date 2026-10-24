@@ -1,16 +1,34 @@
+import {LOCAL_MODELS_CATALOGUES} from './localModelsI18n';
+import {INTERFACE_CATALOGUES} from './interface/i18n';
+import {CODE_PANEL_CATALOGUES} from './codePanels/i18n';
+import {WORKSPACE_CATALOGUES} from './workspace/locales';
 import {DIAGNOSTIC_LOCALES} from './diagnostics/locales';
 import {CONSENT_CATALOGUES} from './extensions/consentLocales';
 import {STORE_CATALOGUES} from './extensions/storeLocales';
+import {SCHEDULE_CATALOGUES} from './vibespace/scheduleI18n';
+import {SHEETS_RAIL_CATALOGUES} from './sheetsRailI18n';
+import {BOARD_CATALOGUES} from './vibespace/boardI18n';
+import {LIFECYCLE_CATALOGUES} from './lifecycle/i18n';
+import {BOARD_CATALOGUES as AGENT_BOARD_CATALOGUES} from './agentBoard/i18n';
 import en from '../locales/en.json';
 import de from '../locales/de.json';
 import es from '../locales/es.json';
 import fr from '../locales/fr.json';
 import ptBR from '../locales/pt-BR.json';
 import {PHOTOS_CATALOGUES} from './photos/i18n';
+import {CODE_RAIL_CATALOGUES} from './codeRail/i18n';
+import {DEPLOY_PANEL_CATALOGUES} from './deployPanels/i18n';
+import {PHOTOS_PANEL_CATALOGUES} from './photosPanelI18n';
 import {SOUND_CATALOGUES} from './sound/i18n';
 import {VIDEO_CATALOGUES} from './video/i18n';
+import {ANIMATION_CATALOGUES} from './animation/i18n';
+import {RAIL_CATALOGUES} from './railI18n';
 import {VECTOR_CATALOGUES} from './vectorstudio/i18n';
 import {DESIGN_CATALOGUES} from './design/i18n';
+import {VIBESPACE_CATALOGUES} from './vibespace/i18n';
+import {STUDIO3D_CATALOGUES} from './studio3d/i18n';
+import {EXPORT_CATALOGUES} from './export/i18n';
+import {HANDOFF_CATALOGUES} from './handoff/i18n';
 /**
  * Small in-house i18n layer (no dependency, no network).
  * Keys are flat strings. Plurals use `_one` / `_other` suffixes picked with Intl.PluralRules.
@@ -20,15 +38,35 @@ export type Catalogue = Record<string, string>;
 export const BASE_LOCALE = 'en';
 /** Languages with a catalogue. Add a file in src/locales and an entry here. */
 export const CATALOGUES: Record<string, Catalogue> = {en, de, es, fr, 'pt-BR': ptBR};
+for (const [tag, extra] of Object.entries(LOCAL_MODELS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(INTERFACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(CODE_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 // Studio-owned strings live next to their studio and merge here, so the shared catalogues stay free of merge hotspots.
 for (const [tag, extra] of Object.entries(PHOTOS_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(CODE_RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(DEPLOY_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(PHOTOS_PANEL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(SOUND_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VIDEO_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(ANIMATION_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(VECTOR_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DESIGN_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(STUDIO3D_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(EXPORT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(HANDOFF_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(CONSENT_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(STORE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(LIFECYCLE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(AGENT_BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
 for (const [tag, extra] of Object.entries(DIAGNOSTIC_LOCALES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(SCHEDULE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(SHEETS_RAIL_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(VIBESPACE_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for (const [tag, extra] of Object.entries(BOARD_CATALOGUES)) Object.assign(CATALOGUES[tag], extra);
+for(const [tag,extra] of Object.entries(WORKSPACE_CATALOGUES))Object.assign(CATALOGUES[tag],extra);
+for(const [tag,extra] of Object.entries(LIFECYCLE_CATALOGUES))Object.assign(CATALOGUES[tag],extra);
 /** Native names for the language picker. */
 export const LOCALE_NAMES: Record<string, string> = {en:'English', de:'Deutsch', es:'Español', fr:'Français', 'pt-BR':'Português (Brasil)'};
 export const LOCALE_KEY = 'somnia.locale.v1';

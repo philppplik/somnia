@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Somnia",
-  "version": "0.1.0",
+  "version": "12.2.0",
   "identifier": "app.somnia.desktop",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -28,15 +28,19 @@
     ],
     "security": {
       "capabilities": [
-        "editor"
+        "editor",
+        "studio-copy"
       ],
-      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost https://openrouter.ai https://api.openai.com https://api.anthropic.com http://127.0.0.1:11434 http://localhost:11434 https://api.github.com https://raw.githubusercontent.com ws: wss:; frame-src 'self' blob: somnia-ext: http://somnia-ext.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self' somnia-ext: http://somnia-ext.localhost",
-      "devCsp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420 https://openrouter.ai https://api.openai.com https://api.anthropic.com http://127.0.0.1:11434 http://localhost:11434 https://raw.githubusercontent.com ws: wss:; frame-src 'self' blob: somnia-ext: http://somnia-ext.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self' somnia-ext: http://somnia-ext.localhost"
+      "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob: ipc: http://ipc.localhost https://openrouter.ai https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.meta.ai https://api.deepseek.com http://127.0.0.1:11434 http://localhost:11434 https://api.github.com https://raw.githubusercontent.com ws: wss:; frame-src 'self' blob: somnia-ext: http://somnia-ext.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self' somnia-ext: http://somnia-ext.localhost",
+      "devCsp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' blob: ipc: http://ipc.localhost http://127.0.0.1:1420 ws://127.0.0.1:1420 https://openrouter.ai https://api.openai.com https://api.anthropic.com https://api.x.ai https://api.meta.ai https://api.deepseek.com http://127.0.0.1:11434 http://localhost:11434 https://raw.githubusercontent.com ws: wss:; frame-src 'self' blob: somnia-ext: http://somnia-ext.localhost; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self' somnia-ext: http://somnia-ext.localhost"
     }
   },
   "bundle": {
     "active": false,
     "targets": "all",
+    "macOS": {
+      "entitlements": "./Entitlements.plist"
+    },
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"

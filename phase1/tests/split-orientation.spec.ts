@@ -1,7 +1,8 @@
 import {test,expect} from './fixtures';
+import {revealMenuItem} from './menuHelpers';
 const dir=(page:any)=>page.locator('.workspace').evaluate((e:Element)=>getComputedStyle(e).flexDirection);
 test('View menu offers vertical, horizontal and swapped split',async({page})=>{await page.goto('/');
- const pick=async(name:string)=>{await page.getByRole('button',{name:'View',exact:true}).click();await page.getByRole('menuitem',{name:new RegExp(name)}).click();};
+ const pick=async(name:string)=>{const item=await revealMenuItem(page,'View',page.getByRole('menuitem',{name:new RegExp(name)}));await item.click();};
  await pick('Split: code and design side by side');expect(await dir(page)).toBe('row');
  await pick('Split: code above');expect(await dir(page)).toBe('column');
  await pick('Split: swap');expect(await dir(page)).toBe('column-reverse');

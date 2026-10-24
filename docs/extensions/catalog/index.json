@@ -12,7 +12,9 @@
       "download": "https://raw.githubusercontent.com/philppplik/somnia/main/docs/extensions/catalog/packages/quiet-colors-1.0.0.zip",
       "sha256": "4415d00be5ed5714655688c39be8711c7b1b7b1d7a9a5b1f1624835cd546c798",
       "apiVersion": 1,
-      "permissions": []
+      "permissions": [],
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.accessibility-audit",
@@ -27,7 +29,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.seo-preflight",
@@ -42,7 +46,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.local-link-check",
@@ -57,7 +63,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.heading-outline",
@@ -72,7 +80,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.editorial-metrics",
@@ -88,7 +98,9 @@
         "project.read",
         "storage"
       ],
-      "category": "Productivity"
+      "category": "Productivity",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.todo-navigator",
@@ -104,7 +116,9 @@
         "project.read",
         "storage"
       ],
-      "category": "Productivity"
+      "category": "Productivity",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.css-variable-inventory",
@@ -119,7 +133,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.locale-parity",
@@ -135,7 +151,9 @@
         "project.read",
         "storage"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.data-workbench",
@@ -151,7 +169,9 @@
         "project.read",
         "storage"
       ],
-      "category": "Tools"
+      "category": "Tools",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.form-kit",
@@ -166,7 +186,9 @@
       "permissions": [
         "project.read"
       ],
-      "category": "Editing"
+      "category": "Editing",
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     },
     {
       "id": "somnia.accent-palettes",
@@ -179,7 +201,9 @@
       "download": "https://raw.githubusercontent.com/philppplik/somnia/main/docs/extensions/catalog/packages/accent-palettes-1.0.0.zip",
       "sha256": "c7e44cd2b29443dab19f0d59fa1732c1e8135e5a11554b1d0f9ea479ffa65204",
       "apiVersion": 1,
-      "permissions": []
+      "permissions": [],
+      "reviewed": true,
+      "reviewedBy": "Somnia maintainers"
     }
   ]
 }

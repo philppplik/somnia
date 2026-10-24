@@ -1,0 +1,18 @@
+▄▀▀  █▀▀█  █▀▄▀█  █▄ █  ▀█▀  ▄▀▀▄   task  Fix the nav
+▀▀▄  █  █  █ ▀ █  █ ▀█   █   █▀▀█   model local
+▄▄▀  ▀▀▀▀  ▀   ▀  ▀  ▀  ▀▀▀  ▀  ▀   base  8d552f36
+
+──────────────────────────────────────────────────────────────────────────────────────────
+ ? Needs input: Which page should I change?
+ > pricing page_
+
+
+
+
+
+
+
+
+
+
+ needs input   t-1 │ $0.0000 · 0 tok │ branch somnia/task/t-1 │ type answer  ⏎ send  esc c

@@ -1,0 +1,11 @@
+{
+  "id": "vue-js",
+  "framework": "vue",
+  "language": "js",
+  "output": "static",
+  "scripts": {
+    "dev": "dev",
+    "build": "build"
+  },
+  "artifactPath": "dist"
+}

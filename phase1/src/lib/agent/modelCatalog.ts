@@ -1,9 +1,11 @@
 import {isTauri} from '@tauri-apps/api/core';
 import {OpenAIProvider} from './openAI';import {ClaudeProvider} from './providers/claude';import {OllamaProvider} from './providers/ollama';
+import {isCompatProvider,COMPAT_PROVIDERS} from './compatProviders';
 import {loadProviderKey,type AuthProvider} from './providerAuth';import {nativeProviderFetch} from './nativeProviderFetch';import {agentPrivacy} from './privacy';
 export async function listProviderModels(provider:AuthProvider,signal:AbortSignal):Promise<{id:string;name:string}[]>{
  const options={getApiKey:()=>loadProviderKey(provider),...(isTauri()?{fetch:nativeProviderFetch(provider)}:{})};
  if(provider==='openai')return (await new OpenAIProvider(options).listModels(signal)).map(x=>({id:x.id,name:x.id}));
+ if(isCompatProvider(provider))return (await new OpenAIProvider({...options,vendor:COMPAT_PROVIDERS[provider]}).listModels(signal)).map(x=>({id:x.id,name:x.id}));
  if(provider==='claude')return new ClaudeProvider(options).listModels(signal);
  if(provider==='ollama')return (await new OllamaProvider().listModels(signal)).map(x=>({id:x.id,name:x.label}));
  return agentPrivacy.run({provider:'openrouter',endpoint:'https://openrouter.ai/api/v1/models',processing:'cloud'},async guarded=>{

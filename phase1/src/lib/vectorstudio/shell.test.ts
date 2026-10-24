@@ -1,0 +1,173 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {vectorShell} from '../studios/vector';
+import {validateStudioShell,resolveInspectorSections} from '../shell/panels';
+import {effectiveRail} from '../shell/railResolver';
+import {vectorCommandSpecs} from './commands';
+import {vectorShellCommandSpecs} from './shellCommands';
+import {VECTOR_CATALOGUES} from './i18n';
+import {CommandDispatcher,CommandDispatchError} from '../commandDispatcher';
+import * as S from './session';
+import {rectPath} from './shapes';
+const commands=[...vectorCommandSpecs(()=>true),...vectorShellCommandSpecs(()=>true)];
+test('vector manifest validates hosts, commands, all labels and inspector conditions',()=>{
+ const ids=new Set(commands.map(s=>s.id));const hosts=new Set(vectorShell.panels!.map(s=>s.component)),sections=new Set(vectorShell.inspector!.sections.map(s=>s.component));
+ const icons=new Set(['Files','Layers','Pencil','MousePointer2','VectorNode','VectorPen','Square','VectorEllipse','VectorLine','VectorPolygon','VectorStar','Type','VectorExport','SlidersHorizontal']);
+ assert.deepEqual(validateStudioShell('vector',vectorShell,{commandExists:id=>ids.has(id),hostExists:id=>hosts.has(id),sectionHostExists:id=>sections.has(id),iconExists:id=>icons.has(id)}),[]);
+ const labels=[...vectorShell.panels!,...vectorShell.leftRail!,...vectorShell.rightRail!,...vectorShell.inspector!.sections].flatMap(x=>'labelKey' in x&&x.labelKey?[x.labelKey]:'titleKey' in x&&x.titleKey?[x.titleKey]:[]);
+ for(const [tag,d] of Object.entries(VECTOR_CATALOGUES)){for(const k of labels)assert.ok(d[k],tag+':'+k);for(const c of commands)assert.ok(d['cmd.'+c.id],tag+':'+c.id);assert.deepEqual(Object.keys(d).sort(),Object.keys(VECTOR_CATALOGUES.en).sort());}
+ const ctx={studio:'vector',selection:{kind:'none',count:0},services:{ready:true}};
+ assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,ctx).map(s=>s.id),['page','shape','image','text']);
+ assert.deepEqual(resolveInspectorSections(vectorShell.inspector!.sections,{...ctx,selection:{kind:'one',count:1},services:{ready:true,node:true}}).map(s=>s.id),['page','transform','style','shape','image','text','nodes']);
+ assert.deepEqual(effectiveRail(vectorShell.leftRail!,undefined,{ctx}).overflow.map(s=>s.id),['rect','ellipse','line','polygon','star','text']);
+ assert.deepEqual(effectiveRail(vectorShell.leftRail!,undefined,{ctx:{...ctx,services:{}}}).visible.map(s=>s.id),['files','layers','tools']);
+});
+test('typed shell tools, transforms and history reject invalid or remote writes',async()=>{
+ S.resetVectorSession();S.createBlankVector();const p=rectPath({x:0,y:0,w:100,h:60});S.addPath(p);const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await d.runCommand('vector.tool.node',{}, {origin:'test'});assert.equal(S.getVectorSession().tool,'node');
+ await assert.rejects(d.runCommand('vector.rotateSelection',{degrees:'90'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.flipSelection',{axis:'vertical'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.rotateSelection',{degrees:90},{origin:'test'});assert.notDeepEqual(S.getVectorSession().doc,before);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.flipSelection',{axis:'horizontal'},{origin:'test'});assert.equal(S.getVectorSession().doc.paths[0].nodes[0].x,100);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.rotateSelection',{degrees:0},{origin:'test'});assert.deepEqual(S.getVectorSession().doc,before);
+});
+import {alignSelection,distributeSelection,selectionBounds} from './transforms';
+const box=(x:number,y:number,w:number,h:number)=>rectPath({x,y,w,h});
+const at=(doc:ReturnType<typeof S.getVectorSession>['doc'],i:number)=>selectionBounds(doc,[doc.paths[i].id])!;
+test('align and distribute move whole objects, keep compounds together and refuse unusable selections',()=>{
+ S.resetVectorSession();S.createBlankVector();const [a,b,c]=[box(10,10,20,20),box(100,50,40,10),box(70,200,30,30)];[a,b,c].forEach(p=>S.addPath(p));
+ const doc=S.getVectorSession().doc,ids=doc.paths.map(p=>p.id);
+ const L=alignSelection(doc,ids,'left','selection');for(let i=0;i<3;i++)assert.equal(at(L,i).x,10);assert.equal(at(L,0).y,10);
+ const R=alignSelection(doc,ids,'right','selection');for(let i=0;i<3;i++)assert.equal(at(R,i).x+at(R,i).width,140);
+ const P=alignSelection(doc,[ids[1]],'centerY','page');assert.equal(at(P,1).y+at(P,1).height/2,doc.height/2);
+ const B=alignSelection(doc,ids,'bottom','page');for(let i=0;i<3;i++)assert.equal(at(B,i).y+at(B,i).height,doc.height);
+ const D=distributeSelection(doc,ids,'horizontal'),xs=[0,1,2].map(i=>at(D,i)).sort((p,q)=>p.x-q.x);
+ assert.equal(xs[0].x,10);assert.equal(xs[2].x+xs[2].width,140);assert.ok(Math.abs((xs[1].x-(xs[0].x+xs[0].width))-(xs[2].x-(xs[1].x+xs[1].width)))<1e-9);
+ assert.throws(()=>alignSelection(doc,[ids[0]],'left','selection'),/at least two/);assert.throws(()=>distributeSelection(doc,ids.slice(0,2),'vertical'),/at least three/);
+ assert.throws(()=>alignSelection(doc,ids,'diagonal' as never,'page'),/Unknown/);assert.throws(()=>alignSelection(doc,[],'left','page'),/Nothing/);
+ const comp={...doc,paths:doc.paths.map((p,i)=>i<2?{...p,compound:'k'}:p)},C=alignSelection(comp,ids,'left','selection');
+ assert.deepEqual(C.paths[0].nodes,doc.paths[0].nodes);assert.deepEqual(C.paths[1].nodes,doc.paths[1].nodes);assert.equal(at(C,2).x,10);
+ assert.deepEqual(doc,structuredClone(doc));
+});
+test('align and distribute commands are one undo step and reject bad params',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(10,10,20,20),box(100,50,40,10),box(70,200,30,30)].forEach(p=>S.addPath(p));
+ S.select(S.getVectorSession().doc.paths.map(p=>p.id));const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.alignSelection',{mode:'left'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.alignSelection',{mode:'x',to:'page'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.distributeSelection',{axis:'horizontal'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.alignSelection',{mode:'left',to:'selection'},{origin:'test'});assert.notDeepEqual(S.getVectorSession().doc,before);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ await d.runCommand('vector.distributeSelection',{axis:'vertical'},{origin:'test'});S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+});
+import {applyBoolean} from './booleanOps';
+test('boolean command combines shapes in one undo step and refuses unusable selections without changes',async()=>{
+ S.resetVectorSession();S.createBlankVector();S.addPath(box(0,0,100,100));S.addPath(box(50,50,100,100));S.addPath(box(300,300,20,20));
+ const all=S.getVectorSession().doc.paths.map(p=>p.id);S.select(all.slice(0,2));const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.booleanOp',{op:'xor'},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await assert.rejects(d.runCommand('vector.booleanOp',{op:'union'},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select(all.slice(2));await assert.rejects(d.runCommand('vector.booleanOp',{op:'union'},{origin:'test'}),/at least two/);
+ S.select([all[0],all[2]]);await assert.rejects(d.runCommand('vector.booleanOp',{op:'intersect'},{origin:'test'}),/empty/);
+ assert.deepEqual(S.getVectorSession().doc,before);
+ S.select(all.slice(0,2));await d.runCommand('vector.booleanOp',{op:'union'},{origin:'test'});
+ const after=S.getVectorSession().doc;assert.equal(after.paths.length,2);assert.equal(S.getVectorSession().selection.length,1);assert.ok(!after.paths.some(p=>all.slice(0,2).includes(p.id)));
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ const open={...before,paths:before.paths.map((p,i)=>i===0?{...p,closed:false}:p)};assert.throws(()=>applyBoolean(open,all.slice(0,2),'union'),/closed shapes/);
+ const hole=applyBoolean(before,all.slice(0,2),'subtract');assert.equal(hole.ids.length,1);assert.equal(hole.doc.paths.length,2);
+});
+import {groupSelection,ungroupSelection} from './groups';
+import {exportSvg,importSvg,normalizeDoc} from '../vectorio';
+test('group/ungroup: one undo step, selection expands, contiguous at top, duplicate remaps, bad input is a no-op',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(100,0,10,10),box(200,0,10,10),box(300,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select([ids[0],ids[2]]);const before=structuredClone(S.getVectorSession().doc);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await assert.rejects(d.runCommand('vector.group',{},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select([ids[0]]);await d.runCommand('vector.group',{},{origin:'test'});assert.deepEqual(S.getVectorSession().doc,before); // one object: nothing to group
+ S.select([ids[0],ids[2]]);await d.runCommand('vector.group',{},{origin:'test'});
+ const g=S.getVectorSession().doc;assert.deepEqual(g.paths.map(p=>p.id),[ids[1],ids[0],ids[2],ids[3]]);
+ assert.equal(g.paths[1].group,g.paths[2].group);assert.ok(g.paths[1].group);assert.equal(g.paths[0].group,undefined);
+ S.select([ids[2]]);assert.deepEqual([...S.getVectorSession().selection].sort(),[ids[0],ids[2]].sort());
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);S.redo();
+ S.select([ids[0]]);await d.runCommand('vector.duplicateSelection',{},{origin:'test'});
+ const dup=S.getVectorSession().doc.paths.filter(p=>p.group);assert.equal(dup.length,4);assert.equal(new Set(dup.map(p=>p.group)).size,2);
+ S.undo();S.select([ids[0]]);await d.runCommand('vector.ungroup',{},{origin:'test'});
+ assert.ok(!S.getVectorSession().doc.paths.some(p=>p.group));S.undo();
+ assert.equal(ungroupSelection(before,[ids[0]]),before);assert.equal(groupSelection(before,['nope']),before);
+});
+test('group SVG roundtrip is stable, old files load unchanged, bad ids are ignored',()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(20,0,10,10),box(40,0,10,10)].forEach(p=>S.addPath(p));
+ const doc=S.getVectorSession().doc,ids=doc.paths.map(p=>p.id);const grouped=groupSelection(doc,[ids[0],ids[1]]);
+ const svg=exportSvg(grouped);assert.match(svg,/<g data-vs-group="g[^"]*">/);
+ const back=importSvg(svg).doc;assert.equal(back.paths.filter(p=>p.group).length,2);assert.equal(back.paths[0].group,back.paths[1].group);assert.equal(back.paths[2].group,undefined);
+ assert.equal(exportSvg(back),svg);
+ const old=exportSvg(doc);assert.ok(!old.includes('data-vs-group'));assert.ok(importSvg(old).doc.paths.every(p=>p.group===undefined));
+ const plain=importSvg('<svg viewBox="0 0 10 10"><g data-name="Layer A"><path d="M0 0L5 5"/></g></svg>').doc;assert.equal(plain.paths[0].layer,'Layer A');assert.equal(plain.paths[0].group,undefined);
+ const bad=importSvg('<svg viewBox="0 0 10 10"><g data-vs-group="a b&lt;"><path d="M0 0L5 5"/></g></svg>').doc;assert.equal(bad.paths[0].group,undefined);
+ const nested=importSvg('<svg viewBox="0 0 10 10"><g data-name="L"><g data-vs-group="x"><path d="M0 0L5 5"/></g></g></svg>').doc;assert.equal(nested.paths[0].layer,'L');assert.equal(nested.paths[0].group,'x');
+ assert.match(exportSvg(nested),/<g data-name="L">\s*<g data-vs-group="x">/);
+});
+import {layerRows} from './layerRows';
+test('layer rows: groups listed together under a header, collapse and filter keep it consistent',()=>{
+ const p=(id:string,group?:string,name=id)=>({id,closed:true,nodes:[],name,...(group?{group}:{})}) as never;
+ const paths=[p('a'),p('b','g1'),p('c'),p('d','g1'),p('e')];
+ const all=()=>true;
+ const rows=layerRows(paths,all);
+ assert.deepEqual(rows.map(r=>r.kind==='group'?'G:'+r.group+':'+r.ids.join(''):(r.indent?'  ':'')+r.path.id),['e','G:g1:db','  d','  b','c','a']);
+ assert.deepEqual(layerRows(paths,all,new Set(['g1'])).map(r=>r.kind),['path','group','path','path']);
+ assert.deepEqual(layerRows(paths,x=>x.id==='b').map(r=>r.kind==='group'?'G':r.path.id),['G','b']);
+ assert.deepEqual(layerRows(paths,x=>x.id==='zzz'),[]);
+ assert.deepEqual(layerRows([],all),[]);
+});
+test('ungroup accepts explicit ids (layers panel) without relying on the selection',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(50,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select(ids);const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await d.runCommand('vector.group',{},{origin:'test'});S.select([]);
+ await d.runCommand('vector.ungroup',{ids},{origin:'test'});assert.ok(!S.getVectorSession().doc.paths.some(p=>p.group));
+ await assert.rejects(d.runCommand('vector.ungroup',{ids:[1]},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+});
+test('group names: rename is one undo step, roundtrips through SVG, follows duplicate, dies with the group',async()=>{
+ S.resetVectorSession();S.createBlankVector();[box(0,0,10,10),box(50,0,10,10)].forEach(p=>S.addPath(p));
+ const ids=S.getVectorSession().doc.paths.map(p=>p.id);S.select(ids);const d=new CommandDispatcher();commands.forEach(s=>d.register(s));
+ await d.runCommand('vector.group',{},{origin:'test'});const g=S.getVectorSession().doc.paths[0].group!;
+ await assert.rejects(d.runCommand('vector.renameGroup',{group:'nope',name:'x'},{origin:'test'}),/Unknown group/);
+ await assert.rejects(d.runCommand('vector.renameGroup',{group:g,name:'x'.repeat(81)},{origin:'test'}),e=>e instanceof CommandDispatchError&&e.code==='invalid-params');
+ await d.runCommand('vector.renameGroup',{group:g,name:'  Logo "mark" <1> '},{origin:'test'});
+ assert.equal(S.getVectorSession().doc.groupNames![g],'Logo "mark" <1>');
+ const svg=S.toSvg();assert.match(svg,/data-vs-group-name="Logo &quot;mark&quot; &lt;1>"/);
+ const back=importSvg(svg).doc;assert.equal(Object.values(back.groupNames!)[0],'Logo "mark" <1>');assert.equal(exportSvg(normalizeDoc(back)),svg);
+ S.undo();assert.equal(S.getVectorSession().doc.groupNames,undefined);S.redo();
+ await d.runCommand('vector.duplicateSelection',{},{origin:'test'});assert.equal(Object.keys(S.getVectorSession().doc.groupNames!).length,2);
+ S.undo();S.select(ids);await d.runCommand('vector.ungroup',{},{origin:'test'});assert.ok(!normalizeDoc(S.getVectorSession().doc).groupNames);
+ assert.ok(!importSvg('<svg viewBox="0 0 10 10"><g data-vs-group-name="orphan"><path d="M0 0L5 5"/></g></svg>').doc.groupNames);
+});
+import {splitPath,joinPaths,reverseSelection} from './pathOps';
+const open=(id:string,pts:[number,number][],extra:object={})=>({id,closed:false,nodes:pts.map(([x,y],i)=>({id:id+'n'+i,x,y,kind:'corner' as const})),...extra}) as never;
+test('path ops: split, join and reverse are single undo steps, keep geometry, and refuse unusable input',async()=>{
+ S.resetVectorSession();S.createBlankVector();
+ S.addPath(open('a',[[0,0],[10,0],[20,0]]),false);S.addPath(open('b',[[20,0.2],[30,10]]),false);S.addPath(open('far',[[100,100],[120,100]]),false);
+ const d=new CommandDispatcher();commands.forEach(s=>d.register(s));const before=structuredClone(S.getVectorSession().doc);
+ await assert.rejects(d.runCommand('vector.joinPaths',{},{origin:'agent'}),e=>e instanceof CommandDispatchError&&e.code==='forbidden-origin');
+ S.select(['a']);await assert.rejects(d.runCommand('vector.joinPaths',{},{origin:'test'}),/exactly two/);
+ S.select(['a','b']);await d.runCommand('vector.joinPaths',{},{origin:'test'});
+ let doc=S.getVectorSession().doc;assert.equal(doc.paths.length,2);assert.deepEqual(doc.paths[0].nodes.map(n=>[n.x,n.y]),[[0,0],[10,0],[20,0],[30,10]]);
+ S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ S.select(['a','far']);await d.runCommand('vector.joinPaths',{},{origin:'test'});doc=S.getVectorSession().doc;assert.equal(doc.paths[0].nodes.length,5);S.undo();
+ // reversed order join: b's start meets a's start
+ const r=joinPaths({...before,paths:[open('p',[[20,0],[30,0]]),open('q',[[20,0],[20,10]])]},['p','q']);assert.deepEqual(r.doc.paths[0].nodes.map(n=>[n.x,n.y]),[[30,0],[20,0],[20,10]]);
+ await assert.rejects(d.runCommand('vector.splitPath',{pathId:'a',nodeId:'an0'},{origin:'test'}),/inside the path/);
+ await assert.rejects(d.runCommand('vector.splitPath',{pathId:'a',nodeId:'nope'},{origin:'test'}),/Unknown node/);
+ await d.runCommand('vector.splitPath',{pathId:'a',nodeId:'an1'},{origin:'test'});
+ doc=S.getVectorSession().doc;assert.equal(doc.paths.length,4);assert.deepEqual(doc.paths[0].nodes.map(n=>n.x),[0,10]);assert.deepEqual(doc.paths[1].nodes.map(n=>n.x),[10,20]);
+ assert.equal(new Set(doc.paths.flatMap(p=>p.nodes.map(n=>n.id))).size,doc.paths.flatMap(p=>p.nodes).length);S.undo();assert.deepEqual(S.getVectorSession().doc,before);
+ // closed split + handles
+ const sq={id:'sq',closed:true,nodes:[{id:'s0',x:0,y:0,kind:'smooth',in:{x:-1,y:0},out:{x:1,y:0}},{id:'s1',x:10,y:0,kind:'corner'},{id:'s2',x:10,y:10,kind:'corner'}]} as never;
+ const sp=splitPath({width:1,height:1,paths:[sq]},'sq','s0').doc.paths[0];
+ assert.equal(sp.closed,false);assert.equal(sp.nodes.length,4);assert.equal(sp.nodes[0].in,undefined);assert.deepEqual(sp.nodes[0].out,{x:1,y:0});assert.equal(sp.nodes[3].out,undefined);assert.deepEqual(sp.nodes[3].in,{x:-1,y:0});
+ // reverse swaps handles, twice is identity for open paths
+ const h={id:'h',closed:false,nodes:[{id:'h0',x:0,y:0,kind:'corner',out:{x:1,y:1}},{id:'h1',x:5,y:5,kind:'corner',in:{x:4,y:4}}]} as never;
+ const doc1={width:1,height:1,paths:[h]};const rev=reverseSelection(doc1,['h']);assert.deepEqual(rev.paths[0].nodes[0],{id:'h1',x:5,y:5,kind:'corner',out:{x:4,y:4}});assert.deepEqual(reverseSelection(rev,['h']),doc1);
+ assert.equal(reverseSelection(doc1,['nope']),doc1);
+});
