@@ -2,7 +2,7 @@
 
 Status: **In development**. Review checklist, not completed acceptance. Every box starts unchecked.
 
-Use this before handling sensitive text or publishing a release claim. Record the exact integrated build, device/runtime/model digest, reviewer/date and evidence or gaps for each box. A missing observation remains unknown. Use non-private fixtures for tests. See the [manual QA script](LOCAL-SOURCE-SEARCH-MANUAL-QA.md) for steps.
+Use this before handling sensitive text or publishing a release claim. Record the exact integrated build, device/runtime/model digest, reviewer/date and evidence or gaps for each box. A missing observation remains unknown. Use non-private fixtures for tests. See the [acceptance checklist](LOCAL-AI-ACCEPTANCE.md) for steps.
 
 ## Source and request scope
 
@@ -36,4 +36,4 @@ Use this before handling sensitive text or publishing a release claim. Record th
 - [ ] Generated answers, persistence and cloud routing are not introduced by this checklist or inferred from search approval.
 - [ ] Failures, skips and unknowns remain visible in the release decision. An unchecked item is not a pass.
 
-No checks have been completed by creating this document. Read the [short user overview](../guide/ai-and-collaboration.md#local-search), [workflow guide](../guide/local-source-search.md), [known limits](../guide/local-source-search-limits.md) and [milestone status](LOCAL-SOURCE-SEARCH-MILESTONE.md).
+No checks have been completed by creating this document. Read the [short user overview](../guide/ai-and-collaboration.md#local-search), [workflow guide](../guide/local-source-search.md), [known limits](../guide/local-source-search.md#development-limits) and [milestone status](LOCAL-SOURCE-SEARCH-MILESTONE.md).

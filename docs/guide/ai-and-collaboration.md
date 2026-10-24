@@ -12,7 +12,7 @@ The index stays in this search session's memory. Closing search or changing its 
 
 Only eligible open `.txt` and `.md` files are supported, up to32 files,256KiB of text and256 chunks. Similarity is not factual confidence, and displayed snippets may omit matches. Real-device model, native and screen-reader checks are still pending.
 
-Read the [workflow guide](local-source-search.md) and [known limits](local-source-search-limits.md). Contributors should use the [privacy/limits checklist](../ai/LOCAL-SOURCE-SEARCH-PRIVACY-CHECKLIST.md) before making release claims.
+Read the [workflow guide](local-source-search.md) and [known limits](local-source-search.md#development-limits). Contributors should use the [privacy/limits checklist](../ai/LOCAL-SOURCE-SEARCH-PRIVACY-CHECKLIST.md) before making release claims.
 
 ## Somnia Agent
 
