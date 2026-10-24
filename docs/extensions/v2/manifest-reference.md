@@ -256,6 +256,8 @@ Everything the extension adds to Somnia. Declarative first: the host registers t
 | Field | Type | Required | Limits |
 | ----- | ---- | -------- | ------ |
 | `commands` | array | no | 0–200 items |
+| `menus` | array | no | 0–200 items |
+| `keybindings` | array | no | 0–200 items |
 | `panels` | array | no | 0–200 items |
 | `themes` | array | no | 0–200 items |
 | `snippets` | array | no | 0–200 items |
@@ -285,6 +287,46 @@ Commands in the palette and menus. IDs are `publisher.name.thing`. A command nee
 - **`when`** — Context expression gating availability. Closed boolean grammar over `studio`, `language`, `hasProject`, `hasSelection`, `workspaceTrusted`, `isReadonly` — never JavaScript.
 - **`argumentsSchema`** — Closed JSON Schema subset for command arguments: no references, no patterns, no arbitrary keywords, at most 8 levels deep.
 - **`resultSchema`** — Closed JSON Schema subset for the command result, same rules as `argumentsSchema`.
+
+### `menus`
+
+array · optional · 0–200 items
+
+Menu placements for own commands. Pure metadata: the host renders the entry, the command still runs through its normal activation and permission checks.
+
+#### Item fields
+
+| Field | Type | Required | Limits |
+| ----- | ---- | -------- | ------ |
+| `menu` | `"Project"` \| `"Edit"` \| `"View"` \| `"Insert"` \| `"Tools"` \| `"Help"` | **yes** |  |
+| `command` | string | **yes** | ≤ 150 chars; pattern `^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]*$` |
+| `when` | string | no | 1–256 chars |
+| `group` | string | no | pattern `^[A-Za-z0-9][A-Za-z0-9_-]{0,39}$` |
+
+- **`menu`** — Host menu group (`Project`, `Edit`, `View`, `Insert`, `Tools`, `Help`). Matches the command categories.
+- **`command`** — ID of a command contributed by the same extension. Referencing other extensions or host commands is rejected.
+- **`when`** — Context expression gating visibility, same grammar as commands.
+- **`group`** — Optional subgroup inside the menu; lexical order decides placement.
+
+### `keybindings`
+
+array · optional · 0–200 items
+
+Keybindings for own commands. Pure metadata: registration, conflict handling and user overrides live in the host adapter, not in the manifest.
+
+#### Item fields
+
+| Field | Type | Required | Limits |
+| ----- | ---- | -------- | ------ |
+| `command` | string | **yes** | ≤ 150 chars; pattern `^[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]*\.[a-z0-9][a-z0-9-]*$` |
+| `key` | string | **yes** | ≤ 60 chars; pattern `^(Ctrl\|Alt\|Shift\|Mod)(\+(Ctrl\|Alt\|Shift\|Mod)){0,2}\+(F([1-9]\|1[0-2])\|[A-Z0-9])$` |
+| `mac` | string | no | ≤ 60 chars; pattern `^(Ctrl\|Alt\|Shift\|Mod)(\+(Ctrl\|Alt\|Shift\|Mod)){0,2}\+(F([1-9]\|1[0-2])\|[A-Z0-9])$` |
+| `when` | string | no | 1–256 chars |
+
+- **`command`** — ID of a command contributed by the same extension.
+- **`key`** — Shortcut like `Ctrl+Shift+F7`. At least one modifier; `Mod` means Ctrl on Windows/Linux and Cmd on macOS.
+- **`mac`** — Optional macOS-specific replacement for `key`.
+- **`when`** — Context expression gating the binding, same grammar as commands.
 
 ### `panels`
 

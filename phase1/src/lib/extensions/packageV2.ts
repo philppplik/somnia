@@ -50,7 +50,7 @@ export function parsePackageFilesV2(files:Readonly<Record<string,Uint8Array>>,op
   if(m.runtime.entry) references.push({path:m.runtime.entry,pointer:'/runtime/entry'});
   if(m.icon) references.push({path:m.icon,pointer:'/icon'});
   if(m.license.startsWith('SEE LICENSE IN ')) references.push({path:m.license.slice(15),pointer:'/license'});
-  for(const [family,items] of Object.entries(m.contributes)) for(const [i,c] of (items??[]).entries()) for(const key of ['path','icon'] as const) if(c[key]) references.push({path:c[key]!,pointer:`/contributes/${family}/${i}/${key}`});
+  for(const [family,items] of Object.entries(m.contributes)) for(const [i,c] of (items??[]).entries()) for(const key of ['path','icon'] as const){const v=(c as {path?:string;icon?:string})[key]; if(v) references.push({path:v,pointer:`/contributes/${family}/${i}/${key}`});}
   for(const ref of references) if(!Object.hasOwn(files,ref.path)) errors.push(diagnostic('SOM-EXT-006',ref.pointer,'Referenced file is missing from the verified inventory.'));
   for(const name of names) if(files[name].byteLength>fileBudget(name,m)) errors.push(diagnostic('SOM-EXT-007',`/files/${escape(name)}`,'Asset exceeds its package budget.'));
   if(m.runtime.type==='wasm' && !m.runtime.entry?.endsWith('.wasm')) errors.push(diagnostic('SOM-EXT-003','/runtime/entry','Wasm entry must be a .wasm file.'));

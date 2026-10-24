@@ -47,7 +47,7 @@ test('permissions and activation correspondence are checked',()=>{
  const s=fresh(); s.activationEvents.push('onSelectionChanged'); invalid(s,'/activationEvents/2');
 });
 test('declarative runtime has no executable contributions and static panels need no activation',()=>{
- const m:any=fresh(); m.runtime={type:'declarative'}; m.activationEvents=[]; m.contributes.commands=[]; m.permissions=[];
+ const m:any=fresh(); m.runtime={type:'declarative'}; m.activationEvents=[]; m.contributes.commands=[]; m.contributes.menus=[]; m.contributes.keybindings=[]; m.permissions=[];
  assert.equal(validateManifestV2(m).ok,true); m.contributes.panels[0].scripts=true; invalid(m,'/contributes/panels/0/scripts');
 });
 test('limited workspace permissions cannot widen declared permissions',()=>{

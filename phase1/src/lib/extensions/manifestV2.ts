@@ -12,12 +12,16 @@ export type ExtensionDiagnosticCode = `SOM-EXT-${string}`;
 export interface ExtensionDiagnostic {code: ExtensionDiagnosticCode; path: string; message: string}
 export type ValidationResult<T> = {ok:true; manifest:T} | {ok:false; errors:ExtensionDiagnostic[]};
 export interface ContributionV2 {id:string; path?:string; icon?:string; when?:string; [key:string]:unknown}
+/** Declarative menu placement of an own command. No id, no asset: identity is menu+command. */
+export interface MenuContributionV2 {menu:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help'; command:string; when?:string; group?:string}
+/** Declarative keybinding of an own command. No id, no asset: identity is the command. */
+export interface KeybindingContributionV2 {command:string; key:string; mac?:string; when?:string}
 export interface ManifestV2 {
   security?:ExtensionSecurity; manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
   engines:{somnia:string; api:string}; runtime:{type:'declarative'|'js'|'wasm'; entry?:string; abi?:string};
   activationEvents:string[]; permissions:string[];
   capabilities:{untrustedWorkspaces:{supported:'supported'|'unsupported'|'limited'; description?:string; allowedPermissions?:string[]}; virtualWorkspaces:{supported:boolean}};
-  contributes:{commands?:ContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
+  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
   dependencies:{ecosystem:string; name:string; version:string; license:string; sourceIntegrity:string}[];
   proposedApis?:{id:string; revision:number}[]; icon?:string; repository?:string; homepage?:string; $schema?:string;
 }
@@ -131,17 +135,21 @@ export function validateManifestV2(input:unknown,options:ManifestValidationOptio
     const seen=new Set<string>();
     for(const [i,c] of (entries??[]).entries()) {
       const p=`/contributes/${family}/${i}`;
-      if(seen.has(c.id)) fail(`${p}/id`,'Duplicate contribution ID.'); seen.add(c.id);
-      if(family==='commands' && !c.id.startsWith(m.id+'.')) fail(`${p}/id`,'Command is outside the extension namespace.');
-      for(const field of ['path','icon'] as const) if(c[field] && !isSafePackagePath(c[field]!)) fail(`${p}/${field}`,'Unsafe package path.','SOM-EXT-005');
-      if(c.when && !isValidWhen(c.when)) fail(`${p}/when`,'Unsupported context expression.');
-      for(const key of ['argumentsSchema','resultSchema']) if(c[key]) checkArgumentSchema(c[key],`${p}/${key}`,errors);
+      // Menus/keybindings carry no id: menus identify as menu+command, keybindings as command.
+      const ident=family==='menus'?`${(c as MenuContributionV2).menu}${(c as MenuContributionV2).command}`:family==='keybindings'?(c as KeybindingContributionV2).command:(c as ContributionV2).id;
+      if(seen.has(ident)) fail(`${p}/${family==='menus'||family==='keybindings'?'command':'id'}`,'Duplicate contribution ID.'); seen.add(ident);
+      if(family==='commands' && !(c as ContributionV2).id.startsWith(m.id+'.')) fail(`${p}/id`,'Command is outside the extension namespace.');
+      if((family==='menus'||family==='keybindings') && !m.contributes.commands?.some(cmd=>cmd.id===(c as MenuContributionV2|KeybindingContributionV2).command)) fail(`${p}/command`,'Contribution references an undeclared command.');
+      const cv=c as ContributionV2; // Generic field checks apply to families that may carry them; menus/keybindings never do.
+      for(const field of ['path','icon'] as const) if(cv[field] && !isSafePackagePath(cv[field]!)) fail(`${p}/${field}`,'Unsafe package path.','SOM-EXT-005');
+      if(cv.when && !isValidWhen(cv.when)) fail(`${p}/when`,'Unsupported context expression.');
+      for(const key of ['argumentsSchema','resultSchema']) if(cv[key]) checkArgumentSchema(cv[key],`${p}/${key}`,errors);
       if(family==='commands' && (!m.permissions.includes('commands')||m.runtime.type==='declarative')) fail(p,'Commands need the commands permission and executable runtime.');
       if(m.runtime.type!=='declarative' && ['commands','panels'].includes(family)) {
-        const event=family==='commands'?`onCommand:${c.id}`:`onPanel:${m.id}.${c.id}`;
+        const event=family==='commands'?`onCommand:${cv.id}`:`onPanel:${m.id}.${cv.id}`;
         if(!startup&&!m.activationEvents.includes(event)) fail(p,'Contribution has no matching activation event.');
       }
-      if(m.runtime.type==='declarative'&&c.scripts===true) fail(`${p}/scripts`,'Declarative packages cannot execute panel scripts.');
+      if(m.runtime.type==='declarative'&&cv.scripts===true) fail(`${p}/scripts`,'Declarative packages cannot execute panel scripts.');
     }
   }
   for(const [i,event] of m.activationEvents.entries()) {
