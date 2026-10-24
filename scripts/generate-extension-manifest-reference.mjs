@@ -74,7 +74,7 @@ const DOCS = {
   'contributes.languages[].extensions': 'File extensions including the leading dot.',
   'contributes.languages[].filenames': 'Exact file names matched when no extension matches.',
   'contributes.languages[].path': 'Optional package path to a TextMate grammar JSON (`scopeName` plus a `patterns` array) used for tokenization.',
-  'contributes.panels': 'Side-rail panels. `declarative` panels are native view trees; `webview` panels render through the isolated panel bridge, never inside Somnia’s own UI tree.',
+  'contributes.panels': 'Side-rail panels. `declarative` panels are native view trees; `webview` panels render through the isolated panel bridge, never inside Somnia’s own UI tree. View-tree buttons may bind a `command` only to commands the same extension declares; unknown or foreign command ids are rejected at install.',
   'contributes.panels[].id': 'Panel ID, unique inside the extension. Activation uses `onPanel:<extId>.<panelId>`.',
   'contributes.panels[].title': 'Panel title shown in the rail tooltip and header.',
   'contributes.panels[].side': 'Which side rail hosts the panel.',

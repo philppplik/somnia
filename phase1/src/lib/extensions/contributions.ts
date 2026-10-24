@@ -22,10 +22,14 @@ export interface ContributionTransaction {
  commit():Disposable;
  rollback():void;
 }
+export interface ContributionAssetContext {
+ /** Command ids the same extension declares, for declarative panel command bindings. */
+ isCommandKnown?:(command:string)=>boolean;
+}
 export interface ContributionSink {
  begin(extensionId:string):ContributionTransaction;
  /** Native theme/snippet/declarative-panel validator. Must not execute scripts or fetch assets. */
- validateAsset(contribution:PreparedContribution):void;
+ validateAsset(contribution:PreparedContribution,context?:ContributionAssetContext):void;
 }
 /** No runtime factory is touched for static themes/snippets/panels. All assets come from verified inventory. */
 export class ContributionRegistry {
@@ -33,6 +37,7 @@ export class ContributionRegistry {
  constructor(private readonly sink:ContributionSink){}
  register(manifest:ManifestV2,files:Readonly<Record<string,Uint8Array>>):void {
   if(this.owners.has(manifest.id))throw new ExtensionError('E_INVALID_ARGUMENT','Remove existing contributions before replacement.');
+  const declaredCommands=new Set((manifest.contributes.commands??[]).map(c=>c.id));
   const prepared:PreparedContribution[]=[];
   for(const family of ['commands','menus','keybindings','settings','languages','panels','themes','snippets'] as const)for(const metadata of (manifest.contributes[family]??[]) as ContributionV2[]){
    // Menus/keybindings carry no id: menus identify as menu:command, keybindings as command. Settings carry full namespaced ids like commands.
@@ -40,7 +45,7 @@ export class ContributionRegistry {
    const fullId=family==='commands'||family==='settings'?metadata.id:`${manifest.id}.${localId}`;const namespace=`${family}:${fullId}`;
    if(this.ids.has(namespace)||prepared.some(c=>`${c.family}:${c.fullId}`===namespace))throw new ExtensionError('E_INVALID_ARGUMENT','Contribution ID is already registered.');
    let asset:Uint8Array|undefined;if(metadata.path){if(!Object.hasOwn(files,metadata.path))throw new ExtensionError('E_INVALID_ARGUMENT','Contribution asset is missing.');asset=files[metadata.path].slice();}
-   const contribution={family,fullId,metadata:structuredClone(metadata),asset};this.sink.validateAsset(contribution);prepared.push(contribution);
+   const contribution={family,fullId,metadata:structuredClone(metadata),asset};this.sink.validateAsset(contribution,family==='panels'?{isCommandKnown:id=>declaredCommands.has(id)}:undefined);prepared.push(contribution);
   }
   const tx=this.sink.begin(manifest.id);try{for(const c of prepared)tx.stage(c);const disposable=tx.commit();this.owners.set(manifest.id,disposable);for(const c of prepared)this.ids.set(`${c.family}:${c.fullId}`,manifest.id);}catch(error){tx.rollback();throw error;}
  }
@@ -58,7 +63,7 @@ export class NativeContributionStore implements ContributionSink {
   private readonly uiThemeValidator:(tokens:Record<string,string>)=>boolean=nativeUiThemeValidator,
  ){}
  snapshot():NativeContributionSnapshot{return {items:new Map(this.items)};}
- validateAsset(c:PreparedContribution):void {
+ validateAsset(c:PreparedContribution,context?:ContributionAssetContext):void {
   // Menus and keybindings are pure metadata placements of an own command, like commands: no asset.
   if(c.family==='commands'||c.family==='menus'||c.family==='keybindings'||c.family==='settings')return;
   if(c.family==='languages'&&!c.asset)return; // Grammar-less language registrations are pure metadata.
@@ -77,7 +82,7 @@ export class NativeContributionStore implements ContributionSink {
   }else if(c.family==='languages'){
    const g=parsed as {scopeName?:unknown;patterns?:unknown};
    if(typeof g.scopeName!=='string'||!g.scopeName||!Array.isArray(g.patterns))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid TextMate grammar: needs scopeName and a patterns array.');
-  }else validateView(parsed,c,0);
+  }else validateView(parsed,c,0,context);
  }
  begin(_extensionId:string):ContributionTransaction {
   const staged=new Map<string,PreparedContribution>();let committed=false;
@@ -95,10 +100,14 @@ function defaultThemeValidator(tokens:Record<string,string>):boolean {
  const allowed=new Set(['--syntax-tag','--syntax-keyword','--syntax-string','--syntax-number','--syntax-comment','--syntax-property','--syntax-variable','--syntax-operator','--syntax-function']);
  return Object.keys(tokens).length>0&&Object.entries(tokens).every(([key,value])=>allowed.has(key)&&typeof value==='string'&&/^#(?:[a-f\d]{3}|[a-f\d]{6}|[a-f\d]{8})$/i.test(value));
 }
-function validateView(view:Json,c:PreparedContribution,depth:number):void {
+function validateView(view:Json,c:PreparedContribution,depth:number,context?:ContributionAssetContext):void {
  if(depth>8||!view||typeof view!=='object'||Array.isArray(view)||!['text','button','input','select','list','group'].includes(view.type as string)||Object.keys(view).some(k=>!['type','text','label','value','command','children','options'].includes(k)))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid declarative panel tree.');
  for(const key of ['text','label','value'])if(key in view&&typeof view[key]!=='string')throw new ExtensionError('E_INVALID_ARGUMENT','Invalid declarative panel value.');
- if('command'in view)throw new ExtensionError('E_INVALID_ARGUMENT','Panel command bindings require a native command-aware validator.');
- if(view.children!==undefined){if(!Array.isArray(view.children)||view.children.length>200)throw new ExtensionError('E_RESOURCE_LIMIT','Panel tree exceeds budget.');for(const child of view.children)validateView(child,c,depth+1);}
+ if('command'in view){
+  if(typeof view.command!=='string')throw new ExtensionError('E_INVALID_ARGUMENT','Invalid declarative panel value.');
+  if(!context?.isCommandKnown)throw new ExtensionError('E_INVALID_ARGUMENT','Panel command bindings require a native command-aware validator.');
+  if(!context.isCommandKnown(view.command))throw new ExtensionError('E_INVALID_ARGUMENT','Panel command references an undeclared command.');
+ }
+ if(view.children!==undefined){if(!Array.isArray(view.children)||view.children.length>200)throw new ExtensionError('E_RESOURCE_LIMIT','Panel tree exceeds budget.');for(const child of view.children)validateView(child,c,depth+1,context);}
  if(view.options!==undefined&&(!Array.isArray(view.options)||view.options.length>200||view.options.some(v=>typeof v!=='string')))throw new ExtensionError('E_INVALID_ARGUMENT','Invalid panel options.');
 }

@@ -380,7 +380,7 @@ Language registrations. Declaring a language makes its id usable in `onLanguage:
 
 array · optional · 0–200 items
 
-Side-rail panels. `declarative` panels are native view trees; `webview` panels render through the isolated panel bridge, never inside Somnia’s own UI tree.
+Side-rail panels. `declarative` panels are native view trees; `webview` panels render through the isolated panel bridge, never inside Somnia’s own UI tree. View-tree buttons may bind a `command` only to commands the same extension declares; unknown or foreign command ids are rejected at install.
 
 #### Item fields
 
