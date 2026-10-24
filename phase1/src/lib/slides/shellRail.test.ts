@@ -30,7 +30,7 @@ test('every panel item targets a rail panel on its own side; every contract pane
  for(const [rail,side] of [[SLIDES_LEFT_RAIL,'left'],[SLIDES_RIGHT_RAIL,'right']] as const){
   for(const it of rail){
    if(it.kind==='panel'){const p=shell.panels!.find(x=>x.id===it.panel);assert.ok(p,it.id);assert.equal(p!.side,side);assert.notEqual(p!.placement,'docked');}
-   else{assert.equal(it.kind,'command');assert.ok(known.has(it.command!),it.command);}
+   else{assert.equal(it.kind,'command');assert.ok(it.command);assert.ok(known.has(it.command!),it.command);}
   }
   const orders=rail.map(i=>i.order);assert.deepEqual(orders,[...orders].sort((a,b)=>a-b));assert.equal(new Set(orders).size,orders.length);assert.equal(new Set(ids(rail)).size,rail.length);
  }

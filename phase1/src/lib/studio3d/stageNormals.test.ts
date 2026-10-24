@@ -42,7 +42,7 @@ test('smoothMesh splits everything at angle 0 (flat) and merges per vertex at 18
  assert.ok(smooth.normals);
  // smoothed tetra vertex normals point away from the centroid (origin here)
  for(let i=0;i<4;i++){
-  const d=smooth.positions[i*3]*smooth.normals![i*3]+smooth.positions[i*3+1]*smooth.normals![i*3+1]+smooth.positions[i*3+2]*smooth.normals![i*3+2];
+  const d:number=smooth.positions[i*3]*smooth.normals![i*3]+smooth.positions[i*3+1]*smooth.normals![i*3+1]+smooth.positions[i*3+2]*smooth.normals![i*3+2];
   assert.ok(d>0,`vertex ${i} normal points outward`);
  }
 });
