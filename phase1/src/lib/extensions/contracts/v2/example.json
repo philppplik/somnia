@@ -57,6 +57,27 @@
         "when": "hasProject && studio == \"code\""
       }
     ],
+    "settings": [
+      {
+        "id": "acme.word-count.include-footnotes",
+        "type": "boolean",
+        "title": "Include footnotes",
+        "description": "Count words in footnotes as part of the document total.",
+        "default": true
+      },
+      {
+        "id": "acme.word-count.reading-ease",
+        "type": "enum",
+        "title": "Reading ease metric",
+        "description": "Metric shown next to the word count.",
+        "default": "flesch",
+        "enum": [
+          "flesch",
+          "ari",
+          "coleman-liau"
+        ]
+      }
+    ],
     "panels": [
       {
         "id": "summary",

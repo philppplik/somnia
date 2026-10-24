@@ -16,12 +16,14 @@ export interface ContributionV2 {id:string; path?:string; icon?:string; when?:st
 export interface MenuContributionV2 {menu:'Project'|'Edit'|'View'|'Insert'|'Tools'|'Help'; command:string; when?:string; group?:string}
 /** Declarative keybinding of an own command. No id, no asset: identity is the command. */
 export interface KeybindingContributionV2 {command:string; key:string; mac?:string; when?:string}
+/** Declarative typed setting. Pure metadata: the host renders the editor and owns storage; no asset, no script. */
+export interface SettingContributionV2 {id:string; type:'string'|'number'|'boolean'|'enum'; title:string; description?:string; default:unknown; enum?:string[]}
 export interface ManifestV2 {
   security?:ExtensionSecurity; manifestVersion:2; id:string; publisher:string; name:string; version:string; description:string; license:string;
   engines:{somnia:string; api:string}; runtime:{type:'declarative'|'js'|'wasm'; entry?:string; abi?:string};
   activationEvents:string[]; permissions:string[];
   capabilities:{untrustedWorkspaces:{supported:'supported'|'unsupported'|'limited'; description?:string; allowedPermissions?:string[]}; virtualWorkspaces:{supported:boolean}};
-  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
+  contributes:{commands?:ContributionV2[]; menus?:MenuContributionV2[]; keybindings?:KeybindingContributionV2[]; settings?:SettingContributionV2[]; panels?:ContributionV2[]; themes?:ContributionV2[]; snippets?:ContributionV2[]};
   dependencies:{ecosystem:string; name:string; version:string; license:string; sourceIntegrity:string}[];
   proposedApis?:{id:string; revision:number}[]; icon?:string; repository?:string; homepage?:string; $schema?:string;
 }
@@ -139,6 +141,18 @@ export function validateManifestV2(input:unknown,options:ManifestValidationOptio
       const ident=family==='menus'?`${(c as MenuContributionV2).menu}${(c as MenuContributionV2).command}`:family==='keybindings'?(c as KeybindingContributionV2).command:(c as ContributionV2).id;
       if(seen.has(ident)) fail(`${p}/${family==='menus'||family==='keybindings'?'command':'id'}`,'Duplicate contribution ID.'); seen.add(ident);
       if(family==='commands' && !(c as ContributionV2).id.startsWith(m.id+'.')) fail(`${p}/id`,'Command is outside the extension namespace.');
+      if(family==='settings') {
+        const sc=c as SettingContributionV2;
+        if(!sc.id.startsWith(m.id+'.')) fail(`${p}/id`,'Setting is outside the extension namespace.');
+        if(sc.type==='enum') {
+          if(!Array.isArray(sc.enum)||sc.enum.length===0) fail(`${p}/enum`,'Enum settings need a non-empty value list.');
+          else if(typeof sc.default!=='string'||!sc.enum.includes(sc.default)) fail(`${p}/default`,'Enum default must be one of the listed values.');
+        } else {
+          if(sc.enum!==undefined) fail(`${p}/enum`,'Only enum settings may list values.');
+          const matches=sc.type==='boolean'?typeof sc.default==='boolean':sc.type==='number'?typeof sc.default==='number'&&Number.isFinite(sc.default):typeof sc.default==='string';
+          if(!matches) fail(`${p}/default`,'Default must match the declared setting type.');
+        }
+      }
       if((family==='menus'||family==='keybindings') && !m.contributes.commands?.some(cmd=>cmd.id===(c as MenuContributionV2|KeybindingContributionV2).command)) fail(`${p}/command`,'Contribution references an undeclared command.');
       const cv=c as ContributionV2; // Generic field checks apply to families that may carry them; menus/keybindings never do.
       for(const field of ['path','icon'] as const) if(cv[field] && !isSafePackagePath(cv[field]!)) fail(`${p}/${field}`,'Unsafe package path.','SOM-EXT-005');

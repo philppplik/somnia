@@ -357,6 +357,61 @@
             ]
           }
         },
+        "settings": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^[a-z0-9][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$",
+                "maxLength": 150,
+                "description": "Full setting ID, namespaced under the extension ID, e.g. acme.word-count.includeFootnotes."
+              },
+              "type": {
+                "enum": [
+                  "string",
+                  "number",
+                  "boolean",
+                  "enum"
+                ],
+                "description": "Value type; decides which editor the host renders."
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120,
+                "description": "User-visible setting name."
+              },
+              "description": {
+                "type": "string",
+                "maxLength": 500,
+                "description": "User-visible explanation shown next to the editor."
+              },
+              "default": {
+                "description": "Default value; must match the declared type, and for enum one of the listed values."
+              },
+              "enum": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "minItems": 1,
+                "maxItems": 100,
+                "description": "Allowed values. Required with type enum, forbidden otherwise."
+              }
+            },
+            "required": [
+              "id",
+              "type",
+              "title",
+              "default"
+            ]
+          }
+        },
         "panels": {
           "type": "array",
           "items": {
