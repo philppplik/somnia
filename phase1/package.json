@@ -24,7 +24,7 @@
     "test:render-goldens": "playwright test --config test/fixtures/render/playwright.config.ts",
     "test:render-determinism": "tsx test/fixtures/render/determinism.ts",
     "test:auth": "tsx --test src/lib/agent/oauth/*.test.ts",
-    "test:updater": "node --test scripts/updater-e2e/lib.test.mjs scripts/updater-e2e/channels.test.mjs",
+    "test:updater": "node --test scripts/updater-e2e/lib.test.mjs scripts/updater-e2e/channels.test.mjs scripts/msix-version.test.mjs",
     "typecheck": "tsc --noEmit",
     "inventory:ui-commands": "tsx scripts/dump-ui-commands.ts",
     "check:no-control": "node scripts/check-no-control.mjs",
@@ -65,7 +65,8 @@
     "test:jobs": "tsx --test src/lib/jobs/*.test.ts src/lib/sound/transport.test.ts",
     "test:layers": "node --test scripts/layers.test.mjs",
     "layers:install": "npm ci --prefix tools/layers --ignore-scripts",
-    "check:no-dev-fixture": "node scripts/assert-no-dev-fixture.mjs"
+    "check:no-dev-fixture": "node scripts/assert-no-dev-fixture.mjs",
+    "test:msix": "node --test scripts/msix-version.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
