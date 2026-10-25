@@ -14,6 +14,6 @@
     "@babel/parser": "8.0.7",
     "svelte": "5.57.2",
     "typescript": "6.0.3",
-    "vite": "8.3.2"
+    "vite": "8.3.5"
   }
 }
