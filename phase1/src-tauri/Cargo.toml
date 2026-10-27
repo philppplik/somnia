@@ -53,19 +53,19 @@ tauri = { version = "2", optional = true, features = ["macos-private-api"] }
 tauri-plugin-dialog = { version = "2", optional = true }
 tauri-plugin-updater = { version = "2", optional = true }
 tauri-plugin-process = { version = "2", optional = true }
-tauri-plugin-single-instance = { version = "=2.5.0", optional = true }
+tauri-plugin-single-instance = { version = "=2.5.4", optional = true }
 
 reqwest = { version = "0.12", optional = true, default-features = false, features = ["rustls-tls", "stream", "json", "blocking"] }
 keyring = { version = "=3.6.3", optional = true, features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust", "vendored"] }
 jsonwebtoken = { version = "=9.3.1", default-features = false }
 # No `transport-child-process`: MCP servers are only started through the broker (mcp_broker.rs), never spawned directly.
-rmcp = { version = "=3.5.1", default-features = false, features = ["client", "transport-async-rw"] }
+rmcp = { version = "=3.7.0", default-features = false, features = ["client", "transport-async-rw"] }
 
 russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
 russh-sftp = { version = "=3.0.1", default-features = false }
 rand = "0.10"
 zeroize = "1"
-ignore = "=0.4.25"
+ignore = "=0.4.33"
 # FTPS (explicit TLS) client for shared-hosting deploy targets. ring only, same provider family as russh.
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 rustls-native-certs = "0.8"
@@ -87,7 +87,7 @@ tokio-tungstenite = "0.26"
 futures-util = "0.3"
 tempfile = "3"
 rcgen = { version = "0.13", default-features = false, features = ["crypto", "ring", "pem"] }
-rmcp = { version = "=3.5.1", default-features = false, features = ["server", "client", "macros", "transport-async-rw"] }
+rmcp = { version = "=3.7.0", default-features = false, features = ["server", "client", "macros", "transport-async-rw"] }
 
 [profile.release]
 opt-level = 3
