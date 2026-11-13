@@ -8,6 +8,6 @@
   },
   "dependencies": {
     "astro": "5",
-    "@astrojs/node": "9"
+    "@astrojs/node": "11"
   }
 }
